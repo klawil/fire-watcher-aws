@@ -556,6 +556,7 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
 	const result = await dynamodb.query({
 		TableName: textsTable,
+		IndexName: 'pageIndex',
 		ExpressionAttributeNames: {
 			'#pid': 'pageId'
 		},
