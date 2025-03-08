@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-source ~/.zshrc
+source .env
 
 echo -n "Deploy the stack (Y/N): "
 read confirmStack
@@ -18,6 +18,6 @@ fi
 if [[ $confirmClient == [yY] || $confirmClient == [yY][eE][sS] ]]; then
   cd website
   npm run build
-  aws s3 cp --recursive ./src/_site s3://***REMOVED***/ --acl bucket-owner-full-control --metadata-directive REPLACE
+  aws s3 cp --recursive ./src/_site s3://$BUCKET_NAME/ --acl bucket-owner-full-control --metadata-directive REPLACE
   cd ..
 fi

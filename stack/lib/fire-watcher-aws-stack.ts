@@ -20,11 +20,15 @@ import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
+import * as dotenv from 'dotenv';
 
-const bucketName = '***REMOVED***';
-const certArn = '***REMOVED***';
-const secretArn = '***REMOVED***';
-const phoneNumberTableArn = '***REMOVED***';
+dotenv.config({ path: `${__dirname}/../../.env` });
+
+const bucketName = process.env.BUCKET_NAME as string;
+const certArn = process.env.SSL_CERT_ARN as string;
+const secretArn = process.env.TWILIO_SECRET_ARN as string;
+const phoneNumberTableArn = process.env.PHONE_NUMBER_TABLE_ARN as string;
+const glueCatalogId = process.env.GLUE_CATALOG_ID as string;
 
 type AlarmTag = 'Dtr' | 'Api';
 interface CvfdAlarm {
@@ -220,7 +224,6 @@ export class FireWatcherAwsStack extends Stack {
     const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
 
     // Make the Glue table
-    const glueCatalogId = '***REMOVED***'; // Account ID
     const glueDatabaseName = 'cvfd-data-db';
     const glueTableName = 'cvfd-radio-events';
     const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
