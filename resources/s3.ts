@@ -106,14 +106,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
-				if (headInfo.Metadata?.tone === 'true') {
-					body.Item.CsLooked = {
-						NS: []
-					};
-					body.Item.CsLookedTime = {
-						NS: []
-					};
-				}
 				if (sourceList.length === 0) {
 					delete body.Item.Sources;
 				}
@@ -150,17 +142,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					!!existingItems.Items &&
 					existingItems.Items.length > 1
 				) {
-					let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
-					if (headInfo.Metadata?.tone === 'true') {
-						queuePromise = sqs.sendMessage({
-							MessageBody: JSON.stringify({
-								action: 'dtrPage',
-								key: Key,
-								isTest: true
-							}),
-							QueueUrl: sqsQueue
-						}).promise();
-					}
 
 					const matchingItems = existingItems.Items.filter(item => {
 						const itemStartTime = Number(item.StartTime.N);
@@ -213,6 +194,18 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						await metric;
 						return;
 					}
+				}
+
+				let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
+				if (headInfo.Metadata?.tone === 'true') {
+					queuePromise = sqs.sendMessage({
+						MessageBody: JSON.stringify({
+							action: 'dtrPage',
+							key: Key,
+							isTest: true
+						}),
+						QueueUrl: sqsQueue
+					}).promise();
 				}
 
 				const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
@@ -312,7 +305,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				try {
 					const promises: Promise<any>[] = [
 						dynamodb.updateItem(talkgroupCreate).promise()
-							.then(() => doDeviceUpdate ? dynamodb.updateItem(talkgroupDevices).promise() : null)
+							.then(() => doDeviceUpdate ? dynamodb.updateItem(talkgroupDevices).promise() : null),
+							queuePromise
 					];
 					if (doDeviceUpdate) {
 						promises.push(Promise.all(deviceCreate.map(conf => dynamodb.updateItem(conf).promise()))

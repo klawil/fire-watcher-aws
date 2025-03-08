@@ -314,8 +314,8 @@ function display(dataToDisplay, location, restart) {
 					while (i < dataToDisplay.length && dataToDisplay[i][dataTimeKey] > newTime) {
 						i++;
 					}
-					play(dataToDisplay[i][dataFileKey]);
-					scrollRowIntoView(dataToDisplay[i][dataFileKey]);
+					play(dataToDisplay[i][dataFileKey].split('/').slice(-1)[0]);
+					scrollRowIntoView(dataToDisplay[i][dataFileKey].split('/').slice(-1)[0]);
 				} else {
 					isInit = true;
 					updateData('after', true, newTime - 1);
