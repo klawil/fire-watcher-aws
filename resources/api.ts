@@ -722,8 +722,18 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		return unauthorizedResponse;
 	}
 
+	const getAfter = Date.now() - (1000 * 60 * 60 * 24 * 60);
 	const result = await dynamodb.scan({
-		TableName: messagesTable
+		TableName: messagesTable,
+		FilterExpression: '#dt >= :dt',
+		ExpressionAttributeValues: {
+			':dt': {
+				N: getAfter.toString()
+			}
+		},
+		ExpressionAttributeNames: {
+			'#dt': 'datetime'
+		}
 	}).promise();
 
 	return {
