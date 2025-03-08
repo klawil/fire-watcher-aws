@@ -110,7 +110,7 @@ if (filterModal) {
 		Object.keys(afterFilters)
 			.forEach(key => afterFilters[key].update());
 		setUrlParams();
-		updateData('after', true);
+		updateData('after', true, fileToTime(player.file));
 	});
 }
 

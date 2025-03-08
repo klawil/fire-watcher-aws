@@ -125,7 +125,7 @@ const dataTimeKey = 'Datetime';
 const dataFileKey = 'Key';
 
 function fileToTime(name) {
-	if (!fileNameRegex.test(name)) return false;
+	if (!name || !fileNameRegex.test(name)) return false;
 
 	const parts = name.match(fileNameRegex);
 	return new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`).getTime();

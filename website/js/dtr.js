@@ -115,7 +115,7 @@ const dataTimeKey = 'StartTime';
 const dataFileKey = 'File';
 
 function fileToTime(name) {
-	if (!fileNameRegex.test(name)) return false;
+	if (!name || !fileNameRegex.test(name)) return false;
 
 	const parts = name.match(fileNameRegex);
 	return parseInt(parts[1], 10);
