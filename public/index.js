@@ -128,7 +128,7 @@ function display() {
 		isInit = false;
 		let u = new URL(window.location.href);
 		let f = u.searchParams.get('f');
-		if (f !== null) {
+		if (f !== null && document.getElementById(f) !== null) {
 			play(f);
 			document.getElementById(f).scrollIntoView();
 		} else {
