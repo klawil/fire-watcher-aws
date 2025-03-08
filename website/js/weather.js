@@ -55,4 +55,6 @@ fetch('/weather.json')
 		insertionPoints.alerts.innerHTML = data.weather || '<b>No active alerts</b>';
 		insertionPoints.restrictions.innerHTML = data.bans;
 		insertionPoints.updated.innerHTML = data.updated;
+
+		doneLoading();
 	});
