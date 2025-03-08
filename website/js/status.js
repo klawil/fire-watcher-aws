@@ -70,7 +70,7 @@ const color2 = {
 const baseCharts = [
 	{
 		id: 'api-calls',
-		query: 'metrics=api-frontend,api-infra,api-user,api-twilio,api-events,s3-created,queue'
+		query: 'metrics=api-frontend,api-user,api-twilio,s3-created,queue'
 	},
 	{
 		id: 'api-errors',

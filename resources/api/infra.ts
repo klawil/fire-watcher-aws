@@ -671,12 +671,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	const action = event.queryStringParameters?.action || 'none';
 
 	try {
-		if (action !== 'metric') {
-			await incrementMetric('Call', {
-				source: metricSource,
-				action
-			}, true, false);
-		}
 		switch (action) {
 			case 'page':
 			case 'dtrPage':
