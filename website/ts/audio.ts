@@ -267,7 +267,6 @@ async function updateData(
 	} else if (direction === 'after' && !isUpToLive) {
 		const row = document.getElementById(btoa(apiResults.files[0].Key));
 		if (row === null) return;
-		row.scrollIntoView({ block: 'center' });
 		setTimeout(() => row.classList.add('tg-row-highlight'), 100);
 		setTimeout(() => row.classList.remove('tg-row-highlight'), 800);
 	} else if (direction === 'after' && playNewFiles && apiResults.files.length > 0) {
