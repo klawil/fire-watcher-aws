@@ -909,7 +909,7 @@ async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	} else if (
 		body.active &&
 		!phoneUser[body.department]?.M?.active?.BOOL &&
-		body.department !== 'Page Only'
+		body.department !== 'PageOnly'
 	) {
 		const queueMessage: ActivateBody = {
 			action: 'activate',
