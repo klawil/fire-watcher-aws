@@ -1,7 +1,9 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { parseDynamoDbAttributeMap } from '../utils';
+import { incrementMetric, parseDynamoDbAttributeMap } from '../utils';
 import { getLoggedInUser } from '../utils/auth';
+
+const metricSource = 'Frontend';
 
 const dynamodb = new aws.DynamoDB();
 
@@ -10,7 +12,7 @@ const defaultListLimit = 100;
 const vhfTable = process.env.TABLE_VHF as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
-const deviceTable = process.env.TABLE_DEVICE as string;
+// const deviceTable = process.env.TABLE_DEVICE as string;
 const textsTable = process.env.TABLE_TEXTS as string;
 
 const dtrTableIndexes: {
@@ -515,9 +517,12 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const action = event.queryStringParameters?.action;
+	const action = event.queryStringParameters?.action || '';
 	try {
-		console.log(`API - FRONTEND - CALL - ${action}`);
+		incrementMetric('Call', {
+			source: metricSource,
+			action
+		});
 		switch (action) {
 			case 'vhf':
 				return await getVhfList(event);
@@ -529,7 +534,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getTexts(event);
 		}
 
-		console.log(`API - FRONTEND - 404`);
+		incrementMetric('Error', {
+			source: metricSource,
+			type: '404'
+		});
 		return {
 			statusCode: 404,
 			headers: {},
@@ -539,7 +547,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		}
 	} catch (e) {
-		console.log(`API - FRONTEND - ERROR - ${action}`);
+		incrementMetric('Error', {
+			source: metricSource,
+			type: 'general'
+		});
 		console.error(e);
 		return {
 			statusCode: 400,

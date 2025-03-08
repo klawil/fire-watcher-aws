@@ -318,6 +318,13 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the frontend API
     const frontendApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-frontend-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/api/frontend.ts',
       handler: 'main',
@@ -346,6 +353,13 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the infrastructure API
     const infraApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-infra-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/api/infra.ts',
       handler: 'main',

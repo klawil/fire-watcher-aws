@@ -1,11 +1,12 @@
-import * as AWS from 'aws-sdk';
+import * as aws from 'aws-sdk';
 const twilio = require('twilio');
 
-const secretManager = new AWS.SecretsManager();
+const secretManager = new aws.SecretsManager();
+const cloudWatch = new aws.CloudWatch();
 
-type DynamoDbValues = boolean | number | string | undefined | AWS.DynamoDB.AttributeValue | DynamoDbValues[];
+type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
 
-function parseDynamoDbAttributeValue(value: AWS.DynamoDB.AttributeValue): DynamoDbValues {
+function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): DynamoDbValues {
 	if (typeof value.S !== 'undefined') {
 		return value.S;
 	} else if (typeof value.N !== 'undefined') {
@@ -27,7 +28,7 @@ interface NewObject {
 	[key: string]: DynamoDbValues | NewObject;
 }
 
-export function parseDynamoDbAttributeMap(item: AWS.DynamoDB.AttributeMap): NewObject {
+export function parseDynamoDbAttributeMap(item: aws.DynamoDB.AttributeMap): NewObject {
 	const newObj: NewObject = {};
 
 	Object.keys(item)
@@ -120,4 +121,62 @@ export async function sendMessage(
 			console.log(`QUEUE - ERROR - sendMessage`);
 			console.error(e);
 		});
+}
+
+
+
+interface ErrorMetric {
+	source: string;
+	type: string;
+	reason?: string;
+}
+
+interface CallMetric {
+	source: string;
+	action: string;
+}
+
+interface EventMetric {
+	source: string;
+	type: string;
+	event: string;
+}
+
+export async function incrementMetric(
+	name: 'Error',
+	metricData: ErrorMetric
+): Promise<any>
+export async function incrementMetric(
+	name: 'Call',
+	metricData: CallMetric
+): Promise<any>
+export async function incrementMetric(
+	name: 'Event',
+	metricData: EventMetric
+): Promise<any>
+export async function incrementMetric(
+	name: string,
+	metricData: ErrorMetric | CallMetric | EventMetric
+): Promise<any> {
+	const putConfig: aws.CloudWatch.PutMetricDataInput = {
+		Namespace: `CVFD API`,
+		MetricData: [
+			{
+				MetricName: name,
+				Dimensions: (Object.keys(metricData) as Array<keyof typeof metricData>)
+					.reduce((agg: aws.CloudWatch.Dimensions, key) => [
+						...agg,
+						{
+							Name: key,
+							Value: metricData[key]
+						}
+					], []),
+				Timestamp: new Date(),
+				Unit: 'Count',
+				Value: 1
+			}
+		]
+	};
+
+	await cloudWatch.putMetricData(putConfig).promise();
 }

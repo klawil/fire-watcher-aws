@@ -1,5 +1,8 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { incrementMetric } from '../utils';
+
+const metricSource = 'Infra';
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
@@ -85,7 +88,11 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
-		console.log(`API - INFRA - ERROR - INVALID CODE`);
+		incrementMetric('Error', {
+			source: metricSource,
+			type: 'handleText',
+			reason: 'Invalid Code'
+		});
 		return response;
 	}
 
@@ -105,7 +112,11 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		}
 	}).promise();
 	if (!sender.Item || !sender.Item.isActive.BOOL) {
-		console.log(`API - INFRA - ERROR - ${sender.Item ? 'Inactive' : 'Invalid'} Sender`);
+		incrementMetric('Error', {
+			source: metricSource,
+			type: 'handleText',
+			reason: `${sender.Item ? 'Inactive' : 'Invalid'} Sender`
+		});
 		response.body = `<Response><Message>You do not have access to this text group. Contact your station chief to request access.</Message></Response>`
 		return response;
 	}
@@ -118,7 +129,11 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Handle text commands
 	if (isTextCommand) {
-		console.log(`API - INFRA - COMMAND - ${sender.Item.phone.N}`);
+		incrementMetric('Event', {
+			source: metricSource,
+			type: 'handleText',
+			event: 'command'
+		});
 		await dynamodb.updateItem({
 			TableName: userTable,
 			Key: {
@@ -131,7 +146,11 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 		response.body = `<Response><Message>${textCommands[eventData.Body].response}</Message></Response>`;
 	} else if (isAppleResponse) {
-		console.log(`API - INFRA - APPLE - ${sender.Item.phone.N}`);
+		incrementMetric('Event', {
+			source: metricSource,
+			type: 'handleText',
+			event: 'apple'
+		});
 	} else {
 		await sqs.sendMessage({
 			MessageBody: JSON.stringify({
@@ -157,9 +176,17 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
-		console.log('API - INFRA - ERROR - INVALID CODE');
+		incrementMetric('Error', {
+			source: metricSource,
+			type: 'handleTextStatus',
+			reason: 'Invalid Code'
+		});
 	} else if (messageId === null) {
-		console.log('API - INFRA - ERROR - INVALID MESSAGE ID');
+		incrementMetric('Error', {
+			source: metricSource,
+			type: 'handleTextStatus',
+			reason: 'Invalid Message'
+		});
 	} else {
 		const eventData = event.body?.split('&')
 			.map(str => str.split('=').map(str => decodeURIComponent(str)))
@@ -203,10 +230,13 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const action = event.queryStringParameters?.action;
+	const action = event.queryStringParameters?.action || '';
 
 	try {
-		console.log(`API - INFRA - CALL - ${action}`);
+		incrementMetric('Call', {
+			source: metricSource,
+			action
+		});
 		switch (action) {
 			case 'text':
 				return await handleText(event);
@@ -214,7 +244,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleTextStatus(event);
 		}
 
-		console.log(`API - INFRA - 404`);
+		incrementMetric('Error', {
+			source: metricSource,
+			type: '404'
+		});
 		return {
 			statusCode: 404,
 			headers: {},
@@ -224,7 +257,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		};
 	} catch (e) {
-		console.log(`API - INFRA - ERROR - ${action}`);
+		incrementMetric('Error', {
+			source: metricSource,
+			type: 'general'
+		});
 		console.error(e);
 		return {
 			statusCode: 400,
