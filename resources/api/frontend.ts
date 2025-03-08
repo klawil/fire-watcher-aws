@@ -13,6 +13,7 @@ const defaultListLimit = 100;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const textsTable = process.env.TABLE_TEXTS as string;
+const siteTable = process.env.TABLE_SITE as string;
 
 const dtrTableIndexes: {
 	[key: string]: undefined | string;
@@ -1586,6 +1587,32 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	};
 }
 
+async function getSites(): Promise<APIGatewayProxyResult> {
+	const response: GenericApiResponse = {
+		success: true,
+		errors: [],
+		data: []
+	};
+
+	// Get the sites
+	const results = await dynamodb.query({
+		TableName: siteTable,
+		IndexName: 'active',
+		ExpressionAttributeNames: { '#ia': 'IsActive' },
+		ExpressionAttributeValues: { ':ia': { S: 'y' } },
+		KeyConditionExpression: '#ia = :ia'
+	}).promise();
+
+	if (results.Items) {
+		response.data = results.Items.map(parseDynamoDbAttributeMap);
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 	try {
@@ -1604,6 +1631,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handlePageView(event);
 			case 'stats':
 				return await getStats(event);
+			case 'sites':
+				return await getSites();
 		}
 
 		await incrementMetric('Error', {

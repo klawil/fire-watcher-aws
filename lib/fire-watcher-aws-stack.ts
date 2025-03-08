@@ -796,12 +796,14 @@ export class FireWatcherAwsStack extends Stack {
           TABLE_DTR: dtrTable.tableName,
           TABLE_TALKGROUP: talkgroupTable.tableName,
           TABLE_TEXTS: textsTable.tableName,
-          TABLE_USER: phoneNumberTable.tableName
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_SITE: siteTable.tableName
         },
         read: [
           dtrTable,
           talkgroupTable,
-          phoneNumberTable
+          phoneNumberTable,
+          siteTable
         ],
         readWrite: [
           textsTable
