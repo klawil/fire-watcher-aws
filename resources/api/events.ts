@@ -23,17 +23,20 @@ interface GenericApiResponse {
 	data?: any[];
 }
 
-function validateEventBody(body: EventBody, index: number, response: GenericApiResponse): void {
+function validateEventBody(body: EventBody, index: number, response: GenericApiResponse): boolean {
 	body.timestamp = Date.now();
+	let thisItemSuccess = true;
 
 	// Validate the body
 	if (typeof body.event !== 'string') {
 		response.success = false;
 		response.errors.push(`${index}-event`);
+		thisItemSuccess = false;
 	}
 	if (typeof body.tower !== 'string') {
 		response.success = false;
 		response.errors.push(`${index}-tower`);
+		thisItemSuccess = false;
 	}
 	if (
 		typeof body.radioId !== 'string' ||
@@ -41,6 +44,7 @@ function validateEventBody(body: EventBody, index: number, response: GenericApiR
 	) {
 		response.success = false;
 		response.errors.push(`${index}-radioId`);
+		thisItemSuccess = false;
 	}
 	if (
 		typeof body.talkgroup !== 'string' ||
@@ -48,6 +52,7 @@ function validateEventBody(body: EventBody, index: number, response: GenericApiR
 	) {
 		response.success = false;
 		response.errors.push(`${index}-talkgroup`);
+		thisItemSuccess = false;
 	}
 	if (
 		typeof body.talkgroupList !== 'string' ||
@@ -55,7 +60,10 @@ function validateEventBody(body: EventBody, index: number, response: GenericApiR
 	) {
 		response.success = false;
 		response.errors.push(`${index}-talkgroupList`);
+		thisItemSuccess = false;
 	}
+
+	return thisItemSuccess;
 }
 
 async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -100,18 +108,12 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 		errors: []
 	};
 
-	body
-		.filter(e => e.radioId !== '-1')
-		.forEach((event, i) => validateEventBody(event, i, response));
-
-	if (
-		response.success &&
-		body.filter(event => event.radioId !== '-1').length > 0
-	) {
+	if (body.filter(event => event.radioId !== '-1').length > 0) {
 		await firehose.putRecordBatch({
 			DeliveryStreamName: FIREHOSE_NAME,
 			Records: body
 				.filter(event => event.radioId !== '-1')
+				.filter((event, i) => validateEventBody(event, i, response))
 				.map(event => ({
 					Data: JSON.stringify(event)
 				}))
