@@ -122,26 +122,12 @@ interface ApiResponse {
 	message?: string;
 }
 
-function validateBodyIsJson(body: string | null): true | APIGatewayProxyResult {
-	const errorBody: ApiResponse = {
-		success: false,
-		message: 'Invalid API format',
-		errors: []
-	};
-	const errorResponse: APIGatewayProxyResult = {
-		statusCode: 400,
-		body: JSON.stringify(errorBody)
-	};
-
+function validateBodyIsJson(body: string | null): true {
 	if (body === null) {
-		return errorResponse;
+		throw new Error(`Invalid JSON body - null`);
 	}
 
-	try {
-		JSON.parse(body);
-	} catch (e) {
-		return errorResponse;
-	}
+	JSON.parse(body);
 
 	return true;
 }
@@ -566,8 +552,9 @@ async function handleAllActivate(event: APIGatewayProxyEvent): Promise<APIGatewa
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const action = event.queryStringParameters?.action || 'list';
 	try {
-		const action = event.queryStringParameters?.action || 'list';
+		console.log(`API - CALL - ${action}`);
 		switch (action) {
 			case 'list':
 				return getList(event);
@@ -587,6 +574,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return handleAllActivate(event);
 		}
 
+		console.log(`API - 404`);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -600,6 +588,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			error: true,
 			message: JSON.stringify(e, null, 2)
 		};
+		console.log(`API - ERROR - ${action}`);
+		console.error(e);
 		return {
 			statusCode: 400,
 			headers: {},

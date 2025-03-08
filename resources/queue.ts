@@ -218,12 +218,10 @@ async function handleTwilio(body: TwilioBody) {
 		}
 	}).promise();
 	if (!sender.Item) {
-		console.error('INVALID REQUEST - SENDER INVALID');
-		return;
+		throw new Error(`Invalid sender`);
 	}
 	if (!sender.Item.isActive.BOOL) {
-		console.error('INVALID REQUEST - SENDER INACTIVE');
-		return;
+		throw new Error(`Invactive sender`);
 	}
 
 	// Get the number that was messaged
@@ -296,15 +294,26 @@ async function handleLogin(body: ActivateOrLoginBody) {
 
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
-	switch (body.action) {
-		case 'activate':
-			return handleActivation(body);
-		case 'twilio':
-			return handleTwilio(body);
-		case 'page':
-			return handlePage(body);
-		case 'login':
-			return handleLogin(body);
+	try {
+		console.log(`QUEUE - CALL - ${body.action || 'invalid'}`);
+		let response;
+		switch (body.action) {
+			case 'activate':
+				response = await handleActivation(body);
+			case 'twilio':
+				response = await handleTwilio(body);
+			case 'page':
+				response = await handlePage(body);
+			case 'login':
+				response = await handleLogin(body);
+			default:
+				console.log(`QUEUE - 404`);
+		}
+		return response;
+	} catch (e) {
+		console.log(`QUEUE - ERROR - ${body.action || 'invalid'}`);
+		console.error(e);
+		throw e;
 	}
 }
 

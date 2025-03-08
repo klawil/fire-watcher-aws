@@ -9,65 +9,72 @@ const trafficTable = process.env.TABLE_TRAFFIC as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
-	const Bucket = record.s3.bucket.name;
-	const Key = record.s3.object.key;
+	try {
+		const Bucket = record.s3.bucket.name;
+		const Key = record.s3.object.key;
 
-	if (record.eventName.indexOf('ObjectCreated') === 0) {
-		const headInfo = await s3.headObject({
-			Bucket,
-			Key
-		}).promise();
+		if (record.eventName.indexOf('ObjectCreated') === 0) {
+			console.log(`S3 - CALL - CREATE`);
+			const headInfo = await s3.headObject({
+				Bucket,
+				Key
+			}).promise();
 
-		const body: AWS.DynamoDB.PutItemInput = {
-			TableName: trafficTable,
-			Item: {
+			const body: AWS.DynamoDB.PutItemInput = {
+				TableName: trafficTable,
+				Item: {
+					Key: {
+						S: Key
+					},
+					Datetime: {
+						N: headInfo.Metadata?.datetime
+					},
+					Len: {
+						N: headInfo.Metadata?.len
+					},
+					Tone: {
+						BOOL: headInfo.Metadata?.tone === 'y'
+					},
+					ToneIndex: {
+						S: headInfo.Metadata?.tone || 'n'
+					}
+				}
+			};
+			console.log(`Create: ${JSON.stringify(body)}`)
+
+			await dynamodb.putItem(body).promise();
+		} else {
+			console.log(`S3 - CALL - DELETE`);
+			const dynamoQuery = await dynamodb.query({
+				TableName: trafficTable,
+				ExpressionAttributeNames: {
+					'#key': 'Key'
+				},
+				ExpressionAttributeValues: {
+					':key': {
+						S: Key
+					}
+				},
+				KeyConditionExpression: '#key = :key'
+			}).promise();
+
+			const body: AWS.DynamoDB.DeleteItemInput = {
 				Key: {
-					S: Key
+					Key: {
+						S: Key
+					},
+					Datetime: {
+						N: dynamoQuery.Items && dynamoQuery.Items[0].Datetime.N
+					}
 				},
-				Datetime: {
-					N: headInfo.Metadata?.datetime
-				},
-				Len: {
-					N: headInfo.Metadata?.len
-				},
-				Tone: {
-					BOOL: headInfo.Metadata?.tone === 'y'
-				},
-				ToneIndex: {
-					S: headInfo.Metadata?.tone || 'n'
-				}
-			}
-		};
-		console.log(`Create: ${JSON.stringify(body)}`)
-
-		await dynamodb.putItem(body).promise();
-	} else {
-		const dynamoQuery = await dynamodb.query({
-			TableName: trafficTable,
-			ExpressionAttributeNames: {
-				'#key': 'Key'
-			},
-			ExpressionAttributeValues: {
-				':key': {
-					S: Key
-				}
-			},
-			KeyConditionExpression: '#key = :key'
-		}).promise();
-
-		const body: AWS.DynamoDB.DeleteItemInput = {
-			Key: {
-				Key: {
-					S: Key
-				},
-				Datetime: {
-					N: dynamoQuery.Items && dynamoQuery.Items[0].Datetime.N
-				}
-			},
-			TableName: trafficTable
-		};
-		console.log(`Delete: ${JSON.stringify(body)}`)
-		await dynamodb.deleteItem(body).promise();
+				TableName: trafficTable
+			};
+			console.log(`Delete: ${JSON.stringify(body)}`)
+			await dynamodb.deleteItem(body).promise();
+		}
+	} catch (e) {
+		console.log(`S3 - ERROR`);
+		console.error(e);
 	}
 }
 
