@@ -316,7 +316,8 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_DTR: dtrTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
         TABLE_DEVICE: deviceTable.tableName,
-        TABLE_TEXTS: textsTable.tableName
+        TABLE_TEXTS: textsTable.tableName,
+        TABLE_USER: phoneNumberTable.tableName
       }
     });
     vhfTable.grantReadData(frontendApiHandler);
@@ -324,6 +325,7 @@ export class FireWatcherAwsStack extends Stack {
     talkgroupTable.grantReadData(frontendApiHandler);
     deviceTable.grantReadData(frontendApiHandler);
     textsTable.grantReadData(frontendApiHandler);
+    phoneNumberTable.grantReadData(frontendApiHandler);
     const frontendApiIntegration = new apigateway.LambdaIntegration(frontendApiHandler, {
       requestTemplates: {
         'application/json': '{"statusCode":"200"}'

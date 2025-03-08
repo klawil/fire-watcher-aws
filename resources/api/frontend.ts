@@ -1,6 +1,7 @@
 import * as AWS from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseDynamoDbAttributeMap } from '../utils';
+import { getLoggedInUser } from '../utils/auth';
 
 const dynamodb = new AWS.DynamoDB();
 
@@ -471,6 +472,46 @@ async function getDtrTalkgroups(event: APIGatewayProxyEvent): Promise<APIGateway
 	};
 }
 
+async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+
+	const user = await getLoggedInUser(event);
+	if (user === null) {
+		return unauthorizedResponse;
+	}
+
+	const firstTextDate = Date.now() - (1000 * 60 * 60 * 24 * 60); // Only get texts from the last 60 days
+	const result = await dynamodb.scan({
+		TableName: textsTable,
+		FilterExpression: '#dt >= :dt',
+		ExpressionAttributeValues: {
+			':dt': {
+				N: firstTextDate.toString()
+			}
+		},
+		ExpressionAttributeNames: {
+			'#dt': 'datetime'
+		}
+	}).promise();
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body: JSON.stringify({
+			success: true,
+			count: result.Count,
+			scanned: result.ScannedCount,
+			data: result.Items?.map(parseDynamoDbAttributeMap)
+		})
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action;
 	try {
@@ -483,6 +524,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			case 'talkgroups':
 				return await getDtrTalkgroups(event);
 			case 'listTexts':
+				return await getTexts(event);
 		}
 
 		console.log(`API - FRONTEND - 404`);
