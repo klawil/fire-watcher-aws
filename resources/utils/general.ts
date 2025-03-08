@@ -153,7 +153,11 @@ export async function saveMessageData(
 				Value: recipients
 			}
 		]
-	}).promise());
+	}).promise()
+		.catch(e => {
+			console.error(`Error with metrics`);
+			console.error(e);
+		}));
 
 	await Promise.all(promises);
 }
@@ -262,7 +266,7 @@ export async function incrementMetric(
 	sendLessSpecific: boolean = true,
 	sendMoreSpecific: boolean = true
 ): Promise<any> {
-	console.log(`METRIC - ${metricData.source} - name - ${JSON.stringify(metricData)}`);
+	console.log(`METRIC - ${metricData.source} - ${name} - ${JSON.stringify(metricData)}`);
 	const putConfig: aws.CloudWatch.PutMetricDataInput = {
 		Namespace: `CVFD API`,
 		MetricData: []
