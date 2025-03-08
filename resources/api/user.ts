@@ -218,6 +218,11 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 }
 
 async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	let redirectLocation = '/';
+	if (event.queryStringParameters?.redirectTo) {
+		redirectLocation = event.queryStringParameters.redirectTo;
+	}
+
 	const response: APIGatewayProxyResult = {
 		statusCode: 301,
 		body: 'Logged Out',
@@ -228,7 +233,7 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			]
 		},
 		headers: {
-			Location: '/'
+			Location: redirectLocation
 		}
 	};
 
