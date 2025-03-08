@@ -193,6 +193,24 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 }
 
+async function handleLogout(): Promise<APIGatewayProxyResult> {
+	// @TODO delete the old token if it is valid
+
+	return {
+		statusCode: 301,
+		body: 'Logged Out',
+		multiValueHeaders: {
+			'Set-Cookie': [
+				`${authUserCookie}=; Path=/; Max-Age=0`,
+				`${authTokenCookie}=; Path=/; Max-Age=0`
+			]
+		},
+		headers: {
+			Location: '/'
+		}
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 	try {
@@ -207,6 +225,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleAuth(event);
 			case 'getUser':
 				return await getUser(event);
+			case 'logout':
+				return await handleLogout();
 		}
 
 		await incrementMetric('Error', {

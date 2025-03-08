@@ -56,6 +56,7 @@ fetch('/api/user?action=getUser')
 			const username = document.getElementById('username');
 			username.innerHTML = window.user.user;
 			username.classList.remove('d-none');
+			document.getElementById('logoutLink').classList.remove('d-none');
 		}
 		if (window.user.isAdmin) {
 			[ ...document.getElementsByClassName('requireAdmin') ]

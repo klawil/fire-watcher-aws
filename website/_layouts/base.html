@@ -53,6 +53,9 @@
 							<span id="username" class="nav-link d-none">Test</span>
 							<a id="loginLink" class="nav-link{% if page.url == '/login.html' %} active{% endif %}" href="/login.html">Login</a>
 						</li>
+						<li class="nav-item d-none" id="logoutLink">
+							<a class="nav-link" href="/api/user?action=logout">Logout</a>
+						</li>
 						{% if page.hasFilter %}
 						<li class="nav-item hide-small" id="filter-button-d">
 							<a class="nav-link interactive-button" data-bs-toggle="modal" data-bs-target="#filter-modal">
