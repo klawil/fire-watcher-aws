@@ -326,7 +326,7 @@ interface TwilioMessageStatus {
 }
 
 async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const eventDatetime = new Date().getTime();
+	const eventDatetime = Date.now();
 	const code = event.queryStringParameters?.code || '';
 	const messageId = event.queryStringParameters?.msg || null;
 	const response = {
@@ -481,7 +481,6 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 	const cookies = getCookies(event);
 
 	// Validate the phone number
-	let user: AWS.DynamoDB.GetItemOutput;
 	if (typeof cookies['cvfd-user'] === 'undefined') {
 		response.success = false;
 		response.errors.push('phone');
@@ -489,23 +488,22 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 			statusCode: 400,
 			body: JSON.stringify(response)
 		};
-	} else {
-		user = await dynamodb.getItem({
-			TableName: phoneTable,
-			Key: {
-				phone: {
-					N: cookies['cvfd-user']
-				}
+	}
+	let user: AWS.DynamoDB.GetItemOutput = await dynamodb.getItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: cookies['cvfd-user']
 			}
-		}).promise();
-		if (!user.Item || !user.Item.isActive.BOOL) {
-			response.success = false;
-			response.errors.push('phone');
-			return {
-				statusCode: 400,
-				body: JSON.stringify(response)
-			};
 		}
+	}).promise();
+	if (!user.Item || !user.Item.isActive.BOOL) {
+		response.success = false;
+		response.errors.push('phone');
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
 	}
 
 	// Validate the code
@@ -522,9 +520,24 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 		};
 	}
 
+	// Find previous tokens that should be deleted
+	const now = Date.now();
+	const validUserTokens = user.Item.loginTokens?.L
+		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
+
 	// Create a token and attach it
 	const token = randomString(32);
 	const tokenExpiry = Date.now() + (loginDuration * 1000);
+	validUserTokens.push({
+		M: {
+			token: {
+				S: token
+			},
+			tokenExpiry: {
+				N: tokenExpiry.toString()
+			}
+		}
+	});
 	await dynamodb.updateItem({
 		TableName: phoneTable,
 		Key: {
@@ -539,24 +552,10 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 		},
 		ExpressionAttributeValues: {
 			':t': {
-				L: [
-					{
-						M: {
-							token: {
-								S: token
-							},
-							tokenExpiry: {
-								N: tokenExpiry.toString()
-							}
-						}
-					}
-				]
-			},
-			':el': {
-				L: []
+				L: validUserTokens
 			}
 		},
-		UpdateExpression: 'SET #t = list_append(if_not_exists(#t, :el), :t) REMOVE #c, #ce'
+		UpdateExpression: `REMOVE #c, #ce SET #t = :t`
 	}).promise();
 
 	return {

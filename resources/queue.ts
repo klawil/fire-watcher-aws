@@ -309,7 +309,7 @@ async function handleTwilio(body: TwilioBody) {
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
 
-	const messageId = new Date().getTime().toString();
+	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
 		messageId,
 		recipients.length,
@@ -340,7 +340,7 @@ async function handlePage(body: PageBody) {
 	const messageBody = createPageMessage(body.key);
 	const recipients = await getRecipients();
 
-	const messageId = new Date().getTime().toString();
+	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
 		messageId,
 		recipients.length,
