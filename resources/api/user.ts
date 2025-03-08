@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, randomString, validateBodyIsJson } from '../utils/general';
+import { incrementMetric, parseDynamoDbAttributeMap, randomString, validateBodyIsJson } from '../utils/general';
 import { authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 
 const metricSource = 'User';
@@ -211,6 +211,72 @@ async function handleLogout(): Promise<APIGatewayProxyResult> {
 	};
 }
 
+async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+	const unathorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+	if (
+		user === null ||
+		!user.isAdmin?.BOOL
+	) {
+		return unathorizedResponse;
+	}
+
+	// Get the users to return
+	let usersItems: aws.DynamoDB.ScanOutput | aws.DynamoDB.QueryOutput;
+	if (user.isDistrictAdmin?.BOOL) {
+		usersItems = await dynamodb.query({
+			TableName: userTable,
+			IndexName: 'StationIndex',
+			ExpressionAttributeNames: {
+				'#n': 'name',
+				'#d': 'department',
+				'#p': 'phone',
+				'#cs': 'callSign',
+				'#active': 'isActive',
+				'#admin': 'isAdmin',
+				'#dadmin': 'isDistrictAdmin'
+			},
+			ExpressionAttributeValues: {
+				':d': { S: user.department?.S }
+			},
+			KeyConditionExpression: '#d = :d',
+			ProjectionExpression: '#n,#d,#p,#cs,#active,#admin,#dadmin'
+		}).promise();
+	} else {
+		usersItems = await dynamodb.scan({
+			TableName: userTable,
+			ExpressionAttributeNames: {
+				'#n': 'name',
+				'#d': 'department',
+				'#p': 'phone',
+				'#cs': 'callSign',
+				'#active': 'isActive',
+				'#admin': 'isAdmin',
+				'#dadmin': 'isDistrictAdmin'
+			},
+			ProjectionExpression: '#n,#d,#p,#cs,#active,#admin,#dadmin'
+		}).promise();
+	}
+
+	// Parse the users into a readable format
+	const users = (usersItems.Items || [])
+		.map(parseDynamoDbAttributeMap);
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+			users
+		})
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 	try {
@@ -227,6 +293,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getUser(event);
 			case 'logout':
 				return await handleLogout();
+			case 'list':
+				return await handleList(event);
 		}
 
 		await incrementMetric('Error', {

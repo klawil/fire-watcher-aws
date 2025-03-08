@@ -10,87 +10,6 @@ const statusTable = process.env.TABLE_STATUS as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
 
-const unauthorizedResponse = {
-	statusCode: 403,
-	body: JSON.stringify({
-		success: false,
-		message: 'You are not permitted to access this area'
-	})
-};
-
-interface Cookies {
-	[key: string]: string;
-}
-
-function getCookies(event: APIGatewayProxyEvent): Cookies {
-	return (event.headers.Cookie || '')
-		.split('; ')
-		.reduce((agg: Cookies, val) => {
-			let valSplit = val.split('=');
-			if (valSplit[0] !== '') {
-				if (valSplit.length < 2) {
-					valSplit.push('');
-				}
-
-				agg[valSplit[0]] = valSplit[1];
-			}
-
-			return agg;
-		}, {});
-}
-
-async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.DynamoDB.AttributeMap> {
-	console.log('AUTH - CALL');
-
-	try {
-		const cookies = getCookies(event);
-
-		// Check that there are cookies
-		if (
-			typeof cookies['cvfd-user'] === 'undefined' ||
-			typeof cookies['cvfd-token'] === 'undefined'
-		) {
-			console.log('AUTH - FAILED - NO COOKIES');
-			return null;
-		}
-
-		// Check that the cookies are valid
-		const user = await dynamodb.getItem({
-			TableName: phoneTable,
-			Key: {
-				phone: {
-					N: cookies['cvfd-user']
-				}
-			}
-		}).promise();
-		if (!user.Item) {
-			console.log('AUTH - FAILED - INVALID USER');
-			return null;
-		}
-
-		const matchingTokens = user.Item.loginTokens?.L
-			?.filter(t => t.M?.token?.S === cookies['cvfd-token'])
-			.map(t => parseInt(t.M?.tokenExpiry?.N || '0', 10));
-
-		if (!matchingTokens || matchingTokens.length === 0) {
-			console.log('AUTH - FAILED - INVALID TOKEN');
-			return null;
-		}
-
-		if (Date.now() > matchingTokens[0]) {
-			console.log('AUTH - FAILED - EXPIRED TOKEN');
-			return null;
-		}
-
-		return user.Item;
-	} catch (e) {
-		console.log('AUTH - FAILED - ERROR');
-		console.log('API - ERROR - getLoggedInUser');
-		console.error(e);
-		return null;
-	}
-}
-
 interface ApiResponse {
 	success: boolean;
 	errors: string[];
@@ -145,56 +64,6 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	return {
 		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response)
-	};
-}
-
-const EXPOSED_KEYS: {
-	[key: string]: string | boolean
-} = {
-	phone: '',
-	isActive: false,
-	isAdmin: false,
-	callSign: '',
-	name: ''
-};
-
-async function listUsers(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const user = await getLoggedInUser(event);
-	if (user === null) {
-		return unauthorizedResponse;
-	}
-
-	// Get the users to return
-	let usersItems: AWS.DynamoDB.ItemList = [ user ];
-	if (user.isAdmin?.BOOL) {
-		usersItems = await dynamodb.scan({
-			TableName: phoneTable
-		}).promise()
-			.then((r) => r.Items || []);
-	}
-
-	// Parse the users into a readable format
-	const users = usersItems
-		.map((item) => {
-			let itemObj = parseDynamoDbAttributeMap(item);
-
-			Object.keys(itemObj)
-				.filter(key => typeof EXPOSED_KEYS[key] === 'undefined')
-				.forEach(key => delete itemObj[key]);
-
-			Object.keys(EXPOSED_KEYS)
-				.filter(key => typeof itemObj[key] === 'undefined')
-				.forEach(key => itemObj[key] = EXPOSED_KEYS[key]);
-
-			return itemObj;
-		});
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			users
-		})
 	};
 }
 interface ActivateApiResponse {
@@ -370,8 +239,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		switch (action) {
 			case 'page':
 				return await handlePage(event);
-			case 'listUsers':
-				return await listUsers(event);
 			case 'allActivate':
 				return await handleAllActivate(event);
 			case 'location':
