@@ -163,6 +163,12 @@ function addRow(user) {
 			name: 'pageOnly'
 		},
 		{
+			val: user.getTranscript || false,
+			tdClass: [ 'districtAdmin' ],
+			type: 'checkbox',
+			name: 'getTranscript'
+		},
+		{
 			val: user.talkgroups || [],
 			type: 'talkgroups',
 			name: 'talkgroups'
@@ -390,6 +396,12 @@ function init() {
 						type: 'checkbox',
 						class: [ 'form-check-input' ],
 						name: 'pageOnly',
+						tdClass: [ 'districtAdmin' ]
+					},
+					{
+						type: 'checkbox',
+						class: [ 'form-check-input' ],
+						name: 'getTranscript',
 						tdClass: [ 'districtAdmin' ]
 					},
 					{

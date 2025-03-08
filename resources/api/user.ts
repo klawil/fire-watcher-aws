@@ -49,12 +49,13 @@ interface UserObject {
 	phone: string;
 	fName: string;
 	lName: string;
-	department: string;
 	callSign: string;
 	isActive: boolean;
 	isAdmin: boolean;
-	pageOnly: boolean;
 	talkgroups: string[];
+	department?: string;
+	pageOnly?: boolean;
+	getTranscript?: boolean;
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -314,31 +315,31 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#cs': 'callSign',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
-				'#dadmin': 'isDistrictAdmin',
-				'#tg': 'talkgroups'
+				'#tg': 'talkgroups',
+				'#po': 'pageOnly',
+				'#gt': 'getTranscript'
 			},
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin,#tg'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt'
 		}).promise();
 	} else {
 		usersItems = await dynamodb.query({
 			TableName: userTable,
 			IndexName: 'StationIndex',
 			ExpressionAttributeNames: {
+				'#d': 'department',
 				'#fn': 'fName',
 				'#ln': 'lName',
-				'#d': 'department',
 				'#p': 'phone',
 				'#cs': 'callSign',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
-				'#dadmin': 'isDistrictAdmin',
 				'#tg': 'talkgroups'
 			},
 			ExpressionAttributeValues: {
 				':d': { S: user.department?.S }
 			},
 			KeyConditionExpression: '#d = :d',
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin,#tg'
+			ProjectionExpression: '#fn,#ln,#p,#cs,#active,#admin,#tg'
 		}).promise();
 	}
 
@@ -417,15 +418,6 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	if (typeof body.isAdmin !== 'boolean') {
 		response.errors.push('isAdmin');
 	}
-	if (typeof body.pageOnly !== 'boolean') {
-		response.errors.push('pageOnly');
-	}
-	if (
-		typeof body.department !== 'string' ||
-		validDepartments.indexOf(body.department) === -1
-	) {
-		response.errors.push('department');
-	}
 	if (
 		typeof body.talkgroups === 'undefined' ||
 		!Array.isArray(body.talkgroups) ||
@@ -433,9 +425,24 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	) {
 		response.errors.push('talkgroups');
 	}
-
-	if (!user.isDistrictAdmin?.BOOL) {
-		body.department = user.department?.S as string;
+	if (
+		user.isDistrictAdmin?.BOOL &&
+		typeof body.pageOnly !== 'boolean'
+	) {
+		response.errors.push('pageOnly');
+	}
+	if (
+		user.isDistrictAdmin?.BOOL &&
+		typeof body.getTranscript !== 'boolean'
+	) {
+		response.errors.push('getTranscript');
+	}
+	if (
+		user.isDistrictAdmin?.BOOL &&
+		typeof body.department !== 'undefined' &&
+		validDepartments.indexOf(body.department) === -1
+	) {
+		response.errors.push('department');
 	}
 
 	// Check to see if the phone number already exists
@@ -486,8 +493,6 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			'#cs': 'callSign',
 			'#act': 'isActive',
 			'#adm': 'isAdmin',
-			'#dep': 'department',
-			'#po': 'pageOnly',
 			'#tg': 'talkgroups'
 		},
 		ExpressionAttributeValues: {
@@ -496,13 +501,25 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			':cs': { N: body.callSign },
 			':act': { BOOL: body.isActive },
 			':adm': { BOOL: body.isAdmin },
-			':dep': { S: body.department },
-			':po': { BOOL: body.pageOnly },
 			':tg': { NS: body.talkgroups }
 		},
-		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep, #po = :po, #tg = :tg',
+		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #tg = :tg',
 		ReturnValues: 'UPDATED_NEW'
 	};
+	if (user.isDistrictAdmin?.BOOL) {
+		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
+		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+
+		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
+		updateConfig.ExpressionAttributeNames['#po'] = 'pageOnly';
+		updateConfig.ExpressionAttributeNames['#gt'] = 'getTranscript';
+
+		updateConfig.ExpressionAttributeValues[':dep'] = { S: body.department };
+		updateConfig.ExpressionAttributeValues[':po'] = { BOOL: body.pageOnly };
+		updateConfig.ExpressionAttributeValues[':gt'] = { BOOL: body.getTranscript };
+
+		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt`;
+	}
 	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {
 		response.success = false;
