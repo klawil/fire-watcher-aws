@@ -217,6 +217,14 @@ function setParams(toSet) {
 
 function scrollRowIntoView(f) {
 	const elemToScrollTo = document.getElementById(f);
+	const elemRect = elemToScrollTo.getBoundingClientRect();
+	const winTop = window.scrollY + 80;
+	const winBottom = window.scrollY + window.innerHeight - 80;
+	if (
+		elemRect.top >= winTop &&
+		elemRect.bottom <= winBottom
+	) return;
+
 	const newScroll = window.scrollY + elemToScrollTo.getBoundingClientRect().top - 80;
 	window.scrollTo(0, newScroll);
 }
@@ -229,20 +237,6 @@ function markRowAsPlaying(file) {
 	if (playingRow !== null) {
 		playingRow.classList.add('table-success');
 	}
-}
-
-function isInView(row) {
-	const container = document.getElementById('container');
-	const rec1 = row.getBoundingClientRect();
-	const rec2 = container.getBoundingClientRect();
-
-	if (
-		rec1.y + rec1.height >= rec2.y + rec2.height ||
-		rec1.y < rec2.y
-	) {
-		return false;
-	}
-	return true;
 }
 
 function padLeft(value) {
