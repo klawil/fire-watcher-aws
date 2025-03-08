@@ -1,5 +1,10 @@
 let files = [];
 const dataUpdateFrequency = 10000;
+const sourceMap = {
+	BG_FIRE_VHF: 'Baca Fire VHF',
+	SAG_FIRE_VHF: 'Saguache Fire VHF',
+	FIRE: 'Saguache Fire VHF'
+};
 
 function dateToStr(d) {
 	let dateString = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -85,6 +90,7 @@ function display() {
 	const rows = files
 		.map((file) => [
 			file.Local,
+			sourceMap[file.Source] || file.Source,
 			secondsToString(file.Len),
 			file.Tone ? 'TONE' : '',
 			`<button class="btn btn-success" onclick="play('${file.File}');">Play</button>`
