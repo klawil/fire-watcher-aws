@@ -1,5 +1,11 @@
 import { ApiResponseBase } from "./common";
 
+export interface ApiUserLoginBody {
+	phone: string;
+}
+export interface ApiUserAuthBody {
+	code: string;
+}
 export interface ApiUserUpdateBody {
 	fName: string;
 	lName: string;
@@ -34,6 +40,13 @@ export interface ApiUserFidoRegisterBody {
 	};
 }
 
+export interface ApiUserLoginResult extends ApiResponseBase {
+	errors: string[];
+	data?: string[];
+}
+export interface ApiUserAuthResponse extends ApiResponseBase {
+	errors: string[];
+}
 export interface ApiUserGetUserResponse extends ApiResponseBase {
 	isUser: boolean;
 	isActive: boolean;

@@ -1,5 +1,5 @@
-import { ApiUserFidoAuthBody, ApiUserFidoAuthResponse, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
-import { afterAuthUpdate, user } from './utils/auth';
+import { ApiUserFidoChallengeResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
+import { afterAuthUpdate, base64ToBuffer, bufferToBase64, useFidoKey, user } from './utils/auth';
 import { formatPhone, pageNames, talkgroupOrder } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
@@ -13,9 +13,6 @@ const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
 	'fName',
 	'lName',
 ];
-
-const base64ToBuffer = (base64: string) => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-const bufferToBase64 = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
 function formatValue(value: string | boolean | number): string {
 	if (
@@ -117,53 +114,7 @@ async function testFidoKey(btn: HTMLButtonElement, key: string) {
 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 	btn.classList.add('btn-secondary');
 
-	let result: ApiUserFidoAuthResponse = {
-		success: false,
-		message: 'Failed to authenticate',
-	};
-	try {
-		const challengeData: ApiUserFidoGetAuthResponse = await fetch(`/api/user?action=fido-get-auth`).then(r => r.json());
-		
-		const challengeArr = base64ToBuffer(challengeData.challenge);
-		const challenge: CredentialRequestOptions = {
-			publicKey: {
-				challenge: challengeArr,
-				allowCredentials: [{
-					id: base64ToBuffer(user.fidoKeys[key]),
-					type: 'public-key',
-					transports: [ 'internal' ],
-				}]
-			}
-		};
-		const credential = (await navigator.credentials.get(challenge)) as PublicKeyCredential & {
-			response: AuthenticatorAssertionResponse;
-		};
-
-		const userAuthBody: ApiUserFidoAuthBody = {
-			rawId: bufferToBase64(credential.rawId),
-			challenge: bufferToBase64(challengeArr),
-			test: true,
-			response: {
-				authenticatorData: bufferToBase64(credential.response.authenticatorData),
-				signature: bufferToBase64(credential.response.signature),
-				userHandle: bufferToBase64(credential.response.userHandle),
-				clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
-				id: credential.id,
-				type: credential.type,
-			},
-		};
-
-		result = await fetch(`/api/user?action=fido-auth`, {
-			method: 'POST',
-			body: JSON.stringify(userAuthBody),
-		}).then(r => r.json());
-	} catch (e) {
-		result.message = e.message;
-		console.error(e);
-	}
-
-	const alertMessage = `${key} Test: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
-	showAlert(result.success ? 'success' : 'danger', alertMessage);
+	await useFidoKey([ user.fidoKeys[key] ], true);
 
 	btn.disabled = false;
 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');

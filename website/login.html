@@ -1,21 +1,21 @@
 ---
 title: Login
 layout: base
+noLoading: true
 ---
-
-<div id="alert-container"></div>
 
 <div class="form">
 	<div class="input-group mb-3" id="phone-container">
 		<span class="input-group-text" for="phone">Phone Number</span>
 		<input type="text" class="form-control" id="phone" name="phone" placeholder="Enter phone">
 	</div>
-	<div class="input-group mb-3 d-none" id="code-container">
+	<div class="input-group mb-3" id="code-container" hidden>
 		<span class="input-group-text" for="code">Authentication Code</span>
 		<input type="text" class="form-control" id="code" name="code" placeholder="Auth code" autocomplete="off">
 	</div>
 	<div class="input-group mb-3">
-		<button type="submit" class="btn btn-primary" id="submit">Submit</button>
+		<button type="submit" class="btn btn-primary" id="get-code">Get Code</button>
+		<button type="submit" class="btn btn-primary" id="submit-code" hidden>Submit</button>
 		<button type="submit" class="btn btn-primary ms-3" id="use-token" hidden>Use Token</button>
 	</div>
 </div>

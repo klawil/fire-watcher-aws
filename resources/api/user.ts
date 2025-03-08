@@ -4,7 +4,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, parseDynamoDbAttributeValue, randomString, validateBodyIsJson } from '../utils/general';
 import { allUserCookies, authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
-import { ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse } from '../../common/userApi';
+import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserLoginResult } from '../../common/userApi';
 import { unauthorizedApiResponse } from '../../common/common';
 
 const metricSource = 'User';
@@ -118,7 +118,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 
 	// Parse the body
 	const body = JSON.parse(event.body as string);
-	const response: ApiResponse = {
+	const response: ApiUserLoginResult = {
 		success: true,
 		errors: []
 	};
@@ -175,7 +175,7 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Parse the body
 	const body = JSON.parse(event.body as string);
-	const response: ApiResponse = {
+	const response: ApiUserAuthResponse = {
 		success: true,
 		errors: []
 	};
