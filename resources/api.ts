@@ -234,7 +234,7 @@ interface TextCommand {
 const textCommands: {
 	[key: string]: TextCommand;
 } = {
-	startTest: {
+	'!startTest': {
 		ExpressionAttributeNames: {
 			'#isTest': 'isTest'
 		},
@@ -245,7 +245,7 @@ const textCommands: {
 		},
 		UpdateExpression: 'SET #isTest = :isTest'
 	},
-	stopTest: {
+	'!stopTest': {
 		ExpressionAttributeNames: {
 			'#isTest': 'isTest'
 		},
