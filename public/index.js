@@ -1,4 +1,5 @@
 let files = [];
+const dataUpdateFrequency = 10000;
 
 function dateToStr(d) {
 	let dateString = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -27,7 +28,7 @@ function updateData() {
 			display();
 		})
 		.catch(console.error)
-		.then(() => setTimeout(updateData, 1000));
+		.then(() => setTimeout(updateData, dataUpdateFrequency));
 }
 
 updateData();
