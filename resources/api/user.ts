@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import * as crypto from 'crypto';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, parseDynamoDbAttributeValue, randomString, validateBodyIsJson } from '../utils/general';
-import { authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
+import { allUserCookies, authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
 
 const metricSource = 'User';
@@ -119,6 +119,9 @@ async function loginUser(user: AWS.DynamoDB.AttributeMap) {
 		'Set-Cookie': [
 			`${authUserCookie}=${user.phone.N}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
 			`${authTokenCookie}=${token}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+			`cvfd-user-name=${user.fName.S}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+			`cvfd-user-admin=${user.isAdmin.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+			`cvfd-user-super=${user.isDistrictAdmin.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
 		],
 	};
 }
@@ -247,6 +250,11 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		isDistrictAdmin: false
 	};
 
+	const httpResponse: APIGatewayProxyResult = {
+		statusCode: 200,
+		body: '',
+	};
+
 	if (user !== null) {
 		response.isUser = true;
 		response.isActive = !!user.isActive?.BOOL;
@@ -264,6 +272,25 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 				agg[key] = fidoKeys[key].rawId;
 				return agg;
 			}, {});
+		}
+
+		// Get the request cookies
+		const cookies = getCookies(event);
+		const cookieMap: { [key: string]: string } = {
+			'cvfd-user-name': response.fName as string,
+			'cvfd-user-admin': response.isAdmin ? '1' : '0',
+			'cvfd-user-super': response.isDistrictAdmin ? '1' : '0',
+		};
+		const cookieValues: string[] = [];
+		Object.keys(cookieMap).forEach(cookie => {
+			if (typeof cookies[cookie] === 'undefined') {
+				cookieValues.push(`${cookie}=${cookieMap[cookie]}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`);
+			}
+		});
+		if (cookieValues.length > 0) {
+			httpResponse.multiValueHeaders = {
+				'Set-Cookie': cookieValues,
+			};
 		}
 
 		// Save now as the last login time
@@ -286,10 +313,8 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		}).promise();
 	}
 
-	return {
-		statusCode: 200,
-		body: JSON.stringify(response)
-	};
+	httpResponse.body = JSON.stringify(response);
+	return httpResponse;
 }
 
 async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -299,13 +324,10 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	}
 
 	const response: APIGatewayProxyResult = {
-		statusCode: 301,
+		statusCode: 302,
 		body: 'Logged Out',
 		multiValueHeaders: {
-			'Set-Cookie': [
-				`${authUserCookie}=; Path=/; Max-Age=0`,
-				`${authTokenCookie}=; Path=/; Max-Age=0`
-			]
+			'Set-Cookie': allUserCookies.map(v => `${v}=; Path=/; Max-Age=0`),
 		},
 		headers: {
 			Location: redirectLocation

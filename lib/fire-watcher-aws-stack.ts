@@ -23,6 +23,7 @@ import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
 const secretArn = '***REMOVED***';
+const phoneNumberTableArn = '***REMOVED***';
 
 type AlarmTag = 'Dtr' | 'Api';
 interface CvfdAlarm {
@@ -46,7 +47,7 @@ export class FireWatcherAwsStack extends Stack {
       partitionKey: {
         name: 'phone',
         type: dynamodb.AttributeType.NUMBER
-      }
+      },
     });
     const dtrTable = new dynamodb.Table(this, 'cvfd-dtr-added', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -1010,6 +1011,32 @@ export class FireWatcherAwsStack extends Stack {
       bucket.policy.document.addStatements(s3ReadPolicy);
     }
 
+    // Get the Lambda@Edge Function ARN
+    const lambdaEdgeFunction = new cloudfront.experimental.EdgeFunction(this, 'cvfd-edge-auth', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          resources: [
+            phoneNumberTableArn,
+          ],
+          actions: [
+            'dynamodb:GetItem',
+            'dynamodb:BatchGetItem',
+            'dynamodb:Scan',
+            'dynamodb:Query',
+            'dynamodb:ConditionCheckItem',
+          ]
+        }),
+      ],
+      handler: 'auth_middleware.main',
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset(`${__dirname}/../resources`),
+    });
+    lambdaEdgeFunction.grantInvokeCompositePrincipal(new iam.CompositePrincipal(
+      new iam.ServicePrincipal('lambda.amazonaws.com'),
+      new iam.ServicePrincipal('edgelambda.amazonaws.com')
+    ));
+
     // Create the cloudfront distribution
     new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
       viewerCertificate: {
@@ -1029,8 +1056,14 @@ export class FireWatcherAwsStack extends Stack {
           behaviors: [{
             isDefaultBehavior: true,
             defaultTtl: Duration.seconds(0),
-            maxTtl: Duration.seconds(0)
-          }]
+            maxTtl: Duration.seconds(0),
+            lambdaFunctionAssociations: [
+              {
+                eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
+                lambdaFunction: lambdaEdgeFunction
+              },
+            ],
+          }],
         },
         {
           customOriginSource: {

@@ -6,6 +6,14 @@ const dynamodb = new aws.DynamoDB();
 export const authUserCookie = 'cvfd-user';
 export const authTokenCookie = 'cvfd-token';
 
+export const allUserCookies = [
+	authUserCookie,
+	authTokenCookie,
+	'cvfd-user-name',
+	'cvfd-user-admin',
+	'cvfd-user-super',
+];
+
 const userTable = process.env.TABLE_USER as string;
 
 interface Cookies {
