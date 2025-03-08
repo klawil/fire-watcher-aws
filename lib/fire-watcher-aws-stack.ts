@@ -323,25 +323,25 @@ export class FireWatcherAwsStack extends Stack {
           alarmName: 'Saguache Tower'
         }
       },
-      {
-        codeName: 'pool-table-tower',
-        alarm: {
-          ...baseTowerAlarmConfig,
-          evaluationPeriods: 10,
-          datapointsToAlarm: 10,
-          metric: new cloudwatch.Metric({
-            metricName: 'Decode Rate',
-            namespace: 'DTR Metrics',
-            period: Duration.minutes(1),
-            statistic: cloudwatch.Statistic.MINIMUM,
-            dimensionsMap: {
-              Tower: 'Pool Table Mountain'
-            }
-          }),
-          alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
-          alarmName: 'Pool Table Tower'
-        }
-      },
+      // {
+      //   codeName: 'pool-table-tower',
+      //   alarm: {
+      //     ...baseTowerAlarmConfig,
+      //     evaluationPeriods: 10,
+      //     datapointsToAlarm: 10,
+      //     metric: new cloudwatch.Metric({
+      //       metricName: 'Decode Rate',
+      //       namespace: 'DTR Metrics',
+      //       period: Duration.minutes(1),
+      //       statistic: cloudwatch.Statistic.MINIMUM,
+      //       dimensionsMap: {
+      //         Tower: 'Pool Table Mountain'
+      //       }
+      //     }),
+      //     alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
+      //     alarmName: 'Pool Table Tower'
+      //   }
+      // },
       {
         codeName: 'user-api',
         okayAction: false,
@@ -584,6 +584,21 @@ export class FireWatcherAwsStack extends Stack {
           textsTable
         ],
         queue
+      },
+      {
+        name: 'test',
+        env: {
+          TABLE_DEVICE: deviceTable.tableName,
+          TABLE_TALKGROUPS: talkgroupTable.tableName,
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_DTR: dtrTable.tableName
+        },
+        read: [
+          deviceTable,
+          talkgroupTable,
+          phoneNumberTable,
+          dtrTable
+        ]
       }
     ];
 
