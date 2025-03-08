@@ -34,11 +34,11 @@ export async function getRecipients(
 	logger.trace('getRecipients', ...arguments);
 	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
-		FilterExpression: '',
 	};
 	if (pageTg !== null) {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+		scanInput.FilterExpression = scanInput.FilterExpression || '';
 
 		scanInput.FilterExpression = 'contains(#tg, :tg)';
 		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
@@ -47,6 +47,7 @@ export async function getRecipients(
 	if (department !== 'all') {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+		scanInput.FilterExpression = scanInput.FilterExpression || '';
 		
 		scanInput.ExpressionAttributeNames['#dep'] = department;
 		scanInput.ExpressionAttributeNames['#ac'] = 'active';
@@ -60,12 +61,16 @@ export async function getRecipients(
 	if (isTest) {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+		scanInput.FilterExpression = scanInput.FilterExpression || '';
 
 		scanInput.ExpressionAttributeNames['#t'] = 'isTest';
 		scanInput.ExpressionAttributeValues[':t'] = {
 			BOOL: true
 		};
-		scanInput.FilterExpression += ' AND #t = :t';
+		if (scanInput.FilterExpression !== '') {
+			scanInput.FilterExpression += ' AND ';
+		}
+		scanInput.FilterExpression += '#t = :t';
 	}
 
 	let promise = dynamodb.scan(scanInput).promise();
