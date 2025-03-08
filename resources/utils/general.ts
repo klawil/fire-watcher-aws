@@ -168,7 +168,7 @@ export async function incrementMetric(
 		MetricData: []
 	};
 
-	if (sendLessSpecific) {
+	if (sendLessSpecific && name !== 'Event') {
 		putConfig.MetricData.push({
 			MetricName: name,
 			Dimensions: [

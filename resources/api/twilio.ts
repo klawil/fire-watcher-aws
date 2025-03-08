@@ -122,6 +122,8 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	const isAppleResponse = applePrefixes
 		.filter(prefix => eventData.Body.indexOf(prefix) === 0)
 		.length > 0;
+	const isCarResponse = eventData.Body.indexOf(`I'm+Driving`) !== -1 &&
+		eventData.Body.indexOf(`Sent+from+My+Car`) !== -1;
 
 	// Handle text commands
 	if (isTextCommand) {
@@ -146,6 +148,12 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			source: metricSource,
 			type: 'handleText',
 			event: 'apple'
+		});
+	} else if (isCarResponse) {
+		await incrementMetric('Event', {
+			source: metricSource,
+			type: 'handleText',
+			event: 'car'
 		});
 	} else {
 		await sqs.sendMessage({
