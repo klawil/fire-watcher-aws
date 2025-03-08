@@ -1,5 +1,5 @@
 import { ApiUserListResponse, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, UserObject } from "../../common/userApi";
-import { UserDepartment, pagingConfig, pagingTalkgroupOrder, validDepartments } from "../../common/userConstants";
+import { UserDepartment, defaultDepartment, departmentConfig, pagingConfig, pagingTalkgroupOrder, validDepartments } from "../../common/userConstants";
 import { showAlert } from "./utils/alerts";
 import { user } from "./utils/auth";
 import { modifyButton } from "./utils/button";
@@ -391,6 +391,16 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 			}
 			saveButton.disabled = Object.keys(changedValues).length === 0;
 
+			if (prop === 'department') {
+				(departmentConfig[value as UserDepartment]?.defaultTalkgroups || [])
+					.forEach(tg => {
+						const elem = document.getElementById(`talkgroups-${tg}-new`) as (HTMLInputElement | null);
+						if (elem !== null) {
+							elem.checked = true;
+						}
+					});
+			}
+
 			(target as any)[prop] = value;
 			return true;
 		}
@@ -428,29 +438,33 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 
 	// Department and callsign (if new user)
 	if (u === null) {
-		const departmentContainer = document.createElement('div');
-		mainSubContainer1.appendChild(departmentContainer);
-		departmentContainer.classList.add('input-group', 'p-2');
-		const departmentLabel = document.createElement('label');
-		departmentContainer.appendChild(departmentLabel);
-		departmentLabel.classList.add('input-group-text');
-		departmentLabel.innerHTML = 'Department';
-		const departmentSelect = document.createElement('select');
-		departmentContainer.appendChild(departmentSelect);
-		departmentSelect.classList.add('form-select');
-		userAdminDepartments
-			.forEach(dep => {
-				const option = document.createElement('option');
-				departmentSelect.appendChild(option);
-				option.value = dep;
-				option.innerHTML = dep;
-				if (dep === defaultUserValues.department) {
-					option.selected = true;
-				}
+		if (userAdminDepartments.length > 1) {
+			const departmentContainer = document.createElement('div');
+			mainSubContainer1.appendChild(departmentContainer);
+			departmentContainer.classList.add('input-group', 'p-2');
+			const departmentLabel = document.createElement('label');
+			departmentContainer.appendChild(departmentLabel);
+			departmentLabel.classList.add('input-group-text');
+			departmentLabel.innerHTML = 'Department';
+			const departmentSelect = document.createElement('select');
+			departmentContainer.appendChild(departmentSelect);
+			departmentSelect.classList.add('form-select');
+			userAdminDepartments
+				.forEach(dep => {
+					const option = document.createElement('option');
+					departmentSelect.appendChild(option);
+					option.value = dep;
+					option.innerHTML = dep;
+					if (dep === defaultUserValues.department) {
+						option.selected = true;
+					}
+				});
+			departmentSelect.addEventListener('change', () => {
+				userValues.department = departmentSelect.value as UserDepartment;
 			});
-		departmentSelect.addEventListener('change', () => {
-			userValues.department = departmentSelect.value as UserDepartment;
-		});
+		} else {
+			setTimeout(() => userValues.department = userAdminDepartments[0] || defaultDepartment, 100);
+		}
 
 		makeTextInput({
 			name: 'callSign',
@@ -467,7 +481,7 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 	pagesContainer.appendChild(pagesTitle);
 	pagesTitle.classList.add('text-center');
 	pagesTitle.innerHTML = 'Pages';
-	const pageGroups = buildTalkgroupCheckboxes(userValues);
+	const pageGroups = buildTalkgroupCheckboxes(userValues, u === null);
 	pagesContainer.appendChild(pageGroups);
 
 	// Roles and Alerts
