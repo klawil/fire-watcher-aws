@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, validateBodyIsJson } from '../utils';
+import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils';
 
 const metricSource = 'Infra';
 
@@ -11,6 +11,7 @@ const apiCode = process.env.SERVER_CODE as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_TEXT as string;
+const statusTable = process.env.TABLE_STATUS as string;
 
 interface TwilioTextEvent {
 	From: string;
@@ -39,11 +40,19 @@ interface TextCommand {
 	};
 };
 
-interface PageApiResponse {
+interface GenericApiResponse {
 	success: boolean;
 	errors: string[];
 	message?: string;
 	data?: any[];
+}
+
+interface HeartbeatBody {
+	code: string;
+	Server: string;
+	Program: string;
+	IsPrimary: boolean;
+	IsActive: boolean;
 }
 
 const textCommands: {
@@ -95,7 +104,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'handleText',
 			reason: 'Invalid Code'
@@ -119,7 +128,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		}
 	}).promise();
 	if (!sender.Item || !sender.Item.isActive.BOOL) {
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'handleText',
 			reason: `${sender.Item ? 'Inactive' : 'Invalid'} Sender`
@@ -136,7 +145,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Handle text commands
 	if (isTextCommand) {
-		incrementMetric('Event', {
+		await incrementMetric('Event', {
 			source: metricSource,
 			type: 'handleText',
 			event: 'command'
@@ -153,7 +162,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 		response.body = `<Response><Message>${textCommands[eventData.Body].response}</Message></Response>`;
 	} else if (isAppleResponse) {
-		incrementMetric('Event', {
+		await incrementMetric('Event', {
 			source: metricSource,
 			type: 'handleText',
 			event: 'apple'
@@ -183,13 +192,13 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'handleTextStatus',
 			reason: 'Invalid Code'
 		});
 	} else if (messageId === null) {
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'handleTextStatus',
 			reason: 'Invalid Message'
@@ -242,7 +251,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Parse the body
 	const body = JSON.parse(event.body as string);
-	const response: PageApiResponse = {
+	const response: GenericApiResponse = {
 		success: true,
 		errors: []
 	};
@@ -268,6 +277,12 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			MessageBody: JSON.stringify(event),
 			QueueUrl: sqsQueue
 		}).promise();
+	} else {
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'handlePage',
+			reason: 'Invalid Code or Key'
+		});
 	}
 
 	return {
@@ -276,11 +291,97 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
+async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as HeartbeatBody;
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body
+	if (!body.code || body.code !== apiCode) {
+		response.success = false;
+		response.errors.push('code');
+	}
+	const neededFields: { [key in keyof HeartbeatBody]?: string } = {
+		Server: 'string',
+		Program: 'string',
+		IsPrimary: 'boolean',
+		IsActive: 'boolean'
+	};
+	(Object.keys(neededFields) as (keyof HeartbeatBody)[])
+		.forEach(key => {
+			if (typeof body[key] !== neededFields[key]) {
+				response.errors.push(key);
+				response.success = false;
+			}
+		});
+
+	if (!response.success) {
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'handleHeartbeat',
+			reason: 'Invalid Body'
+		});
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	await dynamodb.updateItem({
+		TableName: statusTable,
+		Key: {
+			ServerProgram: {
+				S: `${body.Server}:${body.Program}`
+			},
+			Program: {
+				S: body.Program
+			}
+		},
+		ExpressionAttributeNames: {
+			'#s': 'Server',
+			'#ip': 'IsPrimary',
+			'#ia': 'IsActive',
+			'#lh': 'LastHeartbeat'
+		},
+		ExpressionAttributeValues: {
+			':s': { S: body.Server },
+			':ip': { BOOL: body.IsPrimary },
+			':ia': { BOOL: body.IsActive },
+			':lh': { N: Date.now().toString() }
+		},
+		UpdateExpression: 'SET #s = :s, #ip = :ip, #ia = :ia, #lh = :lh'
+	}).promise();
+
+	response.data = await dynamodb.scan({
+		TableName: statusTable,
+		ExpressionAttributeNames: {
+			'#p': 'Program'
+		},
+		ExpressionAttributeValues: {
+			':p': { S: body.Program }
+		},
+		FilterExpression: '#p = :p'
+	}).promise()
+		.then(data => data.Items || [])
+		.then(data => data.map(parseDynamoDbAttributeMap));
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 
 	try {
-		incrementMetric('Call', {
+		await incrementMetric('Call', {
 			source: metricSource,
 			action
 		});
@@ -291,9 +392,11 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleTextStatus(event);
 			case 'page':
 				return await handlePage(event);
+			case 'heartbeat':
+				return await handleHeartbeat(event);
 		}
 
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: '404'
 		});
@@ -306,7 +409,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		};
 	} catch (e) {
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'general'
 		});

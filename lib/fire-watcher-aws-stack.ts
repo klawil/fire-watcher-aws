@@ -367,12 +367,14 @@ export class FireWatcherAwsStack extends Stack {
         SERVER_CODE: apiCode,
         SQS_QUEUE: queue.queueUrl,
         TABLE_USER: phoneNumberTable.tableName,
-        TABLE_TEXT: textsTable.tableName
+        TABLE_TEXT: textsTable.tableName,
+        TABLE_STATUS: statusTable.tableName
       }
     });
     queue.grantSendMessages(infraApiHandler);
     phoneNumberTable.grantReadWriteData(infraApiHandler);
     textsTable.grantReadWriteData(infraApiHandler);
+    statusTable.grantReadWriteData(infraApiHandler);
     const infraApiIntegration = new apigateway.LambdaIntegration(infraApiHandler, {
       requestTemplates: {
         'application/json': '{"statusCode":"200"}'

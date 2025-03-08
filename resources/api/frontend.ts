@@ -519,7 +519,7 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 	try {
-		incrementMetric('Call', {
+		await incrementMetric('Call', {
 			source: metricSource,
 			action
 		});
@@ -534,7 +534,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getTexts(event);
 		}
 
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: '404'
 		});
@@ -547,7 +547,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		}
 	} catch (e) {
-		incrementMetric('Error', {
+		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'general'
 		});
