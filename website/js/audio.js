@@ -1,12 +1,12 @@
 // Get the player elements
 const player = document.getElementById('player');
-const playerProgress = document.getElementById('player-progress');
 const playerButtons = [
 	document.getElementById('play-button-m'),
 	document.getElementById('play-button-d')
 ];
 const playerDuration = document.getElementById('player-duration');
 const playerBar = document.getElementById('player-progress');
+const playerBarContainer = document.getElementById('player-progress-container');
 const autoPlayButtons = [
 	document.getElementById('autoplay-button-d'),
 	document.getElementById('autoplay-button-m')
@@ -85,6 +85,15 @@ document.getElementById('latest-button-m').addEventListener('click', (e) => {
 	defaultFunc();
 });
 document.getElementById('latest-button-d').addEventListener('click', () => defaultFunc());
+
+playerBarContainer.addEventListener('click', (e) => {
+	const container = playerBarContainer.getBoundingClientRect();
+	let percent = (e.x - container.x) / container.width;
+	if (percent < 0) percent = 0;
+	if (percent > 1) percent = 1;
+
+	player.currentTime = player.duration * percent;
+});
 
 // Add the filtering functionality
 const filterModal = document.getElementById('filter-modal');
