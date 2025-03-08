@@ -140,11 +140,22 @@ class TalkgroupFilter {
 	chosenPreset = 'NSCFPD';
 	chosenTalkgroups = [];
 
+	/**
+	 * 8090 - ARCC 5
+	 * 8198 - Ambo
+	 * 8330 - Mac
+	 * 8331 - BG Tac
+	 * 8332 - Fire Dispatch
+	 * 8333 - Fire Tac
+	 * 8335 - SO Dispatch
+	 * 8336 - SO Tac
+	 */
 	presets = {
 		'NSCAD': [ '8198' ],
-		'NSCFPD': [ '8330', '8332', '8333' ],
+		'NSCFPD': [ '8332', '8333' ],
+		'Sag Mac': [ '8330' ],
 		'BGFD/BGEMS': [ '8090', '8331' ],
-		'Saguache SO': [ '8335', '8336' ],
+		'SC Sheriff': [ '8335', '8336' ],
 		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333' ],
 		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336' ],
 		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336' ],
