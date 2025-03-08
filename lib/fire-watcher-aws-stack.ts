@@ -195,7 +195,7 @@ export class FireWatcherAwsStack extends Stack {
     textsTable.addGlobalSecondaryIndex({
       indexName: 'pageIndex',
       partitionKey: {
-        name: 'pageId',
+        name: 'isPage',
         type: dynamodb.AttributeType.STRING
       },
       sortKey: {
