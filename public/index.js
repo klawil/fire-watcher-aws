@@ -152,7 +152,6 @@ player.addEventListener('ended', async () => {
 		return;
 	}
 
-	playNewFiles = false;
 	play(files[index - 1].File);
 });
 
@@ -162,6 +161,7 @@ function play(file) {
 		return;
 	}
 
+	playNewFiles = false;
 	player.file = file;
 	timestamp.innerHTML = data.Local;
 
