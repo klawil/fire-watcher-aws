@@ -570,7 +570,7 @@ export class FireWatcherAwsStack extends Stack {
             period: Duration.hours(1),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
-              Tower: 'sanantonio'
+              Tower: 'SanAntonio'
             }
           }),
           alarmDescription: 'No files uploaded for San Antonio Peak',
