@@ -470,6 +470,7 @@ function setUrlParams() {
 		...getUrlParams()
 	};
 	delete newParams.nostart;
+	delete newParams.cs;
 	Object.keys(urlFilters)
 		.forEach((filterKey) => {
 			newParams[filterKey] = urlFilters[filterKey].getUrl();

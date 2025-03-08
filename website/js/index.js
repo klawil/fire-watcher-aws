@@ -134,7 +134,19 @@ window.addEventListener('scroll', () => {
 	}
 });
 
+// Check for a callsign and `f` parameter
 window.audioQ = window.audioQ || [];
+window.audioQ.push(() => {
+	const currentParams = getUrlParams();
+	console.log(currentParams);
+	if (
+		typeof currentParams.cs !== 'undefined' &&
+		currentParams.cs !== ''
+	) {
+		console.log(currentParams.cs);
+	}
+});
+
 window.audioQ.push(() => {
 	afterFilters.Source = new CheckBoxFilter('input[name="vhf-source"]');
 	urlFilters.tone = new ToggleFilter('only-pages');
