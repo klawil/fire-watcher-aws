@@ -303,8 +303,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						MediaFileUri: `s3://${Bucket}/${Key}`
 					},
 					Settings: {
-						VocabularyName: 'SagVocab'
-					}
+						VocabularyName: 'SagVocab',
+						MaxSpeakerLabels: 5,
+						ShowSpeakerLabels: true,
+					},
+					Tags: [
+						{ Key: 'Talkgroup', Value: body.Item.Talkgroup?.N as string },
+						{ Key: 'File', Value: toneFile },
+						{ Key: 'FileKey', Value: Key },
+					]
 				}).promise());
 				promises.push(dynamodb.putItem({
 					TableName: dtrTranslationTable,
