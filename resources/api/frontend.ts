@@ -1148,11 +1148,11 @@ const statsMap: {
 		},
 	},
 	'status-cvfd-station': {
-		Label: 'Home VHF Heartbeats',
+		Label: 'CVFD VHF Heartbeats',
 		MetricStat: {
 			Metric: {
 				Namespace: 'VHF Metrics',
-				MetricName: '120-home',
+				MetricName: 'cvfd-station',
 			},
 			Period: 60,
 			Stat: 'Sum',
