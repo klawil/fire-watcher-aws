@@ -9,7 +9,10 @@ const sourceMap = {
 	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR'
 };
 const allowedSources = [
-	'SAG_FIRE_VHF'
+	'SAG_FIRE_VHF',
+	'SaguacheCo_FD_Ds',
+	'SagucheCo_MAC',
+	'SaguacheCo_FD_Tc'
 ];
 
 function dateToStr(d) {
