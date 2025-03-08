@@ -233,6 +233,25 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		response.lName = user.lName?.S;
 		response.department = user.department?.S;
 		response.talkgroups = user.talkgroups?.NS;
+
+		// Save now as the last login time
+		await dynamodb.updateItem({
+			TableName: userTable,
+			Key: {
+				phone: {
+					N: user.phone.N,
+				},
+			},
+			ExpressionAttributeNames: {
+				'#lli': 'lastLogin',
+			},
+			ExpressionAttributeValues: {
+				':lli': {
+					N: Date.now().toString(),
+				},
+			},
+			UpdateExpression: 'SET #lli = :lli',
+		}).promise();
 	}
 
 	return {
@@ -332,8 +351,9 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#gaa': 'getApiAlerts',
 				'#gva': 'getVhfAlerts',
 				'#gda': 'getDtrAlerts',
+				'#lli': 'lastLogin',
 			},
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt,#gaa,#gva,#gda'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt,#gaa,#gva,#gda,#lli'
 		}).promise();
 	} else {
 		usersItems = await dynamodb.query({
@@ -347,13 +367,14 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#cs': 'callSign',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
-				'#tg': 'talkgroups'
+				'#tg': 'talkgroups',
+				'#lli': 'lastLogin',
 			},
 			ExpressionAttributeValues: {
 				':d': { S: user.department?.S }
 			},
 			KeyConditionExpression: '#d = :d',
-			ProjectionExpression: '#fn,#ln,#p,#cs,#active,#admin,#tg'
+			ProjectionExpression: '#fn,#ln,#p,#cs,#active,#admin,#tg,#lli'
 		}).promise();
 	}
 
