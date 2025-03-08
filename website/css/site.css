@@ -31,6 +31,6 @@ body {
 	border-top: 1px solid #dee2e6;
 }
 
-.tg-row {
+.tg-row, .sortLabel {
 	cursor: pointer;
 }

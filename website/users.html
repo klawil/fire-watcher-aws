@@ -7,12 +7,12 @@ requireAdmin: true
 <table class="table table-striped">
 	<thead>
 		<tr class="text-center">
-			<th>Phone Number</th>
-			<th>First Name</th>
-			<th>Last Name</th>
-			<th>Callsign</th>
-			<th>Active</th>
-			<th>Admin</th>
+			<th class="sortLabel" data-keys="phone">Phone Number</th>
+			<th class="sortLabel" data-keys="fName,lName">First Name</th>
+			<th class="sortLabel" data-keys="lName,fName">Last Name</th>
+			<th class="sortLabel" data-keys="callSign,lName,fName">Callsign</th>
+			<th class="sortLabel" data-keys="isActive,callSign">Active</th>
+			<th class="sortLabel" data-keys="isAdmin,isActive,callSign">Admin</th>
 			<th></th>
 		</tr>
 	</thead>

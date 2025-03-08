@@ -15,7 +15,11 @@ function formatPhone(phone) {
 }
 
 function addRow(user) {
+	user.isAdmin = user.isAdmin || false;
+	user.isActive = user.isActive || false;
+
 	const tr = document.createElement('tr');
+	tr.user = user;
 	let button;
 
 	[
@@ -95,7 +99,6 @@ function addRow(user) {
 						? input.checked
 						: input.value);
 					
-					console.log(user);
 					fetch(`${baseHost}/api/user?action=update`, {
 						method: 'POST',
 						body: JSON.stringify(user)
@@ -203,7 +206,14 @@ function init() {
 		.then(r => r.json())
 		.then(data => {
 			if (data.success) {
-				data.users.map(addRow);
+				data.users
+					.sort((a, b) => {
+						if (a.lName === b.lName)
+							return a.fName > b.fName ? 1 : -1;
+
+						return a.lName > b.lName ? 1 : -1;
+					})
+					.map(addRow);
 			
 				const tr = document.createElement('tr');
 				[
@@ -316,8 +326,49 @@ function init() {
 					});
 				tbody.appendChild(tr);
 			}
+		});
+}
+
+let lastSort = 'lName,fName';
+function sortRows(keys) {
+	let aGreater = 1;
+	let aLesser = -1;
+	if (lastSort === keys) {
+		aGreater = -1;
+		aLesser = 1;
+		lastSort += ',';
+	} else {
+		lastSort = keys;
+	}
+	keys = keys.split(',');
+
+	const rows = [ ...tbody.getElementsByTagName('tr') ];
+	
+	const rowsToSort = rows.filter(row => row.user);
+	const rowsToKeep = rows.filter(row => !row.user);
+
+	rowsToSort
+		.sort((a, b) => {
+			let i = 0;
+			while (i < keys.length && a.user[keys[i]] === b.user[keys[i]]) {
+				i++;
+			}
+
+			if (i === keys.length) {
+				return aGreater;
+			}
+			let key = keys[i];
+
+			return a.user[key] > b.user[key]
+				? aGreater
+				: aLesser;
 		})
-		.then(console.log);
+		.forEach(row => tbody.appendChild(row));
+	rowsToKeep.forEach(row => tbody.appendChild(row));
 }
 
 window.afterAuth.push(init);
+
+[ ...document.querySelectorAll('.sortLabel') ]
+	.forEach(label => label.addEventListener('click', () =>
+		sortRows(label.getAttribute('data-keys'))));
