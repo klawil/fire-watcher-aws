@@ -1047,7 +1047,7 @@ export class FireWatcherAwsStack extends Stack {
     // Create the cloudfront distribution
     new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
       viewerCertificate: {
-        aliases: [ 'fire.klawil.net' ],
+        aliases: [ 'fire.klawil.net', 'cofrn.org', 'www.cofrn.org' ],
         props: {
           acmCertificateArn: certArn,
           sslSupportMethod: 'sni-only'
