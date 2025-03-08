@@ -4,6 +4,7 @@ export type PagingTalkgroup = 8332 | 18332 | 18331 | 8198 | 8334
 
 interface DepartmentConfig {
 	name: string;
+	shortName: string;
 	defaultTalkgroups: PagingTalkgroup[];
 	type: 'text' | 'page';
 	pagePhone: string;
@@ -45,6 +46,7 @@ type DepartmentConfigBaseType2 = {
 export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseType2 = {
 	Crestone: {
 		name: 'Crestone Volunteer Fire Department',
+		shortName: 'Crestone',
 		type: 'text',
 		defaultTalkgroups: [ 8332 ],
 		pagePhone: 'page',
@@ -52,12 +54,14 @@ export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseTy
 	},
 	Baca: {
 		name: 'Baca Emergency Services',
+		shortName: 'Baca',
 		type: 'page',
 		defaultTalkgroups: [ 18331 ],
 		pagePhone: 'pageBaca',
 	},
 	NSCAD: {
 		name: 'NSCAD',
+		shortName: 'NSCAD',
 		type: 'text',
 		defaultTalkgroups: [ 8198 ],
 		pagePhone: 'page',
@@ -65,6 +69,7 @@ export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseTy
 	},
 	PageOnly: {
 		name: 'Page Only',
+		shortName: 'Page Only',
 		type: 'page',
 		pagePhone: 'page',
 		defaultTalkgroups: [],
