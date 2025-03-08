@@ -1,7 +1,6 @@
 ---
 title: Manage Users
 layout: base
-requireAdmin: true
 ---
 
 <style id="customStyles">
@@ -19,7 +18,7 @@ requireAdmin: true
 				<th class="sortLabel" data-keys="lName,fName">Last Name</th>
 				<th class="sortLabel districtAdmin" data-keys="department,lName,fName">Department</th>
 				<th class="sortLabel" data-keys="callSign,lName,fName">Callsign</th>
-				<th></th>
+				<th>Roles</th>
 				<th class="districtAdmin">Alerts</th>
 				<th>Pages</th>
 				<th></th>
@@ -48,5 +47,4 @@ requireAdmin: true
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}
-<script async src="/js/userConstants.js?v={{ randomNumber }}"></script>
 <script async src="/js/users.js?v={{ randomNumber }}"></script>

@@ -1,10 +1,11 @@
-interface ColumnConfig {
+export interface ColumnConfig {
 	html?: string;
 	filter?: boolean;
 	create?: (td: HTMLTableCellElement) => any,
+	classList?: string[];
 }
 
-interface RowConfig {
+export interface RowConfig {
 	id?: string;
 	columns: ColumnConfig[];
 }
@@ -20,6 +21,10 @@ export function createTableRow(tbody: HTMLElement | null, rowConfig: RowConfig) 
 	rowConfig.columns.forEach(column => {
 		const td = document.createElement('td');
 		tr.appendChild(td);
+		
+		td.classList.add('align-middle');
+		if (column.classList)
+			td.classList.add.apply(td.classList, column.classList);
 
 		if (column.html)
 			td.innerHTML = column.html;

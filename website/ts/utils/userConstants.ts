@@ -10,14 +10,14 @@ export const pageNames: {
 	'8181': 'Alamosa EMS',
 };
 
-export const talkgroupOrder: string[] = [
-	'8332',
-	'18332',
-	'18331',
-	'8198',
-	'8334',
-	'8281',
-	'8181',
+export const talkgroupOrder: number[] = [
+	8332,
+	18332,
+	18331,
+	8198,
+	8334,
+	8281,
+	8181,
 ];
 
 export const defaultTalkgroups: {
@@ -28,6 +28,16 @@ export const defaultTalkgroups: {
 	Center: [ '8334' ],
 	NSCAD: [ '8198' ],
 };
+
+export const validDepartments: string[] = [
+	'Crestone',
+	'Moffat',
+	'Saguache',
+	'Villa Grove',
+	'Baca',
+	'NSCAD',
+	'Center',
+];
 
 export function formatPhone(phone: number | string): string {
 	const first = phone.toString().substring(0, 3);

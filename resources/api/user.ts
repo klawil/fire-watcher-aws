@@ -25,14 +25,14 @@ const validDepartments: string[] = [
 	'NSCAD',
 	'Center',
 ];
-const validTalkgroups: string[] = [
-	'8198',
-	'8332',
-	'8334',
-	'8281',
-	'18331',
-	'18332',
-	'8181',
+const validTalkgroups: number[] = [
+	8198,
+	8332,
+	8334,
+	8281,
+	18331,
+	18332,
+	8181,
 ];
 
 interface ApiResponse {
@@ -575,7 +575,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		ExpressionAttributeValues: {
 			':fn': { S: body.fName },
 			':ln': { S: body.lName },
-			':tg': { NS: body.talkgroups }
+			':tg': { NS: body.talkgroups.map(v => v.toString()) }
 		},
 		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #tg = :tg',
 		ReturnValues: 'UPDATED_NEW'

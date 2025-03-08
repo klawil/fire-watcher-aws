@@ -1,23 +1,22 @@
 import { ApiResponseBase } from "./common";
 
-export interface UserObject {
-	phone: string;
-	fName: string;
-	lName: string;
-	callSign: string;
-	isActive: boolean;
-	isAdmin: boolean;
-	isDistrictAdmin?: boolean;
-	talkgroups: string[];
+export type UserObjectBooleans = 'isActive' | 'isAdmin' | 'isDistrictAdmin'
+	| 'pageOnly' | 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
+export type UserObjectStrings = 'phone' | 'fName' | 'lName' | 'callSign';
+
+interface UserObjectBase1 {
+	talkgroups: number[];
 	department?: string;
-	pageOnly?: boolean;
-	getTranscript?: boolean;
-	getApiAlerts?: boolean;
-	getVhfAlerts?: boolean;
-	getDtrAlerts?: boolean;
 
 	isMe?: boolean;
 }
+type UserObjectBase2 = {
+	[key in UserObjectBooleans]?: boolean;
+}
+type UserObjectBase3 = {
+	[key in UserObjectStrings]: string;
+}
+export interface UserObject extends UserObjectBase1, UserObjectBase2, UserObjectBase3 {}
 
 export interface ApiUserLoginBody {
 	phone: string;

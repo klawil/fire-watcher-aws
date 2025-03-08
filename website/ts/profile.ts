@@ -35,7 +35,7 @@ function formatValue(value: string | boolean | number): string {
 	}
 }
 
-function makePageCheckbox(container: HTMLElement, key: string) {
+function makePageCheckbox(container: HTMLElement, key: number) {
 	const div = document.createElement('div');
 	div.classList.add('form-check', 'form-switch');
 	container.appendChild(div);
@@ -44,7 +44,7 @@ function makePageCheckbox(container: HTMLElement, key: string) {
 	input.type = 'checkbox';
 	input.setAttribute('role', 'switch');
 	input.id = `talkgroups-${key}`;
-	input.value = key;
+	input.value = key.toString();
 	input.classList.add('form-check-input', 'talkgroup', 'update-input');
 	if (user.talkgroups?.indexOf(key) !== -1)
 		input.checked = true;
