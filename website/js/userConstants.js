@@ -3,7 +3,8 @@ const pageNames = {
 	'18332': 'NSCFPD VHF',
 	'18331': 'Baca',
 	'8334': 'Center',
-	'8198': 'NSCAD'
+	'8198': 'NSCAD',
+	'8281': 'Mineral Co'
 };
 
 const talkgroupOrder = [
@@ -11,7 +12,8 @@ const talkgroupOrder = [
 	'18332',
 	'18331',
 	'8198',
-	'8334'
+	'8334',
+	'8281'
 ];
 
 const defaultTalkgroups = {

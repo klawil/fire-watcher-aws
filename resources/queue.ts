@@ -74,7 +74,8 @@ const tgToPageDept: { [key: string]: string } = {
 	'18331': 'Baca ES',
 	'18332': 'NSCFPD',
 	'8198': 'NSCAD',
-	'8334': 'Center ES'
+	'8334': 'Center ES',
+	'8281': 'Mineral ES'
 };
 
 const pageConfigs: {
@@ -121,6 +122,13 @@ const pageConfigs: {
 		pageService: 'CENTER',
 		fToTime: dtrFnameToDate
 	},
+	'8281': {
+		linkPreset: 'tg8281',
+		pagingParty: 'Alamosa',
+		partyBeingPaged: 'Mineral EMS/Fire',
+		pageService: 'MINERAL',
+		fToTime: dtrFnameToDate
+	}
 };
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
