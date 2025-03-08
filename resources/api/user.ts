@@ -56,6 +56,7 @@ interface UserObject {
 	department?: string;
 	pageOnly?: boolean;
 	getTranscript?: boolean;
+	getSystemAlerts?: boolean;
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -317,9 +318,10 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#admin': 'isAdmin',
 				'#tg': 'talkgroups',
 				'#po': 'pageOnly',
-				'#gt': 'getTranscript'
+				'#gt': 'getTranscript',
+				'#gsa': 'getSystemAlerts'
 			},
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt,#gsa'
 		}).promise();
 	} else {
 		usersItems = await dynamodb.query({
@@ -439,6 +441,12 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	}
 	if (
 		user.isDistrictAdmin?.BOOL &&
+		typeof body.getSystemAlerts !== 'boolean'
+	) {
+		response.errors.push('getSystemAlerts');
+	}
+	if (
+		user.isDistrictAdmin?.BOOL &&
 		typeof body.department !== 'undefined' &&
 		validDepartments.indexOf(body.department) === -1
 	) {
@@ -513,12 +521,14 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
 		updateConfig.ExpressionAttributeNames['#po'] = 'pageOnly';
 		updateConfig.ExpressionAttributeNames['#gt'] = 'getTranscript';
+		updateConfig.ExpressionAttributeNames['#gsa'] = 'getSystemAlerts';
 
 		updateConfig.ExpressionAttributeValues[':dep'] = { S: body.department };
 		updateConfig.ExpressionAttributeValues[':po'] = { BOOL: body.pageOnly };
 		updateConfig.ExpressionAttributeValues[':gt'] = { BOOL: body.getTranscript };
+		updateConfig.ExpressionAttributeValues[':gsa'] = { BOOL: body.getSystemAlerts };
 
-		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt`;
+		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gsa = :gsa`;
 	}
 	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {
