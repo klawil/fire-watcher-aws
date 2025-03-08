@@ -1,5 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { parseDynamoDbAttributeMap } from './utils';
 
 const dynamodb = new AWS.DynamoDB();
 const sqs = new AWS.SQS();
@@ -63,41 +64,6 @@ function randomString(len: number, numeric = false): string {
 	}
 
 	return str.join('');
-}
-
-type DynamoDbValues = boolean | number | string | undefined | AWS.DynamoDB.AttributeValue | DynamoDbValues[];
-
-function parseDynamoDbAttributeValue(value: AWS.DynamoDB.AttributeValue): DynamoDbValues {
-	if (typeof value.S !== 'undefined') {
-		return value.S;
-	} else if (typeof value.N !== 'undefined') {
-		return parseFloat(value.N as string);
-	} else if (typeof value.BOOL !== 'undefined') {
-		return value.BOOL;
-	} else if (typeof value.L !== 'undefined') {
-		return value.L?.map(parseDynamoDbAttributeValue);
-	} else if (typeof value.NS !== 'undefined') {
-		return value.NS?.map(val => parseFloat(val));
-	} else if (typeof value.SS !== 'undefined') {
-		return value.SS;
-	}
-
-	return value;
-}
-
-interface NewObject {
-	[key: string]: DynamoDbValues | NewObject;
-}
-
-function parseDynamoDbAttributeMap(item: AWS.DynamoDB.AttributeMap): NewObject {
-	const newObj: NewObject = {};
-
-	Object.keys(item)
-		.forEach(key => {
-			newObj[key] = parseDynamoDbAttributeValue(item[key]);
-		});
-
-	return newObj;
 }
 
 async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.DynamoDB.AttributeMap> {
@@ -845,17 +811,15 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 			'#s': 'Server',
 			'#ip': 'IsPrimary',
 			'#ia': 'IsActive',
-			'#if': 'IsFailed',
 			'#lh': 'LastHeartbeat'
 		},
 		ExpressionAttributeValues: {
 			':s': { S: body.Server },
 			':ip': { BOOL: body.IsPrimary },
 			':ia': { BOOL: body.IsActive },
-			':if': { BOOL: false },
 			':lh': { N: `${Date.now()}` }
 		},
-		UpdateExpression: 'SET #s = :s, #ip = :ip, #ia = :ia, #if = :if, #lh = :lh'
+		UpdateExpression: 'SET #s = :s, #ip = :ip, #ia = :ia, #lh = :lh'
 	}).promise();
 
 	response.data = await dynamodb.scan({

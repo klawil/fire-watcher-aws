@@ -1,14 +1,12 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
-const twilio = require('twilio');
+import { getTwilioSecret, parsePhone, sendMessage } from './utils';
 
 const dynamodb = new AWS.DynamoDB();
-const secretManager = new AWS.SecretsManager();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
-const apiCode = process.env.SERVER_CODE as string;
 
 const welcomeMessage = `Welcome to the Crestone Volunteer Fire Department text group!
 
@@ -20,36 +18,6 @@ In a moment, you will receive a copy of the last page sent out over VHF.
 
 You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
-
-interface TwilioConfig {
-	accountSid: string;
-	authToken: string;
-	fromNumber: string;
-	pageNumber: string;
-}
-
-const twilioSecretId = process.env.TWILIO_SECRET as string;
-const twilioSecretPromise: Promise<TwilioConfig> = secretManager.getSecretValue({
-	SecretId: twilioSecretId
-}).promise()
-	.then((data) => JSON.parse(data.SecretString as string))
-	.catch((e) => {
-		console.error(e);
-		return null;
-	});
-
-function parsePhone(num: string, toHuman: boolean = false): string {
-	if (!toHuman) {
-		return num.replace(/[^0-9]/g, '');
-	}
-
-	const matches = parsePhone(num)
-		.match(/([0-9]{3})([0-9]{3})([0-9]{4})/) as string[];
-
-	return matches
-		.slice(1)
-		.join('-');
-}
 
 async function getRecipients() {
 	return dynamodb.scan({
@@ -103,49 +71,6 @@ async function saveMessageData(
 		},
 		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #t = :t'
 	}).promise();
-}
-
-interface TwilioMessageConfig {
-	body: string;
-	mediaUrl?: string[];
-	from: string;
-	to: string;
-	statusCallback?: string;
-}
-
-async function sendMessage(
-	messageId: string | null,
-	phone: string | undefined,
-	body: string,
-	mediaUrl: string[] = [],
-	isPage: boolean = false
-) {
-	if (typeof phone === 'undefined') {
-		return;
-	}
-
-	const twilioConf = await twilioSecretPromise;
-	if (twilioConf === null) {
-		throw new Error('Cannot get twilio secret');
-	}
-
-	const messageConfig: TwilioMessageConfig = {
-		body,
-		mediaUrl,
-		from: isPage ? twilioConf.pageNumber : twilioConf.fromNumber,
-		to: `+1${parsePhone(phone)}`
-	};
-
-	if (messageId !== null) {
-		messageConfig.statusCallback = `https://fire.klawil.net/api?action=messageStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
-	}
-
-	return twilio(twilioConf.accountSid, twilioConf.authToken)
-		.messages.create(messageConfig)
-		.catch((e: any) => {
-			console.log(`QUEUE - ERROR - sendMessage`);
-			console.error(e);
-		});
 }
 
 function randomString(len: number, numeric = false): string {
@@ -290,7 +215,7 @@ async function handleTwilio(body: TwilioBody) {
 	const messageTo = eventData.To;
 	const adminSender = !!sender.Item?.isAdmin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
-	const twilioConf = await twilioSecretPromise;
+	const twilioConf = await getTwilioSecret();
 	const isFromPageNumber = adminSender && messageTo === twilioConf.pageNumber;
 
 	const recipients = await getRecipients()

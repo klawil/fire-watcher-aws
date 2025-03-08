@@ -9,6 +9,8 @@ import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
@@ -24,6 +26,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Created outside of the CDK
     const bucket = s3.Bucket.fromBucketName(this, bucketName, bucketName);
+    const twilioSecret = secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn);
 
     // Push the static files into the bucket
     new s3deployment.BucketDeployment(this, 'cvfd-deploy-s3', {
@@ -130,8 +133,7 @@ export class FireWatcherAwsStack extends Stack {
     phoneNumberTable.grantReadWriteData(queueHandler);
     trafficTable.grantReadData(queueHandler);
     messagesTable.grantReadWriteData(queueHandler);
-    secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn)
-      .grantRead(queueHandler);
+    twilioSecret.grantRead(queueHandler);
 
     // Create the event trigger
     const s3Destination = new s3Notifications.LambdaDestination(s3Handler);
@@ -149,6 +151,28 @@ export class FireWatcherAwsStack extends Stack {
         prefix: 'audio/'
       }
     );
+
+    // Create the status parser function
+    const statusHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-status-lambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/status.ts',
+      handler: 'main',
+      environment: {
+        TABLE_STATUS: statusTable.tableName,
+        TWILIO_SECRET: secretArn
+      },
+      timeout: Duration.minutes(1)
+    });
+
+    // Grant access for the status handler
+    statusTable.grantReadWriteData(statusHandler);
+    twilioSecret.grantRead(statusHandler);
+
+    // Schedule the function for every minute
+    const statusEventRule = new events.Rule(this, 'status-rule', {
+      schedule: events.Schedule.cron({})
+    });
+    statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
 
     // Create an API handler
     const apiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-lambda', {
