@@ -152,11 +152,12 @@ function getTalkgroupSelect(defaultValues) {
 	const randomness = Math.round(Math.random() * 100000).toString();
 	for (let key in pageNames) {
 		const div = document.createElement('div');
-		div.classList.add('form-check');
+		div.classList.add('form-check', 'form-switch');
 		container.appendChild(div);
 
 		const input = document.createElement('input');
 		input.type = 'checkbox';
+		input.role = 'switch';
 		input.id = `talkgroups-${key}-${randomness}`;
 		input.value = key;
 		input.classList.add('form-check-input');
