@@ -444,6 +444,37 @@ export class FireWatcherAwsStack extends Stack {
     userApiResource.addMethod('GET', userApiIntegration);
     userApiResource.addMethod('POST', userApiIntegration);
 
+    // Create the twilio API
+    const twilioApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-twilio-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/api/twilio.ts',
+      handler: 'main',
+      environment: {
+        SERVER_CODE: apiCode,
+        SQS_QUEUE: queue.queueUrl,
+        TABLE_USER: phoneNumberTable.tableName,
+        TABLE_TEXT: textsTable.tableName
+      },
+      timeout: Duration.seconds(10)
+    });
+    queue.grantSendMessages(twilioApiHandler);
+    phoneNumberTable.grantReadWriteData(twilioApiHandler);
+    const twilioApiIntegration = new apigateway.LambdaIntegration(twilioApiHandler, {
+      requestTemplates: {
+        'application/json': '{"statusCode":"200"}'
+      }
+    });
+    const twilioApiResource = apiResource.addResource('twilio');
+    twilioApiResource.addMethod('GET', twilioApiIntegration);
+    twilioApiResource.addMethod('POST', twilioApiIntegration);
+
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
 
