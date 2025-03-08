@@ -32,14 +32,14 @@ const columns = [
 	{
 		name: 'fName',
 		val: user => user.fName || '',
-		tdClass: [ 'ps-3' ],
+		tdClass: [ 'ps-3', 'text-center' ],
 		class: [ 'form-control' ],
 		default: 'First Name'
 	},
 	{
 		name: 'lName',
 		val: user => user.lName || '',
-		tdClass: [ 'ps-3' ],
+		tdClass: [ 'ps-3', 'text-center' ],
 		class: [ 'form-control' ],
 		default: 'Last Name'
 	},
@@ -312,7 +312,7 @@ function addRow(user) {
 			td.appendChild(button);
 
 			const deleteButton = document.createElement('button');
-			deleteButton.classList.add('btn', 'btn-danger', 'ms-1');
+			deleteButton.classList.add('btn', 'btn-danger', 'ms-1', 'mt-3');
 			deleteButton.innerHTML = 'Delete';
 			deleteButton.setAttribute('data-bs-toggle', 'modal');
 			deleteButton.setAttribute('data-bs-target', '#delete-modal');
