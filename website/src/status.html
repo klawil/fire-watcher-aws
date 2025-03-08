@@ -80,6 +80,16 @@ noLoading: true
 <div class="row"><div class="col-12"><canvas id="api-duration-max"></canvas></div></div>
 <h3 class="text-center">Function Errors</h3>
 <div class="row"><div class="col-12"><canvas id="api-errors"></canvas></div></div>
+<div class="d-none requireDistrictAdmin">
+	<h3 class="text-center">Twilio Cost - Total</h3>
+	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-total"></canvas></div></div>
+	<h3 class="text-center">Twilio Cost - NSCAD</h3>
+	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-NSCAD"></canvas></div></div>
+	<h3 class="text-center">Twilio Cost - Baca</h3>
+	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-Baca"></canvas></div></div>
+	<h3 class="text-center">Twilio Cost - Crestone</h3>
+	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-Crestone"></canvas></div></div>
+</div>
 
 {% assign randomNumber = "now" | date: "%N" %}
 <script src="/libs/leaflet.js?v={{ randomNumber }}"></script>

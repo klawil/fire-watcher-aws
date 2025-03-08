@@ -161,7 +161,7 @@ export function playFile(fileName: string) {
 	logger.trace('playFile', ...arguments);
 	playNewFiles = false;
 	try {
-		player.src = `https://fire.klawil.net/${fileName}`;
+		player.src = `https://cofrn.org/${fileName}`;
 		player.play();
 	} catch (e) {
 		logger.error('playFile', e);
