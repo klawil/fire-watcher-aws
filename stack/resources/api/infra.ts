@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, sendAlertMessage, validateBodyIsJson } from '../utils/general';
+import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { PageBody } from '../types/queue';
 import { PagingTalkgroup } from '../../../common/userConstants';
 import { getLogger } from '../../../common/logger';
@@ -269,7 +269,7 @@ const keyMap: { [key in keyof AdjacentSitesBodyItemCombined]: string } = {
 	site: ''
 };
 
-const onlyChangeInFields = [ 'SiteFailed', 'NoServReq', 'BackupCtrl' ];
+// const onlyChangeInFields = [ 'SiteFailed', 'NoServReq', 'BackupCtrl' ];
 
 async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.trace('handleSiteStatus', ...arguments);
@@ -374,7 +374,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 			sites[siteId].supports_authentication[system] = site.supports_authentication;
 		}));
 
-	const updateItemsStrings: string[] = [];
+	// const updateItemsStrings: string[] = [];
 	await Promise.all(Object.keys(sites).map(siteId => {
 		const site = sites[siteId];
 		let systemShortNames: string[] = [];
