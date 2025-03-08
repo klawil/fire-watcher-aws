@@ -1,0 +1,67 @@
+<html>
+	<head>
+		<title>Texts - CVFD Radio Chatter</title>
+		<link rel="icon" type="image/png" href="/favicon.png" />
+		<meta name="theme-color" content="#000000" />
+
+		<link href="/libs/bootstrap.min.css" rel="stylesheet">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<style>
+			.table-wrapper-scroll-y {
+				display: block;
+				height: 400px;
+				overflow: auto;
+				margin-top: 10px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1 class="text-center">CVFD Text Group</h1>
+
+		<h2 class="text-center">Pages</h2>
+
+		<div class="table-wrapper-scroll-y">
+			<table class="container table table-striped">
+				<thead>
+					<tr>
+						<th>Page Time</th>
+						<th>Message</th>
+						<th>Media</th>
+						<th>Recipients</th>
+						<th>% Delivered</th>
+						<th>Text Time</th>
+						<th>First</th>
+						<th>P50</th>
+						<th>P75</th>
+						<th>P100</th>
+					</tr>
+				</thead>
+				<tbody id="pages"></tbody>
+			</table>
+		</div>
+
+		<h2 class="text-center">Other Messages</h2>
+
+		<div class="table-wrapper-scroll-y">
+			<table class="container table table-striped">
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>Message</th>
+						<th>Media</th>
+						<th>Recipients</th>
+						<th>% Delivered</th>
+						<th>First</th>
+						<th>P50</th>
+						<th>P75</th>
+						<th>P100</th>
+					</tr>
+				</thead>
+				<tbody id="texts"></tbody>
+			</table>
+		</div>
+
+		<script async src="/js/texts.js"></script>
+	</body>
+</html>

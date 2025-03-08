@@ -695,7 +695,7 @@ async function handleLocationUpdate(event: APIGatewayProxyEvent): Promise<APIGat
 	};
 }
 
-async function test(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
 	if (user === null) {
 		return unauthorizedResponse;
@@ -708,7 +708,10 @@ async function test(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult>
 	return {
 		statusCode: 200,
 		headers: {},
-		body: JSON.stringify((result.Items || []).map(parseDynamoDbAttributeMap))
+		body: JSON.stringify({
+			success: true,
+			data: (result.Items || []).map(parseDynamoDbAttributeMap)
+		})
 	};
 }
 
@@ -735,8 +738,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleAllActivate(event);
 			case 'location':
 				return await handleLocationUpdate(event);
-			case 'test':
-				return await test(event);
+			case 'getTexts':
+				return await getTexts(event);
 		}
 
 		console.log(`API - 404`);
