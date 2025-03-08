@@ -149,6 +149,7 @@ class TalkgroupFilter {
 
 	/**
 	 * 8090 - ARCC 5
+	 * 8181 - ACFE - Alamosa County Fire EMS
 	 * 8198 - Ambo
 	 * 8330 - Mac
 	 * 8331 - BG Tac
@@ -166,6 +167,7 @@ class TalkgroupFilter {
 		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333', '18332' ],
 		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
 		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
+		'ACFE': [ '8181' ],
 	};
 
 	constructor() {
