@@ -4,7 +4,7 @@ window.userQueue = window.userQueue || [];
 const boolFormat = bool => `<i class="bi bi-${bool ? 'check-circle-fill  text-success' : 'x-circle-fill text-danger'}">`;
 const noFormat = str => str;
 const staticFields = {
-	phone: formatPhone,
+	phone: val => formatPhone(val),
 	isActive: boolFormat,
 	isAdmin: boolFormat,
 	department: noFormat,

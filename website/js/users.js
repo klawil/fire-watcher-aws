@@ -22,7 +22,7 @@ const columns = [
 		name: 'phone',
 		val: user => formatPhone(user.phone),
 		iVal: user => user.phone,
-		format: formatPhone,
+		format: val => formatPhone(val),
 		classList: [ 'text-center' ],
 		class: [ 'form-control' ],
 		default: 'Phone Number',
