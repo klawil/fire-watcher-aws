@@ -118,13 +118,15 @@ function updateUpdateTime() {
 
 		let timeDelta = Math.round((nowTime - siteUpdateTime[key]) / 1000);
 		// 00:00:00 - hours - minutes - seconds
-		timeElem.innerHTML = [ 60, 1 ].map(v => {
+		const newHtml = [ 60, 1 ].map(v => {
 			if (timeDelta < v) return '00';
 
 			let count = Math.floor(timeDelta / v);
 			timeDelta = timeDelta - (count * v);
 			return `${count}`.padStart(2, '0');
 		}).join(':') + ' ago';
+		if (timeElem.innerHTML !== newHtml)
+			timeElem.innerHTML = newHtml;
 	});
 }
-setInterval(updateUpdateTime, 1000);
+setInterval(updateUpdateTime, 200);

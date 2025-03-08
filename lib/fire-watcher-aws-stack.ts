@@ -541,12 +541,12 @@ export class FireWatcherAwsStack extends Stack {
         codeName: 'pooltable-tower',
         alarm: {
           ...baseTowerAlarmConfig,
-          evaluationPeriods: 20,
-          datapointsToAlarm: 20,
+          evaluationPeriods: 15,
+          datapointsToAlarm: 15,
           metric: new cloudwatch.Metric({
             metricName: 'Decode Rate',
             namespace: 'DTR Metrics',
-            period: Duration.minutes(5),
+            period: Duration.minutes(2),
             statistic: cloudwatch.Stats.MINIMUM,
             dimensionsMap: {
               Tower: 'PoolTable'
