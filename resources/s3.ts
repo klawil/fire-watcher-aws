@@ -12,7 +12,7 @@ const deviceTable = process.env.TABLE_DEVICE as string;
 
 const metricSource = 'S3';
 
-const startTimeBuffer = 1; // Check for calls 3s each way for DTR
+const startTimeBuffer = 3; // Check for calls 3s each way for DTR
 
 interface SourceListItem {
 	pos: number;
