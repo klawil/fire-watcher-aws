@@ -136,7 +136,10 @@ function convertFileDateTime(fileName: string): Date {
 	return d;
 }
 
-function createPageMessage(fileKey: string): string {
+function createPageMessage(
+	fileKey: string,
+	callSign: string | null = null
+): string {
 	const queryParam = fileKey.split('/')[1];
 	const d = convertFileDateTime(queryParam);
 
@@ -155,7 +158,11 @@ function createPageMessage(fileKey: string): string {
 		second: '2-digit'
 	});
 
-	return `Saguache Sheriff: PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/?f=${queryParam}`;
+	let pageStr = `Saguache Sheriff: PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/?f=${queryParam}`;
+	if (callSign !== null) {
+		pageStr += `&cs=${callSign}`;
+	}
+	return pageStr;
 }
 
 interface ActivateOrLoginBody {
@@ -347,7 +354,7 @@ async function handlePage(body: PageBody) {
 		.map((phone) => sendMessage(
 			messageId,
 			phone.phone.N,
-			messageBody,
+			createPageMessage(body.key, phone.callSign.N),
 			[],
 			true
 		)));
