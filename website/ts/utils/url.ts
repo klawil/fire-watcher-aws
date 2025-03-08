@@ -1,8 +1,13 @@
+import { getLogger } from '../../../common/logger';
+
 interface UrlParams {
 	[key: string]: string | null;
 }
 
+const logger = getLogger('url');
+
 export function getUrlParams(): UrlParams {
+	logger.trace('getUrlParams');
 	return window.location.search
 		.slice(1)
 		.split('&')
@@ -19,6 +24,7 @@ export function getUrlParams(): UrlParams {
 }
 
 export function setUrlParams(newUrlParams: UrlParams) {
+	logger.trace('setUrlParams', newUrlParams);
 	const newSearch = Object.keys(newUrlParams)
 		.sort()
 		.filter(key => key !== '')
@@ -36,6 +42,7 @@ export function setUrlParams(newUrlParams: UrlParams) {
 }
 
 export function changeUrlParams(changeUrlParams: UrlParams) {
+	logger.trace('changeUrlParams', changeUrlParams);
 	setUrlParams({
 		...getUrlParams(),
 		...changeUrlParams,
@@ -43,6 +50,7 @@ export function changeUrlParams(changeUrlParams: UrlParams) {
 }
 
 export function deleteUrlParams(paramsToDelete: string[]) {
+	logger.trace('deleteUrlParams', paramsToDelete);
 	const newUrlParams = getUrlParams();
 	paramsToDelete.forEach(param => delete newUrlParams[param]);
 	setUrlParams(newUrlParams);

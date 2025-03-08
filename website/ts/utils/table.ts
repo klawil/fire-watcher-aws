@@ -1,3 +1,7 @@
+import { getLogger } from "../../../common/logger";
+
+const logger = getLogger('table');
+
 export interface ColumnConfig {
 	html?: string;
 	filter?: boolean;
@@ -13,6 +17,7 @@ export interface RowConfig {
 }
 
 export function createTableRow(tbody: HTMLElement | null, rowConfig: RowConfig) {
+	logger.trace('createTableRow', ...arguments);
 	const tr = document.createElement('tr');
 	if (tbody !== null)
 		tbody.appendChild(tr);

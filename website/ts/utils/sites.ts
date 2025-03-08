@@ -2,6 +2,9 @@ import { ApiFrontendSitesResponse, SeenByRecorderKeys, SiteObject } from "../../
 import { showAlert } from "./alerts";
 import { createTableRow } from "./table";
 import * as leaflet from 'leaflet';
+import { getLogger } from "../../../common/logger";
+
+const logger = getLogger('sites');
 
 declare global {
 	interface Window {
@@ -77,6 +80,7 @@ const circleFailedColor = '#ff5733';
 
 let map: leaflet.Map | null = null;
 export async function buildMap(divId: string) {
+	logger.trace('buildMap', ...arguments)
 	map = window.L.map(divId).setView([ 37.749, -106.073 ], 8);
 	window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 19,
@@ -85,6 +89,7 @@ export async function buildMap(divId: string) {
 }
 
 function sortSiteTable() {
+	logger.trace('sortSiteTable', ...arguments)
 	const rowIds = Array.from(siteTable.querySelectorAll('tr'))
 		.map(row => row.id);
 
@@ -96,12 +101,13 @@ function sortSiteTable() {
 }
 
 export async function updateSitesTable() {
+	logger.trace('updateSitesTable', ...arguments)
 	try {
 		const siteData: ApiFrontendSitesResponse = await fetch(`/api/frontend?action=sites`)
 			.then(r => r.json());
 
 		if (!siteData.success) {
-			console.error(siteData);
+			logger.error('updateSitesTable', siteData);
 			throw new Error('Failed to load DTR site data');
 		}
 
@@ -213,7 +219,7 @@ export async function updateSitesTable() {
 		updateUpdateTime();
 		sortSiteTable();
 	} catch (e) {
-		console.error(e);
+		logger.error('updateSitesTable', e);
 		showAlert('danger', 'Failed to update site table');
 	}
 
@@ -221,6 +227,7 @@ export async function updateSitesTable() {
 }
 
 function updateUpdateTime() {
+	logger.trace('updateUpdateTime', ...arguments)
 	const nowTime = Date.now();
 
 	Object.keys(siteUpdateTime).forEach(key => {

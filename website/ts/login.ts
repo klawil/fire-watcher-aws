@@ -1,6 +1,9 @@
 import { ApiUserAuthResponse, ApiUserLoginResult } from "../../common/userApi";
 import { showAlert } from "./utils/alerts";
 import { useFidoKey, user } from "./utils/auth";
+import { getLogger } from "../../common/logger";
+
+const logger = getLogger('login');
 
 const phoneInput = <HTMLInputElement>document.getElementById('phone');
 const codeInput = <HTMLInputElement>document.getElementById('code');
@@ -20,6 +23,7 @@ const searchParams: {
 	.map(v => v.split('=').map(v => decodeURIComponent(v)))
 	.reduce((agg, row) => ({ ...agg, [row[0]]: row[1] }), {});
 function redirectToPage() {
+	logger.trace('redirectToPage', ...arguments);
 	let newLocation: string = '/';
 	if (typeof searchParams.redirectTo !== 'undefined') {
 		newLocation = searchParams.redirectTo;
@@ -32,6 +36,7 @@ if (user.isUser) {
 	redirectToPage();
 }
 function formatPhone() {
+	logger.trace('formatPhone', ...arguments);
 	const phone = phoneInput.value.replace(/\D/g, '');
 	const first = phone.substring(0, 3);
 	const middle = phone.substring(3, 6);
@@ -51,6 +56,7 @@ phoneInput.addEventListener('keyup', formatPhone);
 
 let fidoKeys: string[] = [];
 async function getCode() {
+	logger.trace('getCode', ...arguments);
 	getCodeButton.classList.remove('btn-primary', 'btn-secondary');
 	getCodeButton.classList.add('btn-secondary');
 	getCodeButton.disabled = true;
@@ -99,6 +105,7 @@ phoneInput.addEventListener('keyup', e => {
 });
 
 async function submitCode() {
+	logger.trace('submitCode', ...arguments);
 	submitCodeButton.classList.remove('btn-primary', 'btn-secondary');
 	submitCodeButton.classList.add('btn-secondary');
 	submitCodeButton.disabled = true;
@@ -135,6 +142,7 @@ codeInput.addEventListener('keyup', e => {
 });
 
 async function useToken() {
+	logger.trace('useToken', ...arguments);
 	if (fidoKeys.length === 0) return;
 
 	useTokenButton.disabled = true;

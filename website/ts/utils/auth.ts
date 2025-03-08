@@ -1,10 +1,14 @@
 import { ApiUserFidoAuthBody, ApiUserFidoAuthResponse, ApiUserFidoGetAuthResponse, ApiUserGetUserResponse } from '../../../common/userApi';
 import { showAlert } from './alerts';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('auth');
 
 export const base64ToBuffer = (base64: string) => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
 export const bufferToBase64 = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
 export async function useFidoKey(keyIds: string[], isTest: boolean): Promise<boolean> {
+	logger.trace('useFidoKey', ...arguments);
 	let result: ApiUserFidoAuthResponse = {
 		success: false,
 		message: 'Failed to authenticate',
@@ -47,7 +51,7 @@ export async function useFidoKey(keyIds: string[], isTest: boolean): Promise<boo
 		}).then(r => r.json());
 	} catch (e) {
 		result.message = (<Error>e).message;
-		console.error(e);
+		logger.error('useFidoKey', e);
 	}
 
 	const alertMessage = `Token ${isTest ? 'Test' : 'Login'}: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
@@ -66,6 +70,7 @@ export let user: ApiUserGetUserResponse = {
 	isDistrictAdmin: document.cookie.indexOf('cvfd-user-super=1') !== -1,
 	fName: typeof fNameCookie !== 'undefined' ? fNameCookie.split(';')[0] : undefined,
 }; 
+logger.debug('Initial User:', user);
 
 // Show the available links
 if (user.isUser) {
@@ -84,16 +89,20 @@ if (user.isAdmin) {
 }
 
 if (document.cookie.indexOf('cvfd-token') !== -1) {
+	logger.debug('Fetching updated user data');
 	fetch(`/api/user?action=getUser`)
 		.then(r => r.json())
 		.then(data => {
+			logger.debug('User API response:', data);
 			user = data;
 		})
-		.catch(console.error)
+		.catch(e => logger.error('getUser API', e))
 		.finally(() => {
 			afterAuthUpdate.forEach(fn => fn());
 			afterAuthUpdate.push = fn => fn();
 		});
 }
 
-export function authInit() {}
+export function authInit() {
+	logger.trace('authInit');
+}

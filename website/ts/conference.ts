@@ -6,6 +6,9 @@ import * as twilio from '@twilio/voice-sdk';
 import { ApiUserListResponse, UserObject } from '../../common/userApi';
 import { formatPhone } from './utils/userConstants';
 import { createTableRow } from './utils/table';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('conf');
 
 interface ButtonConfig {
 	color: ButtonColors;
@@ -73,6 +76,7 @@ const buttonConfigs: {
 	},
 };
 function updateButton(btn: HTMLButtonElement, state: string) {
+	logger.trace('updateButton', ...arguments);
 	if (typeof buttonConfigs[state] === 'undefined')
 		throw new Error(`Invalid button state - ${state}`);
 
@@ -116,11 +120,13 @@ let myCallSid = '';
 let call: twilio.Call;
 
 function highlightRow(tr: HTMLTableRowElement) {
+	logger.trace('highlightRow', ...arguments);
 	setTimeout(() => tr.classList.add('bg-opacity-50', 'bg-success'), 1000);
 	setTimeout(() => tr.classList.remove('bg-success', 'bg-opacity-50'), 3000);
 }
 
 const createKickUserFn = (btn: HTMLButtonElement, callSid: string) => async () => {
+	logger.trace('kickUserFn', btn, callSid);
 	modifyButton(btn, 'secondary', 'Removing...', true, false);
 
 	let result: ApiConferenceKickUserResponse = {
@@ -142,6 +148,7 @@ const createKickUserFn = (btn: HTMLButtonElement, callSid: string) => async () =
 };
 
 function showParticipants(participants: ConferenceAttendeeObject[]) {
+	logger.trace('showParticipants', ...arguments);
 	const lastParticipantIds = lastParticipants.map(u => u.CallSid);
 	lastParticipants = participants;
 
@@ -225,6 +232,7 @@ function showParticipants(participants: ConferenceAttendeeObject[]) {
 }
 
 async function loadParticipants() {
+	logger.trace('loadParticipants', ...arguments);
 	const localLastStartTime = Date.now();
 	lastStartTime = localLastStartTime;
 
@@ -254,6 +262,7 @@ async function loadParticipants() {
 }
 
 async function updateAccessToken(device: twilio.Device) {
+	logger.trace('updateAccessToken', ...arguments);
 	const tokenResult: ApiConferenceTokenResponse = await fetch(`/api/conference?action=token`)
 		.then(r => r.json());
 	if (!tokenResult.success || typeof tokenResult.token === 'undefined')
@@ -262,6 +271,7 @@ async function updateAccessToken(device: twilio.Device) {
 }
 
 async function leaveCall() {
+	logger.trace('leaveCall', ...arguments);
 	if (call.status() === 'closed') {
 		updateButton(startButton, 'join');
 		return;
@@ -297,6 +307,7 @@ async function leaveCall() {
 }
 
 async function joinCall() {
+	logger.trace('joinCall', ...arguments);
 	updateButton(startButton, 'joining');
 
 	let wasSuccess = false;
@@ -327,7 +338,7 @@ async function joinCall() {
 			call.once('disconnect', leaveCall);
 			setTimeout(() => {
 				if (promiseResolved) return;
-				console.log('Timeout');
+				logger.warn('Timed out waiting to join call');
 				rej(new Error('timeout'));
 			}, 20000);
 		});
@@ -344,6 +355,7 @@ async function joinCall() {
 }
 
 const createInviteBtnFn = (btn: HTMLButtonElement, u: UserObject) => async () => {
+	logger.trace('inviteBtnFn', btn, u);
 	const mode = btn.getAttribute('data-state');
 	if (mode !== 'can_invite') return;
 
@@ -360,7 +372,7 @@ const createInviteBtnFn = (btn: HTMLButtonElement, u: UserObject) => async () =>
 		wasSuccess = true;
 	} catch (e) {
 		showAlert('danger', `Failed to invite user`);
-		console.error(e);
+		logger.error('inviteBtnFn', btn, u, e);
 	}
 
 	updateButton(btn, wasSuccess ? 'inviting' : 'can_invite');
@@ -377,6 +389,7 @@ const createInviteBtnFn = (btn: HTMLButtonElement, u: UserObject) => async () =>
 };
 
 async function createInvitableTable() {
+	logger.trace('createInvitableTable', ...arguments);
 	const departmentUsers: ApiUserListResponse = await fetch(`/api/user?action=list`)
 		.then(r => r.json());
 	if (!departmentUsers.success) {
@@ -439,6 +452,7 @@ async function createInvitableTable() {
 }
 
 startButton.addEventListener('click', () => {
+	logger.trace('startButton.click');
 	startButton.blur();
 	if (startButton.disabled) return;
 
@@ -450,6 +464,7 @@ startButton.addEventListener('click', () => {
 	}
 });
 endButton.addEventListener('click', async () => {
+	logger.trace('endButton.click');
 	updateButton(endButton, 'ending');
 	await fetch(`/api/conference?action=end`)
 		.then(r => r.json());
@@ -457,6 +472,7 @@ endButton.addEventListener('click', async () => {
 });
 
 function init() {
+	logger.trace('init', ...arguments);
 	updateButton(startButton, 'join');
 	updateButton(endButton, 'end');
 	loadParticipants();

@@ -5,6 +5,9 @@ import { formatPhone } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
 import { createTableRow } from './utils/table';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('profile');
 
 const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
 	'phone',
@@ -17,6 +20,7 @@ const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
 ];
 
 function formatValue(value: string | boolean | number): string {
+	logger.trace('formatValue', ...arguments);
 	if (
 		typeof value === 'number' ||
 		(
@@ -35,6 +39,7 @@ function formatValue(value: string | boolean | number): string {
 }
 
 function makePageCheckbox(container: HTMLElement, key: PagingTalkgroup) {
+	logger.trace('makePageCheckbox', ...arguments);
 	const div = document.createElement('div');
 	div.classList.add('form-check', 'form-switch');
 	container.appendChild(div);
@@ -59,6 +64,7 @@ function makePageCheckbox(container: HTMLElement, key: PagingTalkgroup) {
 const updateUserButton = <HTMLButtonElement>document.getElementById('submit-button');
 updateUserButton.disabled = true;
 async function updateUser() {
+	logger.trace('updateUser', ...arguments);
 	updateUserButton.classList.remove('btn-success', 'btn-secondary', 'btn-danger');
 	updateUserButton.classList.add('btn-secondary');
 	updateUserButton.disabled = true;
@@ -114,6 +120,7 @@ async function updateUser() {
 }
 
 async function testFidoKey(btn: HTMLButtonElement, key: string) {
+	logger.trace('testFidoKey', ...arguments);
 	btn.disabled = true;
 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 	btn.classList.add('btn-secondary');
@@ -129,6 +136,7 @@ async function testFidoKey(btn: HTMLButtonElement, key: string) {
 const addFidoButton = <HTMLButtonElement>document.getElementById('add-fido-button');
 const addFidoKeyName = <HTMLInputElement>document.getElementById('fidoName');
 async function addFidoKey() {
+	logger.trace('addFidoKey', ...arguments);
 	if (addFidoKeyName.value === '') {
 		showAlert('danger', 'A name is required to add a Fido key');
 		return;
@@ -179,7 +187,7 @@ async function addFidoKey() {
 			body: JSON.stringify(registerCredentialBody),
 		}).then(r => r.json());
 	} catch (e) {
-		console.error(e);
+		logger.error('addFidoKey', e);
 		result.message = (<Error>e).message;
 	}
 
@@ -193,6 +201,7 @@ async function addFidoKey() {
 addFidoButton.addEventListener('click', addFidoKey);
 
 function init() {
+	logger.trace('init', ...arguments);
 	fieldsToFill.forEach(key => {
 		const elem = <HTMLInputElement>document.getElementById(key);
 		if (elem === null) return;

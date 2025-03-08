@@ -3,6 +3,9 @@ import { authInit } from './utils/auth';
 import { buildMap, updateSitesTable } from './utils/sites';
 import { Chart, ChartConfiguration, ChartDataset, Point, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('status');
 
 authInit();
 
@@ -29,6 +32,7 @@ interface ChartConfig {
 }
 
 const formatDayHour: TimeFormatFn = date => {
+	logger.trace('formatDayHour', date);
 	const dateString = date.toLocaleDateString('en-us', {
 		timeZone: 'America/Denver',
 		weekday: 'short'
@@ -141,6 +145,7 @@ const baseCharts: ChartConfig[] = [
 ];
 
 async function buildChart(conf: ChartConfig): Promise<Error | null> {
+	logger.trace('buildChart', ...arguments);
 	const data: ApiFrontendStatsResponse = await fetch(`/api/frontend?action=stats&${conf.query}`)
 		.then(r => r.json());
 	
@@ -340,8 +345,7 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 }
 
 async function refreshCharts() {
-	const results = await Promise.all(baseCharts.map(buildChart));
-
-	console.log(results);
+	logger.trace('refreshCharts', ...arguments);
+	await Promise.all(baseCharts.map(buildChart));
 }
 refreshCharts();

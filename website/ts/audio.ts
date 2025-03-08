@@ -7,6 +7,9 @@ import { changeUrlParams, deleteUrlParams, getUrlParams } from './utils/url';
 import { AudioFilter, TalkgroupFilter, ToggleFilter } from './utils/filter';
 import { authInit } from './utils/auth';
 import { fNameToDate } from '../../common/file';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('audio');
 
 authInit();
 
@@ -35,6 +38,7 @@ declare global {
 const dataUpdateFrequency = 5000;
 
 function dateToStr(d: Date) {
+	logger.trace('dateToStr', ...arguments);
 	let dateString = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 	let timeString = [
 		d.getHours(),
@@ -68,7 +72,8 @@ const urlFilters: {
 };
 
 const fileTable = <HTMLTableElement>document.getElementById('files');
-const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => {
+function fileTableColumns(file: AudioFileObject): ColumnConfig[] {
+	logger.trace('fileTableColumns', ...arguments);
 	const baseClassList = typeof file.Transcript !== 'undefined'
 		? [ 'no-bottom-border' ]
 		: [];
@@ -99,23 +104,27 @@ const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => {
 		},
 	].map(conf => ({ ...conf, classList: [ ...(conf.classList || []), ...baseClassList ] }));
 };
-const fileTableTranscriptColumns = (file: AudioFileObject): ColumnConfig[] => [
-	{ html: '', },
-	{
-		classList: [ 'text-start' ],
-		create: (td: HTMLTableCellElement) => {
-			td.setAttribute('colspan', (fileTableColumns(file).length - 2).toString());
-			td.innerHTML = `<b>Approximate Transcript:</b> ${file.Transcript || 'N/A'}`;
+function fileTableTranscriptColumns(file: AudioFileObject): ColumnConfig[] {
+	logger.trace('fileTableTranscriptColumns', ...arguments);
+	return [
+		{ html: '', },
+		{
+			classList: [ 'text-start' ],
+			create: (td: HTMLTableCellElement) => {
+				td.setAttribute('colspan', (fileTableColumns(file).length - 2).toString());
+				td.innerHTML = `<b>Approximate Transcript:</b> ${file.Transcript || 'N/A'}`;
+			},
 		},
-	},
-	{ html: '', },
-];
+		{ html: '', },
+	];
+}
 
 let tgPromise: Promise<void>;
 let isAtTopOfPage: boolean = true; // Is the user at the top of the page?
 let isUpToLive: boolean = false; // Are there any new files after this file?
 
 function displayRows(newFiles: AudioFileObject[], direction: 'after' | 'before', restart: boolean) {
+	logger.trace('displayRows', ...arguments);
 	if (restart) fileTable.innerHTML = '';
 
 	// Make the function for actually adding the rows to the table
@@ -159,6 +168,7 @@ async function updateData(
 	restart = false,
 	date: Date | null = null
 ) {
+	logger.trace('updateData', ...arguments);
 	if (date !== null) {
 		restart = true;
 		isUpToLive = false;
@@ -294,6 +304,7 @@ async function updateData(
 }
 
 function debounce(fn: Function, minDelay: number): EventListenerOrEventListenerObject {
+	logger.trace('debounce', ...arguments);
 	let timerId: NodeJS.Timeout | null = null;
 	let lastCalledTime: number = 0;
 
@@ -318,6 +329,7 @@ function debounce(fn: Function, minDelay: number): EventListenerOrEventListenerO
 // Load new files if within 10% of the screen of the top or bottom of the page
 const scrollDebounce: number = 500; // Max 2 events per second
 function handleLoadNewFiles() {
+	logger.trace('handleLoadNewFiles', ...arguments);
 	const scrollY = window.scrollY;
 	const winHeight = window.innerHeight;
 	const bodyHeight = document.body.getBoundingClientRect().height;
@@ -344,6 +356,7 @@ const numberFormatter = new Intl.NumberFormat('en-us', {
 	maximumFractionDigits: 0
 });
 async function init() {
+	logger.trace('init', ...arguments);
 	if (window.location.href.indexOf('nostart') !== -1) {
 		doneLoading();
 		deleteUrlParams([ 'nostart', 'cs' ]);
@@ -432,6 +445,7 @@ const filterApplyButton = <HTMLButtonElement>document.getElementById('filter-app
 const filterApplyJumpButton = <HTMLButtonElement>document.getElementById('filter-apply-time');
 
 function updateUrlFilters() {
+	logger.trace('updateUrlFilters', ...arguments);
 	const newParams: { [key: string]: string; } = {};
 	Object.keys(urlFilters).forEach(key => {
 		urlFilters[key].update();
@@ -449,10 +463,12 @@ function updateUrlFilters() {
 }
 
 filterApplyButton.addEventListener('click', () => {
+	logger.trace('filterApplyButton.click');
 	updateUrlFilters();
 	updateData('after', true);
 });
 filterApplyJumpButton.addEventListener('click', () => {
+	logger.trace('filterApplyJumpButton.click');
 	updateUrlFilters();
 	const currentFile = getUrlParams().f;
 	if (
@@ -478,6 +494,7 @@ const timeSelect = {
 let firstTimeCall = true;
 let startDatePicker: DatepickerClass;
 timeButtons.forEach(btn => btn.addEventListener('click', () => {
+	logger.trace('timeButtons.click', btn);
 	if (!firstTimeCall) return;
 	firstTimeCall = false;
 
@@ -498,6 +515,7 @@ timeButtons.forEach(btn => btn.addEventListener('click', () => {
 	timeSelect.minute.value = (Math.floor(currentTime.getMinutes() / 15) * 15).toString().padStart(2, '0');
 }));
 timeApplyButton.addEventListener('click', () => {
+	logger.trace('timeApplyButton.click');
 	if (
 		startDatePicker === null ||
 		typeof startDatePicker.getDate() === 'undefined'

@@ -1,4 +1,7 @@
 import { createTableRow } from "./table";
+import { getLogger } from "../../../common/logger";
+
+const logger = getLogger('filter');
 
 export interface AudioFilter {
 	update: () => void;
@@ -14,25 +17,30 @@ export class ToggleFilter implements AudioFilter {
 	defaultUrl: string | null;
 
 	constructor(id: string) {
+		logger.trace('ToggleFilter.constructor', ...arguments);
 		this.element = <HTMLInputElement>document.getElementById(id);
 		this.update();
 		this.defaultUrl = this.get();
 	}
 
 	update() {
+		logger.trace('ToggleFilter.update', ...arguments);
 		this.value = this.element.checked ? 'y' : null;
 	}
 
 	get() {
+		logger.trace('ToggleFilter.get', ...arguments);
 		return this.value === null ? null : 'y';
 	}
 
 	set(urlValue: string) {
+		logger.trace('ToggleFilter.set', ...arguments);
 		this.element.checked = urlValue === 'y';
 		this.update();
 	}
 
 	isDefault() {
+		logger.trace('ToggleFilter.isDefault', ...arguments);
 		return this.get() === this.defaultUrl;
 	}
 }
@@ -85,6 +93,7 @@ export class TalkgroupFilter implements AudioFilter {
 	defaultUrl: string | null;
 
 	constructor(talkgroups: Talkgroups | null) {
+		logger.trace('TalkgroupFilter.constructor', ...arguments);
 		const tabs = [
 			'all',
 			'presets',
@@ -134,6 +143,7 @@ export class TalkgroupFilter implements AudioFilter {
 	}
 
 	setTalkgroups(talkgroups: Talkgroups) {
+		logger.trace('TalkgroupFilter.setTalkgroups', ...arguments);
 		Object.keys(talkgroups)
 			.forEach(key => {
 				const tr = createTableRow(this.talkgroupSelect, {
@@ -171,6 +181,7 @@ export class TalkgroupFilter implements AudioFilter {
 	}
 
 	update() {
+		logger.trace('TalkgroupFilter.update', ...arguments);
 		this.activeTab = this.tabContents
 			.filter(div => div.classList.contains('show'))[0]
 			.id;
@@ -191,6 +202,7 @@ export class TalkgroupFilter implements AudioFilter {
 	}
 
 	get(forApi: boolean) {
+		logger.trace('TalkgroupFilter.get', ...arguments);
 		if (this.activeTab === 'all')
 			return forApi ? null : 'all';
 
@@ -210,6 +222,7 @@ export class TalkgroupFilter implements AudioFilter {
 	}
 
 	set(urlValue: string) {
+		logger.trace('TalkgroupFilter.set', ...arguments);
 		if (urlValue.indexOf('%') !== -1)
 			urlValue = decodeURIComponent(urlValue);
 		if (urlValue[0] === 'p') {
@@ -249,6 +262,7 @@ export class TalkgroupFilter implements AudioFilter {
 	}
 
 	isDefault() {
+		logger.trace('TalkgroupFilter.isDefault', ...arguments);
 		return this.get(false) === this.defaultUrl;
 	}
 }

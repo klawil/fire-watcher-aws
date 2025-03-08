@@ -1,5 +1,9 @@
+import { getLogger } from "../../../common/logger";
+
 export type ButtonColors = 'primary' | 'secondary' | 'success'
 | 'danger' | 'warning' | 'info' | 'light' | 'dark' | 'link';
+
+const logger = getLogger('button');
 
 const buttonColorClasses: string[] = [
 	'btn-primary',
@@ -14,11 +18,13 @@ const buttonColorClasses: string[] = [
 ];
 
 export function changeButtonColor(btn: HTMLButtonElement, color: ButtonColors) {
+	logger.trace('changeButtonColor', ...arguments);
 	btn.classList.remove.apply(btn.classList, buttonColorClasses);
 	btn.classList.add(`btn-${color}`);
 }
 
 export function changeButtonText(btn: HTMLButtonElement, text: string, spinner?: boolean) {
+	logger.trace('changeButtonText', ...arguments);
 	btn.innerHTML = '';
 
 	if (spinner) {
@@ -38,6 +44,7 @@ export function modifyButton(
 	spinner?: boolean,
 	enabled?: boolean
 ) {
+	logger.trace('modifyButton', ...arguments);
 	if (color)
 		changeButtonColor(btn, color);
 

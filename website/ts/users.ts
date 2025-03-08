@@ -6,6 +6,9 @@ import { changeButtonColor } from "./utils/button";
 import { doneLoading } from "./utils/loading";
 import { RowConfig, createTableRow } from "./utils/table";
 import { formatPhone } from "./utils/userConstants";
+import { getLogger } from "../../common/logger";
+
+const logger = getLogger('users');
 
 interface CheckboxConfig {
 	name: UserObjectBooleans;
@@ -43,6 +46,7 @@ const defaultUserObject: UserObject = {
 };
 
 function getUserRowConfig(u: UserObject | null): RowConfig {
+	logger.trace('getUserRowConfig', ...arguments);
 	const newUserObj: UserObject = {
 		...defaultUserObject,
 		phone: u === null ? '' : u.phone.toString(),
@@ -318,6 +322,7 @@ const userAlertCheckboxes: CheckboxConfig[] = [
 ];
 
 function buildDepartmentSelect(u: UserObject | null, newUser: UserObject) {
+	logger.trace('buildDepartmentSelect', ...arguments);
 	const select = document.createElement('select');
 	select.classList.add('form-select');
 	select.name = 'department';
@@ -341,6 +346,7 @@ function buildDepartmentSelect(u: UserObject | null, newUser: UserObject) {
 }
 
 function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
+	logger.trace('buildTalkgroupCheckboxes', ...arguments);
 	const inputs: HTMLInputElement[] = [];
 
 	const container = document.createElement('div');
@@ -387,6 +393,7 @@ function buildCheckboxes(
 	checkboxConfigs: CheckboxConfig[],
 	uOld: UserObject | null
 ) {
+	logger.trace('buildCheckboxes', ...arguments);
 	const container = document.createElement('div');
 
 	checkboxConfigs
@@ -427,7 +434,7 @@ let lastSort = 'lName,fName';
 let currentSortIndex = 0;
 let userRows: UserObject[] = [];
 function sortRows(keysString: string) {
-	console.log('sortRows', keysString, lastSort, currentSortIndex);
+	logger.trace('sortRows', ...arguments);
 	const keys = <UserObjectStrings[]>keysString.split(',');
 	const numPossibilities = Math.pow(2, keys.length);
 
@@ -481,6 +488,7 @@ function sortRows(keysString: string) {
 	tbody.appendChild(<HTMLTableRowElement>document.getElementById('new-user-row'));
 }
 function resortRows() {
+	logger.trace('resortRows', ...arguments);
 	if (currentSortIndex > 0) {
 		currentSortIndex--;
 		sortRows(lastSort);
@@ -501,6 +509,7 @@ Array.from(document.querySelectorAll('.sortLabel'))
 		sortRows(label.getAttribute('data-keys') || '')));
 
 async function init() {
+	logger.trace('init', ...arguments);
 	if (user.isDistrictAdmin)
 		(<HTMLStyleElement>document.getElementById('customStyles')).innerHTML = '';
 

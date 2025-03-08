@@ -1,6 +1,9 @@
 import { FireTypes, WeatherResultJson } from '../../common/weather';
 import { authInit } from './utils/auth';
 import { doneLoading } from './utils/loading';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('weather');
 
 authInit();
 
@@ -34,6 +37,7 @@ const maxFireTypeLabelLen = (<FireTypes[]>Object.keys(fireTypeLabels))
 	.reduce((len, label) => len < label.length ? label.length : len, 0);
 
 function padEndWithSpaces(value: string | number, len: number) {
+	logger.trace('padEndWithSpaces', ...arguments);
 	if (typeof value !== 'string') {
 		value = value.toString();
 	}
@@ -43,6 +47,7 @@ function padEndWithSpaces(value: string | number, len: number) {
 }
 
 function padStartWithSpaces(value: string | number, len: number) {
+	logger.trace('padStartWithSpaces', ...arguments);
 	if (typeof value !== 'string') {
 		value = value.toString();
 	}
@@ -52,6 +57,7 @@ function padStartWithSpaces(value: string | number, len: number) {
 }
 
 async function init() {
+	logger.trace('init', ...arguments);
 	const result: WeatherResultJson = await fetch('./weather.json')
 		.then(r => r.json());
 

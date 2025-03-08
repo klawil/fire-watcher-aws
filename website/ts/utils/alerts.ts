@@ -1,10 +1,13 @@
 import { Alert } from 'bootstrap';
+import { getLogger } from '../../../common/logger';
 
 const alertContainer = <HTMLDivElement>document.getElementById('alert-container');
+const logger = getLogger('alerts');
 
 type AlertType = 'success' | 'danger';
 
 export function showAlert(type: AlertType, message: string, timeout: number = 5000) {
+	logger.trace('showAlert', ...arguments);
 	const elem = document.createElement('div');
 	alertContainer.appendChild(elem);
 	elem.classList.add('alert', `alert-${type}`, 'alert-dismissible', 'alert-fixed', 'fade', 'show');

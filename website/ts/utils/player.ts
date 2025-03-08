@@ -1,4 +1,7 @@
 import { changeUrlParams } from "./url";
+import { getLogger } from "../../../common/logger";
+
+const logger = getLogger('player');
 
 const player = <HTMLAudioElement>document.getElementById('player');
 const playerDuration = <HTMLDivElement>document.getElementById('player-duration');
@@ -22,6 +25,7 @@ export let autoPlayEnabled: boolean = true;
 export let playNewFiles: boolean = false;
 
 playButtons.forEach(btn => btn.addEventListener('click', () => {
+	logger.trace('Play button click', btn);
 	btn.blur();
 	if (playButtonAction === 'play')
 		player.play();
@@ -30,6 +34,7 @@ playButtons.forEach(btn => btn.addEventListener('click', () => {
 }));
 
 autoPlayButtons.forEach(btn => btn.addEventListener('click', () => {
+	logger.trace('Auto play button click', btn);
 	autoPlayEnabled = !autoPlayEnabled;
 	const method: 'add' | 'remove' = autoPlayEnabled ? 'add' : 'remove';
 
@@ -47,6 +52,7 @@ autoPlayButtons.forEach(btn => btn.addEventListener('click', () => {
 
 let currentPlayerShowMinutes: boolean = false;
 function timestampToString(ts: number): string {
+	logger.trace('timestampToString', ...arguments);
 	let durationString: string = '';
 	ts = Math.floor(ts / 0.1) * 0.1;
 	
@@ -64,10 +70,12 @@ function timestampToString(ts: number): string {
 }
 
 player.addEventListener('durationchange', () => {
+	logger.trace('player.durationchange');
 	playerDuration.innerHTML = `${timestampToString(player.currentTime)} / ${timestampToString(player.duration)}`;
 });
 
 player.addEventListener('play', () => {
+	logger.trace('player.play');
 	playButtonAction = 'pause';
 	playButtons.forEach(btn => {
 		const bi = btn.querySelector('.bi');
@@ -78,6 +86,7 @@ player.addEventListener('play', () => {
 });
 
 player.addEventListener('pause', () => {
+	logger.trace('player.pause');
 	playButtonAction = 'play';
 	playButtons.forEach(btn => {
 		const bi = btn.querySelector('.bi');
@@ -88,38 +97,45 @@ player.addEventListener('pause', () => {
 });
 
 player.addEventListener('timeupdate', () => {
+	logger.trace('player.timeupdate');
 	const newPercent = Math.round(player.currentTime * 100 / player.duration);
 	playerBar.style.width = `${newPercent}%`;
 	playerDuration.innerHTML = `${timestampToString(player.currentTime)} / ${timestampToString(player.duration)}`;
 });
 
 player.addEventListener('ended', () => {
+	logger.trace('player.ended');
 	if (!autoPlayEnabled) return;
 
 	// Get the next row
 	const currentFile = player.getAttribute('data-file');
 	if (currentFile === null) {
 		playNewFiles = true;
+		logger.error('Unable to find current file information');
 		return;
 	}
 
 	const row = <HTMLTableRowElement>document.getElementById(btoa(currentFile));
 	if (row === null) {
 		playNewFiles = true;
+		logger.error('Unable to find current file row', currentFile);
 		return;
 	}
 
 	const nextFile = row.previousElementSibling;
 	if (nextFile === null) {
 		playNewFiles = true;
+		logger.debug('No next file to play, holding');
 		return;
 	}
 
+	logger.debug('Playing next file:', atob(nextFile.id));
 	playNewFiles = false;
 	setTimeout(playFile, 100, atob(nextFile.id));
 });
 
 playerBarContainer.addEventListener('click', e => {
+	logger.trace('playerBarContainer.click');
 	const container = playerBarContainer.getBoundingClientRect();
 	let percent = (e.x - container.x) / container.width;
 	if (percent < 0) percent = 0;
@@ -129,6 +145,7 @@ playerBarContainer.addEventListener('click', e => {
 });
 
 function markRowAsPlaying(fileName: string) {
+	logger.trace('markRowAsPlaying', ...arguments);
 	const rowId = btoa(fileName);
 	Array.from(document.querySelectorAll('tr'))
 		.forEach(row => {
@@ -141,12 +158,13 @@ function markRowAsPlaying(fileName: string) {
 }
 
 export function playFile(fileName: string) {
+	logger.trace('playFile', ...arguments);
 	playNewFiles = false;
 	try {
 		player.src = `https://fire.klawil.net/${fileName}`;
 		player.play();
 	} catch (e) {
-		console.error(e);
+		logger.error('playFile', e);
 	}
 	player.setAttribute('data-file', fileName);
 	const fileNameShort = fileName.split('/').pop() || fileName;

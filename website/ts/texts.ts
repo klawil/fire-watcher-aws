@@ -3,12 +3,16 @@ import { showAlert } from './utils/alerts';
 import { doneLoading } from './utils/loading';
 import { createTableRow } from './utils/table';
 import { authInit } from './utils/auth';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('texts');
 
 authInit();
 
 const vhfPageRegex = /(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/;
 const dtrPageRegex = /\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/;
 function parseForPageTime(pageId: string): number {
+	logger.trace('parseForPageTime', ...arguments);
 	let d = new Date();
 	if (dtrPageRegex.test(pageId)) {
 		const match = pageId.match(dtrPageRegex) as string[];
@@ -27,10 +31,12 @@ function parseForPageTime(pageId: string): number {
 }
 
 function padLeft(num: number, len = 2): string {
+	logger.trace('padLeft', ...arguments);
 	return `${num}`.padStart(len, '0');
 }
 
 function dateTimeToTimeStr(datetime: number): string {
+	logger.trace('dateTimeToTimeStr', ...arguments);
 	let d = new Date(datetime);
 	return [
 		[
@@ -48,6 +54,7 @@ function dateTimeToTimeStr(datetime: number): string {
 }
 
 function makePercentString(numerator: number, denominator: number) {
+	logger.trace('makePercentString', ...arguments);
 	if (denominator === 0) return '';
 	const percentStr = `${Math.round(numerator * 100 / denominator)}%`;
 
@@ -59,6 +66,7 @@ function makePercentString(numerator: number, denominator: number) {
 }
 
 function parseMediaUrls(mediaUrls: string) {
+	logger.trace('parseMediaUrls', ...arguments);
 	return mediaUrls
 		.split(',')
 		.filter(s => s !== '')
@@ -67,6 +75,7 @@ function parseMediaUrls(mediaUrls: string) {
 }
 
 function getPercentile(values: number[], percentile: number) {
+	logger.trace('getPercentile', ...arguments);
 	if (values.length === 0) return '';
 
 	values = values.sort((a, b) => a > b ? 1 : -1);
@@ -93,6 +102,7 @@ function buildTable(
 	items: TextObject[],
 	isPage: boolean
 ) {
+	logger.trace('buildTable', ...arguments);
 	items.forEach(text => {
 		text.sent = text.sent || [];
 		text.delivered = text.delivered || [];
@@ -155,12 +165,13 @@ function buildTable(
 }
 
 async function init() {
+	logger.trace('init', ...arguments);
 	const apiResults: ApiFrontendListTextsResponse = await fetch(`/api/frontend?action=listTexts`)
 		.then(r => r.json());
 
 	if (!apiResults.success || typeof apiResults.data === 'undefined') {
 		showAlert('danger', 'Failed to get texts');
-		console.error(apiResults);
+		logger.error('init', apiResults);
 		return;
 	}
 
