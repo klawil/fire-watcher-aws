@@ -17,6 +17,8 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as eventbridge from 'aws-cdk-lib/aws-events';
+import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
@@ -206,6 +208,11 @@ export class FireWatcherAwsStack extends Stack {
           effect: iam.Effect.ALLOW,
           actions: [ 'cloudwatch:PutMetricData' ],
           resources: [ '*' ]
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'transcribe:*' ],
+          resources: [ '*' ]
         })
       ],
       runtime: lambda.Runtime.NODEJS_14_X,
@@ -232,6 +239,11 @@ export class FireWatcherAwsStack extends Stack {
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'transcribe:*' ],
           resources: [ '*' ]
         })
       ],
@@ -477,6 +489,17 @@ export class FireWatcherAwsStack extends Stack {
         prefix: 'audio/'
       }
     );
+
+    // Create the EventBridge link between the transcribe service and queue
+    const rule = new eventbridge.Rule(this, 'cvfd-event-rule', {
+      eventPattern: {
+        source: [ 'aws.transcribe' ],
+        detail: {
+          TranscriptionJobStatus: [ 'COMPLETED' ]
+        }
+      }
+    });
+    rule.addTarget(new eventtarget.SqsQueue(queue))
 
     // Create the status parser function
     const statusHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-status-lambda', {

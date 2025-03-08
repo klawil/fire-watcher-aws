@@ -1,8 +1,10 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
+import * as https from 'https';
 import { getTwilioSecret, incrementMetric, parsePhone, sendMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
+const transcribe = new AWS.TranscribeService();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
@@ -608,8 +610,65 @@ async function handleLogin(body: ActivateOrLoginBody) {
 	await sendMessage(null, body.phone, `This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`);
 }
 
+interface TranscribeBody {
+	'detail-type': string;
+	detail: {
+		TranscriptionJobName: string;
+		TranscriptionJobStatus: string;
+	}
+}
+
+interface TranscribeResult {
+	jobName: string;
+	results: {
+		transcripts: {
+			transcript: string;
+		}[]
+	}
+}
+
+async function handleTranscribe(body: TranscribeBody) {
+	// Get the transcription results
+	const transcriptionInfo = await transcribe.getTranscriptionJob({
+		TranscriptionJobName: body.detail.TranscriptionJobName
+	}).promise();
+	const fileData: string = await new Promise((res, rej) => https.get(transcriptionInfo.TranscriptionJob?.Transcript?.TranscriptFileUri as string, response => {
+		let data = '';
+
+		response.on('data', chunk => data += chunk);	
+		response.on('end', () => res(data));
+	}).on('error', e => rej(e)));
+	const result: TranscribeResult = JSON.parse(fileData);
+
+	// Build the message
+	const tg = result.jobName.split('-')[0];
+	const messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${result.results.transcripts[0].transcript}`;
+
+	// Get recipients and send
+	const recipients = (await getRecipients('all', tg))
+		.filter(r => r.getTranscript?.BOOL);
+	const messageId = Date.now().toString();
+	const insertMessage = saveMessageData(
+		messageId,
+		recipients.length,
+		messageBody
+	);
+
+	await Promise.all(recipients.map(number => sendMessage(
+		messageId,
+		number.phone.N,
+		messageBody,
+		[],
+		true
+	)));
+	await insertMessage;
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
+	if (typeof body.action === 'undefined' && typeof body['detail-type'] !== 'undefined') {
+		body.action = 'transcribe';
+	}
 	try {
 		await incrementMetric('Call', {
 			source: metricSource,
@@ -629,6 +688,8 @@ async function parseRecord(event: lambda.SQSRecord) {
 			case 'login':
 				response = await handleLogin(body);
 				break;
+			case 'transcribe':
+				response = await handleTranscribe(body);
 			default:
 				await incrementMetric('Error', {
 					source: metricSource

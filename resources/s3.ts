@@ -5,6 +5,7 @@ import { incrementMetric } from './utils/general';
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
+const transcribe = new aws.TranscribeService();
 
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
@@ -46,15 +47,17 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		const Key = record.s3.object.key;
 
 		if (record.eventName.indexOf('ObjectCreated') === 0) {
+			let promises: Promise<any>[] = [];
+
 			const metric = incrementMetric('Call', {
 				source: metricSource,
 				action: `create${Key.indexOf('/dtr') !== -1 ? 'DTR' : 'VHF'}`
 			}, false);
+			promises.push(metric);
 			const headInfo = await s3.headObject({
 				Bucket,
 				Key
 			}).promise();
-			await metric;
 
 			const body: AWS.DynamoDB.PutItemInput = {
 				TableName: dtrTable,
@@ -162,6 +165,18 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}
 				};
 			}
+			if (body.Item.Tone?.BOOL) {
+				promises.push(transcribe.startTranscriptionJob({
+					TranscriptionJobName: `${body.Item.Talkgroup.N}-${Date.now()}`,
+					LanguageCode: 'en-US',
+					Media: {
+						MediaFileUri: `s3://${Bucket}/${Key}`
+					},
+					Settings: {
+						VocabularyName: 'SagVocab'
+					}
+				}).promise());
+			}
 			await dynamodb.putItem(body).promise();
 
 			if (Key.indexOf('/dtr') !== -1) {
@@ -210,6 +225,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							type: 'dtr',
 							event: 'duplicate call'
 						}, false);
+						promises.push(metric);
 						const itemsToDelete = matchingItems
 							.sort((a, b) => {
 								const aAdded = Number(a.Added.N);
@@ -223,7 +239,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								return aLen > bLen ? 1 : -1;
 							})
 							.slice(0, -1);
-						await dynamodb.batchWriteItem({
+						promises.push(dynamodb.batchWriteItem({
 							RequestItems: {
 								[dtrTable]: itemsToDelete.map(itemToDelete => ({
 									DeleteRequest: {
@@ -238,23 +254,22 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 									}
 								}))
 							}
-						}).promise();
-						await metric;
+						}).promise());
+						await Promise.all(promises);
 						return;
 					}
 				}
 			}
 
-			let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
 			if (body.Item.Tone?.BOOL && config.sendPage) {
-				queuePromise = sqs.sendMessage({
+				promises.push(sqs.sendMessage({
 					MessageBody: JSON.stringify({
 						action: 'page',
 						tg: body.Item.Talkgroup?.N,
 						key: Key.split('/')[2] || Key.split('/')[1]
 					}),
 					QueueUrl: sqsQueue
-				}).promise();
+				}).promise());
 			}
 
 			const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
@@ -352,11 +367,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			talkgroupDevices.UpdateExpression = `ADD ${updateExpression.join(', ')}`;
 
 			try {
-				const promises: Promise<any>[] = [
-					dynamodb.updateItem(talkgroupCreate).promise()
-						.then(() => doDeviceUpdate ? dynamodb.updateItem(talkgroupDevices).promise() : null),
-						queuePromise
-				];
+				promises.push(dynamodb.updateItem(talkgroupCreate).promise());
 				if (doDeviceUpdate) {
 					promises.push(Promise.all(deviceCreate.map(conf => dynamodb.updateItem(conf).promise()))
 						.then(() => Promise.all(deviceUpdate.map(conf => dynamodb.updateItem(conf).promise()))));
