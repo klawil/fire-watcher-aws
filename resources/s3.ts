@@ -6,6 +6,7 @@ const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const transcribe = new aws.TranscribeService();
+const cloudwatch = new aws.CloudWatch();
 
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
@@ -122,6 +123,18 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				if (sourceList.length === 0) {
 					delete body.Item.Sources;
 				}
+				await cloudwatch.putMetricData({
+					Namespace: 'DTR Metrics',
+					MetricData: [ {
+						MetricName: 'Upload',
+						Dimensions: [ {
+							Name: 'Tower',
+							Value: headInfo.Metadata?.source as string
+						} ],
+						Unit: 'Count',
+						Value: 1
+					} ]
+				}).promise();
 			} else {
 				for (let vhfKey in vhfConfig) {
 					if (Key.indexOf(vhfKey) !== -1) {

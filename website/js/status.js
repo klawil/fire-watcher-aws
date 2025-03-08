@@ -70,6 +70,10 @@ const charts = [
 		query: 'metrics=api-frontend,api-infra,api-user,api-twilio,s3-created,queue'
 	},
 	{
+		id: 's3-uploads',
+		query: 'metrics=tower-sag-upload,tower-ala-upload,tower-pt-upload,tower-sa-upload,tower-mv-upload&live=y'
+	},
+	{
 		id: 'api-errors',
 		query: 'metrics=err-frontend,err-infra,err-user,err-twilio,err-s3,err-queue&live=y'
 	},

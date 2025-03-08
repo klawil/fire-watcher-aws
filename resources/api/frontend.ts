@@ -852,6 +852,23 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
+	'tower-sag-upload': {
+		Id: 'tower_sag_uploads',
+		Label: 'Saguache Tower Uploads',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Upload',
+				Dimensions: [ {
+					Name: 'Tower',
+					Value: 'saguache'
+				} ]
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count'
+		}
+	},
 	'tower-ala-min': {
 		Id: 'tower_ala_min',
 		Label: 'Alamosa Tower Decode Rate - Min',
@@ -887,6 +904,23 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
+			Unit: 'Count'
+		}
+	},
+	'tower-ala-upload': {
+		Id: 'tower_ala_uploads',
+		Label: 'Alamosa Tower Uploads',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Upload',
+				Dimensions: [ {
+					Name: 'Tower',
+					Value: 'alamosa'
+				} ]
+			},
+			Period: 60,
+			Stat: 'Sum',
 			Unit: 'Count'
 		}
 	},
@@ -928,6 +962,23 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
+	'tower-pt-upload': {
+		Id: 'tower_pt_uploads',
+		Label: 'Pool Table Uploads',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Upload',
+				Dimensions: [ {
+					Name: 'Tower',
+					Value: 'pooltable'
+				} ]
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count'
+		}
+	},
 	'tower-sa-min': {
 		Id: 'tower_sa_min',
 		Label: 'San Antonio Peak Decode Rate - Min',
@@ -948,7 +999,7 @@ const statsMap: {
 		}
 	},
 	'tower-sa-max': {
-		Id: 'tower_sg_max',
+		Id: 'tower_sa_max',
 		Label: 'San Antonio Peak Decode Rate - Max',
 		MetricStat: {
 			Metric: {
@@ -963,6 +1014,23 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
+			Unit: 'Count'
+		}
+	},
+	'tower-sa-upload': {
+		Id: 'tower_sa_uploads',
+		Label: 'San Antonio Peak Uploads',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Upload',
+				Dimensions: [ {
+					Name: 'Tower',
+					Value: 'sanantonio'
+				} ]
+			},
+			Period: 60,
+			Stat: 'Sum',
 			Unit: 'Count'
 		}
 	},
@@ -1001,6 +1069,23 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
+			Unit: 'Count'
+		}
+	},
+	'tower-mv-upload': {
+		Id: 'tower_mv_uploads',
+		Label: 'Monte Vista Tower Uploads',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Upload',
+				Dimensions: [ {
+					Name: 'Tower',
+					Value: 'montevista'
+				} ]
+			},
+			Period: 60,
+			Stat: 'Sum',
 			Unit: 'Count'
 		}
 	},

@@ -301,7 +301,7 @@ export class FireWatcherAwsStack extends Stack {
         metricName: 'Decode Rate',
         namespace: 'DTR Metrics',
         period: Duration.seconds(30),
-        statistic: cloudwatch.Statistic.MINIMUM,
+        statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
           Tower: 'Saguache Tower'
         }
@@ -319,7 +319,7 @@ export class FireWatcherAwsStack extends Stack {
         metricName: 'Error',
         namespace: 'CVFD API',
         period: Duration.seconds(30),
-        statistic: cloudwatch.Statistic.SUM,
+        statistic: cloudwatch.Stats.SUM,
         dimensionsMap: {
           source: 'User'
         }
@@ -330,6 +330,24 @@ export class FireWatcherAwsStack extends Stack {
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     };
+    const baseUploadAlarmConfig: cloudwatch.AlarmProps = {
+      evaluationPeriods: 1,
+      datapointsToAlarm: 1,
+      metric: new cloudwatch.Metric({
+        metricName: 'Upload',
+        namespace: 'DTR Metrics',
+        period: Duration.minutes(60),
+        statistic: cloudwatch.Stats.SUM,
+        dimensionsMap: {
+          Tower: 'saguache'
+        }
+      }),
+      threshold: 0,
+      alarmDescription: 'No files uploaded for Saguache Tower',
+      alarmName: 'Saguache Tower Uploads',
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    };
     const alarms: CvfdAlarm[] = [
       {
         codeName: 'saguache-tower',
@@ -339,7 +357,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Decode Rate',
             namespace: 'DTR Metrics',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.MINIMUM,
+            statistic: cloudwatch.Stats.MINIMUM,
             dimensionsMap: {
               Tower: 'Saguache Tower'
             }
@@ -358,13 +376,53 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Decode Rate',
             namespace: 'DTR Metrics',
             period: Duration.minutes(1),
-            statistic: cloudwatch.Statistic.MINIMUM,
+            statistic: cloudwatch.Stats.MINIMUM,
             dimensionsMap: {
               Tower: 'Pool Table Mountain'
             }
           }),
           alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
           alarmName: 'Pool Table Tower'
+        }
+      },
+      {
+        codeName: 'saguache-tower-upload',
+        alarm: {
+          ...baseUploadAlarmConfig
+        }
+      },
+      {
+        codeName: 'pool-table-upload',
+        alarm: {
+          ...baseUploadAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Upload',
+            namespace: 'DTR Metrics',
+            period: Duration.minutes(60),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              Tower: 'pooltable'
+            }
+          }),
+          alarmDescription: 'No files uploaded for Pool Table',
+          alarmName: 'Pool Table Uploads',
+        }
+      },
+      {
+        codeName: 'san-antonio-upload',
+        alarm: {
+          ...baseUploadAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Upload',
+            namespace: 'DTR Metrics',
+            period: Duration.minutes(60),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              Tower: 'sanantonio'
+            }
+          }),
+          alarmDescription: 'No files uploaded for San Antonio Peak',
+          alarmName: 'San Antonio Peak Uploads',
         }
       },
       {
@@ -376,7 +434,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Error',
             namespace: 'CVFD API',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.SUM,
+            statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'User'
             }
@@ -394,7 +452,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Error',
             namespace: 'CVFD API',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.SUM,
+            statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Twilio'
             }
@@ -412,7 +470,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Error',
             namespace: 'CVFD API',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.SUM,
+            statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Infra'
             }
@@ -430,7 +488,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Error',
             namespace: 'CVFD API',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.SUM,
+            statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Frontend'
             }
@@ -448,7 +506,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Error',
             namespace: 'CVFD API',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.SUM,
+            statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'S3'
             }
@@ -466,7 +524,7 @@ export class FireWatcherAwsStack extends Stack {
             metricName: 'Error',
             namespace: 'CVFD API',
             period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.SUM,
+            statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Queue'
             }
