@@ -109,6 +109,11 @@ const baseCharts: ChartConfig[] = [
 		query: 'metrics=tower-sag-upload,tower-ala-upload,tower-pt-upload,tower-sa-upload,tower-mv-upload&live=y',
 	},
 	{
+		id: 's3-uploads-time',
+		type: 'Metric',
+		query: 'metrics=upload-time-cvfd-p80,upload-time-nscad-p80',
+	},
+	{
 		id: 'sag-tower',
 		type: 'Tower',
 		query: 'metrics=tower-sag-max,tower-sag-min,tower-sag-upload&period=300&timerange=86400000&live=y',

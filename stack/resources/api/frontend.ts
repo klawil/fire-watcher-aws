@@ -1017,6 +1017,108 @@ const statsMap: {
 			Stat: 'Sum',
 		},
 	},
+	'upload-time-cvfd-p80': {
+		Label: 'CVFD Upload Time (p80)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'CVFD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'p80',
+		},
+	},
+	'upload-time-cvfd-avg': {
+		Label: 'CVFD Upload Time (avg)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'CVFD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'avg',
+		},
+	},
+	'upload-time-cvfd-max': {
+		Label: 'CVFD Upload Time (max)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'CVFD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'max',
+		},
+	},
+	'upload-time-nscad-p80': {
+		Label: 'NSCAD Upload Time (p80)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'NSCAD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'p80',
+		},
+	},
+	'upload-time-nscad-avg': {
+		Label: 'NSCAD Upload Time (avg)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'NSCAD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'avg',
+		},
+	},
+	'upload-time-nscad-max': {
+		Label: 'NSCAD Upload Time (max)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'NSCAD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'max',
+		},
+	},
 };
 Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 	const baseId = lambdaFn.toLowerCase();

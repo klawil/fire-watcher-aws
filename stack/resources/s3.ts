@@ -53,6 +53,15 @@ const talkgroupsToTag: {
 	'8331': 'Baca',
 };
 
+const towerToStation: {
+	[key: string]: 'NSCAD' | 'CVFD';
+} = {
+	Alamosa: 'CVFD',
+	Saguache: 'NSCAD',
+	SanAntonio: 'CVFD',
+	PoolTable: 'CVFD',
+};
+
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	logger.trace('parseRecord', ...arguments);
 	try {
@@ -159,11 +168,13 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 				];
 				if (!Number.isNaN(Number(headInfo.Metadata?.stop_time))) {
+					const towerName = headInfo.Metadata?.source as string;
+					const stationName = towerToStation[towerName] || towerName;
 					towerUploadMetrics.push({
 						MetricName: 'UploadTime',
 						Dimensions: [ {
 							Name: 'Tower',
-							Value: headInfo.Metadata?.source as string
+							Value: stationName,
 						} ],
 						Unit: 'Seconds',
 						Value: Math.round(addedTime / 1000) - Number(headInfo.Metadata?.stop_time),
