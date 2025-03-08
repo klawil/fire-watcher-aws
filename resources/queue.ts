@@ -311,7 +311,7 @@ async function testSystem() {
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
 			phone.phone.N,
-			createPageMessage('testPage'),
+			createPageMessage('testPage/testPage'),
 			[],
 			true
 		)));
