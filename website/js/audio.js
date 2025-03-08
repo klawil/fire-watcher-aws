@@ -32,7 +32,7 @@ autoPlayButtons.forEach((button) => button.addEventListener('click', () => {
 	const method = autoPlayEnabled ? 'add' : 'remove';
 
 	autoPlayButtons.forEach((button) => {
-		if (button.tagName === 'li') {
+		if (button.tagName === 'LI') {
 			button.querySelector('a').classList[method]('active');
 		} else {
 			button.blur();

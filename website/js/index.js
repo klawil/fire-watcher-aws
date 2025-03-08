@@ -8,7 +8,10 @@ const nextDataFields = {};
 
 let isUpdatingBefore = false;
 function updateData(direction = 'after') {
-	let apiUrl = '/api';
+	const host = window.location.origin.indexOf('localhost') !== -1
+		? 'http://localhost:8001'
+		: '';
+	let apiUrl = `${host}/api`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '?'
 		if (direction === 'after') {

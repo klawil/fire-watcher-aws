@@ -5,7 +5,10 @@ const nextDataFields = {};
 
 let isUpdatingBefore = false;
 function updateData(direction = 'after') {
-	let apiUrl = 'http://localhost:8001/api?action=dtr';
+	const host = window.location.origin.indexOf('localhost') !== -1
+		? 'http://localhost:8001'
+		: '';
+	let apiUrl = `${host}/api?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
 		if (direction === 'after') {
