@@ -97,7 +97,7 @@ interface TwilioConfig {
 interface PhoneNumberConfig {
 	name?: string;
 	number: string;
-	account?: 'Baca';
+	account?: 'Baca' | 'NSCAD';
 	type: 'page' | 'alert' | 'chat';
 	department?: UserDepartment;
 }
@@ -127,6 +127,7 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 		number: '***REMOVED***',
 		type: 'chat',
 		department: 'NSCAD',
+		account: 'NSCAD',
 	},
 };
 export const twilioPhoneNumbers: { [key: string]: PhoneNumberConfig } = Object.keys(twilioPhoneCategories)
