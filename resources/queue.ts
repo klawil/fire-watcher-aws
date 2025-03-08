@@ -9,15 +9,69 @@ const messagesTable = process.env.TABLE_MESSAGES as string;
 
 const metricSource = 'Queue';
 
-const welcomeMessage = `Welcome to the {{department}} Fire Department text group!
+const welcomeMessageParts: {
+	welcome: string;
+	textGroup: string;
+	pageGroup: string;
+	howToLeave: string;
+} = {
+	welcome: `Welcome to the {{department}} {{type}}!`,
+	textGroup: `This number will be used to send and receive messages from other members of the Fire Department.\n\nIn a moment, you will receive a text from another number with a link to the most recent page for {{departmentShort}}. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
+	pageGroup: `This number will be used to send pages and only pages.\n\nIn a moment, you will receive a text with a link to the most recent page for {{departmentShort}}.`,
+	howToLeave: `You can leave this group at any time by texting "STOP" to this number.`
+};
 
-This number will be used to send and receive messages from other members of the Fire Department.
+type WelcomeMessageConfigKeys = 'department' | 'type' | 'departmentShort' | 'groupType';
+const welcomeMessageConfig: { [key: string]: {
+	department: string;
+	type: string;
+	departmentShort: string;
+	groupType: 'text' | 'page';
+} } = {
+	Crestone: {
+		department: 'Crestone Volunteer Fire Department',
+		type: 'text group',
+		departmentShort: 'NSCFPD',
+		groupType: 'text'
+	},
+	Moffat: {
+		department: 'Moffat Volunteer Fire Department',
+		type: 'text group',
+		departmentShort: 'NSCFPD',
+		groupType: 'text'
+	},
+	Saguache: {
+		department: 'Saguache Volunteer Fire Department',
+		type: 'text group',
+		departmentShort: 'NSCFPD',
+		groupType: 'text'
+	},
+	'Villa Grove': {
+		department: 'Villa Grove Volunteer Fire Department',
+		type: 'text group',
+		departmentShort: 'NSCFPD',
+		groupType: 'text'
+	},
+	Baca: {
+		department: 'Baca Emergency Services',
+		type: 'backup paging system',
+		departmentShort: 'Baca',
+		groupType: 'page'
+	},
+	NSCAD: {
+		department: 'Northern Saguache County Ambulance District',
+		type: 'backup paging system',
+		departmentShort: 'NSCAD',
+		groupType: 'page'
+	},
+};
 
-In a moment, you will receive a text from another number with a link to the most recent page for NSCFPD. That number will only ever send you pages or announcements.
+const tgToPageDept: { [key: string]: string } = {
+	'8332': 'NSCFPD',
+	'18331': 'Baca ES',
+	'8198': 'NSCAD'
+};
 
-To send a message to other members of your department, just send a text to this number. Any message you sent will show up for others with your name and callsign attached.
-
-You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
 const timeZone = 'America/Denver';
@@ -296,9 +350,24 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	}).promise();
 
 	// Send the welcome message
-	const customWelcomeMessage = welcomeMessage
-		.replace(/\{\{department\}\}/g, updateResult.Attributes?.department?.S || 'NSCFPD');
-	promises.push(sendMessage(null, body.phone, customWelcomeMessage));
+	const pageTgs = (updateResult.Attributes?.talkgroups?.NS || [])
+		.map(key => tgToPageDept[key] || `Talkgroup ${key}`)
+		.join(', ')
+	const config = welcomeMessageConfig[updateResult.Attributes?.department?.S || 'Crestone'];
+	const customWelcomeMessage = (
+		`${welcomeMessageParts.welcome}\n\n` +
+		`${welcomeMessageParts[`${config.groupType}Group`]}\n\n` +
+		`You will receive pages for: ${pageTgs}\n\n` +
+		`${welcomeMessageParts.howToLeave}`
+	)
+		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => config[b]);
+	promises.push(sendMessage(
+		null,
+		body.phone,
+		customWelcomeMessage,
+		[],
+		config.groupType === 'page'
+	));
 
 	// Send the message to the admins
 	promises.push(dynamodb.query({
