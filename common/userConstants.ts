@@ -1,4 +1,4 @@
-export type UserDepartment = 'Crestone' | 'NSCAD' | 'Baca';
+export type UserDepartment = 'Crestone' | 'NSCAD' | 'Baca' | 'Page Only';
 export type PagingTalkgroup = 8332 | 18332 | 18331 | 8198 | 8334
  | 8281 | 8181;
 
@@ -20,6 +20,7 @@ export const validDepartments: UserDepartment[] = [
 	'Baca',
 	'Crestone',
 	'NSCAD',
+	'Page Only',
 ];
 
 export const pagingTalkgroupOrder: PagingTalkgroup[] = [
@@ -61,6 +62,12 @@ export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseTy
 		defaultTalkgroups: [ 8198 ],
 		pagePhone: 'page',
 		textPhone: 'chatNSCAD',
+	},
+	'Page Only': {
+		name: 'Page Only',
+		type: 'page',
+		pagePhone: 'page',
+		defaultTalkgroups: [],
 	}
 };
 
