@@ -277,7 +277,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 			(Object.keys(neededFields) as (keyof AdjacentSitesBodyItem)[])
 				.filter(key => neededFields[key] !== 'string')
 				.forEach(key => {
-					(sites[siteId][key] as boolean) = (sites[siteId][key] as boolean) && (site[key] as boolean);
+					(sites[siteId][key] as boolean) = (sites[siteId][key] as boolean) || (site[key] as boolean);
 				});
 		}));
 
