@@ -9,6 +9,7 @@ const transcribe = new aws.TranscribeService();
 const cloudwatch = new aws.CloudWatch();
 
 const dtrTable = process.env.TABLE_DTR as string;
+const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 
@@ -221,7 +222,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							event: 'duplicate call'
 						}, false);
 						promises.push(metric);
-						const itemsToDelete = matchingItems
+						const allItems = matchingItems
 							.sort((a, b) => {
 								const aAdded = Number(a.Added.N);
 								const bAdded = Number(b.Added.N);
@@ -233,7 +234,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 
 								return aLen > bLen ? 1 : -1;
 							})
+						const itemsToDelete = allItems
 							.slice(0, -1);
+						const keptItem = allItems.slice(-1)[0];
 						promises.push(dynamodb.batchWriteItem({
 							RequestItems: {
 								[dtrTable]: itemsToDelete.map(itemToDelete => ({
@@ -250,6 +253,20 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								}))
 							}
 						}).promise());
+						promises.push(dynamodb.batchWriteItem({
+							RequestItems: {
+								[dtrTranslationTable]: itemsToDelete.map(itemToDelete => ({
+									PutRequest: {
+										Item: {
+											Key: { S: itemToDelete.Key.S },
+											NewKey: { S: keptItem.Key.S },
+											TTL: { N: (Math.round(Date.now() / 1000) + (10 * 60)).toString() },
+										}
+									}
+								}))
+							}
+						}).promise()
+							.catch(e => console.error(e)));
 						await Promise.all(promises);
 						return;
 					}

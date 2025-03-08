@@ -91,6 +91,14 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING
       }
     });
+    const dtrTranslationTable = new dynamodb.Table(this, 'cvfd-dtr-translation', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'Key',
+        type: dynamodb.AttributeType.STRING
+      },
+      timeToLiveAttribute: 'TTL'
+    });
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
@@ -403,6 +411,7 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_DTR: dtrTable.tableName,
+        TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
         SQS_QUEUE: queue.queueUrl
       }
@@ -413,6 +422,7 @@ export class FireWatcherAwsStack extends Stack {
     dtrTable.grantReadWriteData(s3Handler);
     talkgroupTable.grantReadWriteData(s3Handler);
     queue.grantSendMessages(s3Handler);
+    dtrTranslationTable.grantReadWriteData(s3Handler);
 
     // Create a handler for the SQS queue
     const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
@@ -435,6 +445,7 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_MESSAGES: textsTable.tableName,
         TABLE_DTR: dtrTable.tableName,
+        TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
         TWILIO_SECRET: secretArn
       },
       timeout: Duration.minutes(1)
@@ -446,6 +457,7 @@ export class FireWatcherAwsStack extends Stack {
     textsTable.grantReadWriteData(queueHandler);
     dtrTable.grantReadData(queueHandler);
     twilioSecret.grantRead(queueHandler);
+    dtrTranslationTable.grantReadWriteData(queueHandler);
 
     // Create a queue for cloudwatch alarms
     const alarmQueue = new sqs.Queue(this, 'cvfd-alarm-queue');
