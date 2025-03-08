@@ -102,11 +102,6 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment): 
 					td.appendChild(div);
 					div.classList.add('input-group');
 
-					const label = document.createElement('span');
-					div.appendChild(label);
-					label.classList.add('input-group-text');
-					label.innerHTML = 'CS';
-
 					div.appendChild(callsignInput);
 					callsignInput.type = 'text';
 					callsignInput.name = 'callSign',
@@ -137,12 +132,6 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment): 
 						departmentValues.admin = isAdminInput.checked;
 					});
 					isAdminInput.disabled = !canEditThisDepartment;
-
-					const label = document.createElement('label');
-					div.appendChild(label);
-					label.classList.add('form-check-label');
-					label.innerHTML = 'Admin';
-					label.setAttribute('for', isAdminInput.id);
 				},
 				classList: [],
 			},
@@ -543,7 +532,7 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 		const departmentTable = document.createElement('table');
 		depContainer.appendChild(departmentTable);
 		departmentTable.classList.add('table', 'mb-0', 'text-center', 'no-bg');
-		departmentTable.innerHTML = `<thead><tr><th colspan="4">Departments</th></tr></thead><tbody></tbody>`;
+		departmentTable.innerHTML = `<thead><tr><th>Department</th><th>Call Sign</th><th>Admin</th><th></th></tr></thead><tbody></tbody>`;
 		const departmentTbody = departmentTable.querySelector('tbody');
 		validDepartments
 			.filter(dep => userAdminDepartments.includes(dep) || (
