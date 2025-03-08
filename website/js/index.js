@@ -354,7 +354,7 @@ window.addEventListener('scroll', () => {
 	const winHeight = window.innerHeight;
 	const bodyHeight = document.body.getBoundingClientRect().height;
 
-	if (scrollY + winHeight >= bodyHeight) {
+	if (scrollY + winHeight >= bodyHeight - 60) {
 		updateData('before');
 	}
 });
