@@ -328,6 +328,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		queryConfigs.forEach((queryConfig) => {
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+			queryConfig.ScanIndexForward = true;
 
 			queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
 			queryConfig.ExpressionAttributeValues[':dt'] = {
