@@ -385,17 +385,29 @@ function init() {
 }
 
 let lastSort = 'lName,fName';
-function sortRows(keys) {
-	let aGreater = 1;
-	let aLesser = -1;
-	if (lastSort === keys) {
-		aGreater = -1;
-		aLesser = 1;
-		lastSort += ',';
+let currentSortIndex = 0;
+function sortRows(keysString) {
+	const keys = keysString.split(',');
+	const numPossibilities = Math.pow(2, keys.length);
+
+	if (lastSort === keysString) {
+		currentSortIndex++;
+		if (currentSortIndex === numPossibilities)
+			currentSortIndex = 0;
 	} else {
-		lastSort = keys;
+		currentSortIndex = 0;
 	}
-	keys = keys.split(',');
+	lastSort = keysString;
+	let sortRemainder = currentSortIndex;
+	const direction = keys
+		.map((key, index) => {
+			const power = Math.pow(2, keys.length - index - 1);
+			const isGreater = sortRemainder >= power;
+			if (isGreater)
+				sortRemainder -= power;
+			return isGreater;
+		})
+		.reverse();
 
 	const rows = [ ...tbody.getElementsByTagName('tr') ];
 	
@@ -407,6 +419,13 @@ function sortRows(keys) {
 			let i = 0;
 			while (i < keys.length && a.user[keys[i]] === b.user[keys[i]]) {
 				i++;
+			}
+
+			let aGreater = 1;
+			let aLesser = -1;
+			if (direction[i]) {
+				aGreater = -1;
+				aLesser = 1;
 			}
 
 			if (i === keys.length) {
