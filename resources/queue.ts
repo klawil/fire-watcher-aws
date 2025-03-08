@@ -631,9 +631,28 @@ interface TranscribeResult {
 	results: {
 		transcripts: {
 			transcript: string;
-		}[]
-	}
-}
+		}[];
+		speaker_labels: {
+			segments: {
+				start_time: string;
+				end_time: string;
+				speaker_label: string;
+			}[];
+		},
+		items: ({
+			type: 'pronunciation';
+			start_time: string;
+			alternatives: {
+				content: string;
+			}[];
+		} | {
+			type: 'punctuation';
+			alternatives: {
+				content: string;
+			}[];
+		})[];
+	};
+};
 
 async function getItemToUpdate(key: string | null): Promise<AWS.DynamoDB.AttributeMap | null> {
 	if (key === null) return key;
@@ -688,12 +707,55 @@ async function handleTranscribe(body: TranscribeBody) {
 	}).on('error', e => rej(e)));
 	const result: TranscribeResult = JSON.parse(fileData);
 
+	let transcript: string = 'No voices detected';
+	if (result.results.transcripts[0].transcript !== '') {
+		const words = result.results.items.map(item => {
+			const word: {
+				content: string;
+				startTime?: number;
+				speaker?: string;
+				type: string;
+			} = {
+				content: item.alternatives[0].content,
+				type: item.type,
+			};
+			if (item.type === 'punctuation') return word;
+
+			word.startTime = parseFloat(item.start_time);
+			return word;
+		});
+
+		transcript = result.results.speaker_labels.segments.map(seg => {
+			const startTime = parseFloat(seg.start_time);
+			const endTime = parseFloat(seg.end_time);
+			let text = '';
+			let isSegment = false;
+			for (
+				let i = 0;
+				i < words.length &&
+				(typeof words[i].startTime === 'undefined' || words[i].startTime as number < endTime);
+				i++
+			) {
+				if (
+					typeof words[i].startTime !== 'undefined' &&
+					words[i].startTime as number >= startTime
+				) isSegment = true;
+		
+				if (isSegment) {
+					if (text !== '')
+						text += words[i].type === 'pronunciation' ? ' ': '';
+					text += words[i].content;
+				}
+			}
+		
+			return `${seg.speaker_label}: ${text}`;
+		})
+			.join('\n\n');
+	}
+
 	// Build the message
 	let messageBody: string;
 	let promise: Promise<any> = new Promise(res => res(null));
-	let transcript: string = result.results.transcripts[0].transcript === ''
-		? 'No voices detected'
-		: result.results.transcripts[0].transcript;
 	let tg: string;
 	const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || []).reduce((agg: { [key: string]: string; }, value) => {
 		agg[value.Key] = value.Value;
@@ -742,14 +804,14 @@ async function handleTranscribe(body: TranscribeBody) {
 		messageBody
 	);
 
-	if (jobInfo.Item) {
+	if (jobInfo.File) {
 		await Promise.all(recipients.map(phone => sendMessage(
 			metricSource,
 			messageId,
 			phone.phone.N,
 			phone.department.S,
 			createPageMessage(
-				jobInfo.Item?.File.S as string,
+				jobInfo.File as string,
 				tg,
 				phone.callSign.N,
 				transcript
@@ -757,12 +819,6 @@ async function handleTranscribe(body: TranscribeBody) {
 			[],
 			true
 		)));
-		await dynamodb.deleteItem({
-			TableName: dtrTranslationTable,
-			Key: {
-				Key: { S: jobInfo.Item.Key.S },
-			}
-		}).promise();
 	} else {
 		await Promise.all(recipients.map(number => sendMessage(
 			metricSource,
