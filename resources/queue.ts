@@ -8,6 +8,16 @@ const secretManager = new AWS.SecretsManager();
 const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 
+const welcomeMessage = `Welcome to the Crestone Volunteer Fire Department text group!
+
+This number will be used to communicate with other members of the department and receive recordings of pages sent from dispatch over the radio.
+
+To send a message to the group, just reply to this number.
+
+In a moment, you will receive a copy of the last page sent out over VHF.
+
+You can leave this group at any time by texting "STOP" to this number.`;
+
 const twilioSecretId = process.env.TWILIO_SECRET as string;
 const twilioSecretPromise = secretManager.getSecretValue({
 	SecretId: twilioSecretId
@@ -85,7 +95,7 @@ async function sendMessage(phone: string | undefined, body: string, mediaUrl: st
 function createPageMessage(fileKey: string): string {
 	const queryParam = fileKey.split('/')[1];
 
-	return `S.O.: PAGE - https://fire.klawil.net/?f=${queryParam}`;
+	return `Saguache Sheriff: PAGE - https://fire.klawil.net/?f=${queryParam}`;
 }
 
 interface RegisterBody {
@@ -165,7 +175,7 @@ async function handleActivation(body: ActivateBody) {
 	}).promise();
 
 	// Send the welcome message
-	promises.push(sendMessage(body.phone, 'Welcome to Crestone Fire Notifications! A sample page will be sent momentarily'));
+	promises.push(sendMessage(body.phone, welcomeMessage));
 
 	// Send the message to the admins
 	promises.push(dynamodb.scan({
