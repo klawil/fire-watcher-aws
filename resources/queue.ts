@@ -175,6 +175,7 @@ interface TwilioBody {
 
 interface TwilioParams {
 	From: string;
+	To: string;
 	Body: string;
 	MediaUrl0?: string;
 }
@@ -208,8 +209,14 @@ async function handleTwilio(body: TwilioBody) {
 		return;
 	}
 
+	// Get the number that was messaged
+	const messageTo = eventData.To;
+	const twilioConf = await twilioSecretPromise;
+
 	const recipients = await getRecipients()
-		.then((data) => data.filter((number) => number.phone.N !== sender.Item?.phone.N));
+		.then((data) => data.filter((number) =>
+			messageTo === twilioConf.pageNumber ||
+			number.phone.N !== sender.Item?.phone.N));
 
 	// Build the message
 	const messageBody = `${sender.Item.name.S}: ${eventData.Body}`;
