@@ -30,10 +30,8 @@ function makePageCheckbox(container, key) {
 	input.classList.add('form-check-input', 'talkgroup');
 	if (container.value.indexOf(key) !== -1)
 		input.checked = true;
-	if (userDefaultTgs.indexOf(key) !== -1) {
+	if (userDefaultTgs.indexOf(key) !== -1)
 		input.disabled = true;
-		input.checked = true;
-	}
 	div.appendChild(input);
 
 	const label = document.createElement('label');
