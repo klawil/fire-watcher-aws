@@ -216,10 +216,7 @@ async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGate
 
 async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
-	const bodyValidResponse = validateBodyIsJson(event.body);
-	if (bodyValidResponse !== true) {
-		return bodyValidResponse;
-	}
+	validateBodyIsJson(event.body);
 
 	// Parse the body
 	const body = JSON.parse(event.body as string);
@@ -259,10 +256,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
-	const bodyValidResponse = validateBodyIsJson(event.body);
-	if (bodyValidResponse !== true) {
-		return bodyValidResponse;
-	}
+	validateBodyIsJson(event.body);
 
 	// Parse the body
 	const body = JSON.parse(event.body as string);
@@ -316,10 +310,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 
 async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
-	const bodyValidResponse = validateBodyIsJson(event.body);
-	if (bodyValidResponse !== true) {
-		return bodyValidResponse;
-	}
+	validateBodyIsJson(event.body);
 
 	// Parse the body
 	const body = JSON.parse(event.body as string);
