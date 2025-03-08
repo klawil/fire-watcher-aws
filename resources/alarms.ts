@@ -11,5 +11,12 @@ function parseRecord(event: lambda.SQSRecord): string {
 export async function main(event: lambda.SQSEvent): Promise<void> {
 	const alarmString = event.Records.map(parseRecord)
 		.join('\n');
-	await sendMessage(null, '***REMOVED***', alarmString);
+	await sendMessage(
+		null,
+		'***REMOVED***',
+		alarmString,
+		[],
+		false,
+		true
+	);
 }

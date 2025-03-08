@@ -59,6 +59,7 @@ interface TwilioConfig {
 	authToken: string;
 	fromNumber: string;
 	pageNumber: string;
+	alertNumber: string;
 }
 
 const twilioSecretId = process.env.TWILIO_SECRET as string;
@@ -95,7 +96,8 @@ export async function sendMessage(
 	phone: string | undefined,
 	body: string,
 	mediaUrl: string[] = [],
-	isPage: boolean = false
+	isPage: boolean = false,
+	isAlert: boolean = false
 ) {
 	if (typeof phone === 'undefined') {
 		return;
@@ -105,11 +107,16 @@ export async function sendMessage(
 	if (twilioConf === null) {
 		throw new Error('Cannot get twilio secret');
 	}
+	const fromNumber = isPage
+		? twilioConf.pageNumber
+		: isAlert
+			? twilioConf.alertNumber
+			: twilioConf.fromNumber;
 
 	const messageConfig: TwilioMessageConfig = {
 		body,
 		mediaUrl,
-		from: isPage ? twilioConf.pageNumber : twilioConf.fromNumber,
+		from: fromNumber,
 		to: `+1${parsePhone(phone)}`
 	};
 
