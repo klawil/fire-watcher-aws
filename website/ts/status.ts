@@ -142,7 +142,7 @@ const baseCharts: ChartConfig[] = [
 		id: 'texts-time',
 		type: 'Timing',
 		query: 'metrics=twilio-page-duration,twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y',
-		val: val => val > 150000 ? 150 : Math.ceil(val / 1000),
+		val: val => val > 300000 ? 300 : Math.ceil(val / 1000),
 	},
 ];
 
