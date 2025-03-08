@@ -1,12 +1,16 @@
 import * as AWS from 'aws-sdk';
-const dynamodb = new AWS.DynamoDB();
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import * as captcha from 'svg-captcha';
 
+const dynamodb = new AWS.DynamoDB();
+const sqs = new AWS.SQS();
+
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const captchaTable = process.env.TABLE_CAPTCHA as string;
+const queueUrl = process.env.SQS_QUEUE as string;
 
 const captchaTtl = 1000 * 60 * 5;
+const phoneRegex = /^[0-9]{3}-[0-9]{3}-[0-9]{4}$/;
 
 async function getList(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	const queryConfig: AWS.DynamoDB.ScanInput = {
@@ -117,6 +121,118 @@ async function createCaptcha(): Promise<APIGatewayProxyResultV2> {
 	};
 }
 
+interface RegisterApiResponse {
+	success: boolean;
+	errors: string[];
+	message?: string;
+}
+
+async function registerPhase1(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+	// Validate the body
+	let isBodyValid = true;
+	try {
+		if (event.body) {
+			JSON.parse(event.body);
+		} else {
+			isBodyValid = false;
+		}
+	} catch (e) {
+		isBodyValid = false;
+	}
+	if (!isBodyValid) {
+		const response: RegisterApiResponse = {
+			success: false,
+			message: 'Invalid API format',
+			errors: []
+		};
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: RegisterApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body parameters
+	if (!body.phone || !phoneRegex.test(body.phone)) {
+		response.success = false;
+		response.errors.push('phone');
+	}
+	if (!body.name) {
+		response.success = false;
+		response.errors.push('name');
+	}
+
+	// Get the cookies for the request
+	const cookies: { [key: string]: string } = (event.headers.Cookie || '')
+		.split('&')
+		.map((str) => str.split('='))
+		.reduce((acc, arr) => ({
+			...acc,
+			[arr[0]]: arr[1] || ''
+		}), {});
+
+	// Verify the captcha
+	if (!cookies.captcha) {
+		response.success = false;
+		response.errors.push('captcha');
+	} else {
+		const captcha = await dynamodb.getItem({
+			TableName: captchaTable,
+			Key: {
+				CaptchaId: {
+					S: cookies.captcha
+				}
+			}
+		}).promise();
+
+		if (!captcha.Item) {
+			response.success = false;
+			response.errors.push('captcha');
+		} else {
+			const expiry = parseInt(captcha.Item.ExpTime.N as string) * 1000;
+			const answer = captcha.Item.Answer.S;
+
+			if (expiry <= Date.now() || answer !== body.captcha) {
+				response.success = false;
+				response.errors.push('captcha');
+
+				await dynamodb.deleteItem({
+					TableName: captchaTable,
+					Key: {
+						CaptchaId: {
+							S: cookies.captcha
+						}
+					}
+				}).promise();
+			}
+		}
+	}
+
+	// Create an event to send a verification text and insert the user into the table
+	if (response.success) {
+		const event = {
+			action: 'register',
+			phone: body.phone,
+			name: body.name
+		};
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify(event),
+			QueueUrl: queueUrl
+		}).promise();
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	try {
 		const action = event.queryStringParameters?.action || 'list';
@@ -125,6 +241,10 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 				return getList(event);
 			case 'captcha':
 				return createCaptcha();
+			case 'register1':
+				return registerPhase1(event);
+			case 'register2':
+				console.log(event.body);
 		}
 
 		return {

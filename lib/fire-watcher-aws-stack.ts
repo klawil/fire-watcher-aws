@@ -6,12 +6,16 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
+const secretArn = '***REMOVED***';
 
 export class FireWatcherAwsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -77,6 +81,27 @@ export class FireWatcherAwsStack extends Stack {
     bucket.grantRead(s3Handler);
     trafficTable.grantReadWriteData(s3Handler);
 
+    // Create a handler for the SQS queue
+    const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/queue.ts',
+      handler: 'main',
+      environment: {
+        TABLE_PHONE: phoneNumberTable.tableName,
+        TWILIO_SECRET: secretArn
+      },
+      timeout: Duration.minutes(1)
+    });
+
+    // Grant access for the queue handler
+    phoneNumberTable.grantReadWriteData(queueHandler);
+    secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn)
+      .grantRead(queueHandler);
+
+    // Create the SQS queue
+    const queue = new sqs.Queue(this, 'cvfd-queue');
+    queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
+
     // Create the event trigger
     const s3Destination = new s3Notifications.LambdaDestination(s3Handler);
     bucket.addEventNotification(
@@ -100,20 +125,20 @@ export class FireWatcherAwsStack extends Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'api.main',
       environment: {
-        BUCKET: bucketName,
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_CAPTCHA: captchaTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
-        TABLE_MESSAGES: messagesTable.tableName
+        TABLE_MESSAGES: messagesTable.tableName,
+        SQS_QUEUE: queue.queueUrl
       }
     });
 
     // Grant access for the API handler
-    bucket.grantRead(apiHandler);
-    phoneNumberTable.grantReadWriteData(apiHandler);
+    phoneNumberTable.grantReadData(apiHandler);
     captchaTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
     messagesTable.grantReadWriteData(apiHandler);
+    queue.grantSendMessages(apiHandler);
 
     // Create a rest API
     const api = new apigateway.RestApi(this, 'cvfd-api-gateway', {
@@ -125,7 +150,9 @@ export class FireWatcherAwsStack extends Stack {
         'application/json': '{"statusCode":"200"}'
       }
     });
-    api.root.addResource('api').addMethod('GET', apiIntegration);
+    const apiResource = api.root.addResource('api');
+    apiResource.addMethod('GET', apiIntegration)
+    apiResource.addMethod('POST', apiIntegration)
 
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
@@ -176,6 +203,7 @@ export class FireWatcherAwsStack extends Stack {
             originPath: `/${api.deploymentStage.stageName}`
           },
           behaviors: [{
+            allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
             pathPattern: 'api',
             defaultTtl: Duration.seconds(0),
             maxTtl: Duration.seconds(0),

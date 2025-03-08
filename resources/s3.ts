@@ -6,8 +6,6 @@ const dynamodb = new aws.DynamoDB();
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
-	console.log(JSON.stringify(record));
-
 	const Bucket = record.s3.bucket.name;
 	const Key = record.s3.object.key;
 
@@ -49,7 +47,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			},
 			KeyConditionExpression: '#key = :key'
 		}).promise();
-		console.log(dynamoQuery);
 
 		const body: AWS.DynamoDB.DeleteItemInput = {
 			Key: {

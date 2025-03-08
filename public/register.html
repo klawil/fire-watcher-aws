@@ -68,7 +68,7 @@
 				}), {});
 
 			function resetCaptcha() {
-				document.getElementById('captcha-img').src = '/captcha';
+				document.getElementById('captcha-img').src = '/api?action=captcha';
 			}
 
 			function isNumericInput(event) {
@@ -172,12 +172,12 @@
 					}
 
 					let body = {
-						step,
 						phone: inputs.phone.value,
+						name: inputs.name.value,
 						captcha: inputs.captcha.value
 					};
 
-					fetch('/register', {
+					fetch('/api?action=register1', {
 						method: 'POST',
 						body: JSON.stringify(body)
 					})
@@ -196,13 +196,11 @@
 					}
 
 					let body = {
-						step,
-						name: inputs.name.value,
 						phone: inputs.phone.value,
 						code: inputs.code.value
 					};
 
-					fetch('/register', {
+					fetch('/api?action=register2', {
 						method: 'POST',
 						body: JSON.stringify(body)
 					})
