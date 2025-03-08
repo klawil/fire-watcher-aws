@@ -30,7 +30,7 @@ export class FireWatcherAwsStack extends Stack {
       sources: [ s3deployment.Source.asset('./public') ],
       destinationBucket: bucket,
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
-      exclude: [ 'audio/*' ]
+      exclude: [ 'audio/*', 'weather.json' ]
     });
 
     // Create the tables for dynamo DB
