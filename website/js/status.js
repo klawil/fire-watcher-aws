@@ -76,6 +76,12 @@ const makeSiteServices = makeSiteString({
 	'SupportAuth': 'Auth'
 });
 const siteTable = document.getElementById('adjacent-sites');
+const localeTimeOptions = {
+	hour: '2-digit',
+	minute: '2-digit',
+	second: '2-digit',
+	hour12: false
+};
 function sortAdjacentTable() {
 	const rowIds = [ ...siteTable.querySelectorAll('tr') ]
 		.map(row => row.id);
@@ -101,7 +107,7 @@ function updateSitesTable() {
 					<td id="site-${site.SiteId}-flags">${makeSiteFlags(site)}</td>
 					<td id="site-${site.SiteId}-services">${makeSiteServices(site)}</td>
 					<td id="site-${site.SiteId}-seen">${site.SysShortname.split(',').join(', ')}</td>
-					<td id="site-${site.SiteId}-updated">${new Date(site.UpdateTime).toLocaleTimeString()}</td>`;
+					<td id="site-${site.SiteId}-updated">${new Date(site.UpdateTime).toLocaleTimeString('en-US', localeTimeOptions)}</td>`;
 				siteTable.appendChild(tr);
 			} else {
 				// Update existing site row
@@ -110,7 +116,7 @@ function updateSitesTable() {
 					flags: makeSiteFlags(site),
 					services: makeSiteServices(site),
 					seen: site.SysShortname.split(',').join(', '),
-					updated: new Date(site.UpdateTime).toLocaleTimeString(),
+					updated: new Date(site.UpdateTime).toLocaleTimeString('en-US', localeTimeOptions),
 				};
 				Object.keys(newData).forEach(key => {
 					const elem = document.getElementById(`site-${site.SiteId}-${key}`);
