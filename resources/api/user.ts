@@ -552,6 +552,21 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		updateConfig.ExpressionAttributeValues[':gsa'] = { BOOL: body.getSystemAlerts };
 
 		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gsa = :gsa`;
+	} else {
+		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
+		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+
+		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
+		updateConfig.ExpressionAttributeNames['#po'] = 'pageOnly';
+		updateConfig.ExpressionAttributeNames['#gt'] = 'getTranscript';
+		updateConfig.ExpressionAttributeNames['#gsa'] = 'getSystemAlerts';
+
+		updateConfig.ExpressionAttributeValues[':dep'] = { S: user.department?.S };
+		updateConfig.ExpressionAttributeValues[':po'] = { BOOL: false };
+		updateConfig.ExpressionAttributeValues[':gt'] = { BOOL: false };
+		updateConfig.ExpressionAttributeValues[':gsa'] = { BOOL: false };
+
+		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gsa = :gsa`;
 	}
 	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {
