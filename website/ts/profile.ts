@@ -3,6 +3,7 @@ import { afterAuthUpdate, base64ToBuffer, bufferToBase64, useFidoKey, user } fro
 import { formatPhone, pageNames, talkgroupOrder } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
+import { createTableRow } from './utils/table';
 
 const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
 	'phone',
@@ -204,26 +205,29 @@ function init() {
 
 	const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
 	Object.keys(user.fidoKeys || {}).forEach(key => {
-		const tr = document.createElement('tr');
+		const tr = createTableRow(null, {
+			columns: [
+				{
+					html: key
+				},
+				{
+					create: td => {
+						if (window.PublicKeyCredential) {
+							const testBtn = document.createElement('button');
+							td.appendChild(testBtn);
+							testBtn.classList.add('btn', 'btn-success');
+							testBtn.innerHTML = 'Test';
+							testBtn.addEventListener('click', testFidoKey.bind(null, testBtn, key));
+						}
+						const deleteBtn = document.createElement('button');
+						td.appendChild(deleteBtn);
+						deleteBtn.classList.add('btn', 'btn-danger', 'ms-3');
+						deleteBtn.innerHTML = 'Delete';
+					},
+				},
+			]
+		});
 		fidoRow.parentElement.insertBefore(tr, fidoRow);
-
-		const td1 = document.createElement('td');
-		tr.appendChild(td1);
-		td1.innerHTML = key;
-
-		const td2 = document.createElement('td');
-		tr.appendChild(td2);
-		if (window.PublicKeyCredential) {
-			const testBtn = document.createElement('button');
-			td2.appendChild(testBtn);
-			testBtn.classList.add('btn', 'btn-success');
-			testBtn.innerHTML = 'Test';
-			testBtn.addEventListener('click', testFidoKey.bind(null, testBtn, key));
-		}
-		const deleteBtn = document.createElement('button');
-		td2.appendChild(deleteBtn);
-		deleteBtn.classList.add('btn', 'btn-danger', 'ms-3');
-		deleteBtn.innerHTML = 'Delete';
 	});
 
 	updateUserButton.disabled = false;

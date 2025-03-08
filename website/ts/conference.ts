@@ -5,6 +5,7 @@ import { afterAuthUpdate, user } from './utils/auth';
 import * as twilio from '@twilio/voice-sdk';
 import { ApiUserListResponse, UserObject } from '../../common/userApi';
 import { formatPhone } from './utils/userConstants';
+import { createTableRow } from './utils/table';
 
 interface ButtonConfig {
 	color: ButtonColors;
@@ -99,7 +100,7 @@ function updateButton(btn: HTMLButtonElement, state: string) {
 const participantsLoading = document.getElementById('participantsLoading');
 const participantsTable = document.getElementById('participantsTable');
 const participantsNone = document.getElementById('participantsNone');
-const participantsBody = document.getElementById('participants');
+const participantsBody = <HTMLTableSectionElement>document.getElementById('participants');
 
 const endButton = <HTMLButtonElement>document.getElementById('endButton');
 const endButtonContainer = document.getElementById('endButtonContainer');
@@ -172,36 +173,30 @@ function showParticipants(participants: ConferenceAttendeeObject[]) {
 			return;
 		};
 
-		const tr = document.createElement('tr');
-		participantsBody.appendChild(tr);
-		tr.id = caller.CallSid;
-		if (!lastParticipantIds.includes(caller.CallSid))
-			highlightRow(tr);
-
-		const tdMe = document.createElement('td');
-		tr.appendChild(tdMe);
-		if (caller.CallSid === myCallSid)
-			tdMe.innerHTML = 'Me';
-
-		const tdName = document.createElement('td');
-		tr.appendChild(tdName);
-		tdName.innerHTML = `${caller.FirstName} ${caller.LastName} (${caller.CallSign})`;
-
-		const tdDevice = document.createElement('td');
-		tr.appendChild(tdDevice);
-		tdDevice.style.textTransform = 'capitalize';
-		tdDevice.innerHTML = caller.Type;
-
-		if (user.isAdmin) {
-			const tdKick = document.createElement('td');
-			tr.appendChild(tdKick);
-
-			const kickBtn = document.createElement('button');
-			tdKick.appendChild(kickBtn);
-			kickBtn.classList.add('btn', 'btn-danger');
-			kickBtn.innerHTML = 'Remove';
-			kickBtn.addEventListener('click', createKickUserFn(kickBtn, caller.CallSid));
-		}
+		createTableRow(participantsBody, {
+			id: caller.CallSid,
+			columns: [
+				{
+					html: caller.CallSid === myCallSid ? 'Me' : '',
+				},
+				{
+					html: `${caller.FirstName} ${caller.LastName} (${caller.CallSign})`,
+				},
+				{
+					html: caller.Type.replace(/^(.)(.+)$/, (a, b, c) => `${b.toUpperCase()}${c}`),
+				},
+				{
+					filter: !!user.isAdmin,
+					create: td => {
+						const kickBtn = document.createElement('button');
+						td.appendChild(kickBtn);
+						kickBtn.classList.add('btn', 'btn-danger');
+						kickBtn.innerHTML = 'Remove';
+						kickBtn.addEventListener('click', createKickUserFn(kickBtn, caller.CallSid));
+					},
+				},
+			]
+		});
 	});
 
 	Array.from(participantsBody.querySelectorAll('tr')).forEach(row => {
@@ -412,28 +407,28 @@ async function createInvitableTable() {
 		const existingRow = document.getElementById(`${u.callSign}-invite`);
 		if (existingRow !== null) return;
 
-		const tr = document.createElement('tr');
-		invitableUsersTable.appendChild(tr);
-		tr.id = `${u.callSign}-invite`;
-
-		const nameTd = document.createElement('td');
-		tr.appendChild(nameTd);
-		nameTd.innerHTML = `${u.fName} ${u.lName} (${u.callSign})`;
-
-		const phoneTd = document.createElement('td');
-		tr.appendChild(phoneTd);
-		phoneTd.innerHTML = formatPhone(u.phone);
-
-		const btnTd = document.createElement('td');
-		tr.appendChild(btnTd);
-
-		const inviteBtn = document.createElement('button');
-		btnTd.appendChild(inviteBtn);
-		inviteBtn.classList.add('btn', 'invite-button');
-		inviteBtn.id = `${u.callSign}-invite-btn`;
-		inviteBtn.setAttribute('data-callsign', u.callSign);
-		inviteBtn.addEventListener('click', createInviteBtnFn(inviteBtn, u));
-		updateButton(inviteBtn, 'can_invite');
+		createTableRow(invitableUsersTable, {
+			id: `${u.callSign}-invite`,
+			columns: [
+				{
+					html: `${u.fName} ${u.lName} (${u.callSign})`,
+				},
+				{
+					html: formatPhone(u.phone),
+				},
+				{
+					create: td => {
+						const inviteBtn = document.createElement('button');
+						td.appendChild(inviteBtn);
+						inviteBtn.classList.add('btn', 'invite-button');
+						inviteBtn.id = `${u.callSign}-invite-btn`;
+						inviteBtn.setAttribute('data-callsign', u.callSign);
+						inviteBtn.addEventListener('click', createInviteBtnFn(inviteBtn, u));
+						updateButton(inviteBtn, 'can_invite');
+					},
+				},
+			]
+		});
 	});
 
 	showParticipants(lastParticipants);
