@@ -403,13 +403,20 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		};
 	}
 
+	const towerMapping: { [key: string]: string } = {
+		saguache: 'Saguache Tower',
+		pooltable: 'Pool Table Mountain',
+		alamosa: 'Alamosa',
+		sanantonio: 'San Antonio Peak',
+	};
+
 	const putConfig: aws.CloudWatch.PutMetricDataInput = {
 		Namespace: 'DTR Metrics',
 		MetricData: body.data.map(i => ({
 			MetricName: body.type,
 			Dimensions: [ {
 				Name: 'Tower',
-				Value: i.id
+				Value: towerMapping[i.id] || i.id
 			} ],
 			Timestamp: date,
 			Unit: 'Count',
