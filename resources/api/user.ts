@@ -407,8 +407,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	}
 	if (
 		typeof body.callSign !== 'string' ||
-		body.callSign.length !== 3 ||
-		body.callSign.replace(/[^0-9]/g, '').length !== 3
+		!/^[0-9]+$/.test(body.callSign)
 	) {
 		response.errors.push('callSign');
 	}
