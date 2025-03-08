@@ -103,16 +103,17 @@ export class FireWatcherAwsStack extends Stack {
         name: 'cvfd-data-db'
       }
     });
-    const eventsGlueTable = new glue.CfnTable(this, 'cvfd-events-glue-table-orc', {
+    const eventsGlueTable = new glue.CfnTable(this, 'cvfd-events-table', {
       databaseName: 'cvfd-data-db',
       catalogId: glueCatalogId,
       tableInput: {
-        name: 'cvfd-events',
+        name: 'cvfd-radio-events',
         tableType: 'EXTERNAL_TABLE',
         partitionKeys: [
           { name: 'year', type: 'int' },
           { name: 'month', type: 'int' },
           { name: 'day', type: 'int' },
+          { name: 'hour', type: 'int' },
           { name: 'event', type: 'string' },
         ],
         storageDescriptor: {
@@ -123,10 +124,11 @@ export class FireWatcherAwsStack extends Stack {
             serializationLibrary: 'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
           },
           columns: [
-            { name: 'radioId', type: 'int' },
-            { name: 'talkgroup', type: 'int' },
+            { name: 'radioId', type: 'string' },
+            { name: 'talkgroup', type: 'string' },
             { name: 'talkgroupList', type: 'string' },
             { name: 'tower', type: 'string' },
+            { name: 'timestamp', type: 'bigint' },
           ],
           location: eventsS3Bucket.s3UrlForObject() + '/data/'
         }
@@ -134,7 +136,7 @@ export class FireWatcherAwsStack extends Stack {
     });
     eventsGlueTable.addDependency(eventsGlueDatabase);
 
-    // Make the kinesis firehose
+    // Make the role
     const eventsFirehoseRole = new iam.Role(this, 'cvfd-events-firehose-role', {
       assumedBy: new iam.ServicePrincipal('firehose.amazonaws.com')
     });
@@ -177,7 +179,7 @@ export class FireWatcherAwsStack extends Stack {
         bufferingHints: {
           intervalInSeconds: 60,
         },
-        prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/event=!{partitionKeyFromQuery:event}/',
+        prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:hh}/event=!{partitionKeyFromQuery:event}/',
         errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
         dataFormatConversionConfiguration: {
           enabled: true,
@@ -191,7 +193,7 @@ export class FireWatcherAwsStack extends Stack {
             catalogId: eventsGlueTable.catalogId,
             roleArn: eventsFirehoseRole.roleArn,
             databaseName: eventsGlueTable.databaseName,
-            tableName: 'cvfd-events'
+            tableName: 'cvfd-radio-events'
           }
         },
         processingConfiguration: {

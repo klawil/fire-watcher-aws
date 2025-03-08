@@ -10,9 +10,10 @@ const firehose = new aws.Firehose();
 interface EventBody {
 	event: string;
 	tower: string;
-	radioId: number;
-	talkgroup?: string | number;
+	radioId: string;
+	talkgroup?: string;
 	talkgroupList?: string;
+	timestamp?: number;
 }
 
 interface GenericApiResponse {
@@ -33,11 +34,7 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		errors: []
 	};
 
-	// Remove empty values
-	if (body.talkgroup === '')
-		body.talkgroup = '0';
-	if (body.talkgroupList === '')
-		body.talkgroupList = '0';
+	body.timestamp = Date.now();
 
 	// Validate the body
 	if (typeof body.event !== 'string') {
@@ -48,31 +45,35 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		response.success = false;
 		response.errors.push('tower');
 	}
-	if (typeof body.radioId !== 'number') {
+	if (
+		typeof body.radioId !== 'string' ||
+		!/^[0-9]+$/.test(body.radioId)
+	) {
 		response.success = false;
 		response.errors.push('radioId');
 	}
-	if (typeof body.talkgroup !== 'undefined' && (
+	if (
 		typeof body.talkgroup !== 'string' ||
-		!/^-?[0-9]+$/.test(body.talkgroup)
-	)) {
+		!/^[0-9]*$/.test(body.talkgroup)
+	) {
 		response.success = false;
 		response.errors.push('talkgroup');
 	}
-	if (typeof body.talkgroupList !== 'undefined' && (
+	if (
 		typeof body.talkgroupList !== 'string' ||
-		!/^([0-9]+,?)+$/.test(body.talkgroupList)
-	)) {
+		!/^([0-9]*,?)+$/.test(body.talkgroupList)
+	) {
 		response.success = false;
 		response.errors.push('talkgroup');
 	}
 
-	await firehose.putRecord({
-		DeliveryStreamName: FIREHOSE_NAME,
-		Record: {
-			Data: JSON.stringify(body)
-		}
-	}).promise();
+	if (body.radioId !== '-1')
+		await firehose.putRecord({
+			DeliveryStreamName: FIREHOSE_NAME,
+			Record: {
+				Data: JSON.stringify(body)
+			}
+		}).promise();
 
 	return {
 		statusCode: response.success ? 200 : 400,
