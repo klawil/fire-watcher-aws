@@ -260,8 +260,8 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 			datasets[1].showLine = false;
 			datasets[1].fill = {
 				target: 3,
-				above: color2.backgroundColor,
-				below: 'rgba(0,0,0,0)',
+				below: color2.backgroundColor,
+				above: 'rgba(0,0,0,0)',
 			};
 
 			datasets[2].yAxisID = 'y2';
