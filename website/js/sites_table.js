@@ -65,12 +65,12 @@ function updateSitesTable(hasMap) {
 				tr.id = `site-${site.SiteId}`;
 				tr.innerHTML = `<td>${site.SiteId}</td>
 					<td>${site.SiteName || 'N/A'}</td>
-					<td>${site.SiteCounty || 'N/A'}</td>
-					<td id="site-${site.SiteId}-failed">${newData.failed}</td>
-					<td id="site-${site.SiteId}-flags">${newData.flags}</td>
-					<td id="site-${site.SiteId}-services">${newData.services}</td>
-					<td id="site-${site.SiteId}-seen">${newData.seen}</td>
-					<td id="site-${site.SiteId}-updated">${newData.updated}</td>`;
+					<td class="text-end">${site.SiteCounty || 'N/A'}</td>
+					<td class="text-center" id="site-${site.SiteId}-failed">${newData.failed}</td>
+					<td class="text-center" id="site-${site.SiteId}-flags">${newData.flags}</td>
+					<td class="text-center" id="site-${site.SiteId}-services">${newData.services}</td>
+					<td class="text-center" id="site-${site.SiteId}-seen">${newData.seen}</td>
+					<td class="text-end" style="font-family:monospace" id="site-${site.SiteId}-updated">${newData.updated}</td>`;
 				siteTable.appendChild(tr);
 			} else {
 				Object.keys(newData).forEach(key => {
@@ -120,15 +120,20 @@ function updateUpdateTime() {
 		const timeElem = document.getElementById(`site-${key}-updated`);
 		if (timeElem === null) return;
 
+		// 00d 00h00m00s
 		let timeDelta = Math.round((nowTime - siteUpdateTime[key]) / 1000);
-		// 00:00:00 - hours - minutes - seconds
-		const newHtml = [ 60, 1 ].map(v => {
-			if (timeDelta < v) return '00';
+		const periodValues = [ 24 * 60 * 60, 60 * 60, 60, 1 ];
+		const periodLabels = [ 'd ', 'h', 'm', 's' ];
+		let hasHadValue = false;
+		const newHtml = periodValues.map((v, i) => {
+			if (timeDelta < v && !hasHadValue) return '';
+			else if (timeDelta < v) return `00${periodLabels[i]}`;
+			hasHadValue = true;
 
 			let count = Math.floor(timeDelta / v);
 			timeDelta = timeDelta - (count * v);
-			return `${count}`.padStart(2, '0');
-		}).join(':') + ' ago';
+			return `${count}`.padStart(2, '0') + periodLabels[i];
+		}).join('');
 		if (timeElem.innerHTML !== newHtml)
 			timeElem.innerHTML = newHtml;
 	});
