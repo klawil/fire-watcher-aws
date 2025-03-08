@@ -10,3 +10,6 @@ cdk.out
 # Jekyll directories
 website/_site
 website/.jekyll-cache
+
+# Certificates used for server
+client*
