@@ -12,15 +12,21 @@ const sqs = new aws.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
 const userTable = process.env.TABLE_USER as string;
 
-const departmentPageGroups: { [key: string]: string[] } = {
-	Crestone: [ '8332' ],
-	Moffat: [ '8332' ],
-	Saguache: [ '8332' ],
-	'Villa Grove': [ '8332' ],
-	Baca: [ '18331' ],
-	NSCAD: [ '8198' ],
-	Center: [ '8334' ]
-}
+const validDepartments: string[] = [
+	'Crestone',
+	'Moffat',
+	'Saguache',
+	'Villa Grove',
+	'Baca',
+	'NSCAD',
+	'Center'
+];
+const validTalkgroups: string[] = [
+	'8198',
+	'8332',
+	'8334',
+	'18331'
+];
 
 interface ApiResponse {
 	success: boolean;
@@ -377,11 +383,6 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		errors: []
 	};
 
-	if (!user.isDistrictAdmin?.BOOL) {
-		body.pageOnly = user.department?.S === 'Baca';
-		body.department = user.department?.S as string;
-	}
-
 	// Validate the request
 	if (
 		typeof body.phone !== 'string' ||
@@ -421,9 +422,20 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	}
 	if (
 		typeof body.department !== 'string' ||
-		typeof departmentPageGroups[body.department] === 'undefined'
+		validDepartments.indexOf(body.department) === -1
 	) {
 		response.errors.push('department');
+	}
+	if (
+		typeof body.talkgroups === 'undefined' ||
+		!Array.isArray(body.talkgroups) ||
+		body.talkgroups.filter(v => validTalkgroups.indexOf(v) !== -1).length === 0
+	) {
+		response.errors.push('talkgroups');
+	}
+
+	if (!user.isDistrictAdmin?.BOOL) {
+		body.department = user.department?.S as string;
 	}
 
 	// Check to see if the phone number already exists
@@ -475,7 +487,8 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			'#act': 'isActive',
 			'#adm': 'isAdmin',
 			'#dep': 'department',
-			'#po': 'pageOnly'
+			'#po': 'pageOnly',
+			'#tg': 'talkgroups'
 		},
 		ExpressionAttributeValues: {
 			':fn': { S: body.fName },
@@ -484,22 +497,12 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			':act': { BOOL: body.isActive },
 			':adm': { BOOL: body.isAdmin },
 			':dep': { S: body.department },
-			':po': { BOOL: body.pageOnly }
+			':po': { BOOL: body.pageOnly },
+			':tg': { NS: body.talkgroups }
 		},
-		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep, #po = :po',
+		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep, #po = :po, #tg = :tg',
 		ReturnValues: 'UPDATED_NEW'
 	};
-	if (
-		create &&
-		updateConfig.ExpressionAttributeNames &&
-		updateConfig.ExpressionAttributeValues
-	) {
-		updateConfig.ExpressionAttributeNames['#tg'] = 'talkgroups';
-		updateConfig.ExpressionAttributeValues[':tg'] = {
-			NS: departmentPageGroups[body.department]
-		};
-		updateConfig.UpdateExpression += ', #tg = :tg';
-	}
 	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {
 		response.success = false;

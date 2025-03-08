@@ -10,6 +10,20 @@ const possibleDepartments = [
 	'Center'
 ];
 
+const pageNames = {
+	'8332': 'NSCFPD',
+	'18331': 'Baca',
+	'8334': 'Center',
+	'8198': 'NSCAD'
+};
+
+const defaultTalkgroups = {
+	default: [ '8332' ],
+	Baca: [ '18331' ],
+	Center: [ '8334' ],
+	NSCAD: [ '8198' ]
+};
+
 const tbody = document.getElementById('tbody');
 const modalItems = {
 	name: document.getElementById('deleteUser'),
@@ -30,6 +44,58 @@ function getDepartmentSelect(defaultValue) {
 	});
 
 	return select;
+}
+
+function getTalkgroupSelect(defaultValues) {
+	const inputs = [];
+	let isInvalid = false;
+
+	const container = document.createElement('div');
+	container.classList.add('input');
+	container.value = defaultValues.map(v => `${v}`);
+	container.name = 'talkgroups';
+	new MutationObserver(() => {
+		let newIsInvalid = container.classList.contains('is-invalid');
+		if (newIsInvalid && !isInvalid) {
+			inputs.forEach(i => i.classList.add('is-invalid'));
+		} else if (!newIsInvalid && isInvalid) {
+			inputs.forEach(i => i.classList.remove('is-invalid'));
+		}
+		isInvalid = newIsInvalid;
+	}).observe(container, { attributes: true });
+	const randomness = Math.round(Math.random() * 100000).toString();
+	for (let key in pageNames) {
+		const div = document.createElement('div');
+		div.classList.add('form-check');
+		container.appendChild(div);
+
+		const input = document.createElement('input');
+		input.type = 'checkbox';
+		input.id = `talkgroups-${key}-${randomness}`;
+		input.value = key;
+		input.classList.add('form-check-input');
+		input.reset = () => {};
+		input.addEventListener('change', () => {
+			container.changeFunc();
+			if (input.checked && container.value.indexOf(key) === -1) {
+				container.value.push(key);
+			} else if (!input.checked && container.value.indexOf(key) !== -1) {
+				container.value = container.value.filter(v => v !== key);
+			}
+		});
+		if (container.value.indexOf(key) !== -1)
+			input.checked = true;
+		inputs.push(input);
+		div.appendChild(input);
+
+		const label = document.createElement('label');
+		label.classList.add('form-check-label');
+		label.innerHTML = `${pageNames[key]}`;
+		label.setAttribute('for', `talkgroups-${key}-${randomness}`);
+		div.appendChild(label);
+	}
+
+	return container;
 }
 
 function formatPhone(phone) {
@@ -96,6 +162,11 @@ function addRow(user) {
 			name: 'pageOnly'
 		},
 		{
+			val: user.talkgroups || [],
+			type: 'talkgroups',
+			name: 'talkgroups'
+		},
+		{
 			type: 'button'
 		}
 	]
@@ -133,7 +204,8 @@ function addRow(user) {
 					const user = {};
 					const inputs = [
 						...tr.querySelectorAll('input'),
-						...tr.querySelectorAll('select')
+						...tr.querySelectorAll('select'),
+						...tr.querySelectorAll('.input')
 					];
 					inputs.forEach(input => input.classList.remove('is-invalid'));
 					inputs.forEach(input => user[input.name] = input.type === 'checkbox'
@@ -205,6 +277,11 @@ function addRow(user) {
 				const input = getDepartmentSelect(value.val);
 				input.reset = () => {};
 				input.addEventListener('change', () => button.disabled = false);
+				td.appendChild(input);
+			} else if (value.type === 'talkgroups') {
+				const input = getTalkgroupSelect(value.val);
+				input.reset = () => {};
+				input.changeFunc = () => button.disabled = false;
 				td.appendChild(input);
 			} else {
 				const span = document.createElement('span');
@@ -288,6 +365,7 @@ function init() {
 					{
 						type: 'department',
 						name: 'department',
+						tdClass: [ 'districtAdmin' ],
 						default: user.department
 					},
 					{
@@ -310,7 +388,13 @@ function init() {
 					{
 						type: 'checkbox',
 						class: [ 'form-check-input' ],
-						name: 'pageOnly'
+						name: 'pageOnly',
+						tdClass: [ 'districtAdmin' ]
+					},
+					{
+						type: 'talkgroups',
+						name: 'talkgroups',
+						value: 'TGs'
 					},
 					{
 						type: 'button',
@@ -321,10 +405,16 @@ function init() {
 					.forEach(item => {
 						const td = document.createElement('td');
 						td.classList.add('text-center', 'align-middle');
+						if (item.tdClass)
+							td.classList.add.apply(td.classList, item.tdClass);
 						
 						if (item.type === 'department') {
 							const input = getDepartmentSelect(user.department);
-							td.classList.add('districtAdmin');
+							td.appendChild(input);
+						} else if (item.type === 'talkgroups') {
+							const input = getTalkgroupSelect(defaultTalkgroups[user.department] || defaultTalkgroups.default);
+							input.reset = () => {};
+							input.changeFunc = () => {};
 							td.appendChild(input);
 						} else {
 							const input = document.createElement('input');
@@ -353,7 +443,8 @@ function init() {
 									const user = {};
 									const inputs = [
 										...tr.querySelectorAll('input'),
-										...tr.querySelectorAll('select')
+										...tr.querySelectorAll('select'),
+										...tr.querySelectorAll('.input')
 									];
 									inputs.forEach(input => input.classList.remove('is-invalid'));
 									inputs

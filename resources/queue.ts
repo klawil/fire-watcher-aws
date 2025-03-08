@@ -21,48 +21,48 @@ const welcomeMessageParts: {
 	howToLeave: `You can leave this group at any time by texting "STOP" to this number.`
 };
 
-type WelcomeMessageConfigKeys = 'department' | 'type' | 'departmentShort' | 'groupType';
+type WelcomeMessageConfigKeys = 'department' | 'type' | 'departmentShort';
 const welcomeMessageConfig: { [key: string]: {
 	department: string;
 	type: string;
 	departmentShort: string;
-	groupType: 'text' | 'page';
+	isPageOnly: boolean;
 } } = {
 	Crestone: {
 		department: 'Crestone Volunteer Fire Department',
 		type: 'text group',
 		departmentShort: 'NSCFPD',
-		groupType: 'text'
+		isPageOnly: false
 	},
 	Moffat: {
 		department: 'Moffat Volunteer Fire Department',
 		type: 'text group',
 		departmentShort: 'NSCFPD',
-		groupType: 'text'
+		isPageOnly: false
 	},
 	Saguache: {
 		department: 'Saguache Volunteer Fire Department',
 		type: 'text group',
 		departmentShort: 'NSCFPD',
-		groupType: 'text'
+		isPageOnly: false
 	},
 	'Villa Grove': {
 		department: 'Villa Grove Volunteer Fire Department',
 		type: 'text group',
 		departmentShort: 'NSCFPD',
-		groupType: 'text'
+		isPageOnly: false
 	},
 	Baca: {
 		department: 'Baca Emergency Services',
 		type: 'backup paging system',
 		departmentShort: 'Baca',
-		groupType: 'page'
+		isPageOnly: true
 	},
 	NSCAD: {
 		department: 'Northern Saguache County Ambulance District',
 		type: 'backup paging system',
 		departmentShort: 'NSCAD',
-		groupType: 'page'
+		isPageOnly: true
 	},
 };
 
@@ -362,9 +362,12 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		.map(key => tgToPageDept[key] || `Talkgroup ${key}`)
 		.join(', ')
 	const config = welcomeMessageConfig[updateResult.Attributes?.department?.S || 'Crestone'];
+	const groupType = config.isPageOnly || updateResult.Attributes?.pageOnly?.BOOL
+		? 'page'
+		: 'text';
 	const customWelcomeMessage = (
 		`${welcomeMessageParts.welcome}\n\n` +
-		`${welcomeMessageParts[`${config.groupType}Group`]}\n\n` +
+		`${welcomeMessageParts[`${groupType}Group`]}\n\n` +
 		`You will receive pages for: ${pageTgs}\n\n` +
 		`${welcomeMessageParts.howToLeave}`
 	)
@@ -374,7 +377,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		body.phone,
 		customWelcomeMessage,
 		[],
-		config.groupType === 'page'
+		groupType === 'page'
 	));
 
 	// Send the message to the admins

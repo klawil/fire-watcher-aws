@@ -109,7 +109,11 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			}
 		}
 	}).promise();
-	if (!sender.Item || !sender.Item.isActive.BOOL) {
+	if (
+		!sender.Item ||
+		!sender.Item.isActive?.BOOL ||
+		sender.Item.pageOnly?.BOOL
+	) {
 		await incrementMetric('Error', {
 			source: metricSource
 		});
