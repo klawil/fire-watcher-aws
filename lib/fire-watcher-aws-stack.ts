@@ -462,12 +462,12 @@ export class FireWatcherAwsStack extends Stack {
     const alarmAction = new cw_actions.SnsAction(alarmTopic);
 
     const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 2,
-      datapointsToAlarm: 2,
+      evaluationPeriods: 5,
+      datapointsToAlarm: 5,
       metric: new cloudwatch.Metric({
         metricName: 'Decode Rate',
         namespace: 'DTR Metrics',
-        period: Duration.minutes(5),
+        period: Duration.minutes(2),
         statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
           Tower: 'Saguache Tower'
