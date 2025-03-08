@@ -376,6 +376,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			});
 			const dynamoQuery = await dynamodb.query({
 				TableName: dtrTable,
+				IndexName: 'KeyIndex',
 				ExpressionAttributeNames: {
 					'#key': 'Key'
 				},
@@ -387,19 +388,19 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				KeyConditionExpression: '#key = :key'
 			}).promise();
 
-			const body: AWS.DynamoDB.DeleteItemInput = {
-				Key: {
+			if (dynamoQuery.Items && dynamoQuery.Items.length > 0) {
+				const body: AWS.DynamoDB.DeleteItemInput = {
 					Key: {
-						S: Key
+						Talkgroup: dynamoQuery.Items[0].Talkgroup,
+						Added: dynamoQuery.Items[0].Added
 					},
-					Datetime: {
-						N: dynamoQuery.Items && dynamoQuery.Items[0].Datetime.N
-					}
-				},
-				TableName: dtrTable
-			};
-			console.log(`Delete: ${JSON.stringify(body)}`);
-			await dynamodb.deleteItem(body).promise();
+					TableName: dtrTable
+				};
+				console.log(`Delete: ${JSON.stringify(body)}`);
+				await dynamodb.deleteItem(body).promise();
+			} else {
+				console.log(`Delete Not Found: ${Key}`);
+			}
 		}
 	} catch (e) {
 		await incrementMetric('Error', {
