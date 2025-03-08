@@ -382,6 +382,58 @@ async function handlePage(event: APIGatewayProxyEventV2): Promise<APIGatewayProx
 	};
 }
 
+interface ActivateApiResponse {
+	success: boolean;
+	errors: string[];
+	data?: (string | undefined)[];
+}
+
+async function handleAllActivate(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+	const response: ActivateApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the token
+	const code = event.queryStringParameters?.code || '';
+
+	// Validate the body
+	if (!code || code !== apiCode) {
+		response.success = false;
+		response.errors.push('code');
+	}
+
+	if (response.success) {
+		const activations = await dynamodb.scan({
+			TableName: phoneTable,
+			FilterExpression: '#a = :a',
+			ExpressionAttributeNames: {
+				'#a': 'isActive'
+			},
+			ExpressionAttributeValues: {
+				':a': {
+					BOOL: false
+				}
+			}
+		}).promise()
+			.then((data) => data.Items?.map((item) => item.phone.N));
+		response.data = activations;
+
+		await Promise.all((activations || []).map((num) => sqs.sendMessage({
+			MessageBody: JSON.stringify({
+				action: 'activate',
+				phone: num
+			}),
+			QueueUrl: queueUrl
+		})));
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	try {
 		const action = event.queryStringParameters?.action || 'list';
@@ -398,6 +450,8 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 				return handleMessage(event);
 			case 'page':
 				return handlePage(event);
+			case 'allActivate':
+				return handleAllActivate(event);
 		}
 
 		return {
