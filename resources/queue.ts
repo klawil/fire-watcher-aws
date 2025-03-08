@@ -7,6 +7,7 @@ const secretManager = new AWS.SecretsManager();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
+const messagesTable = process.env.TABLE_MESSAGES as string;
 const apiCode = process.env.SERVER_CODE as string;
 
 const welcomeMessage = `Welcome to the Crestone Volunteer Fire Department text group!
@@ -66,7 +67,49 @@ async function getRecipients() {
 		.then((data) => data.Items || []);
 }
 
+async function saveMessageData(
+	messageId: string,
+	recipients: number,
+	body: string,
+	mediaUrls: string[] = []
+) {
+	await dynamodb.updateItem({
+		TableName: messagesTable,
+		Key: {
+			datetime: {
+				N: messageId
+			}
+		},
+		ExpressionAttributeNames: {
+			'#r': 'recipients',
+			'#b': 'body',
+			'#m': 'mediaUrls'
+		},
+		ExpressionAttributeValues: {
+			':r': {
+				N: recipients.toString()
+			},
+			':b': {
+				S: body
+			},
+			':m': {
+				S: mediaUrls.join(',')
+			}
+		},
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m'
+	}).promise();
+}
+
+interface TwilioMessageConfig {
+	body: string;
+	mediaUrl?: string[];
+	from: string;
+	to: string;
+	statusCallback?: string;
+}
+
 async function sendMessage(
+	messageId: string | null,
 	phone: string | undefined,
 	body: string,
 	mediaUrl: string[] = [],
@@ -81,13 +124,16 @@ async function sendMessage(
 		throw new Error('Cannot get twilio secret');
 	}
 
-	const messageConfig = {
+	const messageConfig: TwilioMessageConfig = {
 		body,
 		mediaUrl,
 		from: isPage ? twilioConf.pageNumber : twilioConf.fromNumber,
-		statusCallback: `https://fire.klawil.net/api?action=messageStatus&code=${encodeURIComponent(apiCode)}`,
 		to: `+1${parsePhone(phone)}`
 	};
+
+	if (messageId !== null) {
+		messageConfig.statusCallback = `https://fire.klawil.net/api?action=messageStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
+	}
 
 	return twilio(twilioConf.accountSid, twilioConf.authToken)
 		.messages.create(messageConfig)
@@ -148,7 +194,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	}).promise();
 
 	// Send the welcome message
-	promises.push(sendMessage(body.phone, welcomeMessage));
+	promises.push(sendMessage(null, body.phone, welcomeMessage));
 
 	// Send the message to the admins
 	promises.push(dynamodb.scan({
@@ -165,6 +211,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	}).promise()
 		.then((admins) => Promise.all((admins.Items || []).map((item) => {
 			return sendMessage(
+				null,
 				item.phone.N,
 				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
 			);
@@ -184,6 +231,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		ScanIndexForward: false
 	}).promise()
 		.then((data) => sendMessage(
+			null,
 			body.phone,
 			createPageMessage(data.Items && data.Items[0].Key.S || ''),
 			[],
@@ -256,13 +304,19 @@ async function handleTwilio(body: TwilioBody) {
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
 
+	const messageId = new Date().getTime().toString();
+	const insertMessage = saveMessageData(messageId, recipients.length, messageBody, mediaUrls);
+
 	await Promise.all(recipients
 		.map((number) =>  sendMessage(
+			messageId,
 			number.phone.N,
 			messageBody,
 			mediaUrls,
 			isFromPageNumber
 		)) || []);
+
+	await insertMessage;
 }
 
 interface PageBody {
@@ -275,14 +329,20 @@ async function handlePage(body: PageBody) {
 	const messageBody = createPageMessage(body.key);
 	const recipients = await getRecipients();
 
+	const messageId = new Date().getTime().toString();
+	const insertMessage = saveMessageData(messageId, recipients.length, messageBody);
+
 	// Send the messages
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
+			messageId,
 			phone.phone.N,
 			messageBody,
 			[],
 			true
 		)));
+
+	await insertMessage;
 }
 
 async function handleLogin(body: ActivateOrLoginBody) {
@@ -311,7 +371,7 @@ async function handleLogin(body: ActivateOrLoginBody) {
 		UpdateExpression: 'SET #c = :c, #ce = :ce'
 	}).promise();
 
-	await sendMessage(body.phone, `Your login code is ${code}. This code expires in 5 minutes.`);
+	await sendMessage(null, body.phone, `Your login code is ${code}. This code expires in 5 minutes.`);
 }
 
 async function testSystem() {
@@ -324,6 +384,7 @@ async function testSystem() {
 	// Test the paging system
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
+			null,
 			phone.phone.N,
 			createPageMessage('testPage/testPage'),
 			[],
@@ -333,6 +394,7 @@ async function testSystem() {
 	// Test the regular messaging system
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
+			null,
 			phone.phone.N,
 			'System: Test message 👍'
 		)));

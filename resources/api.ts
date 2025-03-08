@@ -8,6 +8,7 @@ const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const phoneTable = process.env.TABLE_PHONE as string;
+const messagesTable = process.env.TABLE_MESSAGES as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
 
@@ -53,6 +54,37 @@ function randomString(len: number, numeric = false): string {
 	}
 
 	return str.join('');
+}
+
+type DynamoDbValues = boolean | number | string | undefined | DynamoDbValues[];
+
+function parseDynamoDbAttributeValue(value: AWS.DynamoDB.AttributeValue): DynamoDbValues {
+	if (typeof value.S !== 'undefined') {
+		return value.S;
+	} else if (typeof value.N !== 'undefined') {
+		return parseFloat(value.N as string);
+	} else if (typeof value.BOOL !== 'undefined') {
+		return value.BOOL;
+	} else if (typeof value.L !== 'undefined') {
+		return value.L?.map(parseDynamoDbAttributeValue);
+	}
+
+	return;
+}
+
+interface NewObject {
+	[key: string]: DynamoDbValues | NewObject;
+}
+
+function parseDynamoDbAttributeMap(item: AWS.DynamoDB.AttributeMap): NewObject {
+	const newObj: NewObject = {};
+
+	Object.keys(item)
+		.forEach(key => {
+			newObj[key] = parseDynamoDbAttributeValue(item[key]);
+		});
+
+	return newObj;
 }
 
 async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -218,27 +250,65 @@ async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	return response;
 }
 
+interface TwilioMessageStatus {
+	SmsSid: string;
+	SmsStatus: string;
+	MessageStatus: string; // Use me!
+	To: string;
+	MessageSid: string;
+	AccountSid: string;
+	From: string;
+	ApiVersion: string;
+}
+
 async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const eventDatetime = new Date().getTime();
 	const code = event.queryStringParameters?.code || '';
+	const messageId = event.queryStringParameters?.msg || null;
 	const response = {
 		statusCode: 204,
 		body: ''
 	};
 
-	// Build the event data
-	const eventData = event.body
-		?.split('&')
-		.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
-		.reduce((acc, curr) => ({
-			...acc,
-			[curr[0]]: curr[1] || ''
-		}), {}) as TwilioParams;
-	console.log(`TWILIO STATUS BODY: ${event.body}`);
-	console.log(eventData);
-
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
 		console.log('API - ERROR - INVALID CODE');
+	} else if (messageId === null) {
+		console.log('API - ERROR - INVALID MESSAGE ID');
+	} else {
+		// Build the event data
+		const eventData = event.body
+			?.split('&')
+			.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
+			.reduce((acc, curr) => ({
+				...acc,
+				[curr[0]]: curr[1] || ''
+			}), {}) as TwilioMessageStatus;
+
+		await dynamodb.updateItem({
+			TableName: messagesTable,
+			Key: {
+				datetime: {
+					N: messageId
+				}
+			},
+			ExpressionAttributeNames: {
+				'#eventName': eventData.MessageStatus
+			},
+			ExpressionAttributeValues: {
+				':eventListItem': {
+					L: [
+						{
+							N: eventDatetime.toString()
+						}
+					]
+				},
+				':emptyList': {
+					L: []
+				}
+			},
+			UpdateExpression: 'SET #eventName = list_append(if_not_exists(#eventName, :emptyList), :eventListItem)'
+		}).promise();
 	}
 
 	return response;
@@ -494,20 +564,15 @@ async function listUsers(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRe
 	// Parse the users into a readable format
 	const users = usersItems
 		.map((item) => {
-			let itemObj: { [key: string]: string | boolean | undefined | null } = {};
+			let itemObj = parseDynamoDbAttributeMap(item);
 
-			Object.keys(EXPOSED_KEYS).forEach((key) => {
-				if (typeof item[key] === 'undefined') {
-					itemObj[key] = EXPOSED_KEYS[key];
-					return;
-				}
+			Object.keys(itemObj)
+				.filter(key => typeof EXPOSED_KEYS[key] === 'undefined')
+				.forEach(key => delete itemObj[key]);
 
-				itemObj[key] = item[key].S
-					? item[key].S
-					: item[key].N
-						? item[key].N
-						: item[key].BOOL
-			});
+			Object.keys(EXPOSED_KEYS)
+				.filter(key => typeof itemObj[key] === 'undefined')
+				.forEach(key => itemObj[key] = EXPOSED_KEYS[key]);
 
 			return itemObj;
 		});
@@ -596,6 +661,18 @@ async function handleLocationUpdate(event: APIGatewayProxyEvent): Promise<APIGat
 	};
 }
 
+async function test(): Promise<APIGatewayProxyResult> {
+	const result = await dynamodb.scan({
+		TableName: messagesTable
+	}).promise();
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body: JSON.stringify((result.Items || []).map(parseDynamoDbAttributeMap))
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'list';
 	try {
@@ -619,6 +696,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleAllActivate(event);
 			case 'location':
 				return await handleLocationUpdate(event);
+			case 'test':
+				return await test();
 		}
 
 		console.log(`API - 404`);

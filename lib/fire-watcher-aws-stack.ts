@@ -147,6 +147,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
+        TABLE_MESSAGES: messagesTable.tableName,
         SQS_QUEUE: queue.queueUrl,
         SERVER_CODE: apiCode
       }
@@ -155,6 +156,7 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the API handler
     phoneNumberTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
+    messagesTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
 
     // Create a rest API
