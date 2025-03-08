@@ -68,58 +68,59 @@ export async function main() {
 			return dynamodb.updateItem(updateConfig).promise();
 		}));
 
-	const messages = changedHeartbeats.map(hb => {
-		const programCaps = hb.Program.toUpperCase();
-		const programHeartbeats = heartbeats.filter(hb2 => hb2.Program === hb.Program);
-		const primaryHeartbeats = programHeartbeats.filter(hb2 => hb2.IsPrimary);
-		const secondaryHeartbeats = programHeartbeats.filter(hb2 => !hb2.IsPrimary);
+	const messages = changedHeartbeats
+		.filter(hb => hb.Program !== 'dtr')
+		.map(hb => {
+			const programCaps = hb.Program.toUpperCase();
+			const programHeartbeats = heartbeats.filter(hb2 => hb2.Program === hb.Program);
+			const primaryHeartbeats = programHeartbeats.filter(hb2 => hb2.IsPrimary);
+			const secondaryHeartbeats = programHeartbeats.filter(hb2 => !hb2.IsPrimary);
 
-		const parts = {
-			changed: `${hb.IsPrimary ? 'Primary' : 'Secondary'} ${programCaps} server (${hb.Server})`,
-			all: `All ${programCaps} servers (${programHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
-			primary: `primary ${programCaps} server (${primaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
-			secondary: `secondary ${programCaps} server (${secondaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
-		};
+			const parts = {
+				changed: `${hb.IsPrimary ? 'Primary' : 'Secondary'} ${programCaps} server (${hb.Server})`,
+				all: `All ${programCaps} servers (${programHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
+				primary: `primary ${programCaps} server (${primaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
+				secondary: `secondary ${programCaps} server (${secondaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
+			};
 
-		const primaryUp = primaryHeartbeats
-			.filter(hb2 => !hb2.IsFailed)
-			.length > 0;
-		const secondaryUp = secondaryHeartbeats
-			.filter(hb2 => !hb2.IsFailed)
-			.length > 0;
-		const isSecondary = secondaryHeartbeats.length > 0;
+			const primaryUp = primaryHeartbeats
+				.filter(hb2 => !hb2.IsFailed)
+				.length > 0;
+			const secondaryUp = secondaryHeartbeats
+				.filter(hb2 => !hb2.IsFailed)
+				.length > 0;
+			const isSecondary = secondaryHeartbeats.length > 0;
 
-		if (primaryUp && secondaryUp) {
-			if (hb.IsPrimary) {
-				return `${parts.changed} is back online. Switching back to ${hb.Server}.`;
+			if (primaryUp && secondaryUp) {
+				if (hb.IsPrimary) {
+					return `${parts.changed} is back online. Switching back to ${hb.Server}.`;
+				} else {
+					return `${parts.changed} is back online. ${parts.all} are online.`;
+				}
+			} else if (!primaryUp && secondaryUp) {
+				if (hb.IsPrimary) {
+					return `${parts.changed} is down. Switching to ${parts.secondary}.`;
+				} else {
+					return `${parts.changed} is back online. Switching to ${parts.secondary}, ${parts.primary} is still offline.`;
+				}
+			} else if (primaryUp && !isSecondary) {
+				return `${parts.changed} is back online. ${programCaps} recording now occuring.`;
+			} else if (primaryUp && !secondaryUp) {
+				if (hb.IsPrimary) {
+					return `${parts.changed} is back online. Switching to ${parts.primary}, ${parts.secondary} is still offline.`;
+				} else {
+					return `${parts.changed} is offline. Continuing to record ${programCaps} on ${parts.primary}.`;
+				}
+			} else if (!primaryUp && (!secondaryUp || !isSecondary)) {
+				if (hb.IsPrimary) {
+					return `${parts.changed} is offline. ${programCaps} recording is no longer occuring${isSecondary ? ` because ${parts.secondary} is still offline` : ''}.`;
+				} else {
+					return `${parts.changed} is offline. ${programCaps} recording is no longer occuring because ${parts.primary} is still offline.`;
+				}
 			} else {
-				return `${parts.changed} is back online. ${parts.all} are online.`;
+				return `Unkown state. IsPrimary: ${hb.IsPrimary}, primaryUp: ${primaryUp}, secondaryUp: ${secondaryUp}, isSecondary: ${isSecondary}. MEOW.`;
 			}
-		} else if (!primaryUp && secondaryUp) {
-			if (hb.IsPrimary) {
-				return `${parts.changed} is down. Switching to ${parts.secondary}.`;
-			} else {
-				return `${parts.changed} is back online. Switching to ${parts.secondary}, ${parts.primary} is still offline.`;
-			}
-		} else if (primaryUp && !isSecondary) {
-			return `${parts.changed} is back online. ${programCaps} recording now occuring.`;
-		} else if (primaryUp && !secondaryUp) {
-			if (hb.IsPrimary) {
-				return `${parts.changed} is back online. Switching to ${parts.primary}, ${parts.secondary} is still offline.`;
-			} else {
-				return `${parts.changed} is offline. Continuing to record ${programCaps} on ${parts.primary}.`;
-			}
-		} else if (!primaryUp && (!secondaryUp || !isSecondary)) {
-			if (hb.IsPrimary) {
-				return `${parts.changed} is offline. ${programCaps} recording is no longer occuring${isSecondary ? ` because ${parts.secondary} is still offline` : ''}.`;
-			} else {
-				return `${parts.changed} is offline. ${programCaps} recording is no longer occuring because ${parts.primary} is still offline.`;
-			}
-		} else {
-			return `Unkown state. IsPrimary: ${hb.IsPrimary}, primaryUp: ${primaryUp}, secondaryUp: ${secondaryUp}, isSecondary: ${isSecondary}. MEOW.`;
-		}
-	});
-
+		});
 
 	if (messages.length > 0) {
 		console.log(messages.join('\n'));
