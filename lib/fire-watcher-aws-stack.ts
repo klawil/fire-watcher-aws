@@ -293,54 +293,12 @@ export class FireWatcherAwsStack extends Stack {
     });
     weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));
 
-    // Create an API handler
-    const apiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
-        })
-      ],
-      runtime: lambda.Runtime.NODEJS_14_X,
-      entry: __dirname + '/../resources/api.ts',
-      handler: 'main',
-      environment: {
-        TABLE_PHONE: phoneNumberTable.tableName,
-        TABLE_TRAFFIC: vhfTable.tableName,
-        TABLE_DTR: dtrTable.tableName,
-        TABLE_TALKGROUP: talkgroupTable.tableName,
-        TABLE_STATUS: statusTable.tableName,
-        SQS_QUEUE: queue.queueUrl,
-        SERVER_CODE: apiCode,
-        S3_BUCKET: bucket.bucketName
-      },
-      timeout: Duration.seconds(10)
-    });
-
-    // Grant access for the API handler
-    phoneNumberTable.grantReadWriteData(apiHandler);
-    vhfTable.grantReadData(apiHandler);
-    dtrTable.grantReadWriteData(apiHandler);
-    talkgroupTable.grantReadData(apiHandler);
-    statusTable.grantReadWriteData(apiHandler);
-    queue.grantSendMessages(apiHandler);
-    bucket.grantRead(apiHandler);
-
     // Create a rest API
     const api = new apigateway.RestApi(this, 'cvfd-api-gateway', {
       restApiName: 'CVFD API Gateway',
       description: 'Allow interaction from the CVFD radio website'
     });
-    const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
-      requestTemplates: {
-        'application/json': '{"statusCode":"200"}',
-        'application/xml': '<Response></Response>'
-      }
-    });
     const apiResource = api.root.addResource('api');
-    apiResource.addMethod('GET', apiIntegration);
-    apiResource.addMethod('POST', apiIntegration);
 
     // Create the frontend API
     const frontendApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-frontend-lambda', {
