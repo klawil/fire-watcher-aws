@@ -92,7 +92,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		statusCode: 200,
 		body: JSON.stringify(response),
 		headers: {
-			'Set-Cookie': `${authUserCookie}=${body.phone}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`
+			'Set-Cookie': `${authUserCookie}=${body.phone}; SameSite=Strict; Path=/; Max-Age=${loginDuration}`
 		}
 	};
 }
@@ -184,8 +184,8 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		body: JSON.stringify(response),
 		multiValueHeaders: {
 			'Set-Cookie': [
-				`${authUserCookie}=${cookies[authUserCookie]}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-				`${authTokenCookie}=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`
+				`${authUserCookie}=${cookies[authUserCookie]}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+				`${authTokenCookie}=${token}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`
 			]
 		}
 	};
