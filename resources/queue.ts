@@ -301,12 +301,16 @@ async function parseRecord(event: lambda.SQSRecord) {
 		switch (body.action) {
 			case 'activate':
 				response = await handleActivation(body);
+				break;
 			case 'twilio':
 				response = await handleTwilio(body);
+				break;
 			case 'page':
 				response = await handlePage(body);
+				break;
 			case 'login':
 				response = await handleLogin(body);
+				break;
 			default:
 				console.log(`QUEUE - 404`);
 		}
