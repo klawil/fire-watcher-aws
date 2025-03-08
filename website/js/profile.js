@@ -117,8 +117,9 @@ function init() {
 							.forEach(elem => elem.classList.remove('is-invalid'));
 				}
 			})
-		console.log(user);
 	});
+
+	doneLoading();
 }
 
 window.afterAuth.push(() => window.userQueue.push(init));

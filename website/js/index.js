@@ -93,6 +93,8 @@ function updateData(direction = 'after', restart = false, date = false) {
 			files = filterData(files);
 			display(filterData(r.data), direction, restart);
 			fromDate = false;
+
+			doneLoading();
 		})
 		.catch(console.error);
 }

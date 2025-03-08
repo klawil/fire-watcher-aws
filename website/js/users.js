@@ -523,6 +523,7 @@ function init() {
 				});
 				tbody.appendChild(tr);
 			}
+			doneLoading();
 		});
 }
 

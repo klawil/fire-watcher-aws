@@ -131,6 +131,8 @@ function getTexts() {
 			document.getElementById('texts').innerHTML = buildTable(texts.filter(text => !text.isPage));
 
 			document.getElementById('pages').innerHTML = buildTable(texts.filter(text => text.isPage), true);
+
+			doneLoading();
 		})
 		.catch(console.error);
 }
