@@ -186,10 +186,12 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
+		console.log(`Invalid API code - ${apiCode}`);
 		await incrementMetric('Error', {
 			source: metricSource
 		});
 	} else if (messageId === null) {
+		console.log(`Invalid message ID - ${messageId}`);
 		await incrementMetric('Error', {
 			source: metricSource
 		});
@@ -251,7 +253,11 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 						Value: eventDatetime - messageTime.getTime()
 					}
 				]
-			}).promise());
+			}).promise()
+				.catch(e => {
+					console.error(`Error with metrics`);
+					console.error(e);
+				}));
 		}
 
 		await Promise.all(promises);
@@ -287,10 +293,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		};
 	} catch (e) {
+		console.error(e);
 		await incrementMetric('Error', {
 			source: metricSource
 		});
-		console.error(e);
 		return {
 			statusCode: 400,
 			headers: {},
