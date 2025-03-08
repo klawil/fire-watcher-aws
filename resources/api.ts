@@ -9,6 +9,7 @@ const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const phoneTable = process.env.TABLE_PHONE as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
+const statusTable = process.env.TABLE_STATUS as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
 
@@ -238,6 +239,7 @@ interface ApiResponse {
 	success: boolean;
 	errors: string[];
 	message?: string;
+	data?: any[]
 }
 
 function validateBodyIsJson(body: string | null): true {
@@ -784,6 +786,98 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 }
 
+interface HeartbeatBody {
+	code: string;
+	Server: string;
+	Program: string;
+	IsPrimary: boolean;
+	IsActive: boolean;
+}
+
+async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as HeartbeatBody;
+	const response: ApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body
+	if (!body.code || body.code !== apiCode) {
+		response.success = false;
+		response.errors.push('code');
+	}
+	const neededFields: { [key in keyof HeartbeatBody]?: string } = {
+		Server: 'string',
+		Program: 'string',
+		IsPrimary: 'boolean',
+		IsActive: 'boolean'
+	};
+	Object.keys(neededFields)
+		.forEach(key => {
+			if (typeof body[key as keyof HeartbeatBody] !== neededFields[key as keyof HeartbeatBody]) {
+				response.errors.push(key);
+				response.success = false;
+			}
+		});
+	
+	if (!response.success) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	await dynamodb.updateItem({
+		TableName: statusTable,
+		Key: {
+			ServerProgram: {
+				S: `${body.Server}:${body.Program}`
+			},
+			Program: {
+				S: body.Program
+			}
+		},
+		ExpressionAttributeNames: {
+			'#s': 'Server',
+			'#ip': 'IsPrimary',
+			'#ia': 'IsActive',
+			'#if': 'IsFailed',
+			'#lh': 'LastHeartbeat'
+		},
+		ExpressionAttributeValues: {
+			':s': { S: body.Server },
+			':ip': { BOOL: body.IsPrimary },
+			':ia': { BOOL: body.IsActive },
+			':if': { BOOL: false },
+			':lh': { N: `${Date.now()}` }
+		},
+		UpdateExpression: 'SET #s = :s, #ip = :ip, #ia = :ia, #if = :if, #lh = :lh'
+	}).promise();
+
+	response.data = await dynamodb.scan({
+		TableName: statusTable,
+		ExpressionAttributeValues: {
+			':p': {
+				S: body.Program
+			}
+		},
+		ExpressionAttributeNames: {
+			'#p': 'Program'
+		},
+		FilterExpression: '#p = :p'
+	}).promise()
+		.then(data => (data.Items || []).map(parseDynamoDbAttributeMap));
+	
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'list';
 	try {
@@ -811,6 +905,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getTexts(event);
 			case 'getUser':
 				return await getUser(event);
+			case 'heartbeat':
+				return await handleHeartbeat(event);
 		}
 
 		console.log(`API - 404`);

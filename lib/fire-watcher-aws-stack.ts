@@ -59,6 +59,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    const statusTable = new dynamodb.Table(this, 'cvfd-status', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'ServerProgram',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'Program',
+        type: dynamodb.AttributeType.STRING
+      }
+    });
 
     trafficTable.addGlobalSecondaryIndex({
       indexName: 'ToneIndex',
@@ -148,6 +159,7 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
         TABLE_MESSAGES: messagesTable.tableName,
+        TABLE_STATUS: statusTable.tableName,
         SQS_QUEUE: queue.queueUrl,
         SERVER_CODE: apiCode
       }
@@ -157,6 +169,7 @@ export class FireWatcherAwsStack extends Stack {
     phoneNumberTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
     messagesTable.grantReadWriteData(apiHandler);
+    statusTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
 
     // Create a rest API
