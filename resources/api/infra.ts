@@ -379,6 +379,51 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	};
 }
 
+const testingUser = '***REMOVED***';
+async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Promise<APIGatewayProxyResult> {
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the code
+	event.queryStringParameters = event.queryStringParameters || {};
+	if (event.queryStringParameters.code !== apiCode) {
+		response.success = false;
+		response.errors.push('auth');
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Update the user
+	const updateConfig: aws.DynamoDB.UpdateItemInput = {
+		TableName: userTable,
+		Key: {
+			phone: { N: testingUser }
+		},
+		ExpressionAttributeNames: {
+			'#it': 'isTest'
+		},
+		ExpressionAttributeValues: {
+			':it': { BOOL: true }
+		},
+		UpdateExpression: 'SET #it = :it'
+	};
+	if (!testOn) {
+		delete updateConfig.ExpressionAttributeValues;
+		updateConfig.UpdateExpression = 'REMOVE #it';
+	}
+
+	await dynamodb.updateItem(updateConfig).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 
@@ -396,6 +441,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handlePage(event);
 			case 'heartbeat':
 				return await handleHeartbeat(event);
+			case 'startTest':
+				return await handleTestState(event, true);
+			case 'endTest':
+				return await handleTestState(event, false);
 		}
 
 		await incrementMetric('Error', {
