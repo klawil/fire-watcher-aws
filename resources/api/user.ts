@@ -71,8 +71,8 @@ async function loginUser(user: AWS.DynamoDB.AttributeMap) {
 			`${authUserCookie}=${user.phone.N}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
 			`${authTokenCookie}=${token}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
 			`cvfd-user-name=${user.fName.S}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-			`cvfd-user-admin=${user.isAdmin.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-			`cvfd-user-super=${user.isDistrictAdmin.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+			`cvfd-user-admin=${user.isAdmin?.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+			`cvfd-user-super=${user.isDistrictAdmin?.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
 		],
 	};
 }
@@ -100,7 +100,10 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				phone: { N: body.phone }
 			}
 		}).promise();
-		if (!user.Item) {
+		if (
+			!user.Item ||
+			!user.Item.isActive?.BOOL
+		) {
 			response.success = false;
 			response.errors.push('phone');
 		}
@@ -163,7 +166,10 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			phone: { N: cookies[authUserCookie] }
 		}
 	}).promise();
-	if (!user.Item) {
+	if (
+		!user.Item ||
+		!user.Item.isActive?.BOOL
+	) {
 		response.success = false;
 		response.errors.push('phone');
 		return {
@@ -238,9 +244,11 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		};
 		const cookieValues: string[] = [];
 		Object.keys(cookieMap).forEach(cookie => {
-			if (typeof cookies[cookie] === 'undefined') {
+			if (
+				typeof cookies[cookie] === 'undefined' ||
+				cookies[cookie] !== cookieMap[cookie]
+			)
 				cookieValues.push(`${cookie}=${cookieMap[cookie]}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`);
-			}
 		});
 		if (cookieValues.length > 0) {
 			httpResponse.multiValueHeaders = {
