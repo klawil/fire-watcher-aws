@@ -100,7 +100,7 @@ const baseCharts: ChartConfig[] = [
 	{
 		id: 'api-duration-max',
 		type: 'Metric',
-		query: 'metrics=s3-dur-max,queue-dur-max,alarmqueue-dur-max,status-dur-max,weather-dur-max,infraapi-dur-max,userapi-dur-max,twilioapi-dur-max,eventsapi-dur-max,conferenceapi-dur-max,frontendapi-dur-max,audioapi-dur-max',
+		query: 'metrics=s3-dur-max,queue-dur-max,alarmqueue-dur-max,status-dur-max,weather-dur-max,infraapi-dur-max,userapi-dur-max,twilioapi-dur-max,eventsapi-dur-max,conferenceapi-dur-max,frontendapi-dur-max,audioapi-dur-max&live=y',
 	},
 	{
 		id: 's3-uploads',
