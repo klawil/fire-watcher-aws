@@ -106,7 +106,7 @@ function updateSitesTable() {
 					<td id="site-${site.SiteId}-failed">${site.SiteFailed ? 'FAILED' : 'N'}</td>
 					<td id="site-${site.SiteId}-flags">${makeSiteFlags(site)}</td>
 					<td id="site-${site.SiteId}-services">${makeSiteServices(site)}</td>
-					<td id="site-${site.SiteId}-seen">${site.SysShortname.split(',').join(', ')}</td>
+					<td id="site-${site.SiteId}-seen">${site.SysShortname.split(',').sort().join(', ')}</td>
 					<td id="site-${site.SiteId}-updated">${new Date(site.UpdateTime).toLocaleTimeString('en-US', localeTimeOptions)}</td>`;
 				siteTable.appendChild(tr);
 			} else {
@@ -115,7 +115,7 @@ function updateSitesTable() {
 					failed: site.SiteFailed ? 'FAILED' : 'N',
 					flags: makeSiteFlags(site),
 					services: makeSiteServices(site),
-					seen: site.SysShortname.split(',').join(', '),
+					seen: site.SysShortname.split(',').sort().join(', '),
 					updated: new Date(site.UpdateTime).toLocaleTimeString('en-US', localeTimeOptions),
 				};
 				Object.keys(newData).forEach(key => {
