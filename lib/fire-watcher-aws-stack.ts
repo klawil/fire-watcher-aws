@@ -323,23 +323,23 @@ export class FireWatcherAwsStack extends Stack {
           alarmName: 'Saguache Tower'
         }
       },
-      {
-        codeName: 'pool-table-tower',
-        alarm: {
-          ...baseTowerAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Decode Rate',
-            namespace: 'DTR Metrics',
-            period: Duration.seconds(30),
-            statistic: cloudwatch.Statistic.MINIMUM,
-            dimensionsMap: {
-              Tower: 'Pool Table Mountain'
-            }
-          }),
-          alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
-          alarmName: 'Pool Table Tower'
-        }
-      },
+      // {
+      //   codeName: 'pool-table-tower',
+      //   alarm: {
+      //     ...baseTowerAlarmConfig,
+      //     metric: new cloudwatch.Metric({
+      //       metricName: 'Decode Rate',
+      //       namespace: 'DTR Metrics',
+      //       period: Duration.seconds(30),
+      //       statistic: cloudwatch.Statistic.MINIMUM,
+      //       dimensionsMap: {
+      //         Tower: 'Pool Table Mountain'
+      //       }
+      //     }),
+      //     alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
+      //     alarmName: 'Pool Table Tower'
+      //   }
+      // },
       {
         codeName: 'user-api',
         okayAction: false,
