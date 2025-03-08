@@ -547,6 +547,30 @@ async function handleAllActivate(event: APIGatewayProxyEvent): Promise<APIGatewa
 	};
 }
 
+interface ApiDataResponse extends ApiResponse {
+	data?: any[];
+}
+
+async function handleLocationUpdate(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: ApiDataResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Log the new location
+	console.log(body);
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'list';
 	try {
@@ -568,6 +592,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await listUsers(event);
 			case 'allActivate':
 				return await handleAllActivate(event);
+			case 'location':
+				return await handleLocationUpdate(event);
 		}
 
 		console.log(`API - 404`);
