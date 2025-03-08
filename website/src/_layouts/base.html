@@ -5,6 +5,12 @@
 		<meta name="theme-color" content="#000000" />
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
+		<script>
+			if (['www.cofrn.org', 'fire.klawil.net'].includes(window.location.host)) {
+				window.location.host = 'cofrn.org';
+			}
+		</script>
+
 		<title>{% if page.title %}{{ page.title }}{% else %}{{ page.titleBarTitle }}{% endif %} - CVFD</title>
 
 		{% assign randomNumber = "now" | date: "%N" %}
