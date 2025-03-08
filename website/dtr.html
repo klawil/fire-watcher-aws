@@ -31,20 +31,50 @@ latestLabel: Live
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				<h5>Talkgroups</h5>
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" role="switch" id="all-tgs" checked>
-					<label class="form-check-label" for="all-tgs">Show All Talkgroups</label>
-				</div>
-				<div id="tg-selected-div"></div>
-				<select class="form-select" filter="true" id="tg-select" style="display: none;">
-					<option selected value="ALL">All</option>
-					<option value="8198">Saguache EMS</option>
-				</select>
-				<h5>Emergency Only</h5>
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" role="switch" id="only-emerg">
-					<label class="form-check-label" for="only-emerg">Only show emergency traffic</label>
+				<ul class="nav nav-tabs">
+					<li class="nav-item">
+						<button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">All</button>
+					</li>
+					<li class="nav-item">
+						<button class="nav-link" id="presets-tab" data-bs-toggle="tab" data-bs-target="#presets" type="button" role="tab">Presets</button>
+					</li>
+					<li class="nav-item">
+						<button class="nav-link" id="talkgroups-tab" data-bs-toggle="tab" data-bs-target="#talkgroups" type="button" role="tab">Talkgroups</button>
+					</li>
+				</ul>
+				<div class="tab-content">
+					<div class="tab-pane fade show active" id="all">
+						All recorded DTR traffic will be displayed
+				
+						<div class="form-check form-switch">
+							<input class="form-check-input" type="checkbox" role="switch" id="only-emerg">
+							<label class="form-check-label" for="only-emerg">Only show emergency traffic</label>
+						</div>
+					</div>
+					<div class="tab-pane fade" id="presets">
+						<select class="form-select" id="preset-select"></select>
+					</div>
+					<div class="tab-pane fade container" id="talkgroups">
+						<div class="row">
+							<input class="form-control col-xs-12" type="text" id="tg-search" placeholder="Filter">
+							<div class="col-sm-12 col-md-6">
+								<h5>Select From</h5>
+								<div style="height: 200px; overflow-y: scroll">
+									<table class="table">
+										<tbody id="talkgroup-select"></tbody>
+									</table>
+								</div>
+							</div>
+							<div class="col-sm-12 col-md-6">
+								<h5>Selected</h5>
+								<div style="height: 200px; overflow-y: scroll">
+									<table class="table">
+										<tbody id="talkgroup-select-active"></tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div class="modal-footer">
@@ -55,5 +85,5 @@ latestLabel: Live
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}
+<script src="/js/talkgroupMap.js?v={{ randomNumber }}"></script>
 <script async src="/js/dtr.js?v={{ randomNumber }}"></script>
-<script async src="/js/talkgroupMap.js?v={{ randomNumber }}"></script>

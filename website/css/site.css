@@ -26,3 +26,11 @@ body {
 		display: none;
 	}
 }
+
+.border-top-modal {
+	border-top: 1px solid #dee2e6;
+}
+
+.tg-row {
+	cursor: pointer;
+}

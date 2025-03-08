@@ -4,7 +4,15 @@ window.talkgroupMap = window.talkgroupMap || {};
 const nextDataFields = {};
 
 let isUpdatingBefore = false;
+let updatingId = 0;
+let nextTimeout = null;
 function updateData(direction = 'after', restart = false) {
+	if (nextTimeout !== null) clearTimeout(nextTimeout);
+
+	updatingId++;
+	if (updatingId > 1000) updatingId = 0;
+	const thisUpdatingId = updatingId;
+
 	if (restart) {
 		delete nextDataFields.after;
 		delete nextDataFields.before;
@@ -27,7 +35,7 @@ function updateData(direction = 'after', restart = false) {
 
 	const queryParams = Object.keys(urlFilters)
 		.filter((filterKey) => urlFilters[filterKey].get())
-		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl())}`);
+		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl(true))}`);
 	if (queryParams.length > 0) {
 		apiUrl += `&${queryParams.join('&')}`;
 	}
@@ -35,6 +43,8 @@ function updateData(direction = 'after', restart = false) {
 	fetch(apiUrl)
 		.then((r) => r.json())
 		.then((r) => {
+			if (thisUpdatingId !== updatingId) return console.log('Exit early');
+
 			if (
 				r.before &&
 				(
@@ -77,9 +87,9 @@ function updateData(direction = 'after', restart = false) {
 		})
 		.catch(console.error)
 		.then(() => {
-			if (direction === 'after') {
-				setTimeout(updateData, dataUpdateFrequency, 'after');
-			} else {
+			if (direction === 'after' && thisUpdatingId === updatingId) {
+				nextTimeout = setTimeout(updateData, dataUpdateFrequency, 'after');
+			} else if (direction !== 'after') {
 				isUpdatingBefore = false;
 			}
 		});
@@ -103,69 +113,162 @@ window.addEventListener('scroll', () => {
 });
 
 class TalkgroupFilter {
-	allToggleId = 'all-tgs';
-	containerId = 'tg-selected-div';
-	selectId = 'tg-select';
-	selected = [];
+	activeTab = 'all';
+	chosenPreset = null;
+	chosenTalkgroups = [];
+
+	presets = {
+		'NSCAD': [ 8198 ],
+		'NSCFPD': [ 8330, 8332, 8333 ],
+		'BGFD/BGEMS': [ 8090, 8331 ],
+		'Saguache SO': [ 8335, 8336 ],
+		'NSCAD and NSCFPD': [ 8198, 8330, 8332, 8333 ],
+		'SC All': [ 8090, 8198, 8330, 8331, 8332, 8333, 8335, 8336 ],
+		'SC All (no ARCC 5)': [ 8198, 8330, 8331, 8332, 8333, 8335, 8336 ],
+	};
 
 	constructor() {
-		this.allToggleEl = document.getElementById(this.allToggleId);
-		this.containerEl = document.getElementById(this.containerId);
-		this.selectEl = document.getElementById(this.selectId);
+		const tabs = [
+			'all',
+			'presets',
+			'talkgroups'
+		];
 
-		this.hideSelect();
+		this.tabButtons = tabs
+			.map(t => `${t}-tab`)
+			.map(id => document.getElementById(id));
+		this.tabContents = tabs
+			.map(id => document.getElementById(id));
+		this.defaultUrl = this.getUrl();
 
-		this.allToggleEl.addEventListener('change', () => {
-			if (this.allToggleEl.checked) this.hideSelect();
-			else this.showSelect();
+		this.presetSelect = document.getElementById('preset-select');
+		Object.keys(this.presets)
+			.sort()
+			.forEach(key => {
+				const elem = document.createElement('option');
+				elem.value = key;
+				elem.innerHTML = key;
+				this.presetSelect.appendChild(elem);
+			});
+
+		this.talkgroupSelect = document.getElementById('talkgroup-select');
+		this.talkgroupSelected = document.getElementById('talkgroup-select-active');
+		document.getElementById('tg-search').addEventListener('input', (e) => {
+			const searchValue = e.target.value;
+			let filterFunc = (elem) => elem.innerHTML.toLowerCase().indexOf(searchValue) !== -1;
+			if (searchValue === '') {
+				filterFunc = () => true;
+			}
+
+			[ ...this.talkgroupSelect.querySelectorAll('tr') ]
+				.forEach(elem => {
+					const show = filterFunc(elem);
+					elem.hidden = !show;
+				});
 		});
-	}
 
-	hideSelect() {
-		this.allToggleEl.checked = true;
-		this.containerEl.innerHTML = '';
-		this.selected = [];
-		this.selectEl.style.display = 'none';
-	}
+		Object.keys(talkgroupMap)
+			.forEach(key => {
+				const elemParent = document.createElement('tr');
+				elemParent.id = `tg-${key}`;
+				elemParent.classList.add('tg-row');
+				elemParent.setAttribute('data-selected', '0');
+				elemParent.addEventListener('click', () => {
+					let newHome;
+					if (elemParent.getAttribute('data-selected') === '0') {
+						newHome = this.talkgroupSelected;
+						elemParent.setAttribute('data-selected', '1');
+					} else {
+						newHome = this.talkgroupSelect;
+						elemParent.setAttribute('data-selected', '0');
+					}
 
-	showSelect() {
-		this.allToggleEl.checked = false;
-		this.containerEl.innerHTML = '';
-		this.selectEl.style.display = 'block';
+					newHome.appendChild(elemParent);
+				});
+
+				const elem = document.createElement('td');
+				elem.innerHTML = talkgroupMap[key];
+				elemParent.appendChild(elem);
+
+				this.talkgroupSelect.appendChild(elemParent);
+			});
+
+		this.emergOnlyCheckbox = document.getElementById('only-emerg');
 	}
 
 	get() {
-		this.selected = [ ...this.selectEl.selectedOptions ]
-			.map((elem) => elem.value)
-			.filter((val) => val !== 'ALL');
-		return this.allToggleEl.checked || this.selected.length === 0 ? undefined : this.selected;
+		this.activeTab = this.tabContents
+			.filter(div => div.classList.contains('show'))[0]
+			.id;
+
+		if (this.activeTab === 'all') return undefined;
+
+		this.emergOnlyCheckbox.checked = false;
+
+		if (this.activeTab === 'presets'){
+			if (this.chosenPreset === null) return undefined;
+
+			this.chosenPreset = this.presetSelect.value;
+			return this.presets[this.chosenPreset];
+		}
+		 
+		this.chosenTalkgroups = [ ...this.talkgroupSelected.querySelectorAll('tr') ]
+			.map(elem => elem.id.slice(3));
+
+		if (this.chosenTalkgroups.length === 0) return undefined;
+
+		return this.chosenTalkgroups;
 	}
 
 	set(urlValue) {
-		console.log(urlValue);
-		const values = urlValue.toString().split('|');
-		console.log(values);
-		if (values.length === 0) {
-			this.hideSelect();
-			return;
+		urlValue = decodeURIComponent(urlValue);
+
+		if (urlValue.indexOf('p') === 0) {
+			this.activeTab = 'presets';
+			this.chosenPreset = urlValue.slice(1);
+			this.presetSelect.value = this.chosenPreset;
+		} else if (urlValue.indexOf('tg') === 0) {
+			this.activeTab = 'talkgroups';
+			this.chosenTalkgroups = urlValue.slice(2).split('|');
+
+			this.chosenTalkgroups.forEach(tg => {
+				const elem = document.getElementById(`tg-${tg}`);
+				if (elem === null) return;
+
+				this.talkgroupSelected.appendChild(elem);
+			});
 		}
 
-		this.showSelect();
-		[ ...this.selectEl.options ]
-			.forEach((elem) => elem.selected = values.indexOf(elem.value) !== -1);
+		this.tabButtons.forEach(div => div.classList.remove('active'));
+		this.tabButtons
+			.filter(div => div.id === `${this.activeTab}-tab`)
+			.forEach(div => div.classList.add('active'));
+
+		this.tabContents.forEach(div => div.classList.remove('active', 'show'));
+		this.tabContents
+			.filter(div => div.id === this.activeTab)
+			.forEach(div => div.classList.add('active', 'show'));
 	}
 
-	getUrl() {
-		const value = this.get();
-		if (typeof value === 'undefined') {
-			return;
-		}
+	getUrl(forApi = false) {
+		this.get();
 
-		return value.join('|');
+		switch (this.activeTab) {
+			case 'all':
+				return undefined;
+			case 'presets':
+				if (this.chosenPreset === null) return undefined;
+				if (forApi) return this.presets[this.chosenPreset].join('|');
+				return encodeURIComponent(`p${this.chosenPreset}`);
+			default:
+				if (this.chosenTalkgroups.length === 0) return undefined;
+				if (forApi) return this.chosenTalkgroups.join('|');
+				return encodeURIComponent(`tg${this.chosenTalkgroups.join('|')}`);
+		}
 	}
 
 	isDefault() {
-		return this.allToggleEl.checked || this.selected.length === 0;
+		return this.getUrl() === this.defaultUrl;
 	}
 }
 
