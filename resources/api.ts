@@ -557,21 +557,21 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		console.log(`API - CALL - ${action}`);
 		switch (action) {
 			case 'list':
-				return getList(event);
+				return await getList(event);
 			case 'message':
-				return handleMessage(event);
+				return await handleMessage(event);
 			case 'messageStatus':
-				return handleMessageStatus(event);
+				return await handleMessageStatus(event);
 			case 'page':
-				return handlePage(event);
+				return await handlePage(event);
 			case 'login':
-				return handleLogin(event);
+				return await handleLogin(event);
 			case 'auth':
-				return handleAuthenticate(event);
+				return await handleAuthenticate(event);
 			case 'listUsers':
-				return listUsers(event);
+				return await listUsers(event);
 			case 'allActivate':
-				return handleAllActivate(event);
+				return await handleAllActivate(event);
 		}
 
 		console.log(`API - 404`);
