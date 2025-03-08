@@ -172,6 +172,18 @@ export async function incrementMetric(
 				Timestamp: new Date(),
 				Unit: 'Count',
 				Value: 1
+			},
+			{
+				MetricName: name,
+				Dimensions: [
+					{
+						Name: 'source',
+						Value: metricData.source
+					}
+				],
+				Timestamp: new Date(),
+				Unit: 'Count',
+				Value: 1
 			}
 		]
 	};
