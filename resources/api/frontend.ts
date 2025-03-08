@@ -928,6 +928,82 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
+	'tower-sa-min': {
+		Id: 'tower_sa_min',
+		Label: 'San Antonio Peak Decode Rate - Min',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Decode Rate',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'San Antonio Peak'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Minimum',
+			Unit: 'Count'
+		}
+	},
+	'tower-sa-max': {
+		Id: 'tower_sg_max',
+		Label: 'San Antonio Peak Decode Rate - Max',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Decode Rate',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'San Antonio Peak'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Maximum',
+			Unit: 'Count'
+		}
+	},
+	'tower-mv-min': {
+		Id: 'tower_mv_min',
+		Label: 'Monte Vista Tower Decode Rate - Min',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Decode Rate',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'Monte Vista Tower'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Minimum',
+			Unit: 'Count'
+		}
+	},
+	'tower-mv-max': {
+		Id: 'tower_mv_max',
+		Label: 'Monte Vista Tower Decode Rate - Max',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'Decode Rate',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'Monte Vista Tower'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Maximum',
+			Unit: 'Count'
+		}
+	},
 	'twilio-init': {
 		Id: 'twilio_init',
 		Label: 'Texts Initiated',
