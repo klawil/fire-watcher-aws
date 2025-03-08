@@ -1,14 +1,10 @@
-# Welcome to your CDK TypeScript project!
+# Deployment
 
-This is a blank project for TypeScript development with CDK.
+```bash
+nvm use 14
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+export AWS_ACCESS_KEY_ID="{AWS Key}"
+export AWS_SECRET_ACCESS_KEY="{AWS Secret Key}"
 
-## Useful commands
-
- * `npm run build`   compile typescript to js
- * `npm run watch`   watch for changes and compile
- * `npm run test`    perform the jest unit tests
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk synth`       emits the synthesized CloudFormation template
+cdk deploy
+```
