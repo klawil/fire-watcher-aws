@@ -4,7 +4,7 @@ import { incrementMetric, parseDynamoDbAttributeMap, randomString, validateBodyI
 import { authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 
 const metricSource = 'User';
-const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
+const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
@@ -172,8 +172,7 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	// Find previous tokens that should be deleted
 	const now = Date.now();
 	const validUserTokens = user.Item.loginTokens?.L
-		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now)
-		.slice(-9) || [];
+		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
 
 	// Create a token and attach it
 	const token = randomString(32);
