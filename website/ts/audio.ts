@@ -73,6 +73,7 @@ const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => [
 	},
 	{
 		html: talkgroups[file.Talkgroup]?.name || file.Talkgroup.toString(),
+		classList: [ 'text-start' ],
 	},
 	{
 		html: dateToStr(new Date(file.StartTime * 1000)),
