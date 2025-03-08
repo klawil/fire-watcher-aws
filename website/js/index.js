@@ -111,7 +111,7 @@ function playLive() {
 }
 
 const fileNameRegex = /\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/;
-const vhfFileNameRegex = /(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
+const vhfFileNameRegex = /((SAG|BG)_FIRE_VHF|FIRE)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
 const dataTimeKey = 'StartTime';
 const dataFileKey = 'File';
 
@@ -124,7 +124,7 @@ function fileToTime(name) {
 		return parseInt(parts[1], 10);
 	} else {
 		const parts = name.match(vhfFileNameRegex);
-		return new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`).getTime() / 1000;
+		return new Date(`${parts[3]}-${parts[4]}-${parts[5]}T${parts[6]}:${parts[7]}:${parts[8]}Z`).getTime() / 1000;
 	}
 }
 
