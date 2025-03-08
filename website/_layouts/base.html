@@ -9,7 +9,6 @@
 
 		<link rel="icon" type="image/png" href="/favicon.png" />
 		<link href="/libs/bootstrap.min.css" rel="stylesheet">
-		<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css" rel="stylesheet"> -->
 		<link href="/libs/bootstrap-icons.css" rel="stylesheet">
 		<link href="/css/site.css" rel="stylesheet">
 
@@ -43,7 +42,7 @@
 
 					<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
 						<li class="nav-item">
-							<span id="username" class="navbar-text d-none">Test</span>
+							<span id="username" class="nav-link d-none">Test</span>
 							<a id="loginLink" class="nav-link{% if page.url == '/login.html' %} active{% endif %}" href="/login.html">Login</a>
 						</li>
 						{% if page.hasFilter %}
