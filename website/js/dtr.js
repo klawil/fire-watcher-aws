@@ -114,7 +114,7 @@ window.addEventListener('scroll', () => {
 
 class TalkgroupFilter {
 	activeTab = 'all';
-	chosenPreset = null;
+	chosenPreset = 'NSCFPD';
 	chosenTalkgroups = [];
 
 	presets = {
@@ -139,7 +139,8 @@ class TalkgroupFilter {
 			.map(id => document.getElementById(id));
 		this.tabContents = tabs
 			.map(id => document.getElementById(id));
-		this.defaultUrl = this.getUrl();
+
+		this.emergOnlyCheckbox = document.getElementById('only-emerg');
 
 		this.presetSelect = document.getElementById('preset-select');
 		Object.keys(this.presets)
@@ -148,6 +149,7 @@ class TalkgroupFilter {
 				const elem = document.createElement('option');
 				elem.value = key;
 				elem.innerHTML = key;
+				if (key === this.chosenPreset) elem.selected = true;
 				this.presetSelect.appendChild(elem);
 			});
 
@@ -193,7 +195,7 @@ class TalkgroupFilter {
 				this.talkgroupSelect.appendChild(elemParent);
 			});
 
-		this.emergOnlyCheckbox = document.getElementById('only-emerg');
+		this.defaultUrl = this.getUrl();
 	}
 
 	get() {
@@ -237,6 +239,8 @@ class TalkgroupFilter {
 
 				this.talkgroupSelected.appendChild(elem);
 			});
+		} else {
+			this.activeTab = 'all';
 		}
 
 		this.tabButtons.forEach(div => div.classList.remove('active'));
@@ -252,16 +256,17 @@ class TalkgroupFilter {
 
 	getUrl(forApi = false) {
 		this.get();
+		const responseForAll = forApi ? undefined : 'all';
 
 		switch (this.activeTab) {
 			case 'all':
-				return undefined;
+				return responseForAll;
 			case 'presets':
-				if (this.chosenPreset === null) return undefined;
+				if (this.chosenPreset === null) return responseForAll;
 				if (forApi) return this.presets[this.chosenPreset].join('|');
 				return encodeURIComponent(`p${this.chosenPreset}`);
 			default:
-				if (this.chosenTalkgroups.length === 0) return undefined;
+				if (this.chosenTalkgroups.length === 0) return responseForAll;
 				if (forApi) return this.chosenTalkgroups.join('|');
 				return encodeURIComponent(`tg${this.chosenTalkgroups.join('|')}`);
 		}
