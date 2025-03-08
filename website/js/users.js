@@ -5,7 +5,8 @@ const possibleDepartments = [
 	'Moffat',
 	'Saguache',
 	'Villa Grove',
-	'None'
+	'Baca',
+	'NSCAD'
 ];
 
 const tbody = document.getElementById('tbody');
