@@ -124,7 +124,8 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 
 	if (!response.success) {
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Invalid heartbeat'
 		});
 		return {
 			statusCode: 400,
@@ -222,7 +223,8 @@ async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGa
 	if (response.errors.length > 0) {
 		response.success = false;
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Invalid DTR Exists'
 		});
 		return {
 			statusCode: 400,
@@ -453,7 +455,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+		type: '404'
 		});
 		return {
 			statusCode: 404,
@@ -465,7 +468,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		};
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Thrown error'
 		});
 		console.error(e);
 		return {

@@ -1389,7 +1389,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: '404'
 		});
 		return {
 			statusCode: 404,
@@ -1401,7 +1402,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Thrown exception'
 		});
 		console.error(e);
 		return {

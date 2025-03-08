@@ -370,7 +370,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				await Promise.all(promises);
 			} catch (e) {
 				await incrementMetric('Error', {
-					source: metricSource
+					source: metricSource,
+					type: 'Talkgroup Update'
 				});
 				console.error(`ERROR TG AND DEVICES - `, e);
 			}
@@ -446,7 +447,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		}
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Thrown exception'
 		});
 		console.error(e);
 	}

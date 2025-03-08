@@ -252,7 +252,8 @@ export async function sendMessage(
 	) {
 		console.error(`Trying to send message to invalid destination\nphone: ${phone}\ndepartment: ${department}\nMessage: ${body}`);
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Invalid destination'
 		});
 		return;
 	}
@@ -275,11 +276,33 @@ export async function sendMessage(
 	if (twilioConf === null) {
 		throw new Error('Cannot get twilio secret');
 	}
-	const fromNumber = isPage
-		? twilioConf.pageNumber
+
+	let fromNumberType = isPage
+		? 'page'
 		: isAlert
-			? twilioConf.alertNumber
-			: twilioConf.fromNumber;
+			? 'alert'
+			: 'from';
+	let fromNumber = twilioConf[`${fromNumberType}Number`];
+	let accountSid: string = twilioConf.accountSid;
+	let authToken: string = twilioConf.authToken;
+	if (
+		typeof twilioConf[`accountSid${department}`] !== 'undefined' &&
+		typeof twilioConf[`authToken${department}`] !== 'undefined' &&
+		typeof twilioConf[`${fromNumberType}Number${department}`] !== 'undefined'
+	) {
+		accountSid = twilioConf[`accountSid${department}`];
+		authToken = twilioConf[`authToken${department}`];
+		fromNumber = twilioConf[`${fromNumberType}Number${department}`];
+	} else if (
+		typeof twilioConf[`accountSid${department}`] !== 'undefined' ||
+		typeof twilioConf[`authToken${department}`] !== 'undefined' ||
+		typeof twilioConf[`${fromNumberType}Number${department}`] !== 'undefined'
+	) {
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: `Invalid combination of department and type: ${department} and ${fromNumberType}`
+		});
+	}
 
 	const messageConfig: TwilioMessageConfig = {
 		body,
@@ -288,17 +311,6 @@ export async function sendMessage(
 		to: `+1${parsePhone(phone)}`,
 		statusCallback: `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
 	};
-
-	let accountSid: string = twilioConf.accountSid;
-	let authToken: string = twilioConf.authToken;
-	// if (
-	// 	typeof twilioConf[department] !== 'undefined' &&
-	// 	typeof twilioConf[`${department}AuthToken`] !== 'undefined'
-	// ) {
-	// 	accountSid = twilioConf[department];
-	// 	authToken = twilioConf[`${department}AuthToken`];
-	// }
-
 	return Promise.all([
 		twilio(accountSid, authToken)
 			.messages.create(messageConfig),
@@ -331,6 +343,7 @@ export async function sendAlertMessage(metricSource: string, body: string) {
 
 interface ErrorMetric {
 	source: string;
+	type: string;
 }
 
 interface CallMetric {

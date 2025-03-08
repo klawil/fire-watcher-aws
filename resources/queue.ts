@@ -650,14 +650,16 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			default:
 				await incrementMetric('Error', {
-					source: metricSource
+					source: metricSource,
+					type: '404'
 				});
 		}
 		return response;
 	} catch (e) {
 		console.error(e);
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Thrown exception'
 		});
 		throw e;
 	}

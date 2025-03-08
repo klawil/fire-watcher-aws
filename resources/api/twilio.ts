@@ -92,7 +92,8 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	// Validate the call is from Twilio
 	if (code !== twilioConf.apiCode) {
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Missing auth Twilio'
 		});
 		return response;
 	}
@@ -119,7 +120,8 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		sender.Item.department?.S === 'Baca'
 	) {
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Missing text access'
 		});
 		response.body = `<Response><Message>You do not have access to use the text group. Contact your station chief to request access.</Message></Response>`
 		return response;
@@ -193,12 +195,14 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	if (code !== twilioConf.apiCode) {
 		console.log(`Invalid API code - ${code}`);
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Invalid Twilio code'
 		});
 	} else if (messageId === null) {
 		console.log(`Invalid message ID - ${messageId}`);
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Invalid message ID'
 		});
 	} else {
 		const eventData = event.body?.split('&')
@@ -287,7 +291,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: '404'
 		});
 		return {
 			statusCode: 404,
@@ -300,7 +305,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	} catch (e) {
 		console.error(e);
 		await incrementMetric('Error', {
-			source: metricSource
+			source: metricSource,
+			type: 'Thrown error'
 		});
 		return {
 			statusCode: 400,
