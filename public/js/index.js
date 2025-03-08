@@ -5,9 +5,7 @@ const sourceMap = {
 	SAG_FIRE_VHF: 'Saguache Fire VHF',
 	SaguacheCo_FD_Ds: 'Saguache Fire DTR',
 	SagucheCo_MAC: 'Saguache MAC DTR',
-	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR',
-	BG_FIRE_VHF: 'Baca Fire VHF',
-	Baca_Grande_FD_T: 'Baca Fire DTR'
+	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR'
 };
 const defaultEnabled = [
 	'SAG_FIRE_VHF',
