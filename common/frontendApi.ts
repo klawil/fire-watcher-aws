@@ -1,24 +1,5 @@
 import { ApiResponseBase } from "./common";
 
-export interface AudioFileObject {
-	ToneIndex: 'y' | 'n';
-	Tower: string;
-	Sources: number[];
-	Emergency: 0 | 1;
-	Len: number;
-	Tone: boolean;
-	Freq: number;
-	Added: number;
-	Talkgroup: number;
-	EndTime: number;
-	Key: string;
-	StartTime: number;
-}
-export interface TalkgroupObject {
-	ID: number;
-	Count: number;
-	Name?: string;
-}
 export interface TextObject {
 	sent?: number[];
 	sentPhone?: string[];
@@ -67,43 +48,20 @@ export interface SiteObject extends BaseSiteObject {
 	};
 }
 
-export interface ApiFrontendDtrQueryString {
-	tg?: string;
-	emerg?: string;
-	next?: string;
-	before?: string;
-	after?: string;
-	source?: string;
-}
-export interface ApiFrontendListTextsBody { }
-export interface ApiFrontendPageViewBody { }
-
-export interface ApiFrontendDtrResponse extends ApiResponseBase {
-	count: number;
-	scanned: number;
-	continueToken: string;
-	before: number | null;
-	after: number | null;
-	data: AudioFileObject[];
-}
-export interface ApiFrontendTalkgroupsResponse extends ApiResponseBase {
-	count: number;
-	scanned: number;
-	data: TalkgroupObject[];
-}
 export interface ApiFrontendListTextsResponse extends ApiResponseBase {
 	count?: number;
 	scanned?: number;
 	data?: TextObject[];
 }
-export interface ApiFrontendPageViewResponse { }
-export interface ApiFrontendStatsResponse extends ApiResponseBase {
+
+interface ApiFrontendStatsResponseSuccess {
+	success: true;
 	errors: string[];
-	startTime?: number;
-	endTime?: number;
-	period?: number;
-	metrics?: string[];
-	data?: {
+	startTime: number;
+	endTime: number;
+	period: number;
+	metrics: string[];
+	data: {
 		names: {
 			[key: string]: string;
 		},
@@ -114,8 +72,12 @@ export interface ApiFrontendStatsResponse extends ApiResponseBase {
 			};
 		}[];
 	};
-	request?: any;
 }
+export type ApiFrontendStatsResponse = ApiFrontendStatsResponseSuccess | {
+	success: false;
+	errors: string[];
+	message: string;
+};
 export interface ApiFrontendSitesResponse extends ApiResponseBase {
 	data: SiteObject[];
 }
