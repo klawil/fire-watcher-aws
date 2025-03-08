@@ -109,29 +109,61 @@ function validateBodyIsJson(body: string | undefined): true | APIGatewayProxyRes
 	return true;
 }
 
+interface TwilioParams {
+	From: string;
+	To: string;
+	Body: string;
+	MediaUrl0?: string;
+}
+
 async function handleMessage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	const code = event.queryStringParameters?.code || '';
-
-	if (code === apiCode) {
-		await sqs.sendMessage({
-			MessageBody: JSON.stringify({
-				action: 'twilio',
-				sig: event.headers['X-Twilio-Signature'],
-				body: event.body
-			}),
-			QueueUrl: queueUrl
-		}).promise();
-	} else {
-		console.log('TWILIO FAILED CODE');
-	}
-
-	return {
+	const response = {
 		statusCode: 200,
 		headers: {
 			'Content-Type': 'application/xml'
 		},
 		body: '<Response></Response>'
 	};
+
+	// Validate the call is from Twilio
+	if (code !== apiCode) {
+		console.log('TWILIO FAILED CODE');
+		return response;
+	}
+
+	// Validate the sending number
+	const eventData = event.body
+		?.split('&')
+		.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
+		.reduce((acc, curr) => ({
+			...acc,
+			[curr[0]]: curr[1] || ''
+		}), {}) as TwilioParams;
+	const sender = await dynamodb.getItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: eventData.From.slice(2)
+			}
+		}
+	}).promise();
+	if (!sender.Item || !sender.Item.isActive.BOOL) {
+		console.log(`API - TWILIO - ERROR - ${sender.Item ? 'Inactive' : 'Invalid'} Sender`);
+		response.body = `<Response><Message>You do not have access to this text group. Contact Chief for access.</Message></Response>`;
+		return response;
+	}
+
+	await sqs.sendMessage({
+		MessageBody: JSON.stringify({
+			action: 'twilio',
+			sig: event.headers['X-Twilio-Signature'],
+			body: event.body
+		}),
+		QueueUrl: queueUrl
+	}).promise();
+
+	return response;
 }
 
 async function handlePage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
