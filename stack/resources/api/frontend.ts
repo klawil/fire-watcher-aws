@@ -206,7 +206,8 @@ async function sendAnnouncement(event: APIGatewayProxyEvent): Promise<APIGateway
 	// Validate the body
 	if (
 		typeof body.body !== 'string' ||
-		body.body === ''
+		body.body === '' ||
+		body.body.length > 1250
 	) {
 		response.errors.push('body');
 	}

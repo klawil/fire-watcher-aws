@@ -218,6 +218,8 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			type: 'handleText',
 			event: 'car'
 		});
+	} else if (event.body !== null && event.body.length > 1250) {
+		response.body = `<Response><Message>Message too long. Please keep messages to less than 1,250 characters</Message></Response>`;
 	} else if (event.body !== null) {
 		const queueMessage: TwilioBody = {
 			action: 'twilio',
