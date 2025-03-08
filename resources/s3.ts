@@ -160,18 +160,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}
 				};
 			}
-			if (body.Item.Tone?.BOOL) {
-				promises.push(transcribe.startTranscriptionJob({
-					TranscriptionJobName: `${body.Item.Talkgroup.N}-${Date.now()}`,
-					LanguageCode: 'en-US',
-					Media: {
-						MediaFileUri: `s3://${Bucket}/${Key}`
-					},
-					Settings: {
-						VocabularyName: 'SagVocab'
-					}
-				}).promise());
-			}
 			await dynamodb.putItem(body).promise();
 
 			if (Key.indexOf('/dtr') !== -1) {
@@ -257,6 +245,17 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			}
 
 			if (body.Item.Tone?.BOOL) {
+				promises.push(transcribe.startTranscriptionJob({
+					TranscriptionJobName: `${body.Item.Talkgroup.N}-${Date.now()}`,
+					LanguageCode: 'en-US',
+					Media: {
+						MediaFileUri: `s3://${Bucket}/${Key}`
+					},
+					Settings: {
+						VocabularyName: 'SagVocab'
+					}
+				}).promise());
+
 				promises.push(sqs.sendMessage({
 					MessageBody: JSON.stringify({
 						action: 'page',
