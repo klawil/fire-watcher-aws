@@ -1,5 +1,5 @@
 const dataUpdateFrequency = 10000;
-const talkgroupMap = {};
+window.talkgroupMap = window.talkgroupMap || {};
 
 const nextDataFields = {};
 
@@ -91,7 +91,7 @@ window.addEventListener('scroll', () => {
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
 	rowConfig = [
-		f => secondsToString(f.Len),
+		f => f.Len,
 		f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
 		f => f.Local,
 		f => f.Emergency === 1 ? '<i class="bi bi-star-fill"></i>' : ''

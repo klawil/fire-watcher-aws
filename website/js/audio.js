@@ -134,9 +134,10 @@ function display(dataToDisplay, location) {
 			row.setAttribute('id', file[fileKeyField]);
 			row.addEventListener('click', play.bind(null, file[fileKeyField]));
 
-			rowConfig.forEach((conf) => {
+			rowConfig.forEach((conf, i) => {
 				const td = document.createElement('td');
 				td.innerHTML = conf(file);
+				if (i === 1) td.classList.add('text-start');
 				row.appendChild(td);
 			});
 

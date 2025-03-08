@@ -99,7 +99,7 @@ window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
 	filters.Source = [ 'SAG_FIRE_VHF' ];
 	rowConfig = [
-		f => secondsToString(f.Len),
+		f => f.Len,
 		f => sourceMap[f.Source] || f.Source,
 		f => f.Local,
 		f => f.Tone ? '<i class="bi bi-star-fill"></i>' : ''
