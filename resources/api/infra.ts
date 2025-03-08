@@ -201,7 +201,7 @@ interface AdjacentSitesBody {
 	adjacent: ('' | AdjacentSitesBodyItem[])[]
 };
 
-const ignoreChangesInFields = [ 'ActiveConn' ];
+const onlyChangeInFields = [ 'SiteFailed', 'NoServReq', 'BackupCtrl' ];
 
 async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
@@ -334,7 +334,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 
 				const changedKeys: string[] = Object.keys(siteValues)
 					.filter(k => typeof siteValues[k].BOOL !== 'undefined')
-					.filter(k => ignoreChangesInFields.indexOf(siteNames[k.replace(':', '#')]) === -1)
+					.filter(k => onlyChangeInFields.indexOf(siteNames[k.replace(':', '#')]) !== -1)
 					.filter(k =>
 						result.Attributes &&
 						(typeof result.Attributes[siteNames[k.replace(':', '#')]] === 'undefined' ||
