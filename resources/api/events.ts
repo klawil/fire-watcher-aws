@@ -69,7 +69,7 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		errors: []
 	};
 
-	validateEventBody(body, response);
+	validateEventBody(body, 0, response);
 
 	if (body.radioId !== '-1' && response.success)
 		await firehose.putRecord({
