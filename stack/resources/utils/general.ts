@@ -35,8 +35,6 @@ export async function getRecipients(
 	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
 		FilterExpression: '',
-		ExpressionAttributeNames: {},
-		ExpressionAttributeValues: {},
 	};
 	if (pageTg !== null) {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};

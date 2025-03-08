@@ -25,7 +25,7 @@ if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
 declare var process: any;
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
   isNodeEnv = true;
-  globalLogLevel = LogLevel.Debug;
+  globalLogLevel = LogLevel.Error;
   if (typeof process.env.DEBUG !== 'undefined') {
     globalLogLevel = LogLevel.Trace;
   }
@@ -163,6 +163,3 @@ export function getLogger(name: string): Logger {
 
   return loggers[name];
 }
-
-const logger = getLogger('log');
-logger.warn(`Log level ${LogLevel[globalLogLevel]}`);
