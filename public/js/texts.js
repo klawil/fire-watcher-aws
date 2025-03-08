@@ -48,7 +48,7 @@ function buildTable(items, isPage = false) {
 			text.body,
 			text.mediaUrls.split(',').filter(s => s !== '').length,
 			text.recipients,
-			`${Math.round(text.delivered.length * 100 / text.recipients)}%`,
+			`${Math.round(text.delivered.length * 100 / text.recipients)}% (${text.delivered.length})`,
 			`${Math.round(getPercentile(text.delivered, 1) / 1000)}s`,
 			`${Math.round(getPercentile(text.delivered, 50) / 1000)}s`,
 			`${Math.round(getPercentile(text.delivered, 75) / 1000)}s`,
