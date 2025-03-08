@@ -51,7 +51,7 @@
 						</li>
 						{% if page.hasFilter %}
 						<li class="nav-item hide-small" id="filter-button-d">
-							<a class="nav-link interactive-button">
+							<a class="nav-link interactive-button" data-bs-toggle="modal" data-bs-target="#filter-modal">
 								<i class="bi bi-funnel-fill"></i>
 								Filter
 							</a>
@@ -67,7 +67,7 @@
 						{% endif %}
 					</ul>
 				</div>
-				{% if page.hasFilter %}<button class="navbar-toggler navbar-player ms-1 interactive-button" id="filter-button-m"><i class="navbar-toggler-icon bi bi-funnel-fill"></i></button>{% endif %}
+				{% if page.hasFilter %}<button data-bs-toggle="modal" data-bs-target="#filter-modal" class="navbar-toggler navbar-player ms-1 interactive-button" id="filter-button-m"><i class="navbar-toggler-icon bi bi-funnel-fill"></i></button>{% endif %}
 				{% if page.isAudio %}<button class="navbar-toggler navbar-player ms-1 interactive-button" id="latest-button-m"><i class="navbar-toggler-icon bi bi-mic-fill"></i></button>{% endif %}
 			</div>
 		</nav>

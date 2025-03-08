@@ -7,12 +7,21 @@ const sourceMap = {
 const nextDataFields = {};
 
 let isUpdatingBefore = false;
-function updateData(direction = 'after') {
+function updateData(direction = 'after', restart = false) {
+	if (restart) {
+		delete nextDataFields.after;
+		delete nextDataFields.before;
+		delete nextDataFields.continue;
+
+	}
+
 	const host = window.location.origin.indexOf('localhost') !== -1
 		? 'http://localhost:8001'
 		: '';
 	let apiUrl = `${host}/api`;
+	let isAppended = false;
 	if (typeof nextDataFields.after !== 'undefined') {
+		isAppended = true;
 		apiUrl += '?'
 		if (direction === 'after') {
 			apiUrl += `after=${nextDataFields.after}`;
@@ -21,6 +30,14 @@ function updateData(direction = 'after') {
 			apiUrl += `before=${nextDataFields.before}&continue=${encodeURIComponent(nextDataFields.continue)}`
 		}
 	}
+
+	const queryParams = Object.keys(urlFilters)
+		.filter((filterKey) => urlFilters[filterKey])
+		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey])}`);
+	if (queryParams.length > 0) {
+		apiUrl += `${isAppended ? '&' : '?'}${queryParams.join('&')}`;
+	}
+
 	fetch(apiUrl)
 		.then((r) => r.json())
 		.then((r) => {
@@ -62,7 +79,7 @@ function updateData(direction = 'after') {
 				];
 			}
 			files = filterData(files);
-			display(filterData(r.data), direction);
+			display(filterData(r.data), direction, restart);
 		})
 		.catch(console.error)
 		.then(() => {
@@ -97,7 +114,10 @@ window.addEventListener('scroll', () => {
 
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
-	filters.Source = [ 'SAG_FIRE_VHF' ];
+	afterFilters.Source = [ 'SAG_FIRE_VHF' ];
+	afterFilterConfigs.Source = getArrayOfCheckedCheckboxes(document.querySelectorAll('input[name="vhf-source"]'));
+	urlFilterConfigs.tone = () => document.getElementById('only-pages').checked ? 'y' : undefined;
+
 	rowConfig = [
 		f => f.Len,
 		f => sourceMap[f.Source] || f.Source,

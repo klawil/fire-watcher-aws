@@ -3,6 +3,7 @@ titleBarTitle: VHF
 layout: base
 centerAll: true
 isAudio: true
+hasFilter: true
 latestLabel: Last Tone
 ---
 
@@ -20,6 +21,36 @@ latestLabel: Last Tone
 		</thead>
 		<tbody id="files" class="align-middle"></tbody>
 	</table>
+</div>
+	
+<div class="modal fade" id="filter-modal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="filterModalLabel">Filters</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<h5>Sources</h5>
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" role="switch" id="vhf-source-cvfd" name="vhf-source" value="SAG_FIRE_VHF" checked>
+					<label class="form-check-label" for="vhf-source-cvfd">NSCFPD</label>
+				</div>
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" role="switch" id="vhf-source-baca" name="vhf-source" value="BG_FIRE_VHF">
+					<label class="form-check-label" for="vhf-source-baca">Baca</label>
+				</div>
+				<h5>Paging Only</h5>
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" role="switch" id="only-pages">
+					<label class="form-check-label" for="only-pages">Only show pages</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" id="filter-apply" data-bs-dismiss="modal" aria-label="Close">Apply</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}

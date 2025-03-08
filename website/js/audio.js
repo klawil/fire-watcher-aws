@@ -86,8 +86,42 @@ document.getElementById('latest-button-m').addEventListener('click', (e) => {
 });
 document.getElementById('latest-button-d').addEventListener('click', () => defaultFunc());
 
+// Add the filtering functionality
+const filterModal = document.getElementById('filter-modal');
+const filterApplyButton = document.getElementById('filter-apply');
+const filterButtons = [
+	document.getElementById('filter-button-d'),
+	document.getElementById('filter-button-m')
+];
+
+if (filterModal) {
+	filterButtons.forEach((btn) => btn.addEventListener('click', () => filterButtons.forEach((button) => button.blur())));
+	filterApplyButton.addEventListener('click', () => {
+		Object.keys(afterFilterConfigs)
+			.forEach((filterKey) => {
+				afterFilters[filterKey] = afterFilterConfigs[filterKey]();
+			});
+
+		Object.keys(urlFilterConfigs)
+			.forEach((filterKey) => {
+				urlFilters[filterKey] = urlFilterConfigs[filterKey]();
+			});
+
+		updateData('after', true);
+	});
+}
+
+const getArrayOfCheckedCheckboxes = (items) => () => {
+	return [ ...items ]
+		.filter((checkbox) => checkbox.checked)
+		.map((checkbox) => checkbox.value);
+}
+
 // Data fetch configuration
-const filters = {};
+const afterFilters = {};
+const afterFilterConfigs = {};
+const urlFilters = {};
+const urlFilterConfigs = {};
 let files = [];
 const fileTable = document.getElementById('files');
 let fileKeyField = 'File';
@@ -118,7 +152,11 @@ function getFileIndex(file) {
 	);
 }
 
-function display(dataToDisplay, location) {
+function display(dataToDisplay, location, restart) {
+	if (restart) {
+		fileTable.innerHTML = '';
+	}
+
 	let addRowToFiles = (row) => fileTable.appendChild(row);
 	if (location === 'after' && fileTable.childElementCount > 0) {
 		dataToDisplay.reverse();
@@ -252,23 +290,23 @@ function secondsToString(seconds) {
 }
 
 function filterData(data) {
-	return data.filter(f => Object.keys(filters)
+	return data.filter(f => Object.keys(afterFilters)
 		.reduce((keep, key) => {
 			if (
 				!keep ||
-				filters[key] === null
+				afterFilters[key] === null
 			) return keep;
 
-			if (typeof filters[key] === 'string') {
-				return filters[key] === f[key];
+			if (typeof afterFilters[key] === 'string') {
+				return afterFilters[key] === f[key];
 			}
 
-			if (Array.isArray(filters[key])) {
-				return filters[key].indexOf(f[key]) !== -1;
+			if (Array.isArray(afterFilters[key])) {
+				return afterFilters[key].indexOf(f[key]) !== -1;
 			}
 
-			if (typeof filters[key] === 'function') {
-				return filters[key](f[key], f);
+			if (typeof afterFilters[key] === 'function') {
+				return afterFilters[key](f[key], f);
 			}
 
 			console.log(`INVALID FILTER - ${key}`);
