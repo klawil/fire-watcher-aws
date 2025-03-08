@@ -1,7 +1,11 @@
 const dataUpdateFrequency = 10000;
 window.talkgroupMap = window.talkgroupMap || {};
+window.talkgroupOptions = window.talkgroupOptions || {};
 
 const nextDataFields = {};
+const host = window.location.origin.indexOf('localhost') !== -1
+	? 'http://localhost:8001'
+	: '';
 
 let isUpdatingBefore = false;
 let updatingId = 0;
@@ -19,9 +23,6 @@ function updateData(direction = 'after', restart = false) {
 		delete nextDataFields.continue;
 	}
 
-	const host = window.location.origin.indexOf('localhost') !== -1
-		? 'http://localhost:8001'
-		: '';
 	let apiUrl = `${host}/api?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
@@ -169,8 +170,8 @@ class TalkgroupFilter {
 				});
 		});
 		
-		Object.keys(talkgroupMap)
-			.forEach(key => this.createTalkgroupElem(key, talkgroupMap[key]));
+		Object.keys(talkgroupOptions)
+			.forEach(key => this.createTalkgroupElem(key, talkgroupOptions[key]));
 
 		this.update();
 		this.defaultUrl = this.getUrl();
@@ -296,18 +297,46 @@ class TalkgroupFilter {
 	}
 }
 
-window.audioQ = window.audioQ || [];
-window.audioQ.push(() => {	
-	urlFilters.tg = new TalkgroupFilter();
-	urlFilters.emerg = new ToggleFilter('only-emerg');
-	
-	rowConfig = [
-		f => f.Len,
-		f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
-		f => f.Local,
-		f => f.Emergency === 1 ? '<i class="bi bi-star-fill"></i>' : ''
-	];
-	defaultFunc = playLive;
-	
-	init();
+const numberFormatter = new Intl.NumberFormat('en-us', {
+	maximumFractionDigits: 0
 });
+fetch(`${host}/api?action=talkgroups`)
+	.then(r => r.json())
+	.then(data => {
+		if (!data.success) return;
+
+		window.talkgroupMap = data.data
+			.reduce((agg, item) => {
+				agg[item.ID] = item.Name || item.ID;
+
+				return agg;
+			}, {});
+
+		window.talkgroupOptions = data.data
+		.reduce((agg, item) => {
+			const countStr = item.Count > 100000
+				? '>100,000'
+				: numberFormatter.format(item.Count);
+
+			agg[item.ID] = `${item.Name || item.ID} (${countStr} recordings)`;
+
+			return agg;
+		}, {});
+
+		window.audioQ = window.audioQ || [];
+		window.audioQ.push(() => {	
+			urlFilters.tg = new TalkgroupFilter();
+			urlFilters.emerg = new ToggleFilter('only-emerg');
+			
+			rowConfig = [
+				f => f.Len,
+				f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
+				f => f.Local,
+				f => f.Emergency === 1 ? '<i class="bi bi-star-fill"></i>' : ''
+			];
+			defaultFunc = playLive;
+			
+			init();
+		});
+	})
+	.then(console.log);
