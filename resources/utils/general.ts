@@ -10,7 +10,7 @@ const dynamodb = new aws.DynamoDB();
 
 type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
 
-function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): DynamoDbValues {
+export function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): DynamoDbValues {
 	if (typeof value.S !== 'undefined') {
 		return value.S;
 	} else if (typeof value.N !== 'undefined') {

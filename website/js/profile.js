@@ -48,6 +48,15 @@ function pageGroups() {
 	talkgroupOrder.forEach(key => makePageCheckbox(container, key));
 }
 
+if (window.PublicKeyCredential) {
+	[ ...document.getElementsByClassName('hide-no-fido') ].forEach(div => {
+		div.hidden = false;
+	});
+}
+
+const bufferToBase64 = buffer => btoa(String.fromCharCode(...new Uint8Array(buffer)));
+const base64ToBuffer = base64 => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
 function init() {
 	userDefaultTgs = defaultTalkgroups[user.department] || defaultTalkgroups.default;
 
@@ -118,6 +127,114 @@ function init() {
 				}
 			})
 	});
+
+	if (window.PublicKeyCredential) {
+		const fidoRow = document.getElementById('create-fido-row');
+		Object.keys(user.fidoKeys || {}).forEach(key => {
+			const tr = document.createElement('tr');
+			const td1 = document.createElement('td');
+			tr.appendChild(td1);
+			td1.innerHTML = key;
+
+			const td2 = document.createElement('td');
+			tr.appendChild(td2);
+			const btn2 = document.createElement('button');
+			td2.appendChild(btn2);
+			btn2.classList.add('btn', 'btn-success');
+			btn2.innerHTML = 'Test';
+			const btn = document.createElement('button');
+			td2.appendChild(btn);
+			btn.classList.add('btn', 'btn-danger', 'ms-3');
+			btn.innerHTML = 'Delete';
+
+			btn2.addEventListener('click', async () => {
+				btn2.enabled = false;
+				const challenge = await fetch(`/api/user?action=fido-get-auth`).then(r => r.json());
+				challenge.challenge = new Uint8Array(challenge.challenge.data);
+				challenge.allowCredentials = [
+					{
+						id: base64ToBuffer(user.fidoKeys[key]),
+						type: 'public-key',
+						transports: ['internal'],
+					}
+				];
+
+				const credential = await navigator.credentials.get({
+					publicKey: challenge,
+				});
+
+				const data = {
+					rawId: bufferToBase64(credential.rawId),
+					challenge: bufferToBase64(challenge.challenge),
+					test: true,
+					response: {
+						authenticatorData: bufferToBase64(credential.response.authenticatorData),
+						signature: bufferToBase64(credential.response.signature),
+						userHandle: bufferToBase64(credential.response.userHandle),
+						clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+						id: credential.id,
+						type: credential.type
+					},
+				};
+				console.log(data);
+
+				const result = await fetch(`/api/user?action=fido-auth`, {
+					method: 'POST',
+					body: JSON.stringify(data),
+				}).then(r => r.json());
+				console.log(result);
+				btn2.enabled = true;
+			});
+
+			fidoRow.parentElement.insertBefore(tr, fidoRow);
+		});
+
+		const fidoButton = document.getElementById('add-fido-button');
+		const fidoKeyName = document.getElementById('fidoName');
+		async function addFidoKey() {
+			if (fidoKeyName.value === '')
+				throw new Error('Missing Name');
+			const newName = fidoKeyName.value;
+
+			// Get the attestation
+			const data = await fetch(`${baseHost}/api/user?action=fido-challenge`, {
+				method: 'POST',
+				body: JSON.stringify({ name: newName }),
+			}).then(r => r.json());
+			data.options.challenge = new Uint8Array(data.options.challenge.data);
+			data.options.user.name = user.phone;
+			data.options.user.id = new Uint8Array(data.options.user.id.data);
+			data.options.user.displayName = `${user.fName} ${user.lName}`;
+
+			const credential = await navigator.credentials.create({
+				publicKey: data.options,
+			});
+			const credentialId = bufferToBase64(credential.rawId);
+
+			await fetch(`${baseHost}/api/user?action=fido-register`, {
+				method: 'POST',
+				body: JSON.stringify({
+					challenge: bufferToBase64(data.options.challenge),
+					name: newName,
+					userId: bufferToBase64(data.options.user.id),
+					credential: {
+						rawId: credentialId,
+						response: {
+							attestationObject: bufferToBase64(credential.response.attestationObject),
+							clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+						},
+					},
+				}),
+			}).then(r => r.json());
+
+			console.log(newName);
+		}
+		fidoButton.addEventListener('click', addFidoKey);
+		fidoKeyName.addEventListener('keyup', e => {
+			if (e.key === 'Enter')
+				addFidoKey();
+		});
+	}
 
 	doneLoading();
 }

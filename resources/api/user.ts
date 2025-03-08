@@ -1,7 +1,9 @@
 import * as aws from 'aws-sdk';
+import * as crypto from 'crypto';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap, randomString, validateBodyIsJson } from '../utils/general';
+import { incrementMetric, parseDynamoDbAttributeMap, parseDynamoDbAttributeValue, randomString, validateBodyIsJson } from '../utils/general';
 import { authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
+import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
 
 const metricSource = 'User';
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
@@ -49,7 +51,20 @@ interface CurrentUser {
 	lName?: string;
 	department?: string;
 	talkgroups?: string[];
+	fidoKeys?: {
+		[key: string]: string;
+	};
 }
+
+interface FidoKey {
+	prevCount: number;
+	pubKey: string;
+	rawId: string;
+}
+
+interface FidoKeys {
+	[key: string]: FidoKey;
+};
 
 interface UserObject {
 	phone: string;
@@ -69,6 +84,45 @@ interface UserObject {
 	isMe?: boolean;
 }
 
+async function loginUser(user: AWS.DynamoDB.AttributeMap) {
+	// Find the previous tokens that should be deleted
+	const now = Date.now();
+	const validUserTokens = user.loginTokens?.L
+		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
+
+	// Create a new token and attach it
+	const token = randomString(32);
+	const tokenExpiry = Date.now() + (loginDuration * 1000);
+	validUserTokens.push({
+		M: {
+			token: { S: token },
+			tokenExpiry: { N: tokenExpiry.toString() }
+		}
+	});
+	await dynamodb.updateItem({
+		TableName: userTable,
+		Key: {
+			phone: { N: user.phone?.N }
+		},
+		ExpressionAttributeNames: {
+			'#c': 'code',
+			'#ce': 'codeExpiry',
+			'#t': 'loginTokens',
+		},
+		ExpressionAttributeValues: {
+			':t': { L: validUserTokens },
+		},
+		UpdateExpression: 'REMOVE #c, #ce SET #t = :t'
+	}).promise();
+
+	return {
+		'Set-Cookie': [
+			`${authUserCookie}=${user.phone.N}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+			`${authTokenCookie}=${token}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+		],
+	};
+}
+
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
 	validateBodyIsJson(event.body);
@@ -81,7 +135,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	};
 
 	// Validate the phone number
-	let user: aws.DynamoDB.GetItemOutput;
+	let user: aws.DynamoDB.GetItemOutput | undefined;
 	if (typeof body.phone === 'undefined') {
 		response.success = false;
 		response.errors.push('phone');
@@ -111,6 +165,11 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}),
 		QueueUrl: queueUrl
 	}).promise();
+
+	const fidoKeys = parseDynamoDbAttributeValue(user?.Item?.fidoKeys || {}) as FidoKeys;
+	if (Object.keys(fidoKeys).length > 0) {
+		response.data = Object.keys(fidoKeys).map(key => fidoKeys[key].rawId);
+	}
 
 	return {
 		statusCode: 200,
@@ -172,45 +231,11 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		};
 	}
 
-	// Find previous tokens that should be deleted
-	const now = Date.now();
-	const validUserTokens = user.Item.loginTokens?.L
-		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
-
-	// Create a token and attach it
-	const token = randomString(32);
-	const tokenExpiry = Date.now() + (loginDuration * 1000);
-	validUserTokens.push({
-		M: {
-			token: { S: token },
-			tokenExpiry: { N: tokenExpiry.toString() }
-		}
-	});
-	await dynamodb.updateItem({
-		TableName: userTable,
-		Key: {
-			phone: { N: cookies[authUserCookie] }
-		},
-		ExpressionAttributeNames: {
-			'#c': 'code',
-			'#ce': 'codeExpiry',
-			'#t': 'loginTokens'
-		},
-		ExpressionAttributeValues: {
-			':t': { L: validUserTokens }
-		},
-		UpdateExpression: 'REMOVE #c, #ce SET #t = :t'
-	}).promise();
-
+	const headers = await loginUser(user.Item);
 	return {
 		statusCode: 200,
 		body: JSON.stringify(response),
-		multiValueHeaders: {
-			'Set-Cookie': [
-				`${authUserCookie}=${cookies[authUserCookie]}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-				`${authTokenCookie}=${token}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`
-			]
-		}
+		multiValueHeaders: headers,
 	};
 }
 
@@ -233,6 +258,13 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		response.lName = user.lName?.S;
 		response.department = user.department?.S;
 		response.talkgroups = user.talkgroups?.NS;
+		if (typeof user.fidoKeys !== 'undefined') {
+			const fidoKeys = parseDynamoDbAttributeValue(user.fidoKeys) as FidoKeys;
+			response.fidoKeys = Object.keys(fidoKeys).reduce((agg: {[key: string]: string }, key) => {
+				agg[key] = fidoKeys[key].rawId;
+				return agg;
+			}, {});
+		}
 
 		// Save now as the last login time
 		await dynamodb.updateItem({
@@ -679,6 +711,292 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
+function getFidoLib() {
+	return new Fido2Lib({
+		timeout: 60,
+		rpId: 'fire.klawil.net',
+		rpName: 'CVFD DTR',
+		challengeSize: 128,
+	});
+}
+
+function base64ToBuffer(base64: string): Buffer {
+	return Buffer.from(base64, 'base64');
+}
+
+async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+	if (user === null)
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				error: 'You must be logged in to access this endpoint',
+			}),
+		};
+
+	// Validate and parse the body
+	validateBodyIsJson(event.body);
+	const body = JSON.parse(event.body as string) as {
+		name: string;
+	};
+	if (
+		typeof user.fidoKeys?.M !== 'undefined' &&
+		typeof user.fidoKeys.M[body.name] !== 'undefined'
+	) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'A key with that name already exists',
+			}),
+		};
+	}
+
+	const f2l = getFidoLib();
+
+	const options = await f2l.attestationOptions();
+	options.challenge = Buffer.from(options.challenge);
+	options.user.name = user.phone?.N as string;
+	options.user.displayName = `${user.fName?.S} ${user.lName?.S}`;
+
+	if (typeof user.fidoUserId?.S !== 'undefined') {
+		options.user.id = base64ToBuffer(user.fidoUserId.S);
+	} else {
+		options.user.id = crypto.randomBytes(32);
+	}
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+			options,
+		}),
+	};
+}
+
+interface FidoRegisterBody {
+	challenge: string;
+	name: string;
+	userId: string;
+	credential: {
+		rawId: string;
+		response: {
+			attestationObject: string;
+			clientDataJSON: string;
+		};
+	};
+};
+
+async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+	if (user === null)
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				error: 'You must be logged in to access this endpoint',
+			}),
+		};
+
+	// Validate and parse the body
+	validateBodyIsJson(event.body);
+	const body = JSON.parse(event.body as string) as FidoRegisterBody;
+	const { credential } = body;
+	const f2l = getFidoLib();
+	const result = {
+		rawId: base64ToBuffer(credential.rawId),
+		// rawId: new Uint8Array(Buffer.from(credential.rawId, 'base64')).buffer,
+		response: credential.response,
+	};
+	try {
+		const regResult = await f2l.attestationResult(result, {
+			challenge: body.challenge,
+			origin: 'https://fire.klawil.net',
+			factor: 'either',
+		});
+
+		const newFidoKey = {
+			M: {
+				pubKey: { S: regResult.authnrData.get('credentialPublicKeyPem') },
+				prevCount: { N: regResult.authnrData.get('counter').toString() },
+				rawId: { S: credential.rawId },
+			},
+		};
+		if (typeof user.fidoKeys?.M !== 'undefined') {
+			// Add to keys
+			await dynamodb.updateItem({
+				TableName: userTable,
+				Key: {
+					phone: user.phone,
+				},
+				ExpressionAttributeNames: {
+					'#fk': 'fidoKeys',
+					'#fkn': body.name,
+				},
+				ExpressionAttributeValues: {
+					':fkv': newFidoKey,
+				},
+				UpdateExpression: 'SET #fk.#fkn = :fkv',
+			}).promise();
+		} else {
+			// Create keys
+			await dynamodb.updateItem({
+				TableName: userTable,
+				Key: {
+					phone: user.phone,
+				},
+				ExpressionAttributeNames: {
+					'#fk': 'fidoKeys',
+					'#uid': 'fidoUserId',
+				},
+				ExpressionAttributeValues: {
+					':uid': {
+						S: body.userId,
+					},
+					':fk': newFidoKey,
+				},
+				UpdateExpression: 'SET #fk = :fk, #uid = :uid',
+			}).promise();
+		}
+
+		return {
+			statusCode: 200,
+			body: JSON.stringify({ success: true }),
+		}
+	} catch (e) {
+		return {
+			statusCode: 500,
+			body: JSON.stringify({
+				success: false,
+				message: (e as Error).message,
+			}),
+		};
+	}
+}
+
+async function fidoGetAuth(): Promise<APIGatewayProxyResult> {
+	const f2l = getFidoLib();
+	const options = await f2l.assertionOptions();
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+			challenge: Buffer.from(options.challenge),
+		}),
+	};
+}
+
+interface FidoAuthBody {
+	rawId: string;
+	challenge: string;
+	test?: boolean;
+	phone?: string;
+	response: {
+		authenticatorData: string;
+		signature: string;
+		userHandle: string;
+		clientDataJSON: string;
+		id: string;
+		type: string;
+	};
+};
+
+async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as FidoAuthBody;
+
+	// Get the user
+	let user: AWS.DynamoDB.AttributeMap | null = null;
+	if (body.test) {
+		user = await getLoggedInUser(event);
+	} else if (typeof body.phone !== 'undefined') {
+		user = await dynamodb.getItem({
+			TableName: userTable,
+			Key: {
+				phone: { N: body.phone }
+			}
+		}).promise().then(data => data.Item || null);
+	}
+	if (
+		user === null ||
+		typeof user.fidoKeys?.M === 'undefined'
+	) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'Invalid user',
+			}),
+		};
+	}
+
+	// Get the correct key
+	const fidoKeys = parseDynamoDbAttributeValue(user.fidoKeys) as FidoKeys;
+	let fidoKey: FidoKey | undefined;
+	Object.keys(fidoKeys).forEach(key => {
+		if (fidoKeys[key].rawId === body.rawId) {
+			fidoKey = fidoKeys[key] as FidoKey;
+		}
+	});
+	if (!fidoKey) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'Invalid Key',
+			}),
+		};
+	}
+
+	const assertionExpectations: ExpectedAssertionResult = {
+		challenge: body.challenge,
+		origin: 'https://fire.klawil.net',
+		factor: 'either',
+		publicKey: fidoKey.pubKey,
+		prevCounter: fidoKey.prevCount,
+		userHandle: user.fidoUserId?.S as string,
+		// userHandle: null,
+	};
+	const f2l = getFidoLib();
+
+	try {
+		await f2l.assertionResult({
+			...body,
+			response: {
+				...body.response,
+				authenticatorData: new Uint8Array(base64ToBuffer(body.response.authenticatorData)).buffer,
+			},
+			rawId: new Uint8Array(base64ToBuffer(body.rawId)).buffer,
+		}, assertionExpectations);
+	} catch (e) {
+		return {
+			statusCode: 500,
+			body: JSON.stringify({
+				success: false,
+				message: (e as Error).message,
+			})
+		}
+	}
+
+	if (body.test) {
+		return {
+			statusCode: 200,
+			body: JSON.stringify({ success: true }),
+		};
+	}
+
+	const headers = await loginUser(user);
+	return {
+		statusCode: 200,
+		body: JSON.stringify({ success: true }),
+		multiValueHeaders: headers,
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 	try {
@@ -699,6 +1017,14 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await createOrUpdateUser(event, false);
 			case 'delete':
 				return await deleteUser(event);
+			case 'fido-challenge':
+				return await fidoGetChallenge(event);
+			case 'fido-register':
+				return await fidoRegister(event);
+			case 'fido-get-auth':
+				return await fidoGetAuth();
+			case 'fido-auth':
+				return await fidoAuth(event);
 		}
 
 		console.error(`Invalid action - '${action}'`);

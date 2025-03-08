@@ -46,6 +46,24 @@ requireUser: true
 	</div>
 </div>
 
+<h2 class="text-center mt-3">Authentication Devices:</h2>
+<div class="table-responsive">
+	<table class="table table-striped text-center align-middle">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody id="fido-body">
+			<tr id="create-fido-row" class="hide-no-fido" hidden>
+				<td><input class="form-control" type="string" name="fidoName" id="fidoName" placeholder="Key Name"></td>
+				<td><button class="btn btn-success" id="add-fido-button">Add Key</button></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
 {% assign randomNumber = "now" | date: "%N" %}
 <script async src="/js/userConstants.js?v={{ randomNumber }}"></script>
 <script async src="/js/profile.js?v={{ randomNumber }}"></script>

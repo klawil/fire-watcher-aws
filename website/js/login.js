@@ -4,6 +4,7 @@ const phoneContainer = document.getElementById('phone-container');
 const codeContainer = document.getElementById('code-container');
 const alertContainer = document.getElementById('alert-container');
 const submitButton = document.getElementById('submit');
+const fidoButton = document.getElementById('use-token');
 
 phoneInput.addEventListener('keyup', () => {
 	const input = phoneInput.value.replace(/\D/g, '');
@@ -24,6 +25,7 @@ const searchParams = location.search
 	.reduce((agg, row) => ({ ...agg, [row[0]]: row[1] }), {});
 
 let stage = 1;
+let fidoKeys = [];
 function submitHandler() {
 	phoneInput.classList.remove('is-invalid');
 	codeInput.classList.remove('is-invalid');
@@ -54,6 +56,16 @@ function submitHandler() {
 				return;
 			}
 
+			if (
+				stage === 1 &&
+				typeof data.data !== 'undefined' &&
+				data.data.length > 0 &&
+				window.PublicKeyCredential
+			) {
+				fidoKeys = data.data;
+				fidoButton.hidden = false;
+			}
+
 			stage = localStage + 1;
 			if (stage === 2) {
 				codeContainer.classList.remove('d-none');
@@ -70,6 +82,46 @@ function submitHandler() {
 submitButton.addEventListener('click', submitHandler);
 document.addEventListener('keyup', e => {
 	if (e.key === 'Enter') submitHandler();
+});
+
+const bufferToBase64 = buffer => btoa(String.fromCharCode(...new Uint8Array(buffer)));
+const base64ToBuffer = base64 => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+fidoButton.addEventListener('click', async () => {
+	if (fidoKeys.length === 0) return;
+
+	const challenge = await fetch(`/api/user?action=fido-get-auth`).then(r => r.json());
+	challenge.challenge = new Uint8Array(challenge.challenge.data);
+	challenge.allowCredentials = fidoKeys.map(keyId => ({
+		id: base64ToBuffer(keyId),
+		type: 'public-key',
+		transports: ['internal'],
+	}));
+
+	const credential = await navigator.credentials.get({
+		publicKey: challenge,
+	});
+
+	const data = {
+		rawId: bufferToBase64(credential.rawId),
+		challenge: bufferToBase64(challenge.challenge),
+		phone: phoneInput.value.replace(/\D/g, ''),
+		response: {
+			authenticatorData: bufferToBase64(credential.response.authenticatorData),
+			signature: bufferToBase64(credential.response.signature),
+			userHandle: bufferToBase64(credential.response.userHandle),
+			clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+			id: credential.id,
+			type: credential.type,
+		},
+	};
+	const result = await fetch(`/api/user?action=fido-auth`, {
+		method: 'POST',
+		body: JSON.stringify(data),
+	}).then(r => r.json());
+	if (result.success) {
+		showAlert('success', 'You are now logged in');
+		redirectToPage();
+	}
 });
 
 function showAlert(type, message) {
