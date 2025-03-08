@@ -369,11 +369,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				console.error(`ERROR TG AND DEVICES - `, e);
 			}
 		} else {
-			await incrementMetric('Event', {
+			await incrementMetric('Call', {
 				source: metricSource,
-				type: '',
-				event: 'delete'
-			});
+				action: 'delete'
+			}, true, false);
 			const dynamoQuery = await dynamodb.query({
 				TableName: dtrTable,
 				IndexName: 'KeyIndex',
