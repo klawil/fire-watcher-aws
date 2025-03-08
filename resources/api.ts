@@ -56,7 +56,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	event.queryStringParameters = event.queryStringParameters || {};
 	event.queryStringParameters = {
 		after: (Date.now() - (1000 * 60 * 60 * 24 * 28 * 2)).toString(),
-		minLen: '4',
+		minLen: '0',
 		...event.queryStringParameters
 	};
 
