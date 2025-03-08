@@ -110,14 +110,20 @@ function validateBodyIsJson(body: string | undefined): true | APIGatewayProxyRes
 }
 
 async function handleMessage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
-	await sqs.sendMessage({
-		MessageBody: JSON.stringify({
-			action: 'twilio',
-			sig: event.headers['X-Twilio-Signature'],
-			body: event.body
-		}),
-		QueueUrl: queueUrl
-	}).promise();
+	const code = event.queryStringParameters?.code || '';
+
+	if (code === apiCode) {
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify({
+				action: 'twilio',
+				sig: event.headers['X-Twilio-Signature'],
+				body: event.body
+			}),
+			QueueUrl: queueUrl
+		}).promise();
+	} else {
+		console.log('TWILIO FAILED CODE');
+	}
 
 	return {
 		statusCode: 200,

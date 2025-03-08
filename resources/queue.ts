@@ -18,8 +18,15 @@ In a moment, you will receive a copy of the last page sent out over VHF.
 
 You can leave this group at any time by texting "STOP" to this number.`;
 
+interface TwilioConfig {
+	accountSid: string;
+	authToken: string;
+	fromNumber: string;
+	pageNumber: string;
+}
+
 const twilioSecretId = process.env.TWILIO_SECRET as string;
-const twilioSecretPromise = secretManager.getSecretValue({
+const twilioSecretPromise: Promise<TwilioConfig> = secretManager.getSecretValue({
 	SecretId: twilioSecretId
 }).promise()
 	.then((data) => JSON.parse(data.SecretString as string))
@@ -27,22 +34,6 @@ const twilioSecretPromise = secretManager.getSecretValue({
 		console.error(e);
 		return null;
 	});
-
-const codeTtl = 1000 * 60 * 5;
-
-function randomString(len: number, numeric = false): string {
-	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	if (numeric) {
-		chars = '0123456789';
-	}
-	let str: string[] = [];
-
-	for (let i = 0; i < len; i++) {
-		str[i] = chars[Math.floor(Math.random() * chars.length)];
-	}
-
-	return str.join('');
-}
 
 function parsePhone(num: string, toHuman: boolean = false): string {
 	if (!toHuman) {
@@ -183,8 +174,6 @@ interface TwilioParams {
 
 async function handleTwilio(body: TwilioBody) {
 	// Pull out the information needed to validate the Twilio request
-	const requestUrl = 'https://fire.klawil.net/api?action=message';
-	const authToken = (await twilioSecretPromise).authToken;
 	const eventData = body.body
 		?.split('&')
 		.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
@@ -193,17 +182,6 @@ async function handleTwilio(body: TwilioBody) {
 			[curr[0]]: curr[1] || ''
 		}), {}) as TwilioParams;
 	eventData.Body = eventData.Body.replace(/\+/g, ' ');
-	
-	// Verify the message
-	if (!twilio.validateRequest(
-		authToken,
-		body.sig,
-		requestUrl,
-		eventData
-	)) {
-		console.error('INVALID REQUEST - TWILIO FAILED');
-		return;
-	}
 	
 	// Validate the sender
 	const sender = await dynamodb.getItem({
