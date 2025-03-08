@@ -8,13 +8,13 @@ const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
 
-const welcomeMessage = `Welcome to the Crestone Volunteer Fire Department text group!
+const welcomeMessage = `Welcome to the {{department}} Fire Department text group!
 
-This number will be used to communicate with other members of the department and receive recordings of pages sent from dispatch over the radio.
+This number will be used to send and receive messages from other members of the Fire Department.
 
-To send a message to the group, just reply to this number.
+In a moment, you will receive a text from another number with a link to the most recent page for NSCFPD. That number will only ever send you pages or announcements.
 
-In a moment, you will receive a copy of the last page sent out over VHF.
+To send a message to other members of your department, just send a text to this number. Any message you sent will show up for others with your name and callsign attached.
 
 You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
@@ -187,7 +187,9 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	}).promise();
 
 	// Send the welcome message
-	promises.push(sendMessage(null, body.phone, welcomeMessage));
+	const customWelcomeMessage = welcomeMessage
+		.replace(/\{\{department\}\}/g, updateResult.Attributes?.department?.S || 'NSCFPD');
+	promises.push(sendMessage(null, body.phone, customWelcomeMessage));
 
 	// Send the message to the admins
 	promises.push(dynamodb.query({
