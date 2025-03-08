@@ -5,6 +5,7 @@ import { getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMess
 
 const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
+const cloudWatch = new AWS.CloudWatch();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const dtrTable = process.env.TABLE_DTR as string;
@@ -495,8 +496,26 @@ interface PageBody {
 
 async function handlePage(body: PageBody) {
 	// Build the message body
+	const pageInitTime = new Date();
 	const messageBody = createPageMessage(body.key, body.tg);
 	const recipients = await getRecipients('all', body.tg, !!body.isTest);
+
+	let metricPromise: Promise<any> = new Promise(res => res(null));
+	if (!body.isTest) {
+		const pageConfig = pageConfigs[body.tg];
+		const pageTime = new Date(Number(pageConfig.fToTime(body.key)));
+		metricPromise = cloudWatch.putMetricData({
+			Namespace: 'Twilio Health',
+			MetricData: [
+				{
+					MetricName: 'PageToQueue',
+					Timestamp: pageTime,
+					Unit: 'Milliseconds',
+					Value: pageInitTime.getTime() - pageTime.getTime()
+				}
+			]
+		}).promise();
+	}
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
@@ -531,6 +550,7 @@ async function handlePage(body: PageBody) {
 		)));
 
 	await insertMessage;
+	await metricPromise;
 }
 
 async function handleLogin(body: ActivateOrLoginBody) {
