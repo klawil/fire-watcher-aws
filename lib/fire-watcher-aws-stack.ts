@@ -185,6 +185,13 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create a handler that pushes file information into Dynamo DB
     const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/s3.ts',
       handler: 'main',

@@ -1,5 +1,6 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
+import { incrementMetric } from './utils/general';
 
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
@@ -8,6 +9,11 @@ const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const deviceTable = process.env.TABLE_DEVICE as string;
+
+const metricSource = 'S3';
+
+const startTimeBuffer = 1; // Check for calls 3s each way for DTR
+const lenBuffer = 1; // Check for calls 1s longer and shorter
 
 interface SourceListItem {
 	pos: number;
@@ -20,11 +26,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		const Key = record.s3.object.key;
 
 		if (record.eventName.indexOf('ObjectCreated') === 0) {
-			console.log(`S3 - CALL - CREATE`);
+			const metric = incrementMetric('Call', {
+				source: metricSource,
+				action: `create${Key.indexOf('/dtr') !== -1 ? 'DTR' : 'VHF'}`
+			});
 			const headInfo = await s3.headObject({
 				Bucket,
 				Key
 			}).promise();
+			await metric;
 
 			const body: AWS.DynamoDB.PutItemInput = {
 				TableName: trafficTable,
@@ -48,7 +58,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			};
 
 			if (Key.indexOf('/dtr') !== -1) {
-				console.log('New DTR');
 				const sourceList: string[] = [];
 				try {
 					if (typeof headInfo.Metadata?.source_list !== 'undefined') {
@@ -89,6 +98,77 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
+				await dynamodb.putItem(body).promise();
+
+				const startTime: number = Number(headInfo.Metadata?.start_time);
+				const existingItems: AWS.DynamoDB.QueryOutput = await dynamodb.query({
+					TableName: dtrTable,
+					IndexName: 'StartTimeTgIndex',
+					ExpressionAttributeNames: {
+						'#tg': 'Talkgroup',
+						'#st': 'StartTime',
+						'#e': 'Emergency',
+						'#l': 'Len'
+					},
+					ExpressionAttributeValues: {
+						':tg': {
+							N: headInfo.Metadata?.talkgroup_num
+						},
+						':st1': {
+							N: (startTime - startTimeBuffer).toString()
+						},
+						':st2': {
+							N: (startTime + startTimeBuffer).toString()
+						},
+						':e': {
+							N: headInfo.Metadata?.emergency
+						},
+						':l1': {
+							N: (Number(headInfo.Metadata?.call_length) - lenBuffer).toString()
+						},
+						':l2': {
+							N: (Number(headInfo.Metadata?.call_length) + lenBuffer).toString()
+						}
+					},
+					KeyConditionExpression: '#tg = :tg AND #st BETWEEN :st1 AND :st2',
+					FilterExpression: '#e = :e AND #l BETWEEN :l1 AND :l2'
+				}).promise();
+				if (
+					!!existingItems.Items &&
+					existingItems.Items.length > 1
+				) {
+					const metric = incrementMetric('Event', {
+						source: metricSource,
+						type: 'dtr',
+						event: 'duplicate call'
+					});
+
+					const itemToDelete = existingItems.Items
+						.sort((a, b) => {
+							const aAdded = Number(a.Added.N);
+							const bAdded = Number(b.Added.N);
+							const aLen = Number(a.Len.N);
+							const bLen = Number(b.Len.N);
+
+							if (aLen === bLen)
+								return aAdded > bAdded ? -1 : 1;
+
+							return aLen > bLen ? 1 : -1;
+						})[0];
+					await dynamodb.deleteItem({
+						TableName: dtrTable,
+						Key: {
+							Talkgroup: {
+								N: itemToDelete.Talkgroup.N
+							},
+							Added: {
+								N: itemToDelete.Added.N
+							}
+						}
+					}).promise();
+					await metric;
+					return;
+				}
 
 				const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
 					TableName: talkgroupTable,
@@ -195,15 +275,21 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}
 					await Promise.all(promises);
 				} catch (e) {
-					console.log(`ERROR - `, e);
+					await incrementMetric('Error', {
+						source: metricSource,
+						type: 'tg and devices'
+					});
+					console.error(`ERROR TG AND DEVICES - `, e);
 				}
+			} else {
+				await dynamodb.putItem(body).promise();
 			}
-
-			console.log(`Create: ${JSON.stringify(body)}`)
-
-			await dynamodb.putItem(body).promise();
 		} else {
-			console.log(`S3 - CALL - DELETE`);
+			await incrementMetric('Event', {
+				source: metricSource,
+				type: '',
+				event: 'delete'
+			});
 			const dynamoQuery = await dynamodb.query({
 				TableName: trafficTable,
 				ExpressionAttributeNames: {
@@ -232,7 +318,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			await dynamodb.deleteItem(body).promise();
 		}
 	} catch (e) {
-		console.log(`S3 - ERROR`);
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'general'
+		});
 		console.error(e);
 	}
 }
