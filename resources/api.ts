@@ -14,15 +14,6 @@ const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
 const s3Bucket = process.env.S3_BUCKET as string;
 
-const ignorePrefixes = [
-	'Liked',
-	'Loved',
-	'Disliked',
-	'Laughed+at',
-	'Questioned'
-]
-	.map(p => `${p}+`);
-
 const unauthorizedResponse = {
 	statusCode: 403,
 	body: JSON.stringify({
@@ -155,113 +146,6 @@ function validateBodyIsJson(body: string | null): true {
 	JSON.parse(body);
 
 	return true;
-}
-
-interface TwilioParams {
-	From: string;
-	To: string;
-	Body: string;
-	MediaUrl0?: string;
-}
-
-interface TextCommand {
-	ExpressionAttributeNames: AWS.DynamoDB.ExpressionAttributeNameMap;
-	ExpressionAttributeValues?: AWS.DynamoDB.ExpressionAttributeValueMap;
-	UpdateExpression: string;
-}
-
-const textCommands: {
-	[key: string]: TextCommand;
-} = {
-	'!startTest': {
-		ExpressionAttributeNames: {
-			'#isTest': 'isTest'
-		},
-		ExpressionAttributeValues: {
-			':isTest': {
-				BOOL: true
-			}
-		},
-		UpdateExpression: 'SET #isTest = :isTest'
-	},
-	'!stopTest': {
-		ExpressionAttributeNames: {
-			'#isTest': 'isTest'
-		},
-		UpdateExpression: 'REMOVE #isTest'
-	},
-}
-
-async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const code = event.queryStringParameters?.code || '';
-	const response = {
-		statusCode: 200,
-		headers: {
-			'Content-Type': 'application/xml'
-		},
-		body: '<Response></Response>'
-	};
-
-	// Validate the call is from Twilio
-	if (code !== apiCode) {
-		console.log('API - ERROR - INVALID CODE');
-		return response;
-	}
-
-	// Validate the sending number
-	const eventData = event.body
-		?.split('&')
-		.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
-		.reduce((acc, curr) => ({
-			...acc,
-			[curr[0]]: curr[1] || ''
-		}), {}) as TwilioParams;
-	const sender = await dynamodb.getItem({
-		TableName: phoneTable,
-		Key: {
-			phone: {
-				N: eventData.From.slice(2)
-			}
-		}
-	}).promise();
-	if (!sender.Item || !sender.Item.isActive.BOOL) {
-		console.log(`API - ERROR - ${sender.Item ? 'Inactive' : 'Invalid'} Sender`);
-		response.body = `<Response><Message>You do not have access to this text group. Contact Chief for access.</Message></Response>`;
-		return response;
-	}
-
-	// Check for text commands and apple responses
-	const isTextCommand = typeof textCommands[eventData.Body] !== 'undefined';
-	const isAppleResponse = ignorePrefixes
-		.reduce((bool, prefix) => bool || eventData.Body.indexOf(prefix) === 0, false);
-
-	if (isTextCommand) {
-		console.log(`API - COMMAND - ${sender.Item.phone.N}`);
-		await dynamodb.updateItem({
-			TableName: phoneTable,
-			Key: {
-				phone: {
-					N: sender.Item.phone.N
-				}
-			},
-			...textCommands[eventData.Body]
-		}).promise();
-
-		response.body = `<Response><Message>Text command processed</Message></Response>`;
-	} else if (isAppleResponse) {
-		console.log(`API - APPLE - ${sender.Item.phone.N}`);
-	} else {
-		await sqs.sendMessage({
-			MessageBody: JSON.stringify({
-				action: 'twilio',
-				sig: event.headers['X-Twilio-Signature'],
-				body: event.body
-			}),
-			QueueUrl: queueUrl
-		}).promise();
-	}
-
-	return response;
 }
 
 interface TwilioMessageStatus {
@@ -776,8 +660,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	try {
 		console.log(`API - CALL - ${action}`);
 		switch (action) {
-			case 'message':
-				return await handleMessage(event);
 			case 'messageStatus':
 				return await handleMessageStatus(event);
 			case 'page':

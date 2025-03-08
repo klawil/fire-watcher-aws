@@ -346,6 +346,28 @@ export class FireWatcherAwsStack extends Stack {
     const frontendApiResource = apiResource.addResource('frontend');
     frontendApiResource.addMethod('GET', frontendApiIntegration);
 
+    // Create the infrastructure API
+    const infraApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-infra-lambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/api/infra.ts',
+      handler: 'main',
+      environment: {
+        SERVER_CODE: apiCode,
+        SQS_QUEUE: queue.queueUrl,
+        TABLE_USER: phoneNumberTable.tableName
+      }
+    });
+    queue.grantSendMessages(infraApiHandler);
+    phoneNumberTable.grantReadWriteData(infraApiHandler);
+    const infraApiIntegration = new apigateway.LambdaIntegration(infraApiHandler, {
+      requestTemplates: {
+        'application/json': '{"statusCode":"200"}'
+      }
+    });
+    const infraApiResource = apiResource.addResource('infra');
+    infraApiResource.addMethod('GET', infraApiIntegration);
+    infraApiResource.addMethod('POST', infraApiIntegration);
+
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
 
