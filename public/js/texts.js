@@ -41,12 +41,20 @@ function dateTimeToTimeStr(datetime) {
 	].join('');
 }
 
+function parseMediaUrls(mediaUrls) {
+	return mediaUrls
+		.split(',')
+		.filter(s => s !== '')
+		.map((v, i) => `<a href="${v}">${i + 1}</a>`)
+		.join(',');
+}
+
 function buildTable(items, isPage = false) {
 	const rows = items.map(text => {
 		const cells = [
 			dateTimeToTimeStr(text.datetime),
 			text.body,
-			text.mediaUrls.split(',').filter(s => s !== '').length,
+			parseMediaUrls(text.mediaUrls),
 			text.recipients,
 			`${Math.round(text.delivered.length * 100 / text.recipients)}% (${text.delivered.length})`,
 			`${Math.round(getPercentile(text.delivered, 1) / 1000)}s`,
