@@ -7,6 +7,7 @@ const dynamodb = new aws.DynamoDB();
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
+const deviceTable = process.env.TABLE_DEVICE as string;
 
 interface SourceListItem {
 	pos: number;
@@ -53,7 +54,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					if (typeof headInfo.Metadata?.source_list !== 'undefined') {
 						JSON.parse(headInfo.Metadata?.source_list)
 							.map((v: SourceListItem) => v.src)
-							.filter((v: number, i: number, a: number[]) => a.indexOf(v) === i)
+							.filter((v: number, i: number, a: number[]) => a.indexOf(v) === i && Number(v) > 0)
 							.forEach((source: number) => sourceList.push(`${source}`));
 					}
 				} catch (e) {}
@@ -89,15 +90,16 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}
 				};
 
-				const talkgroupBody: AWS.DynamoDB.UpdateItemInput = {
+				const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
 					TableName: talkgroupTable,
 					ExpressionAttributeNames: {
 						'#count': 'Count',
+						'#dev': 'Devices',
 						'#iu': 'InUse'
 					},
 					ExpressionAttributeValues: {
-						':initial': {
-							N: '0'
+						':dev': {
+							M: {}
 						},
 						':num': {
 							N: '1'
@@ -111,10 +113,87 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							N: headInfo.Metadata?.talkgroup_num
 						}
 					},
-					UpdateExpression: 'SET #count = if_not_exists(#count, :initial) + :num, #iu = :iu'
+					UpdateExpression: 'SET #iu = :iu, #dev = if_not_exists(#dev, :dev) ADD #count :num'
 				};
+				let doDeviceUpdate = sourceList.length > 0;
+				let updateExpression: string[] = [];
+				const talkgroupDevices: AWS.DynamoDB.UpdateItemInput = {
+					TableName: talkgroupTable,
+					ExpressionAttributeNames: {
+						'#dev': 'Devices'
+					},
+					ExpressionAttributeValues: {
+						':num': {
+							N: '1'
+						}
+					},
+					Key: {
+						'ID': {
+							N: headInfo.Metadata?.talkgroup_num
+						}
+					}
+				};
+
+				const deviceCreate: AWS.DynamoDB.UpdateItemInput[] = [];
+				const deviceUpdate: AWS.DynamoDB.UpdateItemInput[] = [];
+
+				sourceList.forEach((device, index) => {
+					if (!talkgroupDevices.ExpressionAttributeNames) talkgroupDevices.ExpressionAttributeNames = {};
+					talkgroupDevices.ExpressionAttributeNames[`#dev${index}`] = device;
+					updateExpression.push(`#dev.#dev${index} :num`);
+
+					deviceCreate.push({
+						TableName: deviceTable,
+						ExpressionAttributeNames: {
+							'#tg': 'Talkgroups',
+							'#count': 'Count'
+						},
+						ExpressionAttributeValues: {
+							':num': {
+								N: '1'
+							},
+							':tg': {
+								M: {}
+							}
+						},
+						Key: {
+							'ID': {
+								N: device
+							}
+						},
+						UpdateExpression: 'SET #tg = if_not_exists(#tg, :tg) ADD #count :num'
+					});
+					deviceUpdate.push({
+						TableName: deviceTable,
+						ExpressionAttributeNames: {
+							'#tg': 'Talkgroups',
+							'#tgId': headInfo.Metadata?.talkgroup_num as string
+						},
+						ExpressionAttributeValues: {
+							':num': {
+								N: '1'
+							}
+						},
+						Key: {
+							'ID': {
+								N: device
+							}
+						},
+						UpdateExpression: 'ADD #tg.#tgId :num'
+					});
+				});
+				talkgroupDevices.UpdateExpression = `ADD ${updateExpression.join(', ')}`;
+
 				try {
-					await dynamodb.updateItem(talkgroupBody).promise();
+					const promises: Promise<any>[] = [
+						dynamodb.updateItem(talkgroupCreate).promise()
+							.then(() => doDeviceUpdate ? dynamodb.updateItem(talkgroupDevices).promise() : null)
+					];
+					if (doDeviceUpdate) {
+						promises.push(Promise.all(deviceCreate.map(conf => dynamodb.updateItem(conf).promise()))
+							.then(() => Promise.all(deviceUpdate.map(conf => dynamodb.updateItem(conf).promise()))));
+					}
+					await Promise.all(promises);
 				} catch (e) {
 					console.log(`ERROR - `, e);
 				}
