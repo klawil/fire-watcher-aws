@@ -1,4 +1,4 @@
-import { Stack, StackProps, Duration } from 'aws-cdk-lib';
+import { Stack, StackProps, Duration, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -13,10 +13,8 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as sns from 'aws-cdk-lib/aws-sns';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
-import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as eventbridge from 'aws-cdk-lib/aws-events';
 import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
@@ -26,7 +24,9 @@ const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
 const secretArn = '***REMOVED***';
 
+type AlarmTag = 'Dtr' | 'Api';
 interface CvfdAlarm {
+  tag: AlarmTag;
   codeName: string;
   okayAction?: boolean;
   alarm: cloudwatch.AlarmProps;
@@ -476,14 +476,13 @@ export class FireWatcherAwsStack extends Stack {
     dtrTranslationTable.grantReadWriteData(queueHandler);
 
     // Create a queue for cloudwatch alarms
-    const alarmQueue = new sqs.Queue(this, 'cvfd-alarm-queue');
     const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
       initialPolicy: [
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
+          actions: [ 'cloudwatch:PutMetricData', 'cloudwatch:ListTagsForResource' ],
           resources: [ '*' ]
-        })
+        }),
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: __dirname + '/../resources/alarms.ts',
@@ -495,14 +494,11 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_MESSAGES: textsTable.tableName
       }
     });
-    alarmQueueHandler.addEventSource(new lambdaEventSources.SqsEventSource(alarmQueue));
     textsTable.grantReadWriteData(alarmQueueHandler);
     phoneNumberTable.grantReadData(alarmQueueHandler);
     twilioSecret.grantRead(alarmQueueHandler);
 
-    const alarmTopic = new sns.Topic(this, 'cvfd-alarm-topic');
-    alarmTopic.addSubscription(new subscriptions.SqsSubscription(alarmQueue));
-    const alarmAction = new cw_actions.SnsAction(alarmTopic);
+    const alarmAction = new cw_actions.LambdaAction(alarmQueueHandler);
 
     const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
       evaluationPeriods: 5,
@@ -517,8 +513,8 @@ export class FireWatcherAwsStack extends Stack {
         }
       }),
       threshold: 35,
-      alarmDescription: 'Saguache Tower Decode Rate below 35/min',
-      alarmName: 'Saguache Tower',
+      alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
+      alarmName: 'Saguache Tower Decode Rate',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.BREACHING
     };
@@ -535,8 +531,8 @@ export class FireWatcherAwsStack extends Stack {
         }
       }),
       threshold: 0,
-      alarmDescription: 'User API Error Occured',
-      alarmName: 'User API Error',
+      alarmDescription: 'Users trying to use the User API are getting errors and may not be able to log in or access restricted pages',
+      alarmName: 'User API Errors',
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     };
@@ -553,14 +549,16 @@ export class FireWatcherAwsStack extends Stack {
         }
       }),
       threshold: 0,
-      alarmDescription: 'No files uploaded for Saguache Tower',
+      alarmDescription: 'No files have been uploaded for Saguache Tower in the past 24 hours which may indicate the tower is not being recorded',
       alarmName: 'Saguache Tower Uploads',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.BREACHING
     };
     const alarms: CvfdAlarm[] = [
       {
+        tag: 'Api',
         codeName: 'lambda-errors',
+        okayAction: false,
         alarm: {
           evaluationPeriods: 1,
           datapointsToAlarm: 1,
@@ -571,19 +569,21 @@ export class FireWatcherAwsStack extends Stack {
             statistic: cloudwatch.Stats.SUM,
           }),
           threshold: 0,
-          alarmDescription: 'Errors detected in the Lambda functions',
+          alarmDescription: 'One or more lambda functions is throwing uncaught errors which mean the the lambda task is not being completed',
           alarmName: 'Lambda Function Errors',
           comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
           treatMissingData: cloudwatch.TreatMissingData.BREACHING,
         }
       },
       {
+        tag: 'Dtr',
         codeName: 'saguache-tower',
         alarm: {
           ...baseTowerAlarmConfig
         }
       },
       {
+        tag: 'Dtr',
         codeName: 'pooltable-tower',
         alarm: {
           ...baseTowerAlarmConfig,
@@ -598,17 +598,19 @@ export class FireWatcherAwsStack extends Stack {
               Tower: 'PoolTable'
             }
           }),
-          alarmDescription: 'Pool Table Decode Rate below 35/min',
-          alarmName: 'Pool Table Tower'
+          alarmDescription: 'Recording audio from the Pool Table Tower may not be occurring on may only be occurring intermitently',
+          alarmName: 'Pool Table Tower Decode Rate'
         }
       },
       {
+        tag: 'Dtr',
         codeName: 'saguache-tower-upload',
         alarm: {
           ...baseUploadAlarmConfig
         }
       },
       {
+        tag: 'Dtr',
         codeName: 'pool-table-upload',
         alarm: {
           ...baseUploadAlarmConfig,
@@ -621,11 +623,12 @@ export class FireWatcherAwsStack extends Stack {
               Tower: 'PoolTable'
             }
           }),
-          alarmDescription: 'No files uploaded for Pool Table',
+          alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 24 hours which may indicate the tower is not being recorded',
           alarmName: 'Pool Table Uploads',
         }
       },
       {
+        tag: 'Dtr',
         codeName: 'san-antonio-upload',
         alarm: {
           ...baseUploadAlarmConfig,
@@ -638,11 +641,12 @@ export class FireWatcherAwsStack extends Stack {
               Tower: 'SanAntonio'
             }
           }),
-          alarmDescription: 'No files uploaded for San Antonio Peak',
+          alarmDescription: 'No files have been uploaded for San Antonio Peak in the past 24 hours which may indicate the tower is not being recorded',
           alarmName: 'San Antonio Peak Uploads',
         }
       },
       {
+        tag: 'Api',
         codeName: 'twilio-api',
         okayAction: false,
         alarm: {
@@ -656,11 +660,12 @@ export class FireWatcherAwsStack extends Stack {
               source: 'Twilio'
             }
           }),
-          alarmDescription: 'Twilio API error occured',
-          alarmName: 'Twilio API Error'
+          alarmDescription: 'Calls to the Twilio API are failing, potentially resulting in undelivered texts or pages',
+          alarmName: 'Twilio API Errors'
         }
       },
       {
+        tag: 'Api',
         codeName: 's3-api',
         okayAction: false,
         alarm: {
@@ -674,11 +679,12 @@ export class FireWatcherAwsStack extends Stack {
               source: 'S3'
             }
           }),
-          alarmDescription: 'S3 API error occured',
+          alarmDescription: 'Files being uploaded to S3 may not be getting processed correctly (or at all) potentially impacts pages',
           alarmName: 'S3 API Error'
         }
       },
       {
+        tag: 'Api',
         codeName: 'queue-api',
         okayAction: false,
         alarm: {
@@ -692,7 +698,7 @@ export class FireWatcherAwsStack extends Stack {
               source: 'Queue'
             }
           }),
-          alarmDescription: 'Queue API error occured',
+          alarmDescription: 'The event queue is not being processed correctly, potentially impacting texts, pages, and sign-ups',
           alarmName: 'Queue API Error'
         }
       },
@@ -703,6 +709,8 @@ export class FireWatcherAwsStack extends Stack {
       alarm.addAlarmAction(alarmAction);
       if (alarmConfig.okayAction !== false)
         alarm.addOkAction(alarmAction);
+      
+      Tags.of(alarm).add('cvfd-alarm-type', alarmConfig.tag);
     });
 
     // Create the event trigger

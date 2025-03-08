@@ -325,7 +325,7 @@ export async function sendMessage(
 		});
 }
 
-type AlertType = 'Api' | 'Dtr' | 'Vhf';
+export type AlertType = 'Api' | 'Dtr' | 'Vhf';
 
 export async function sendAlertMessage(metricSource: string, alertType: AlertType, body: string) {
 	const messageId = Date.now().toString();

@@ -1,20 +1,31 @@
 import * as lambda from 'aws-lambda';
-import { sendAlertMessage } from './utils/general';
+import * as aws from 'aws-sdk';
+import { sendAlertMessage, AlertType } from './utils/general';
 
 const metricSource = 'Alarms';
+const cloudWatch = new aws.CloudWatch();
 
-function parseRecord(event: lambda.SQSRecord): string {
-	const body = JSON.parse(JSON.parse(event.body).Message);
+export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
+	console.log(`Body`, JSON.stringify(event));
 
-	let message = `State change for ${body.AlarmName} - ${body.NewStateValue}`;
-	return message;
-}
+	const tags: { 'cvfd-alarm-type': AlertType, [key: string]: string } = {
+		'cvfd-alarm-type': 'Api',
+	};
+	try {
+		const alarmInfo = await cloudWatch.listTagsForResource({
+			ResourceARN: event.alarmArn,
+		}).promise();
+		alarmInfo.Tags?.forEach(tag => {
+			tags[tag.Key] = tag.Value;
+		});
+	} catch (e) {
+		console.error(e);
+	}
 
-export async function main(event: lambda.SQSEvent): Promise<void> {
-	const alarmString = event.Records.map(parseRecord)
-		.join('\n');
-	const alarmType = alarmString.indexOf('API') !== -1
-		? 'Api'
-		: 'Dtr';
-	await sendAlertMessage(metricSource, alarmType, alarmString);
+	const alarmData = event.alarmData;
+	let alertMessage = `Alarm for ${alarmData.alarmName} transitioned from ${alarmData.previousState.value} to ${alarmData.state.value}.\n\n`;
+	if (alarmData.state.value !== 'OK')
+		alertMessage += `Impact: ${alarmData.configuration.description}\n\n`;
+	alertMessage += `Reason For Change: ${alarmData.state.reason}`;
+	await sendAlertMessage(metricSource, tags['cvfd-alarm-type'], alertMessage);
 }
