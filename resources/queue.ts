@@ -21,6 +21,61 @@ To send a message to other members of your department, just send a text to this 
 You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
+const timeZone = 'America/Denver';
+
+function dtrFnameToDate(fileName: string): string {
+	let d = new Date(0);
+	try {
+		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
+
+		if (parts !== null) {
+			d = new Date(parseInt(parts[1], 10) * 1000);
+		}
+	} catch (e) {}
+
+	const dateString = d.toLocaleDateString('en-US', {
+		timeZone: 'America/Denver',
+		weekday: 'short',
+		month: 'short',
+		day: '2-digit'
+	});
+	
+	const timeString = d.toLocaleTimeString('en-US', {
+		timeZone: 'America/Denver',
+		hour12: false,
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit'
+	});
+
+	return `on ${dateString} at ${timeString}`;
+}
+
+const pageConfigs: {
+	[key: string]: {
+		linkPreset: string;
+		pagingParty: string;
+		partyBeingPaged: string;
+		pageService: string;
+		fToTime: (fNAme: string) => string;
+	}
+} = {
+	'8198': {
+		linkPreset: 'pNSCAD',
+		pagingParty: 'Saguache SO',
+		partyBeingPaged: 'NSCAD',
+		pageService: 'AMBO',
+		fToTime: dtrFnameToDate
+	},
+	'8332': {
+		linkPreset: 'pNSCFPD',
+		pagingParty: 'Saguache SO',
+		partyBeingPaged: 'NSCFPD',
+		pageService: 'FIRE',
+		fToTime: dtrFnameToDate
+	},
+};
+
 const pageTgNames: { [key: string]: string } = {
 	'8198': 'AMBO',
 	'8332': 'FIRE'
@@ -146,42 +201,20 @@ function randomString(len: number, numeric = false): string {
 	return str.join('');
 }
 
-function convertFileDateTime(fileName: string): Date {
-	let d = new Date(0);
-	try {
-		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
-
-		if (parts !== null) {
-			d = new Date(parseInt(parts[1], 10) * 1000);
-		}
-	} catch (e) {}
-
-	return d;
-}
-
 function createPageMessage(
 	fileKey: string,
 	pageTg: string,
 	callSign: string | null = null
 ): string {
-	const d = convertFileDateTime(fileKey);
+	const pageConfig = pageConfigs[pageTg];
 
-	const dateString = d.toLocaleDateString('en-US', {
-		timeZone: 'America/Denver',
-		weekday: 'short',
-		month: 'short',
-		day: '2-digit'
-	});
-	
-	const timeString = d.toLocaleTimeString('en-US', {
-		timeZone: 'America/Denver',
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit'
-	});
+	if (typeof pageConfig === 'undefined')
+		return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
 
-	let pageStr = `Saguache Sheriff: ${pageTgNames[pageTg]} PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/dtr.html?f=${fileKey}&tg=tg${pageTg}`;
+	let pageStr = `${pageConfig.pageService} PAGE\n`;
+	pageStr += `${pageConfig.pagingParty} paged ${pageConfig.partyBeingPaged} `
+	pageStr += `${pageConfig.fToTime(fileKey)}\n`;
+	pageStr += `https://fire.klawil.net/dtr.html?f=${fileKey}&tg=${pageConfig.linkPreset}`;
 	if (callSign !== null) {
 		pageStr += `&cs=${callSign}`;
 	}
