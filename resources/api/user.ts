@@ -47,6 +47,7 @@ interface UserObject {
 	isActive: boolean;
 	isAdmin: boolean;
 	pageOnly: boolean;
+	talkgroups: string[];
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -309,19 +310,8 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#dadmin': 'isDistrictAdmin',
 				'#tg': 'talkgroups'
 			},
-			ExpressionAttributeValues: {
-				':tg': {
-					N: '8332'
-				}
-			},
-			FilterExpression: 'contains(#tg, :tg)',
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin,#tg'
 		}).promise();
-
-		if (usersItems.Items)
-			usersItems.Items = usersItems.Items.sort((a, b) => Number(a.callSign?.N || 0) > Number(b.callSign?.N || 0)
-				? 1
-				: -1);
 	} else {
 		usersItems = await dynamodb.query({
 			TableName: userTable,
@@ -334,15 +324,21 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#cs': 'callSign',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
-				'#dadmin': 'isDistrictAdmin'
+				'#dadmin': 'isDistrictAdmin',
+				'#tg': 'talkgroups'
 			},
 			ExpressionAttributeValues: {
 				':d': { S: user.department?.S }
 			},
 			KeyConditionExpression: '#d = :d',
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin,#tg'
 		}).promise();
 	}
+
+	if (usersItems.Items)
+		usersItems.Items = usersItems.Items.sort((a, b) => Number(a.callSign?.N || 0) > Number(b.callSign?.N || 0)
+			? 1
+			: -1);
 
 	// Parse the users into a readable format
 	const users = (usersItems.Items || [])
