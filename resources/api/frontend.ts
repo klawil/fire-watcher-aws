@@ -437,8 +437,7 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 		},
 		KeyConditionExpression: '#ip = :ip',
 		FilterExpression: '#pid = :pid',
-		ScanIndexForward: false,
-		Limit: 1
+		ScanIndexForward: false
 	}).promise();
 	if (!result.Items || result.Items.length === 0) {
 		response.errors.push(`"f" is not a valid key`);
