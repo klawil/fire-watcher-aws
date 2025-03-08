@@ -415,7 +415,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	} else {
 		// Get the departments the user is admin for
 		let departmentsUserCanSee: UserDepartment[] = validDepartments
-			.filter(dep => !!user[dep]?.admin);
+			.filter(dep => !!user[dep]?.admin && !!user[dep]?.active);
 		departmentsUserCanSee.forEach(dep => {
 			keysToGet[`#${dep}`] = dep;
 		});
