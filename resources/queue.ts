@@ -262,6 +262,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	promises.push(sendMessage(
 		null,
 		body.phone,
+		updateResult.Attributes?.department?.S,
 		customWelcomeMessage,
 		[],
 		groupType === 'page'
@@ -287,6 +288,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 				return sendMessage(
 					null,
 					item.phone.N,
+					item.department.S,
 					`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
 				);
 			}))));
@@ -320,6 +322,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 			return sendMessage(
 				null,
 				body.phone,
+				updateResult.Attributes?.department?.S,
 				createPageMessage(pageKey, pageTg),
 				[],
 				true
@@ -411,6 +414,7 @@ async function handleTwilio(body: TwilioBody) {
 		.map((number) =>  sendMessage(
 			messageId,
 			number.phone.N,
+			number.department.S,
 			messageBody,
 			mediaUrls
 				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`)),
@@ -481,6 +485,7 @@ async function handlePage(body: PageBody) {
 		.map((phone) => sendMessage(
 			messageId,
 			phone.phone.N,
+			phone.department.S,
 			createPageMessage(body.key, body.tg, phone.callSign.N),
 			[],
 			true
@@ -494,7 +499,7 @@ async function handleLogin(body: ActivateOrLoginBody) {
 	const code = randomString(6, true);
 	const codeTimeout = Date.now() + codeTtl;
 
-	await dynamodb.updateItem({
+	const updateResult = await dynamodb.updateItem({
 		TableName: phoneTable,
 		Key: {
 			phone: {
@@ -516,7 +521,12 @@ async function handleLogin(body: ActivateOrLoginBody) {
 		UpdateExpression: 'SET #c = :c, #ce = :ce'
 	}).promise();
 
-	await sendMessage(null, body.phone, `This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`);
+	await sendMessage(
+		null,
+		body.phone,
+		updateResult.Attributes?.department?.S,
+		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`
+	);
 }
 
 interface TranscribeBody {
@@ -569,6 +579,7 @@ async function handleTranscribe(body: TranscribeBody) {
 	await Promise.all(recipients.map(number => sendMessage(
 		messageId,
 		number.phone.N,
+		number.department?.S,
 		messageBody,
 		[],
 		true

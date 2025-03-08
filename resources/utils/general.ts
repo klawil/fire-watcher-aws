@@ -129,6 +129,7 @@ interface TwilioConfig {
 	pageNumber: string;
 	alertNumber: string;
 	apiCode: string;
+	[key: string]: string;
 }
 
 const twilioSecretId = process.env.TWILIO_SECRET as string;
@@ -238,12 +239,16 @@ interface TwilioMessageConfig {
 export async function sendMessage(
 	messageId: string | null,
 	phone: string | undefined,
+	department: string | undefined,
 	body: string,
 	mediaUrl: string[] = [],
 	isPage: boolean = false,
 	isAlert: boolean = false
 ) {
-	if (typeof phone === 'undefined') {
+	if (
+		typeof phone === 'undefined' ||
+		typeof department === 'undefined'
+	) {
 		return;
 	}
 
@@ -279,8 +284,18 @@ export async function sendMessage(
 		statusCallback: `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
 	};
 
+	let accountSid: string = twilioConf.accountSid;
+	let authToken: string = twilioConf.authToken;
+	// if (
+	// 	typeof twilioConf[department] !== 'undefined' &&
+	// 	typeof twilioConf[`${department}AuthToken`] !== 'undefined'
+	// ) {
+	// 	accountSid = twilioConf[department];
+	// 	authToken = twilioConf[`${department}AuthToken`];
+	// }
+
 	return Promise.all([
-		twilio(twilioConf.accountSid, twilioConf.authToken)
+		twilio(accountSid, authToken)
 			.messages.create(messageConfig),
 		saveMessageDataPromise
 	])
@@ -300,6 +315,7 @@ export async function sendAlertMessage(body: string) {
 		...recipients.map(user => sendMessage(
 			messageId,
 			user.phone.N,
+			'',
 			body,
 			[],
 			false,
