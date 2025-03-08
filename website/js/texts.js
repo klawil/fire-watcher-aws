@@ -1,10 +1,25 @@
 window.afterAuth = window.afterAuth || [];
 
 function getPercentile(values, percentile) {
+	if (values.length === 0) return '';
+
 	values = values.sort((a, b) => a > b ? 1 : -1);
 	const index = Math.ceil(values.length * percentile / 100) - 1;
 
-	return values[index];
+	let valueSeconds = Math.round(values[index] / 1000);
+	const maxValue = valueSeconds;
+	let timeStr = '';
+	if (maxValue >= 60 * 60) {
+		const hours = Math.floor(valueSeconds / (60 * 60));
+		timeStr += `${hours}:`;
+		valueSeconds -= (hours * 60 * 60);
+	}
+	const minutes = Math.floor(valueSeconds / 60);
+	timeStr += `${minutes.toString().padStart(2, '0')}:`;
+	valueSeconds -= (minutes * 60);
+	timeStr += `${valueSeconds.toString().padStart(2, '0')}`;
+
+	return timeStr;
 }
 
 function padLeft(num, len = 2) {
@@ -56,6 +71,17 @@ function parseMediaUrls(mediaUrls) {
 		.join(',');
 }
 
+function makePercentString(numerator, denominator) {
+	if (denominator === 0) return '';
+	const percentStr = `${Math.round(numerator * 100 / denominator)}%`;
+
+	if (numerator !== denominator) {
+		return `${percentStr}<br>(${numerator})`;
+	}
+
+	return percentStr;
+}
+
 function buildTable(items, isPage = false) {
 	const rows = items.map(text => {
 		const cells = [
@@ -63,19 +89,19 @@ function buildTable(items, isPage = false) {
 			text.body,
 			parseMediaUrls(text.mediaUrls),
 			text.recipients,
-			`${Math.round(text.sent.length * 100 / text.recipients)}% (${text.sent.length})`,
-			`${Math.round(text.delivered.length * 100 / text.recipients)}% (${text.delivered.length})`,
-			`${Math.round(text.undelivered.length * 100 / text.recipients)}% (${text.undelivered.length})`,
-			`${Math.round(getPercentile(text.delivered, 1) / 1000)}s`,
-			`${Math.round(getPercentile(text.delivered, 50) / 1000)}s`,
-			`${Math.round(getPercentile(text.delivered, 75) / 1000)}s`,
+			makePercentString(text.sent.length, text.recipients),
+			makePercentString(text.delivered.length, text.recipients),
+			makePercentString(text.undelivered.length, text.recipients),
+			getPercentile(text.delivered, 50),
+			getPercentile(text.delivered, 75),
+			getPercentile(text.delivered, 100),
 		];
 		
 		if (isPage) {
 			text.csLooked = text.csLooked || [];
 			cells.splice(
 				7, 0,
-				`${Math.round(text.csLooked.length * 100 / text.recipients)}% (${text.csLooked.length})`,
+				makePercentString(text.csLooked.length, text.recipients),
 				`${Math.round((text.datetime - text.pageTime) / 1000)}s`
 			);
 			cells.splice(2, 1);
@@ -84,9 +110,10 @@ function buildTable(items, isPage = false) {
 		return cells;
 	});
 
+	const startCenter = isPage ? 2 : 3;
 	const rowsHtml = rows
 		.map(row => row
-			.map(cell => `<td>${cell}</td>`)
+			.map((cell, idx) => `<td${idx >= startCenter ? ' class="text-center"' : ''}>${cell}</td$>`)
 			.join(''));
 
 	return rowsHtml
