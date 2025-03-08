@@ -151,7 +151,7 @@ async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
-		console.log('TWILIO FAILED CODE');
+		console.log('API - ERROR - INVALID CODE');
 		return response;
 	}
 
@@ -172,7 +172,7 @@ async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		}
 	}).promise();
 	if (!sender.Item || !sender.Item.isActive.BOOL) {
-		console.log(`API - TWILIO - ERROR - ${sender.Item ? 'Inactive' : 'Invalid'} Sender`);
+		console.log(`API - ERROR - ${sender.Item ? 'Inactive' : 'Invalid'} Sender`);
 		response.body = `<Response><Message>You do not have access to this text group. Contact Chief for access.</Message></Response>`;
 		return response;
 	}
@@ -208,7 +208,7 @@ async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGate
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
-		console.log('TWILIO STATUS FAILED CODE');
+		console.log('API - ERROR - INVALID CODE');
 	}
 
 	return response;
