@@ -180,7 +180,7 @@ async function init() {
 				text.sent = text.sent || [];
 				text.undelivered = text.undelivered || [];
 
-				if (text.isPage || text.body.indexOf('https://fire.klawil.net') !== -1)
+				if (text.isPage)
 					text.pageTime = parseForPageTime(text.body);
 				
 				const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;

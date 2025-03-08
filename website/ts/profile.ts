@@ -1,5 +1,7 @@
-import { ApiUserFidoChallengeResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
-import { afterAuthUpdate, base64ToBuffer, bufferToBase64, useFidoKey, user } from './utils/auth';
+// import { ApiUserFidoChallengeResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
+// import { afterAuthUpdate, base64ToBuffer, bufferToBase64, useFidoKey, user } from './utils/auth';
+import { ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
+import { afterAuthUpdate, user } from './utils/auth';
 import { PagingTalkgroup, pagingConfig, pagingTalkgroupOrder, validDepartments } from '../../common/userConstants';
 import { formatPhone } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
@@ -115,86 +117,86 @@ async function updateUser() {
 	updateUserButton.disabled = false;
 }
 
-async function testFidoKey(btn: HTMLButtonElement, key: string) {
-	logger.trace('testFidoKey', ...arguments);
-	btn.disabled = true;
-	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
-	btn.classList.add('btn-secondary');
-	if (typeof user.fidoKeyIds === 'undefined' || typeof user.fidoKeyIds[key] === 'undefined') return;
+// async function testFidoKey(btn: HTMLButtonElement, key: string) {
+// 	logger.trace('testFidoKey', ...arguments);
+// 	btn.disabled = true;
+// 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+// 	btn.classList.add('btn-secondary');
+// 	if (typeof user.fidoKeyIds === 'undefined' || typeof user.fidoKeyIds[key] === 'undefined') return;
 
-	await useFidoKey([ user.fidoKeyIds[key] ], true);
+// 	await useFidoKey([ user.fidoKeyIds[key] ], true);
 
-	btn.disabled = false;
-	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
-	btn.classList.add('btn-success');
-}
+// 	btn.disabled = false;
+// 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+// 	btn.classList.add('btn-success');
+// }
 
-const addFidoButton = <HTMLButtonElement>document.getElementById('add-fido-button');
-const addFidoKeyName = <HTMLInputElement>document.getElementById('fidoName');
-async function addFidoKey() {
-	logger.trace('addFidoKey', ...arguments);
-	if (addFidoKeyName.value === '') {
-		showAlert('danger', 'A name is required to add a Fido key');
-		return;
-	}
-	const newName = addFidoKeyName.value;
-	addFidoButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
-	addFidoButton.classList.add('btn-secondary');
-	addFidoButton.disabled = true;
+// const addFidoButton = <HTMLButtonElement>document.getElementById('add-fido-button');
+// const addFidoKeyName = <HTMLInputElement>document.getElementById('fidoName');
+// async function addFidoKey() {
+// 	logger.trace('addFidoKey', ...arguments);
+// 	if (addFidoKeyName.value === '') {
+// 		showAlert('danger', 'A name is required to add a Fido key');
+// 		return;
+// 	}
+// 	const newName = addFidoKeyName.value;
+// 	addFidoButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
+// 	addFidoButton.classList.add('btn-secondary');
+// 	addFidoButton.disabled = true;
 
-	let result: ApiUserFidoRegisterResponse = {
-		success: false,
-		message: 'Unknown failure',
-	};
-	try {
-		// Get the attestation
-		const attestationOptions: ApiUserFidoChallengeResponse = await fetch(`/api/user?action=fido-challenge`, {
-			method: 'POST',
-			body: JSON.stringify({ name: newName }),
-		}).then(r => r.json());
-		const credential = (await navigator.credentials.create({
-			publicKey: {
-				...attestationOptions.options,
-				challenge: base64ToBuffer(attestationOptions.options.challenge),
-				user: {
-					...attestationOptions.options.user,
-					id: base64ToBuffer(attestationOptions.options.user.id),
-				}
-			},
-		})) as PublicKeyCredential & {
-			response: AuthenticatorAttestationResponse;
-		};
-		const credentialId = bufferToBase64(credential.rawId);
+// 	let result: ApiUserFidoRegisterResponse = {
+// 		success: false,
+// 		message: 'Unknown failure',
+// 	};
+// 	try {
+// 		// Get the attestation
+// 		const attestationOptions: ApiUserFidoChallengeResponse = await fetch(`/api/user?action=fido-challenge`, {
+// 			method: 'POST',
+// 			body: JSON.stringify({ name: newName }),
+// 		}).then(r => r.json());
+// 		const credential = (await navigator.credentials.create({
+// 			publicKey: {
+// 				...attestationOptions.options,
+// 				challenge: base64ToBuffer(attestationOptions.options.challenge),
+// 				user: {
+// 					...attestationOptions.options.user,
+// 					id: base64ToBuffer(attestationOptions.options.user.id),
+// 				}
+// 			},
+// 		})) as PublicKeyCredential & {
+// 			response: AuthenticatorAttestationResponse;
+// 		};
+// 		const credentialId = bufferToBase64(credential.rawId);
 
-		const registerCredentialBody: ApiUserFidoRegisterBody = {
-			challenge: attestationOptions.options.challenge,
-			name: newName,
-			userId: attestationOptions.options.user.id,
-			credential: {
-				rawId: credentialId,
-				response: {
-					attestationObject: bufferToBase64(credential.response.attestationObject),
-					clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
-				}
-			}
-		};
-		result = await fetch(`/api/user?action=fido-register`, {
-			method: 'POST',
-			body: JSON.stringify(registerCredentialBody),
-		}).then(r => r.json());
-	} catch (e) {
-		logger.error('addFidoKey', e);
-		result.message = (<Error>e).message;
-	}
+// 		const registerCredentialBody: ApiUserFidoRegisterBody = {
+// 			challenge: attestationOptions.options.challenge,
+// 			name: newName,
+// 			userId: attestationOptions.options.user.id,
+// 			credential: {
+// 				rawId: credentialId,
+// 				response: {
+// 					attestationObject: bufferToBase64(credential.response.attestationObject),
+// 					clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+// 				}
+// 			}
+// 		};
+// 		result = await fetch(`/api/user?action=fido-register`, {
+// 			method: 'POST',
+// 			body: JSON.stringify(registerCredentialBody),
+// 		}).then(r => r.json());
+// 	} catch (e) {
+// 		logger.error('addFidoKey', e);
+// 		result.message = (<Error>e).message;
+// 	}
 
-	const alertMessage = `New Key Registration: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
-	showAlert(result.success ? 'success' : 'danger', alertMessage);
+// 	const alertMessage = `New Key Registration: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
+// 	showAlert(result.success ? 'success' : 'danger', alertMessage);
 
-	addFidoButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
-	addFidoButton.classList.add('btn-success');
-	addFidoButton.disabled = false;
-}
-addFidoButton.addEventListener('click', addFidoKey);
+// 	addFidoButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
+// 	addFidoButton.classList.add('btn-success');
+// 	addFidoButton.disabled = false;
+// }
+// addFidoButton.addEventListener('click', addFidoKey);
 
 function init() {
 	logger.trace('init', ...arguments);
@@ -231,33 +233,33 @@ function init() {
 	if (pageGroupContainer !== null)
 		pagingTalkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
 
-	const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
-	Object.keys(user.fidoKeyIds || {}).forEach(key => {
-		const tr = createTableRow(null, {
-			columns: [
-				{
-					html: key
-				},
-				{
-					create: td => {
-						if (window.PublicKeyCredential) {
-							const testBtn = document.createElement('button');
-							td.appendChild(testBtn);
-							testBtn.classList.add('btn', 'btn-success');
-							testBtn.innerHTML = 'Test';
-							testBtn.addEventListener('click', testFidoKey.bind(null, testBtn, key));
-						}
-						const deleteBtn = document.createElement('button');
-						td.appendChild(deleteBtn);
-						deleteBtn.classList.add('btn', 'btn-danger', 'ms-3');
-						deleteBtn.innerHTML = 'Delete';
-					},
-				},
-			]
-		});
-		if (fidoRow.parentElement !== null)
-			fidoRow.parentElement.insertBefore(tr, fidoRow);
-	});
+	// const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
+	// Object.keys(user.fidoKeyIds || {}).forEach(key => {
+	// 	const tr = createTableRow(null, {
+	// 		columns: [
+	// 			{
+	// 				html: key
+	// 			},
+	// 			{
+	// 				create: td => {
+	// 					if (window.PublicKeyCredential) {
+	// 						const testBtn = document.createElement('button');
+	// 						td.appendChild(testBtn);
+	// 						testBtn.classList.add('btn', 'btn-success');
+	// 						testBtn.innerHTML = 'Test';
+	// 						testBtn.addEventListener('click', testFidoKey.bind(null, testBtn, key));
+	// 					}
+	// 					const deleteBtn = document.createElement('button');
+	// 					td.appendChild(deleteBtn);
+	// 					deleteBtn.classList.add('btn', 'btn-danger', 'ms-3');
+	// 					deleteBtn.innerHTML = 'Delete';
+	// 				},
+	// 			},
+	// 		]
+	// 	});
+	// 	if (fidoRow.parentElement !== null)
+	// 		fidoRow.parentElement.insertBefore(tr, fidoRow);
+	// });
 
 	updateUserButton.disabled = false;
 	updateUserButton.addEventListener('click', updateUser);
@@ -265,10 +267,10 @@ function init() {
 	doneLoading();
 }
 
-if (window.PublicKeyCredential) {
-	(<HTMLDivElement[]>Array.from(document.getElementsByClassName('hide-no-fido'))).forEach((div) => {
-		div.hidden = false;
-	});
-}
+// if (window.PublicKeyCredential) {
+// 	(<HTMLDivElement[]>Array.from(document.getElementsByClassName('hide-no-fido'))).forEach((div) => {
+// 		div.hidden = false;
+// 	});
+// }
 
 afterAuthUpdate.push(init);

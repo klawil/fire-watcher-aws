@@ -40,7 +40,7 @@ layout: base
 	</div>
 </div>
 
-<h2 class="text-center mt-3">Authentication Devices:</h2>
+{% comment %} <h2 class="text-center mt-3">Authentication Devices:</h2>
 <div class="table-responsive">
 	<table class="table table-striped text-center align-middle">
 		<thead>
@@ -56,7 +56,7 @@ layout: base
 			</tr>
 		</tbody>
 	</table>
-</div>
+</div> {% endcomment %}
 
 {% assign randomNumber = "now" | date: "%N" %}
 <script async src="/js/profile.js?v={{ randomNumber }}"></script>
