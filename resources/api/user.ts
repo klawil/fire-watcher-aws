@@ -327,6 +327,8 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		body.phone.replace(/[^0-9]/g, '').length !== 10
 	) {
 		response.errors.push('phone');
+	} else {
+		body.phone = body.phone.replace(/[^0-9]/g, '');
 	}
 	if (
 		typeof body.fName !== 'string' ||
@@ -368,7 +370,6 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		response.errors.push('phone');
 	}
 
-
 	if (response.errors.length > 0) {
 		response.success = false;
 		return {
@@ -381,7 +382,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	const result = await dynamodb.updateItem({
 		TableName: userTable,
 		Key: {
-			phone: { N: body.phone.replace(/[^0-9]/g, '') }
+			phone: { N: body.phone }
 		},
 		ExpressionAttributeNames: {
 			'#fn': 'fName',
@@ -402,10 +403,26 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep',
 		ReturnValues: 'UPDATED_NEW'
 	}).promise();
-	response.data = [ result ];
+	if (!result.Attributes) {
+		response.success = false;
+	} else if (
+		body.isActive &&
+		(
+			!newPhone ||
+			!newPhone.Item?.isActive?.BOOL
+		)
+	) {
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify({
+				action: 'activate',
+				phone: body.phone
+			}),
+			QueueUrl: queueUrl
+		}).promise();
+	}
 
 	return {
-		statusCode: 200,
+		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response)
 	};
 }
