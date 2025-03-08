@@ -1,21 +1,7 @@
 import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 import * as AWS from 'aws-sdk';
-
-interface ResultJson {
-	bans: string;
-	readiness: {
-		[key: string]: number;
-	};
-	stateFires: {
-		new?: number[];
-		ongoing?: number[];
-		rx?: number[];
-		team?: number[];
-	};
-	updated: string;
-	weather: string;
-}
+import { WeatherResultJson } from '../common/weather';
 
 interface GaccUrlObject {
 	new: string;
@@ -77,11 +63,11 @@ function processGaccUrl(url: string): Promise<number[]> {
     .catch(e => [-1, -1]);
 }
 
-function getStateFires(): Promise<ResultJson['stateFires']> {
-  const keys: (keyof ResultJson['stateFires'])[] = Object.keys(currentFireUrls) as unknown as (keyof ResultJson['stateFires'])[];
+function getStateFires(): Promise<WeatherResultJson['stateFires']> {
+  const keys: (keyof WeatherResultJson['stateFires'])[] = Object.keys(currentFireUrls) as unknown as (keyof WeatherResultJson['stateFires'])[];
   return Promise.all(keys.map(key => processGaccUrl(currentFireUrls[key as keyof GaccUrlObject])))
-    .then(data => data.reduce((agg: ResultJson['stateFires'], data, ind) => {
-      agg[keys[ind] as keyof ResultJson['stateFires']] = data;
+    .then(data => data.reduce((agg: WeatherResultJson['stateFires'], data, ind) => {
+      agg[keys[ind] as keyof WeatherResultJson['stateFires']] = data;
       return agg;
     }, {}))
     .catch(e => {
@@ -90,7 +76,7 @@ function getStateFires(): Promise<ResultJson['stateFires']> {
 		});
 }
 
-function getReadinessInfo(): Promise<ResultJson['readiness']> {
+function getReadinessInfo(): Promise<WeatherResultJson['readiness']> {
   return fetch(readiness)
     .then(r => r.text())
     .then(html => parse(html))
@@ -104,7 +90,7 @@ function getReadinessInfo(): Promise<ResultJson['readiness']> {
         return {};
       }
 
-      return readiness.reduce((agg: ResultJson['readiness'], label, index) => {
+      return readiness.reduce((agg: WeatherResultJson['readiness'], label, index) => {
         agg[label] = parseInt(levels[index]);
         return agg;
       }, {});
@@ -155,7 +141,7 @@ function buildTimeframe(onset: string, ends: string): string {
   }
 }
 
-function getAreaAlerts(): Promise<ResultJson['weather']> {
+function getAreaAlerts(): Promise<WeatherResultJson['weather']> {
   return fetch(weatherAlertsApi, {
     headers: {
       'User-Agent': 'klawil willyk95@gmail.com',
@@ -196,7 +182,7 @@ function getAreaAlerts(): Promise<ResultJson['weather']> {
     .then(str => str.replace(/(\.\.\.)([^ ])/g, (a, b, c) => `${b} ${c}`));
 }
 
-function getCountyRestrictions(): Promise<ResultJson['bans']> {
+function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
   return fetch(countyRestrictionUrl)
     .then(r => r.text())
     .then(html => html.split('\n').filter(line => line.indexOf('var _pageData = ') !== -1)[0])
@@ -244,7 +230,7 @@ export async function main() {
 			bans: data[3],
 			updated: `Data fetched on ${dateToLocalString(new Date()).join(' at ')}`
 		}))
-		.then((data: ResultJson) => JSON.stringify(data))
+		.then((data: WeatherResultJson) => JSON.stringify(data))
 		.then(data => uploadFile(data))
 		.catch(console.error);
 }

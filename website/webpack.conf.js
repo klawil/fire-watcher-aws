@@ -6,6 +6,7 @@ const config = {
 		profile: './website/ts/profile.ts',
 		login: './website/ts/login.ts',
 		texts: './website/ts/texts.ts',
+		weather: './website/ts/weather.ts',
 	},
   output: {
     path: path.resolve(__dirname, 'js'),
@@ -27,7 +28,8 @@ const config = {
       '.js'
     ]
   },
-	devtool: 'inline-source-map',
+  devtool: 'eval-source-map',
+	// devtool: 'inline-source-map',
 };
 
 module.exports = config;
