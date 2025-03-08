@@ -653,7 +653,7 @@ async function handleTranscribe(body: TranscribeBody) {
 	let transcript = result.results.transcripts[0].transcript === ''
 		? 'No voices detected'
 		: result.results.transcripts[0].transcript;
-	const messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${transcript}`;
+	const messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pageConfigs[tg].linkPreset}`;
 
 	// Get recipients and send
 	const recipients = (await getRecipients('all', tg))
