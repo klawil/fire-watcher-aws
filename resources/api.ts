@@ -11,6 +11,15 @@ const phoneTable = process.env.TABLE_PHONE as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
 
+const ignorePrefixes = [
+	'Liked',
+	'Loved',
+	'Disliked',
+	'Laughed at',
+	'Questioned'
+]
+	.map(p => `${p}+`);
+
 interface Cookies {
 	[key: string]: string;
 }
@@ -190,14 +199,21 @@ async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		return response;
 	}
 
-	await sqs.sendMessage({
-		MessageBody: JSON.stringify({
-			action: 'twilio',
-			sig: event.headers['X-Twilio-Signature'],
-			body: event.body
-		}),
-		QueueUrl: queueUrl
-	}).promise();
+	const isAppleResponse = ignorePrefixes
+		.reduce((bool, prefix) => bool || eventData.Body.indexOf(prefix) === 0, false);
+
+	if (isAppleResponse) {
+		console.log(`API - APPLE - ${sender.Item.phone.N}`);
+	} else {
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify({
+				action: 'twilio',
+				sig: event.headers['X-Twilio-Signature'],
+				body: event.body
+			}),
+			QueueUrl: queueUrl
+		}).promise();
+	}
 
 	return response;
 }
