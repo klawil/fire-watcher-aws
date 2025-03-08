@@ -476,12 +476,22 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TWILIO_SECRET: secretArn,
         TABLE_USER: phoneNumberTable.tableName,
-        TABLE_MESSAGES: textsTable.tableName
+        TABLE_MESSAGES: textsTable.tableName,
+        CACHE_BUCKET: costDataS3Bucket.bucketName,
       }
     });
     textsTable.grantReadWriteData(alarmQueueHandler);
     phoneNumberTable.grantReadData(alarmQueueHandler);
     twilioSecret.grantRead(alarmQueueHandler);
+    costDataS3Bucket.grantReadWrite(alarmQueueHandler);
+
+    // Schedule the function for every 5 minutes
+    const alarmEventRule = new events.Rule(this, 'alarm-rule', {
+      schedule: events.Schedule.cron({
+        minute: '*/5'
+      }),
+    });
+    alarmEventRule.addTarget(new targets.LambdaFunction(alarmQueueHandler));
 
     const alarmAction = new cw_actions.LambdaAction(alarmQueueHandler);
 
