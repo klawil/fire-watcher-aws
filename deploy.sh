@@ -1,15 +1,21 @@
 #!/bin/zsh
 
-source ~/.zshrc
-nvm use 18
+echo -n "Deploy the stack (Y/N): "
+read confirmStack
+echo -n "Deploy the client (Y/N): "
+read confirmClient
 
-cd stack
-npm run build
-cdk deploy --all
-node test.js
-cd ..
+if [[ $confirmStack == [yY] || $confirmStack == [yY][eE][sS] ]]; then
+  cd stack
+  npm run build
+  cdk deploy --all
+  node test.js
+  cd ..
+fi
 
-cd website
-npm run build
-aws s3 cp --recursive ./src/_site s3://***REMOVED***/ --acl bucket-owner-full-control --metadata-directive REPLACE
-cd ..
+if [[ $confirmClient == [yY] || $confirmClient == [yY][eE][sS] ]]; then
+  cd website
+  npm run build
+  aws s3 cp --recursive ./src/_site s3://***REMOVED***/ --acl bucket-owner-full-control --metadata-directive REPLACE
+  cd ..
+fi
