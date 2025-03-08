@@ -132,7 +132,8 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	// Find previous tokens that should be deleted
 	const now = Date.now();
 	const validUserTokens = user.Item.loginTokens?.L
-		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
+		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now)
+		.slice(-4) || [];
 
 	// Create a token and attach it
 	const token = randomString(32);
