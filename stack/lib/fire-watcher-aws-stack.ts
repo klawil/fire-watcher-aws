@@ -273,9 +273,9 @@ export class FireWatcherAwsStack extends Stack {
     eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       resources: [
-        `arn:aws:glue:us-east-2:${glueCatalogId}:table/*`,
-        `arn:aws:glue:us-east-2:${glueCatalogId}:database/*`,
-        `arn:aws:glue:us-east-2:${glueCatalogId}:catalog`,
+        `arn:aws:glue:${this.region}:${glueCatalogId}:table/*`,
+        `arn:aws:glue:${this.region}:${glueCatalogId}:database/*`,
+        `arn:aws:glue:${this.region}:${glueCatalogId}:catalog`,
       ],
       actions: [
         'glue:GetDatabase',
