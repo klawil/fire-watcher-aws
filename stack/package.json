@@ -6,6 +6,7 @@
   },
   "scripts": {
     "build": "tsc resources/auth_middleware.ts",
+    "deploy": "cdk deploy --all",
     "cdk": "cdk"
   },
   "devDependencies": {

@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+source ~/.zshrc
+
 echo -n "Deploy the stack (Y/N): "
 read confirmStack
 echo -n "Deploy the client (Y/N): "
@@ -8,7 +10,7 @@ read confirmClient
 if [[ $confirmStack == [yY] || $confirmStack == [yY][eE][sS] ]]; then
   cd stack
   npm run build
-  cdk deploy --all
+  npm run deploy
   node test.js
   cd ..
 fi
