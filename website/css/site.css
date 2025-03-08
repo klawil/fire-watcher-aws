@@ -33,4 +33,12 @@ body {
 
 .tg-row, .sortLabel {
 	cursor: pointer;
+	-webkit-transition: background-color 0.2s linear;
+  -moz-transition: background-color 0.2s linear;
+  -o-transition: background-color 0.2s linear;
+  transition: background-color 0.2s linear;
+}
+
+.tg-row-highlight {
+	background-color: #cff4fc;
 }

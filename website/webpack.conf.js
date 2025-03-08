@@ -3,17 +3,18 @@ const path = require('path');
 const config = {
 	mode: 'production',
   entry: {
+		audio: './website/ts/audio.ts',
 		conference: './website/ts/conference.ts',
-		profile: './website/ts/profile.ts',
 		login: './website/ts/login.ts',
-		texts: './website/ts/texts.ts',
-		weather: './website/ts/weather.ts',
-		users: './website/ts/users.ts',
+		profile: './website/ts/profile.ts',
 		status: './website/ts/status.ts',
+		texts: './website/ts/texts.ts',
+		users: './website/ts/users.ts',
+		weather: './website/ts/weather.ts',
 	},
   output: {
     path: path.resolve(__dirname, 'js'),
-    filename: '[name].js'
+    filename: '[name].js',
   },
   module: {
     rules: [

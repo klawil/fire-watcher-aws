@@ -3,8 +3,6 @@ titleBarTitle: DTR
 layout: base
 centerAll: true
 isAudio: true
-hasFilter: true
-latestLabel: Live
 ---
 
 <div class="row row-cols-auto text-start g-1" id="select-inputs-container"></div>
@@ -16,6 +14,7 @@ latestLabel: Live
 				<th>Len</th>
 				<th>Talkgroup</th>
 				<th>Date</th>
+				<th>Tower</th>
 				<th><i class="bi bi-star-fill"></i></th>
 			</tr>
 		</thead>
@@ -143,4 +142,4 @@ latestLabel: Live
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}
-<script async src="/js/index.js?v={{ randomNumber }}"></script>
+<script async src="/js/audio.js?v={{ randomNumber }}"></script>

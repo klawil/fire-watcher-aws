@@ -13,7 +13,7 @@
 		<link href="/libs/bootstrap-icons.css?v={{ randomNumber }}" rel="stylesheet">
 		<link href="/css/site.css?v={{ randomNumber }}" rel="stylesheet">
 
-		{% if page.hasFilter %}
+		{% if page.isAudio %}
 		<link href="/libs/datepicker-bs5.min.css?v={{ randomNumber }}" rel="stylesheet">
 		{% endif %}
 		{%if page.hasMap %}
@@ -82,7 +82,7 @@
 								</script>
 							</ul>
 						</li>
-						{% if page.hasFilter %}
+						{% if page.isAudio %}
 						<li class="nav-item hide-small" id="filter-button-d">
 							<a class="nav-link interactive-button" data-bs-toggle="modal" data-bs-target="#filter-modal">
 								<i class="bi bi-funnel-fill"></i>
@@ -95,20 +95,20 @@
 								Time
 							</a>
 						</li>
-						{% endif %}
-						{% if page.isAudio %}
 						<li class="nav-item hide-small" id="latest-button-d">
 							<a class="nav-link interactive-button">
 								<i class="bi bi-mic-fill"></i>
-								{% if page.latestLabel %}{{ page.latestLabel }}{% else %}Latest{% endif %}
+								Live
 							</a>
 						</li>
 						{% endif %}
 					</ul>
 				</div>
-				{% if page.hasFilter %}<button data-bs-toggle="modal" data-bs-target="#filter-modal" class="navbar-toggler navbar-player ms-1 interactive-button" id="filter-button-m"><i class="navbar-toggler-icon bi bi-funnel-fill"></i></button>{% endif %}
-				{% if page.hasFilter %}<button data-bs-toggle="modal" data-bs-target="#time-modal" class="navbar-toggler navbar-player ms-1 interactive-button" id="time-button-m"><i class="navbar-toggler-icon bi bi-calendar"></i></button>{% endif %}
-				{% if page.isAudio %}<button class="navbar-toggler navbar-player ms-1 interactive-button" id="latest-button-m"><i class="navbar-toggler-icon bi bi-mic-fill"></i></button>{% endif %}
+				{% if page.isAudio %}
+				<button data-bs-toggle="modal" data-bs-target="#filter-modal" class="navbar-toggler navbar-player ms-1 interactive-button" id="filter-button-m"><i class="navbar-toggler-icon bi bi-funnel-fill"></i></button>
+				<button data-bs-toggle="modal" data-bs-target="#time-modal" class="navbar-toggler navbar-player ms-1 interactive-button" id="time-button-m"><i class="navbar-toggler-icon bi bi-calendar"></i></button>
+				<button class="navbar-toggler navbar-player ms-1 interactive-button" id="latest-button-m"><i class="navbar-toggler-icon bi bi-mic-fill"></i></button>
+				{% endif  %}
 			</div>
 		</nav>
 
@@ -168,10 +168,8 @@
 				<div class="navbar-text me-auto ms-2" id="player-duration">- sec</div>
 			</div>
 		</nav>
-		<script async src="/js/audio.js?v={{ randomNumber }}"></script>
-		{% endif %}
 	
-		<script async src="/libs/bootstrap.min.js?v={{ randomNumber }}"></script>
-		{% if page.hasFilter %}<script async src="/libs/datepicker.min.js?v={{ randomNumber }}"></script>{% endif %}
+		<script async src="/libs/datepicker.min.js?v={{ randomNumber }}"></script>
+		{% endif %}
 	</body>
 </html>

@@ -1,0 +1,246 @@
+import { createTableRow } from "./table";
+
+export interface AudioFilter {
+	update: () => void;
+	get: (u: boolean) => string | null;
+	set: (val: string) => void;
+	isDefault: () => boolean;
+	setTalkgroups?: (tg: Talkgroups) => void;
+}
+
+export class ToggleFilter implements AudioFilter {
+	value: string | null = null;
+	element: HTMLInputElement
+	defaultUrl: string;
+
+	constructor(id: string) {
+		this.element = <HTMLInputElement>document.getElementById(id);
+		this.update();
+		this.defaultUrl = this.get();
+	}
+
+	update() {
+		this.value = this.element.checked ? 'y' : null;
+	}
+
+	get() {
+		return this.value === null ? null : 'y';
+	}
+
+	set(urlValue: string) {
+		this.element.checked = urlValue === 'y';
+		this.update();
+	}
+
+	isDefault() {
+		return this.get() === this.defaultUrl;
+	}
+}
+
+interface Talkgroups {
+	[key: string]: {
+		name: string;
+		selectName: string;
+	};
+}
+export class TalkgroupFilter implements AudioFilter {
+	/**
+	 * 8090 - ARCC 5
+	 * 8181 - ACFE - Alamosa County Fire EMS
+	 * 8198 - Ambo
+	 * 8330 - Mac
+	 * 8331 - BG Tac
+	 * 8332 - Fire Dispatch
+	 * 8333 - Fire Tac
+	 * 8335 - SO Dispatch
+	 * 8336 - SO Tac
+	 */
+	presets: {
+		[key: string]: string[];
+	} = {
+		'NSCAD': [ '8198' ],
+		'NSCFPD': [ '8332', '8333', '18332' ],
+		'Sag Mac': [ '8330' ],
+		'BGFD/BGEMS': [ '8090', '8331', '18331' ],
+		'SC Sheriff': [ '8335', '8336' ],
+		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333', '18332' ],
+		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
+		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
+		'ACFE': [ '8181' ],
+	};
+
+	activeTab = 'all';
+	chosenPreset: string = 'NSCFPD';
+	chosenTalkgroups: string[] = [];
+
+	tabButtons: HTMLDivElement[];
+	tabContents: HTMLDivElement[];
+
+	emergOnlyCheckbox: HTMLInputElement;
+	presetSelect: HTMLSelectElement;
+
+	talkgroupSelect: HTMLDivElement;
+	talkgroupSelected: HTMLDivElement;
+
+	defaultUrl: string;
+
+	constructor(talkgroups: Talkgroups | null) {
+		const tabs = [
+			'all',
+			'presets',
+			'talkgroups',
+		];
+
+		this.emergOnlyCheckbox = <HTMLInputElement>document.getElementById('only-emerg');
+
+		this.tabButtons = tabs
+			.map(t => `${t}-tab`)
+			.map(id => <HTMLDivElement>document.getElementById(id));
+		this.tabContents = tabs
+			.map(id => <HTMLDivElement>document.getElementById(id));
+
+		this.presetSelect = <HTMLSelectElement>document.getElementById('preset-select');
+		Object.keys(this.presets)
+			.sort()
+			.forEach(key => {
+				const elem = document.createElement('option');
+				this.presetSelect.appendChild(elem);
+				elem.value = key;
+				elem.innerHTML = key;
+				if (key === this.chosenPreset) elem.selected = true;
+			});
+
+		this.talkgroupSelect = <HTMLDivElement>document.getElementById('talkgroup-select');
+		this.talkgroupSelected = <HTMLDivElement>document.getElementById('talkgroup-select-active');
+		const talkgroupSearch = <HTMLInputElement>document.getElementById('tg-search');
+		talkgroupSearch.addEventListener('input', e => {
+			const searchValue = talkgroupSearch.value.toLowerCase();
+			let filterFunc = (elem: HTMLDivElement) => elem.innerHTML.toLowerCase().indexOf(searchValue) !== -1;
+			if (searchValue === '')
+				filterFunc = () => true;
+
+			Array.from(this.talkgroupSelect.querySelectorAll('tr'))
+				.forEach(elem => elem.hidden = filterFunc(elem));
+		});
+
+		if (talkgroups !== null)
+			this.setTalkgroups(talkgroups);
+	
+		this.update();
+		this.defaultUrl = this.get(false);
+	}
+
+	setTalkgroups(talkgroups: Talkgroups) {
+		Object.keys(talkgroups)
+			.forEach(key => {
+				const tr = createTableRow(this.talkgroupSelect, {
+					id: `tg-${key}`,
+					classList: [ 'tg-row' ],
+					columns: [
+						{ html: talkgroups[key].selectName },
+					],
+				});
+
+				tr.setAttribute('data-selected', '0');
+				tr.addEventListener('click', () => {
+					let newHome;
+					if (tr.getAttribute('data-selected') === '0') {
+						newHome = this.talkgroupSelected;
+						tr.setAttribute('data-selected', '1');
+					} else {
+						newHome = this.talkgroupSelect;
+						tr.setAttribute('data-selected', '0');
+					}
+					
+					newHome.appendChild(tr);
+				});
+
+				if (this.chosenTalkgroups.indexOf(key) !== -1) {
+					this.talkgroupSelected.appendChild(tr);
+					tr.setAttribute('data-selected', '1');
+				}
+			});
+
+		this.update();
+	}
+
+	update() {
+		this.activeTab = this.tabContents
+			.filter(div => div.classList.contains('show'))[0]
+			.id;
+
+		if (this.activeTab === 'all') return;
+
+		this.emergOnlyCheckbox.checked = false;
+
+		if (this.activeTab === 'presets') {
+			if (this.chosenPreset === null) return;
+
+			this.chosenPreset = this.presetSelect.value;
+			return;
+		}
+
+		this.chosenTalkgroups = Array.from(this.talkgroupSelected.querySelectorAll('tr'))
+			.map(elem => elem.id.slice(3));
+	}
+
+	get(forApi: boolean) {
+		if (this.activeTab === 'all')
+			return forApi ? null : 'all';
+
+		if (this.activeTab === 'presets' && this.chosenPreset === null)
+			return null;
+
+		if (this.activeTab === 'presets')
+			return forApi
+				? this.presets[this.chosenPreset].join('|')
+				: `p${this.chosenPreset}`;
+
+		if (this.chosenTalkgroups.length === 0) return null;
+
+		return forApi
+			? this.chosenTalkgroups.join('|')
+			: `tg${this.chosenTalkgroups.join('|')}`;
+	}
+
+	set(urlValue: string) {
+		if (urlValue[0] === 'p') {
+			this.activeTab = 'presets';
+			this.chosenPreset = urlValue.slice(1);
+			this.presetSelect.value = this.chosenPreset;
+		} else if (urlValue.slice(0, 2) === 'tg') {
+			this.activeTab = 'talkgroups';
+			this.chosenTalkgroups = urlValue.slice(2).split('|');
+
+			this.chosenTalkgroups.forEach(tg => {
+				let elem = document.getElementById(`tg-${tg}`);
+				if (elem === null) return;
+
+				this.talkgroupSelected.appendChild(elem);
+				elem.setAttribute('data-selected', '1');
+			});
+		} else {
+			this.activeTab = 'all';
+		}
+
+		this.tabButtons.forEach(div => {
+			if (div.id === `${this.activeTab}-tab`) {
+				div.classList.add('active');
+			} else {
+				div.classList.remove('active');
+			}
+		});
+
+		this.tabContents.forEach(div => {
+			if (div.id === this.activeTab) {
+				div.classList.add('active', 'show');
+			} else {
+				div.classList.remove('active', 'show');
+			}
+		});
+	}
+
+	isDefault() {
+		return this.get(false) === this.defaultUrl;
+	}
+}
