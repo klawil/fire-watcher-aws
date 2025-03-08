@@ -5,6 +5,7 @@ import { Chart, ChartConfiguration, ChartDataset, Point, registerables } from 'c
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { getLogger } from '../../stack/resources/utils/logger';
 import { showAlert } from './utils/alerts';
+import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
 
 const logger = getLogger('status');
 
@@ -345,7 +346,11 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 	return null;
 }
 
-async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone' | 'Saguache'): Promise<Error | null> {
+const moneyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
+async function buildCostChart(account?: PhoneNumberAccount): Promise<Error | null> {
 	logger.trace('buildCostChart', ...arguments);
 	const rawData = await fetch(`/api/twilio?action=billing${typeof account !== 'undefined' ? `&account=${account}`: ''}`)
 		.then(r => r.json());
@@ -356,14 +361,16 @@ async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone' | 'Saguach
 	}
 
 	const elem = document.getElementById(`cost-${account ? account : 'total'}`) as HTMLCanvasElement;
-	const chartLabels: string[] = [ 'Total' ];
+	if (elem === null) {
+		const errMsg = `Unable to render cost chart for ${account}: No element found`;
+		logger.error(errMsg);
+		return new Error(errMsg);
+	}
+	const chartLabels: string[] = [];
 	const chartData: {
 		data: number[];
 	}[] = [
 		{ // Level 1
-			data: [],
-		},
-		{ // Total
 			data: [],
 		},
 	];
@@ -395,8 +402,7 @@ async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone' | 'Saguach
 		'sms',
 		'phonenumbers',
 	];
-	chartData[1].data.push(keysToData.totalprice || 0);
-	const totalPrice = keysToData.totalPrice;
+	const totalPrice = keysToData.totalprice;
 	delete keysToData.totalprice;
 
 	// First layer
@@ -404,14 +410,19 @@ async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone' | 'Saguach
 	Object.keys(keysToData)
 		.filter(key => breakDown.includes(key) ||
 			breakDown.filter(cat => key.indexOf(cat) === -1).length === breakDown.length)
+		.sort((a, b) => keysToData[a] > keysToData[b] ? -1 : 1)
 		.forEach(key => {
 			layerTotal += keysToData[key];
 			chartLabels.push(key);
 			chartData[0].data.push(keysToData[key]);
 		});
-	if (layerTotal < totalPrice) {
+	if (
+		layerTotal < totalPrice &&
+		totalPrice - layerTotal >= 0.005
+	) {
 		chartLabels.push('Other');
 		chartData[0].data.push(totalPrice - layerTotal);
+		logger.warn(`Inaccurate total price, wanted ${totalPrice} got ${layerTotal}`);
 	}
 
 	const chartConfig: ChartConfiguration<'pie'> = {
@@ -428,10 +439,10 @@ async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone' | 'Saguach
 						label: context => (
 							(
 								context.chart?.data?.labels &&
-								context.chart?.data?.labels[(1 - context.datasetIndex) + context.dataIndex]
-							) ? context.chart?.data?.labels[(1 - context.datasetIndex) + context.dataIndex]
+								context.chart?.data?.labels[context.dataIndex]
+							) ? context.chart?.data?.labels[context.dataIndex]
 							: ''
-						) + ': ' + context.formattedValue
+						) + `: ${moneyFormatter.format(Number(context.raw))} / ${moneyFormatter.format(totalPrice)}`
 					}
 				},
 			}
@@ -449,10 +460,7 @@ async function refreshCharts() {
 	if (user.isDistrictAdmin) {
 		promises.push(
 			buildCostChart(),
-			buildCostChart('Baca'),
-			buildCostChart('NSCAD'),
-			buildCostChart('Crestone'),
-			buildCostChart('Saguache'),
+			...validPhoneNumberAccounts.map(buildCostChart),
 		);
 	}
 	await Promise.all(promises);

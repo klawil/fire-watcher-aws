@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone, twilioPhoneNumbers } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
-import { departmentConfig, UserDepartment, validDepartments } from '../../../common/userConstants';
+import { departmentConfig, PhoneNumberAccount, UserDepartment, validDepartments, validPhoneNumberAccounts } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';
 import { isUserActive } from '../types/auth';
 import { getLoggedInUser } from '../utils/auth';
@@ -550,9 +550,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		typeof account !== 'undefined' &&
 		(
 			typeof account !== 'string' ||
-			![
-				'Baca', 'NSCAD', 'Crestone', 'Saguache',
-			].includes(account)
+			!validPhoneNumberAccounts.includes(account as PhoneNumberAccount)
 		)
 	) {
 		return {

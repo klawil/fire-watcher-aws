@@ -22,6 +22,7 @@ import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
@@ -810,6 +811,27 @@ export class FireWatcherAwsStack extends Stack {
     });
     const apiResource = api.root.addResource('api');
 
+    // Create rest APIs for each billing department
+    type ApisByBilling = {
+      [key in PhoneNumberAccount]: {
+        api: apigateway.RestApi;
+        resource: apigateway.Resource;
+      };
+    }
+    const billingApis: ApisByBilling = validPhoneNumberAccounts.reduce((agg: Partial<ApisByBilling>, account) => {
+      const api = new apigateway.RestApi(this, `cvfd-api-gateway-${account}`, {
+        restApiName: `CVFD ${account} API Gateway`,
+        description: `API gateway for the ${account} billing account`,
+      });
+      Tags.of(api).add('CostCenter', account);
+      const resource = api.root.addResource('api').addResource(account);
+      agg[account] = {
+        api,
+        resource,
+      };
+      return agg;
+    }, {}) as ApisByBilling;
+
     interface ApiDefinition {
       name: string;
       env: {
@@ -822,6 +844,7 @@ export class FireWatcherAwsStack extends Stack {
       firehose?: kinesisfirehose.CfnDeliveryStream,
       secret?: secretsManager.ISecret;
       metrics?: boolean;
+      byAccount?: boolean;
     }
 
     const metricMappingEnv: { [key: string]: string } = {
@@ -874,6 +897,7 @@ export class FireWatcherAwsStack extends Stack {
       },
       {
         name: 'twilio',
+        byAccount: true,
         env: {
           SQS_QUEUE: queue.queueUrl,
           TWILIO_SECRET: secretArn,
@@ -995,6 +1019,14 @@ export class FireWatcherAwsStack extends Stack {
       const newApiResource = apiResource.addResource(config.name);
       newApiResource.addMethod('GET', apiIntegration);
       newApiResource.addMethod('POST', apiIntegration);
+
+      if (config.byAccount) {
+        validPhoneNumberAccounts.forEach(account => {
+          const newApiResource = billingApis[account].resource.addResource(config.name);
+          newApiResource.addMethod('GET', apiIntegration);
+          newApiResource.addMethod('POST', apiIntegration);
+        });
+      }
     });
 
     // Create a role for cloudfront to use to access s3
@@ -1072,6 +1104,36 @@ export class FireWatcherAwsStack extends Stack {
             ],
           }],
         },
+        ...validPhoneNumberAccounts
+          .map(account => ({
+            customOriginSource: {
+              domainName: `${billingApis[account].api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
+              originPath: `/${billingApis[account].api.deploymentStage.stageName}`
+            },
+            behaviors: [{
+              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+              pathPattern: `api/${account}`,
+              defaultTtl: Duration.seconds(0),
+              maxTtl: Duration.seconds(0),
+              forwardedValues: {
+                queryString: true,
+                cookies: {
+                  forward: 'all'
+                }
+              }
+            },{
+              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+              pathPattern: `api/${account}/*`,
+              defaultTtl: Duration.seconds(0),
+              maxTtl: Duration.seconds(0),
+              forwardedValues: {
+                queryString: true,
+                cookies: {
+                  forward: 'all'
+                }
+              }
+            }]
+          })),
         {
           customOriginSource: {
             domainName: `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
@@ -1100,7 +1162,7 @@ export class FireWatcherAwsStack extends Stack {
               }
             }
           }]
-        }
+        },
       ]
     });
   }

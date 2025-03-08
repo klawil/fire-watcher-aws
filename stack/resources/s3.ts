@@ -1,8 +1,8 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
-import { incrementMetric, PhoneNumberAccount } from './utils/general';
+import { incrementMetric } from './utils/general';
 import { PageBody } from './types/queue';
-import { PagingTalkgroup } from '../../common/userConstants';
+import { PagingTalkgroup, PhoneNumberAccount } from '../../common/userConstants';
 import { getLogger } from './utils/logger';
 
 const logger = getLogger('s3');

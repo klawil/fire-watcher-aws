@@ -1,5 +1,5 @@
 import * as aws from 'aws-sdk';
-import { UserDepartment, validDepartments } from '../../../common/userConstants';
+import { PhoneNumberAccount, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { getLogger } from './logger';
 import { MessageType } from '../../../common/frontendApi';
 
@@ -94,7 +94,6 @@ interface TwilioConfig {
 	voiceApiSecret: string;
 }
 
-export type PhoneNumberAccount = 'Baca' | 'NSCAD' | 'Crestone' | 'Saguache';
 interface PhoneNumberConfig {
 	name?: string;
 	number: string;
@@ -114,6 +113,7 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 	page: {
 		number: '***REMOVED***',
 		type: 'page',
+		account: 'Crestone',
 	},
 	alerts: {
 		number: '***REMOVED***',
@@ -391,7 +391,7 @@ export async function sendMessage(
 		mediaUrl,
 		from: fromNumber,
 		to: `+1${parsePhone(phone)}`,
-		statusCallback: `https://cofrn.org/api/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
+		statusCallback: `https://cofrn.org/api${numberConfig.account ? `/${numberConfig.account}` : ''}/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
 	};
 	return Promise.all([
 		twilio(accountSid, authToken)

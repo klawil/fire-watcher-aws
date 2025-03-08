@@ -25,6 +25,14 @@ export const validDepartments: UserDepartment[] = [
 	'Saguache',
 ];
 
+export type PhoneNumberAccount = 'Baca' | 'NSCAD' | 'Crestone' | 'Saguache';
+export const validPhoneNumberAccounts: PhoneNumberAccount[] = [
+	'Baca',
+	'NSCAD',
+	'Crestone',
+	'Saguache',
+];
+
 export const pagingTalkgroupOrder: PagingTalkgroup[] = [
 	8332,
 	18332,
