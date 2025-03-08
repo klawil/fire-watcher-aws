@@ -380,6 +380,11 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		errors: []
 	};
 
+	if (!user.isDistrictAdmin?.BOOL) {
+		body.pageOnly = false;
+		body.department = user.department?.S as string;
+	}
+
 	// Validate the request
 	if (
 		typeof body.phone !== 'string' ||
@@ -439,6 +444,17 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		) {
 			response.errors.push('phone');
 		}
+	}
+
+	// Check to see if someone is trying to edit a person from another department
+	if (
+		newPhone &&
+		!create &&
+		newPhone.Item &&
+		newPhone.Item.department?.S !== body.department &&
+		!user.isDistrictAdmin?.BOOL
+	) {
+		response.errors.push('phone');
 	}
 
 	if (response.errors.length > 0) {
