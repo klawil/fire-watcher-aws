@@ -365,44 +365,6 @@ function getUserRowConfig(u: UserObject, doHighlight: boolean, numDepartments: n
 								.forEach(input => input.classList.add('is-invalid'));
 						}
 					});
-
-					// if (u !== null) {
-					// 	const deleteButton = document.createElement('button');
-					// 	td.appendChild(deleteButton);
-					// 	deleteButton.classList.add('btn', 'btn-danger', 'm-1');
-					// 	deleteButton.innerHTML = 'Delete';
-					// 	deleteButton.setAttribute('data-bs-toggle', 'modal');
-					// 	deleteButton.setAttribute('data-bs-target', '#delete-modal');
-					// 	deleteButton.addEventListener('click', () => {
-					// 		deleteButton.blur();
-
-					// 		modalItems.name.innerHTML = `${userValues.fName} ${userValues.lName}`;
-					// 		const newButton = <HTMLButtonElement>modalItems.button.cloneNode(true);
-					// 		if (modalItems.button.parentElement !== null)
-					// 			modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
-					// 		modalItems.button = newButton;
-
-					// 		newButton.addEventListener('click', async () => {
-					// 			changeButtonColor(deleteButton, 'secondary');
-					// 			deleteButton.blur();
-
-					// 			const result = await fetch(`/api/user?action=delete`, {
-					// 				method: 'POST',
-					// 				body: JSON.stringify({
-					// 					phone: userValues.phone,
-					// 				}),
-					// 			}).then(r => r.json());
-
-					// 			if (result.success) {
-					// 				if (td.parentElement !== null && td.parentElement.parentElement !== null)
-					// 					td.parentElement.parentElement.removeChild(td.parentElement);
-					// 			} else {
-					// 				changeButtonColor(deleteButton, 'danger');
-					// 				showAlert('danger', 'Failed to delete user');
-					// 			}
-					// 		});
-					// 	});
-					// }
 				}
 			},
 		]
@@ -425,7 +387,7 @@ const userRoleCheckboxes: CheckboxConfig[] = [
 		name: 'getTranscript',
 		label: 'Get Transcripts',
 		val: user => user.getTranscript || false,
-	}
+	},
 ];
 
 const userAlertCheckboxes: CheckboxConfig[] = [
