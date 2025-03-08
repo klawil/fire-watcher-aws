@@ -109,14 +109,14 @@ export class FireWatcherAwsStack extends Stack {
     });
 
     phoneNumberTable.addGlobalSecondaryIndex({
-      indexName: 'StationIndex',
+      indexName: 'StationIndex2',
       partitionKey: {
         name: 'department',
         type: dynamodb.AttributeType.STRING
       },
       sortKey: {
-        name: 'callSign',
-        type: dynamodb.AttributeType.NUMBER
+        name: 'callSignS',
+        type: dynamodb.AttributeType.STRING
       }
     });
 

@@ -35,7 +35,7 @@ const defaultUserObject: UserObject = {
 	phone: '',
 	fName: '',
 	lName: '',
-	callSign: '',
+	callSignS: '',
 	isActive: true,
 	isAdmin: false,
 	pageOnly: false,
@@ -48,7 +48,7 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 		phone: u === null ? '' : u.phone.toString(),
 		fName: u === null ? '' : u.fName,
 		lName: u === null ? '' : u.lName,
-		callSign: u === null ? '' : u.callSign.toString(),
+		callSignS: u === null ? '' : u.callSignS.toString(),
 		talkgroups: u === null ? [] : u.talkgroups,
 	};
 	let enableProxy = false;
@@ -155,10 +155,10 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 			{ // callSign
 				classList: [ 'text-center' ],
 				create: makeInputCreationFn({
-					name: 'callSign',
+					name: 'callSignS',
 					placeholder: 'Callsign',
 					editable: true,
-					val: u => u.callSign,
+					val: u => u.callSignS,
 					maxWidth: '75px',
 				}),
 			},
@@ -321,7 +321,7 @@ function buildDepartmentSelect(u: UserObject | null, newUser: UserObject) {
 	const select = document.createElement('select');
 	select.classList.add('form-select');
 	select.name = 'department';
-	select.id = `${u === null ? 'new' : u.callSign}-department`;
+	select.id = `${u === null ? 'new' : u.callSignS}-department`;
 	validDepartments.forEach(value => {
 		const option = document.createElement('option');
 		select.appendChild(option);
@@ -355,7 +355,7 @@ function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
 		div.appendChild(input);
 		input.type = 'checkbox';
 		input.setAttribute('role', 'switch');
-		input.id = `talkgroups-${key}-${u === null ? 'new' : u.callSign}`;
+		input.id = `talkgroups-${key}-${u === null ? 'new' : u.callSignS}`;
 		input.value = key.toString();
 		input.name = 'talkgroups';
 		input.classList.add('form-check-input');
@@ -406,7 +406,7 @@ function buildCheckboxes(
 			input.type = 'checkbox';
 			input.setAttribute('role', 'switch');
 			input.name = checkbox.name;
-			input.id = `checkboxes-${checkbox.name}-${u === null ? 'new' : u.callSign}`;
+			input.id = `checkboxes-${checkbox.name}-${u === null ? 'new' : u.callSignS}`;
 			input.checked = !!u[checkbox.name];
 			input.classList.add('form-check-input');
 			input.addEventListener('change', () => {

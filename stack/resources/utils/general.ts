@@ -95,7 +95,7 @@ export async function getRecipients(
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
 
-		scanInput.IndexName = 'StationIndex';
+		scanInput.IndexName = 'StationIndex2';
 		scanInput.KeyConditionExpression = '#dep = :dep';
 		scanInput.ExpressionAttributeNames['#dep'] = 'department';
 		scanInput.ExpressionAttributeValues[':dep'] = { S: department };

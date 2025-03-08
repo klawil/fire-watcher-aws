@@ -11,7 +11,7 @@ const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
 	'isActive',
 	'isAdmin',
 	'department',
-	'callSign',
+	'callSignS',
 	'fName',
 	'lName',
 ];

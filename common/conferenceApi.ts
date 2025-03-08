@@ -3,7 +3,7 @@ import { ApiResponseBase } from "./common";
 export interface ConferenceAttendeeObject {
 	CallSid: string;
 	ConferenceSid: string;
-	CallSign: number;
+	CallSign: string;
 	FirstName: string;
 	LastName: string;
 	Phone: number;

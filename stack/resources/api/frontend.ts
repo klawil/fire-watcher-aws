@@ -145,12 +145,12 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
 	// Parse the body
 	const body = JSON.parse(event.body as string) as {
-		cs: number;
+		cs: string;
 		f: string;
 	};
 
 	// Validate the body
-	if (!body.cs || typeof body.cs !== 'number') {
+	if (!body.cs || typeof body.cs !== 'string') {
 		response.errors.push('cs');
 	}
 	if (!body.f || typeof body.f !== 'string') {
@@ -194,8 +194,8 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
 	if (
 		result.Items[0].csLooked &&
-		result.Items[0].csLooked.NS &&
-		result.Items[0].csLooked.NS.indexOf(`${body.cs}`) !== -1
+		result.Items[0].csLooked.SS &&
+		result.Items[0].csLooked.SS.indexOf(`${body.cs}`) !== -1
 	) {
 		response.data = [ 'Done already' ];
 		return {
@@ -220,7 +220,7 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 		},
 		ExpressionAttributeValues: {
 			':csLooked': {
-				NS: [
+				SS: [
 					`${body.cs}`
 				]
 			},

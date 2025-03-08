@@ -292,7 +292,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			'#r': 'Room',
 		},
 		ExpressionAttributeValues: {
-			':cs': userInfo.Items[0].callSign,
+			':cs': userInfo.Items[0].callSignS,
 			':fn': userInfo.Items[0].fName,
 			':ln': userInfo.Items[0].lName,
 			':p': userInfo.Items[0].phone,

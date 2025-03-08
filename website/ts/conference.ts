@@ -146,7 +146,7 @@ function showParticipants(participants: ConferenceAttendeeObject[]) {
 	lastParticipants = participants;
 
 	let validParticipants: string[] = [];
-	let inMeetingCallsign: number[] = [];
+	let inMeetingCallsign: string[] = [];
 
 	if (participants.length === 0) {
 		participantsTable.hidden = true;
@@ -209,7 +209,7 @@ function showParticipants(participants: ConferenceAttendeeObject[]) {
 	});
 
 	(<HTMLButtonElement[]>Array.from(invitableUsersTable.querySelectorAll('.invite-button'))).forEach(btn => {
-		const callSign = parseInt(btn.getAttribute('data-callsign') || '999', 10);
+		const callSign = btn.getAttribute('data-callsign') || '999';
 		if (
 			!inMeetingCallsign.includes(callSign) &&
 			btn.getAttribute('data-state') === 'on_call'
@@ -400,21 +400,21 @@ async function createInvitableTable() {
 				return 1;
 			} else if (a.fName < b.fName) {
 				return 1;
-			} else if (a.callSign > b.callSign) {
+			} else if (a.callSignS > b.callSignS) {
 				return 1;
 			}
 			return -1;
 		});
 
 	invitableUsers.forEach(u => {
-		const existingRow = document.getElementById(`${u.callSign}-invite`);
+		const existingRow = document.getElementById(`${u.callSignS}-invite`);
 		if (existingRow !== null) return;
 
 		createTableRow(invitableUsersTable, {
-			id: `${u.callSign}-invite`,
+			id: `${u.callSignS}-invite`,
 			columns: [
 				{
-					html: `${u.fName} ${u.lName} (${u.callSign})`,
+					html: `${u.fName} ${u.lName} (${u.callSignS})`,
 				},
 				{
 					html: formatPhone(u.phone),
@@ -424,8 +424,8 @@ async function createInvitableTable() {
 						const inviteBtn = document.createElement('button');
 						td.appendChild(inviteBtn);
 						inviteBtn.classList.add('btn', 'invite-button');
-						inviteBtn.id = `${u.callSign}-invite-btn`;
-						inviteBtn.setAttribute('data-callsign', u.callSign);
+						inviteBtn.id = `${u.callSignS}-invite-btn`;
+						inviteBtn.setAttribute('data-callsign', u.callSignS);
 						inviteBtn.addEventListener('click', createInviteBtnFn(inviteBtn, u));
 						updateButton(inviteBtn, 'can_invite');
 					},

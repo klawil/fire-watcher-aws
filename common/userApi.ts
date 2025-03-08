@@ -3,7 +3,7 @@ import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
 export type UserObjectBooleans = 'isActive' | 'isAdmin' | 'isDistrictAdmin'
 	| 'pageOnly' | 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
-export type UserObjectStrings = 'phone' | 'fName' | 'lName' | 'callSign';
+export type UserObjectStrings = 'phone' | 'fName' | 'lName' | 'callSignS';
 
 interface UserObjectBase1 {
 	talkgroups: PagingTalkgroup[];

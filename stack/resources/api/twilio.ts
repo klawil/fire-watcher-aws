@@ -285,7 +285,7 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 						const queueMessage: TwilioErrorBody = {
 							action: 'twilio_error',
 							count: parseInt(result.Attributes?.lastStatusCount?.N || '0', 10),
-							name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S} (${result.Attributes?.callSign?.N})`,
+							name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S} (${result.Attributes?.callSignS?.S})`,
 							number: parsePhone(result.Attributes?.phone?.N || '', true),
 							department: result.Attributes?.department?.S as UserDepartment,
 						};
@@ -409,7 +409,7 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			'#r': 'Room',
 		},
 		ExpressionAttributeValues: {
-			':cs': sender.Item.callSign,
+			':cs': sender.Item.callSignS,
 			':fn': sender.Item.fName,
 			':ln': sender.Item.lName,
 			':p': sender.Item.phone,

@@ -222,7 +222,7 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		response.isAdmin = !!parsedUser.isAdmin && !!parsedUser.isActive;
 		response.isDistrictAdmin = !!parsedUser.isDistrictAdmin;
 		response.phone = parsedUser.phone;
-		response.callSign = parsedUser.callSign;
+		response.callSignS = parsedUser.callSignS;
 		response.fName = parsedUser.fName;
 		response.lName = parsedUser.lName;
 		response.department = parsedUser.department;
@@ -359,7 +359,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#ln': 'lName',
 				'#d': 'department',
 				'#p': 'phone',
-				'#cs': 'callSign',
+				'#cs': 'callSignS',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
 				'#tg': 'talkgroups',
@@ -375,13 +375,13 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	} else {
 		usersItems = await dynamodb.query({
 			TableName: userTable,
-			IndexName: 'StationIndex',
+			IndexName: 'StationIndex2',
 			ExpressionAttributeNames: {
 				'#d': 'department',
 				'#fn': 'fName',
 				'#ln': 'lName',
 				'#p': 'phone',
-				'#cs': 'callSign',
+				'#cs': 'callSignS',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
 				'#tg': 'talkgroups',
@@ -396,7 +396,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}
 
 	if (usersItems.Items)
-		usersItems.Items = usersItems.Items.sort((a, b) => Number(a.callSign?.N || 0) > Number(b.callSign?.N || 0)
+		usersItems.Items = usersItems.Items.sort((a, b) => (a.lName?.S || '') > (b.lName?.S || '')
 			? 1
 			: -1);
 
@@ -480,10 +480,10 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	}
 	if (user.isAdmin?.BOOL) {
 		if (
-			typeof body.callSign !== 'string' ||
-			!/^[0-9]+$/.test(body.callSign)
+			typeof body.callSignS !== 'string' ||
+			!/^[0-9A-Z\-]+$/.test(body.callSignS)
 		) {
-			response.errors.push('callSign');
+			response.errors.push('callSignS');
 		}
 		if (typeof body.isActive !== 'boolean') {
 			response.errors.push('isActive');
@@ -539,7 +539,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		newPhone &&
 		!create &&
 		newPhone.Item &&
-		newPhone.Item.department?.S !== body.department &&
+		newPhone.Item.department?.S !== user.department?.S &&
 		!user.isDistrictAdmin?.BOOL
 	) {
 		response.errors.push('phone');
@@ -576,11 +576,11 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
 		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
 
-		updateConfig.ExpressionAttributeNames['#cs'] = 'callSign';
+		updateConfig.ExpressionAttributeNames['#cs'] = 'callSignS';
 		updateConfig.ExpressionAttributeNames['#act'] = 'isActive';
 		updateConfig.ExpressionAttributeNames['#adm'] = 'isAdmin';
 
-		updateConfig.ExpressionAttributeValues[':cs'] = { N: body.callSign };
+		updateConfig.ExpressionAttributeValues[':cs'] = { S: body.callSignS };
 		updateConfig.ExpressionAttributeValues[':act'] = { BOOL: body.isActive };
 		updateConfig.ExpressionAttributeValues[':adm'] = { BOOL: body.isAdmin };
 

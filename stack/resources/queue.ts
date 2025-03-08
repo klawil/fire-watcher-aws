@@ -148,7 +148,7 @@ async function handleActivation(body: ActivateBody) {
 	if (updateResult.Attributes?.department?.S !== 'Baca') {
 		promises.push(dynamodb.query({
 			TableName: phoneTable,
-			IndexName: 'StationIndex',
+			IndexName: 'StationIndex2',
 			ExpressionAttributeNames: {
 				'#admin': 'isAdmin',
 				'#dep': 'department'
@@ -270,7 +270,7 @@ async function handleTwilio(body: TwilioBody) {
 		}));
 
 	// Build the message
-	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item.callSign.N})`}: ${eventData.Body}${isFromPageNumber ? ` - ${sender.Item.callSign.N}` : ''}`;
+	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item.callSignS.S})`}: ${eventData.Body}${isFromPageNumber ? ` - ${sender.Item.callSignS.S}` : ''}`;
 	const mediaUrls: string[] = Object.keys(eventData)
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
@@ -400,7 +400,7 @@ async function handlePage(body: PageBody) {
 			messageId,
 			phone.phone.N,
 			phone.department.S as UserDepartment,
-			createPageMessage(body.key, body.tg, phone.callSign.N),
+			createPageMessage(body.key, body.tg, phone.callSignS.S),
 			[],
 			true
 		)));
@@ -598,7 +598,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			createPageMessage(
 				jobInfo.File as string,
 				tg,
-				phone.callSign.N,
+				phone.callSignS.S,
 				transcript
 			),
 			[],
