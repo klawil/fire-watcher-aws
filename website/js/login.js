@@ -92,5 +92,7 @@ window.afterAuth = window.afterAuth || [];
 window.afterAuth.push(() => {
 	if (window.user.isUser) {
 		redirectToPage();
+	} else {
+		doneLoading();
 	}
 });
