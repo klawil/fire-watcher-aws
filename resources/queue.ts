@@ -117,16 +117,24 @@ async function getRecipients(
 ) {
 	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
-		FilterExpression: '#a = :a AND #po = :po',
+		FilterExpression: '#a = :a',
 		ExpressionAttributeNames: {
-			'#a': 'isActive',
-			'#po': 'pageOnly'
+			'#a': 'isActive'
 		},
 		ExpressionAttributeValues: {
-			':a': { BOOL: true },
-			':po': { BOOL: false }
+			':a': { BOOL: true }
 		}
 	};
+	if (pageTg === null) {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.ExpressionAttributeNames['#po'] = 'pageOnly';
+		scanInput.ExpressionAttributeValues[':po'] = {
+			BOOL: false
+		};
+		scanInput.FilterExpression += ' AND (#po = :po OR attribute_not_exists(#po))';
+	}
 	if (department !== 'all') {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
@@ -395,7 +403,7 @@ async function handleTwilio(body: TwilioBody) {
 	if (!sender.Item.isActive.BOOL) {
 		throw new Error(`Invactive sender`);
 	}
-	if (sender.Item.pageOnly?.BOOL || sender.Item.department?.S === 'None') {
+	if (sender.Item.pageOnly?.BOOL) {
 		throw new Error(`Page only sender`);
 	}
 
