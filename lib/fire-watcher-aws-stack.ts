@@ -28,14 +28,6 @@ export class FireWatcherAwsStack extends Stack {
     const bucket = s3.Bucket.fromBucketName(this, bucketName, bucketName);
     const twilioSecret = secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn);
 
-    // Push the static files into the bucket
-    new s3deployment.BucketDeployment(this, 'cvfd-deploy-s3', {
-      sources: [ s3deployment.Source.asset('./website/_site') ],
-      destinationBucket: bucket,
-      accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
-      exclude: [ 'audio/*', 'weather.json' ]
-    });
-
     // Create the tables for dynamo DB
     const phoneNumberTable = new dynamodb.Table(this, 'cvfd-phone', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
