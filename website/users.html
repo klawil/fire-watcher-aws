@@ -19,5 +19,23 @@ requireAdmin: true
 	<tbody id="tbody"></tbody>
 </table>
 
+<div class="modal fade" id="delete-modal" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Are you sure?</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				Are you sure you want to delete <span id="deleteUser"></span>?
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-bs-dismiss="modal">No, do not delete</button>
+				<button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="deleteConfirm">Yes, delete this user</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 {% assign randomNumber = "now" | date: "%N" %}
 <script async src="/js/users.js?v={{ randomNumber }}"></script>

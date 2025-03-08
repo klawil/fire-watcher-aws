@@ -1,6 +1,10 @@
 window.afterAuth = window.afterAuth || [];
 
 const tbody = document.getElementById('tbody');
+const modalItems = {
+	name: document.getElementById('deleteUser'),
+	button: document.getElementById('deleteConfirm')
+};
 
 function formatPhone(phone) {
 	const first = phone.toString().substring(0, 3);
@@ -12,6 +16,7 @@ function formatPhone(phone) {
 
 function addRow(user) {
 	const tr = document.createElement('tr');
+	let button;
 
 	[
 		{
@@ -69,15 +74,18 @@ function addRow(user) {
 				input.name = value.name;
 				input.classList.add('form-check-input');
 				input.role = 'switch';
+				input.addEventListener('change', () => button.disabled = false);
 				if (value.val) input.checked = true;
 				div.appendChild(input);
 				input.reset = () => {};
 			} else if (value.type === 'button') {
 				td.classList.add('text-center');
-				const button = document.createElement('button');
+				button = document.createElement('button');
 				button.classList.add('btn', 'btn-success');
 				button.innerHTML = 'Save';
+				button.disabled = true;
 				button.addEventListener('click', () => {
+					button.disabled = true;
 					button.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 					button.classList.add('btn-secondary');
 					const user = {};
@@ -100,6 +108,7 @@ function addRow(user) {
 								button.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 								button.classList.add('btn-success');
 							} else {
+								button.disabled = false;
 								button.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 								button.classList.add('btn-danger');
 								data.errors = data.errors || inputs.map(i => i.name);
@@ -114,26 +123,38 @@ function addRow(user) {
 				const deleteButton = document.createElement('button');
 				deleteButton.classList.add('btn', 'btn-danger', 'ms-1');
 				deleteButton.innerHTML = 'Delete';
+				deleteButton.setAttribute('data-bs-toggle', 'modal');
+				deleteButton.setAttribute('data-bs-target', '#delete-modal');
 				deleteButton.addEventListener('click', () => {
-					deleteButton.classList.remove('btn-danger', 'btn-secondary');
-					deleteButton.classList.add('btn-secondary');
+					deleteButton.blur();
 
-					fetch(`${baseHost}/api/user?action=delete`, {
-						method: 'POST',
-						body: JSON.stringify({
-							phone: user.phone.toString()
+					modalItems.name.innerHTML = `${user.fName} ${user.lName}`;
+					const newButton = modalItems.button.cloneNode(true);
+					modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
+					modalItems.button = newButton;
+
+					newButton.addEventListener('click', () => {
+						deleteButton.classList.remove('btn-danger', 'btn-secondary');
+						deleteButton.classList.add('btn-secondary');
+						deleteButton.blur();
+
+						fetch(`${baseHost}/api/user?action=delete`, {
+							method: 'POST',
+							body: JSON.stringify({
+								phone: user.phone.toString()
+							})
 						})
-					})
-						.then(r => r.json())
-						.then(data => {
-							if (data.success) {
-								tr.parentElement.removeChild(tr);
-							} else {
-								deleteButton.blur();
-								deleteButton.classList.remove('btn-danger', 'btn-secondary');
-								deleteButton.classList.add('btn-danger');
-							}
-						});
+							.then(r => r.json())
+							.then(data => {
+								if (data.success) {
+									tr.parentElement.removeChild(tr);
+								} else {
+									deleteButton.blur();
+									deleteButton.classList.remove('btn-danger', 'btn-secondary');
+									deleteButton.classList.add('btn-danger');
+								}
+							});
+					});
 				});
 				td.appendChild(deleteButton);
 			} else {
@@ -163,6 +184,7 @@ function addRow(user) {
 						if (listenerRun) return;
 						listenerRun = true;
 
+						button.disabled = false;
 						input.classList.remove('d-none');
 						span.classList.add('d-none');
 						input.focus();
