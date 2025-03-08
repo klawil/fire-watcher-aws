@@ -232,7 +232,7 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 				S: 'page',
 			},
 		},
-		KeyConditionExpression: '#ip = :ip',
+		KeyConditionExpression: '#tpi = :tpi',
 		FilterExpression: '#pid = :pid AND #type = :type',
 		ScanIndexForward: false
 	}).promise();

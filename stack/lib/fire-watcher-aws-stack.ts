@@ -925,7 +925,7 @@ export class FireWatcherAwsStack extends Stack {
         env: {
           TABLE_TEXTS: textsTable.tableName,
           TABLE_USER: phoneNumberTable.tableName,
-          TABLE_SITE: siteTable.tableName
+          TABLE_SITE: siteTable.tableName,
         },
         read: [
           phoneNumberTable,

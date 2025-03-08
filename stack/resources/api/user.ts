@@ -212,6 +212,8 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}
 
 	const headers = await loginUser(parseDynamoDbAttributeMap(user.Item) as unknown as InternalUserObject);
+	logger.debug('Auth headers', headers);
+	logger.debug('Auth body', response);
 	return {
 		statusCode: 200,
 		body: JSON.stringify(response),
