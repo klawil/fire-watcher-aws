@@ -552,16 +552,16 @@ async function handlePage(body: PageBody) {
 		!!body.isTest
 	);
 
-	if (recipients.map(r => r.phone.N).indexOf('***REMOVED***') === -1) {
-		recipients.push({
-			phone: {
-				N: '***REMOVED***'
-			},
-			callSign: {
-				N: '120'
-			}
-		});
-	}
+	// if (recipients.map(r => r.phone.N).indexOf('***REMOVED***') === -1) {
+	// 	recipients.push({
+	// 		phone: {
+	// 			N: '***REMOVED***'
+	// 		},
+	// 		callSign: {
+	// 			N: '120'
+	// 		}
+	// 	});
+	// }
 
 	// Send the messages
 	await Promise.all(recipients
