@@ -7,7 +7,6 @@ const secretManager = new AWS.SecretsManager();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
-const apiCode = process.env.SERVER_CODE as string;
 
 const welcomeMessage = `Welcome to the Crestone Volunteer Fire Department text group!
 
@@ -234,12 +233,19 @@ async function handleTwilio(body: TwilioBody) {
 
 	// Get the number that was messaged
 	const messageTo = eventData.To;
+	const adminSender = !!sender.Item?.isAdmin?.BOOL;
+	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await twilioSecretPromise;
 
 	const recipients = await getRecipients()
-		.then((data) => data.filter((number) =>
-			messageTo === twilioConf.pageNumber ||
-			number.phone.N !== sender.Item?.phone.N));
+		.then((data) => data.filter((number) => {
+			if (isTest) {
+				return number.phone.N === sender.Item?.phone.N;
+			}
+
+			return messageTo === twilioConf.pageNumber ||
+				number.phone.N !== sender.Item?.phone.N
+		}));
 
 	// Build the message
 	const messageBody = `${sender.Item.name.S}: ${eventData.Body}`;
@@ -248,7 +254,12 @@ async function handleTwilio(body: TwilioBody) {
 		.map((key) => eventData[key as keyof TwilioParams] as string);
 
 	await Promise.all(recipients
-		.map((number) =>  sendMessage(number.phone.N, messageBody, mediaUrls)) || []);
+		.map((number) =>  sendMessage(
+			number.phone.N,
+			messageBody,
+			mediaUrls,
+			adminSender && messageTo === twilioConf.pageNumber
+		)) || []);
 }
 
 interface PageBody {
