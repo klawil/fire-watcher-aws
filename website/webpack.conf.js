@@ -33,7 +33,6 @@ const config = {
     ]
   },
   devtool: 'eval-source-map',
-	// devtool: 'inline-source-map',
 };
 
 module.exports = config;
