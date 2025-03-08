@@ -257,20 +257,22 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								}))
 							}
 						}).promise());
-						promises.push(dynamodb.batchWriteItem({
-							RequestItems: {
-								[dtrTranslationTable]: itemsToDelete.map(itemToDelete => ({
-									PutRequest: {
-										Item: {
-											Key: { S: itemToDelete.Key.S },
-											NewKey: { S: keptItem.Key.S },
-											TTL: { N: (Math.round(Date.now() / 1000) + (10 * 60)).toString() },
+						if (headInfo.Metadata?.tone === 'y') {
+							promises.push(dynamodb.batchWriteItem({
+								RequestItems: {
+									[dtrTranslationTable]: itemsToDelete.map(itemToDelete => ({
+										PutRequest: {
+											Item: {
+												Key: { S: itemToDelete.Key.S },
+												NewKey: { S: keptItem.Key.S },
+												TTL: { N: (Math.round(Date.now() / 1000) + (10 * 60)).toString() },
+											}
 										}
-									}
-								}))
-							}
-						}).promise()
-							.catch(e => console.error(e)));
+									}))
+								}
+							}).promise()
+								.catch(e => console.error(e)));
+						}
 						if (transcript !== null) {
 							promises.push(dynamodb.updateItem({
 								TableName: dtrTable,
