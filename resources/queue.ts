@@ -161,9 +161,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		.then((admins) => Promise.all((admins.Items || []).map((item) => {
 			return sendMessage(
 				item.phone.N,
-				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`,
-				[],
-				true
+				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
 			);
 		}))));
 
@@ -180,7 +178,12 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		Limit: 1,
 		ScanIndexForward: false
 	}).promise()
-		.then((data) => sendMessage(body.phone, createPageMessage(data.Items && data.Items[0].Key.S || ''))));
+		.then((data) => sendMessage(
+			body.phone,
+			createPageMessage(data.Items && data.Items[0].Key.S || ''),
+			[],
+			true
+		)));
 
 	return Promise.all(promises);
 }
