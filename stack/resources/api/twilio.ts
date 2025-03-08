@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone, twilioPhoneNumbers } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
-import { departmentConfig, PhoneNumberAccount, UserDepartment, validDepartments, validPhoneNumberAccounts } from '../../../common/userConstants';
+import { departmentConfig, PhoneNumberAccount, UserDepartment, validDepartments, validPhoneNumberAccounts, ValidTwilioAccounts } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';
 import { isUserActive } from '../types/auth';
 import { getLoggedInUser } from '../utils/auth';
@@ -123,7 +123,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		}), {}) as TwilioTextEvent;
 
 	// Check for config for the department
-	const phoneNumberConfig = twilioPhoneNumbers[eventData.To];
+	const phoneNumberConfig = (await twilioPhoneNumbers())[eventData.To];
 	if (
 		typeof phoneNumberConfig === 'undefined' ||
 		phoneNumberConfig.type === 'alert'
@@ -642,7 +642,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		return unauthorizedResponse;
 	}
 
-	const account = event.queryStringParameters?.account;
+	const account: ValidTwilioAccounts | undefined = event.queryStringParameters?.account as ValidTwilioAccounts | undefined;
 	if (
 		typeof account === 'undefined' &&
 		!user.isDistrictAdmin

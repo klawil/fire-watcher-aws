@@ -2,7 +2,7 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneCategories, twilioPhoneNumbers } from './utils/general';
-import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
+import { PagingTalkgroup, PhoneNumberTypes, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
@@ -134,18 +134,27 @@ async function handleActivation(body: ActivateBody) {
 		ReturnValues: 'ALL_NEW'
 	}).promise();
 
+	// Fetch the twilio config
+	const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
+	const config = departmentConfig[body.department] || departmentConfig[defaultDepartment];
+	const pagePhoneName: PhoneNumberTypes = config
+		? config.pagePhone
+		: 'page';
+	if (
+		typeof config === 'undefined'
+		|| typeof resolvedTwilioPhoneCategories[pagePhoneName] === 'undefined'
+	)
+		return;
+
 	// Send the welcome message
 	const pageTgs = (updateResult.Attributes?.talkgroups?.NS || [])
 		.map(key => Number(key))
 		.map(key => pagingConfig[key as PagingTalkgroup]?.partyBeingPaged || `Talkgroup ${key}`)
 		.join(', ')
-	const config = departmentConfig[body.department] || departmentConfig[defaultDepartment];
-	if (typeof config === 'undefined')
-		return;
 	const messagePieces: {
 		[key in WelcomeMessageConfigKeys]: string;
 	} = {
-		pageNumber: formatPhone(twilioPhoneCategories[config.pagePhone].number.slice(2)),
+		pageNumber: formatPhone(resolvedTwilioPhoneCategories[pagePhoneName].number.slice(2)),
 		name: config.name,
 		type: config.type,
 	};
@@ -205,12 +214,14 @@ async function handleActivation(body: ActivateBody) {
 					null,
 					body.department
 				),
-				...adminsToSendTo.map((item) => sendMessage(
+				...adminsToSendTo.map(async (item) => sendMessage(
 					metricSource,
 					'departmentAlert',
 					adminMessageId,
 					item.phone.N as string,
-					groupType === 'page' ? getPageNumber(item) : (config.textPhone || config.pagePhone),
+					groupType === 'page'
+						? await getPageNumber(item)
+						: (config.textPhone || config.pagePhone),
 					adminMessageBody
 				)),
 			]);
@@ -277,10 +288,11 @@ async function handleTwilio(body: TwilioBody) {
 	eventData.Body = eventData.Body.replace(/\+/g, ' ');
 
 	// Get the configuration for the number the text was sent to
-	if (typeof twilioPhoneNumbers[eventData.To] === 'undefined') {
+	const resolvedTwilioPhoneNumbers = await twilioPhoneNumbers();
+	if (typeof resolvedTwilioPhoneNumbers[eventData.To] === 'undefined') {
 		throw new Error(`Message to unkown Twilio number - ${eventData.To}`);
 	}
-	const phoneNumberConfig = twilioPhoneNumbers[eventData.To];
+	const phoneNumberConfig = resolvedTwilioPhoneNumbers[eventData.To];
 	if (typeof phoneNumberConfig === 'undefined') {
 		throw new Error(`Message to Twilio number without assigned config - ${eventData.To}`);
 	}
@@ -416,12 +428,12 @@ async function handleTwilioError(body: TwilioErrorBody) {
 		null,
 		null,
 	);
-	await Promise.all(recipients.map(user => sendMessage(
+	await Promise.all(recipients.map(async user => sendMessage(
 		metricSource,
 		'departmentAlert',
 		messageId,
 		user.phone.N as string,
-		getPageNumber(user),
+		await getPageNumber(user),
 		message,
 		[]
 	)));
@@ -486,12 +498,12 @@ async function handleAnnounce(body: AnnounceBody) {
 	// Send the messages
 	await Promise.all(recipients
 		.filter(phone => typeof phone.phone?.N !== 'undefined')
-		.map(phone => sendMessage(
+		.map(async phone => sendMessage(
 			metricSource,
 			messageType,
 			messageId,
 			phone.phone.N as string,
-			getPageNumber(phone),
+			await getPageNumber(phone),
 			announceBody,
 			[],
 		)));
@@ -564,12 +576,12 @@ async function handlePage(body: PageBody) {
 	// Send the messages
 	await Promise.all(recipients
 		.filter(phone => typeof phone.phone?.N !== 'undefined')
-		.map(phone => sendMessage(
+		.map(async phone => sendMessage(
 			metricSource,
 			'page',
 			messageId,
 			phone.phone.N as string,
-			getPageNumber(phone),
+			await getPageNumber(phone),
 			createPageMessage(body.key, body.tg, phone.phone.N),
 			[],
 		)));
@@ -615,7 +627,7 @@ async function handleLogin(body: LoginBody) {
 		'account',
 		null,
 		body.phone,
-		getPageNumber(updateResult.Attributes),
+		await getPageNumber(updateResult.Attributes),
 		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`,
 		[]
 	);
@@ -772,12 +784,12 @@ async function handleTranscribe(body: TranscribeBody) {
 	if (jobInfo.File) {
 		await Promise.all(recipients
 			.filter(phone => typeof phone.phone.N !== 'undefined')
-			.map(phone => sendMessage(
+			.map(async phone => sendMessage(
 				metricSource,
 				'transcript',
 				messageId,
 				phone.phone.N as string,
-				getPageNumber(phone),
+				await getPageNumber(phone),
 				createPageMessage(
 					jobInfo.File as string,
 					tg,
@@ -789,12 +801,12 @@ async function handleTranscribe(body: TranscribeBody) {
 	} else {
 		await Promise.all(recipients
 			.filter(number => typeof number.phone.N !== 'undefined')
-			.map(number => sendMessage(
+			.map(async number => sendMessage(
 				metricSource,
 				'transcript',
 				messageId,
 				number.phone.N as string,
-				getPageNumber(number),
+				await getPageNumber(number),
 				messageBody,
 				[]
 			)));

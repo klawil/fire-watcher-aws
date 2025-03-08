@@ -26,13 +26,18 @@ export const pagingTalkgroupOrder = [
 ] as const;
 export type PagingTalkgroup = typeof pagingTalkgroupOrder[number];
 
+export type ValidTwilioAccounts = '' | PhoneNumberAccount;
+export type ValidTwilioNumberTypes = 'page' | 'alert' | 'chat';
+
+export type PhoneNumberTypes = `${ValidTwilioNumberTypes}${ValidTwilioAccounts}`;
+
 interface DepartmentConfig {
 	name: string;
 	shortName: string;
 	defaultTalkgroups: PagingTalkgroup[];
 	type: 'text' | 'page';
-	pagePhone: string;
-	textPhone?: string;
+	pagePhone: PhoneNumberTypes;
+	textPhone?: PhoneNumberTypes;
 }
 
 interface PageConfig {

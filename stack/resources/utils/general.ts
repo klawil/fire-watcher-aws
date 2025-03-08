@@ -1,5 +1,5 @@
 import * as aws from 'aws-sdk';
-import { PhoneNumberAccount, UserDepartment, validDepartments } from '../../../common/userConstants';
+import { PhoneNumberAccount, PhoneNumberTypes, UserDepartment, validDepartments, ValidTwilioAccounts, ValidTwilioNumberTypes } from '../../../common/userConstants';
 import { getLogger } from './logger';
 import { MessageType } from '../../../common/frontendApi';
 
@@ -80,9 +80,6 @@ export async function getRecipients(
 		.then((data) => data.Items || []);
 }
 
-type ValidTwilioAccounts = '' | PhoneNumberAccount;
-type ValidTwilioNumberTypes = 'page' | 'alert' | 'chat';
-
 type AccountSidKey = `accountSid${ValidTwilioAccounts}`;
 type AuthTokenKey = `authToken${ValidTwilioAccounts}`;
 type PhoneNumberKey = `phoneNumber${ValidTwilioAccounts}${ValidTwilioNumberTypes}`;
@@ -104,65 +101,114 @@ type TwilioConfig = {
 
 interface PhoneNumberConfig {
 	name?: string;
-	number: string; // PhoneNumberKey;
+	number: string;
+	numberKey: PhoneNumberKey;
 	account?: PhoneNumberAccount;
 	type: ValidTwilioNumberTypes;
 	department?: UserDepartment;
 }
 
-const twilioSecretId = process.env.TWILIO_SECRET as string;
-export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
-	pageBaca: {
-		type: 'page',
-		number: '***REMOVED***', // 'phoneNumberBacapage',
-		account: 'Baca',
-		department: 'Baca',
-	},
-	page: {
-		number: '***REMOVED***', // 'phoneNumberCrestonepage',
-		type: 'page',
-		account: 'Crestone',
-	},
-	alerts: {
-		number: '***REMOVED***', // 'phoneNumberalert',
-		type: 'alert',
-	},
-	chatCrestone: {
-		number: '***REMOVED***', // 'phoneNumberCrestonechat',
-		type: 'chat',
-		department: 'Crestone',
-		account: 'Crestone',
-	},
-	chatNSCAD: {
-		number: '***REMOVED***', // 'phoneNumberNSCADchat',
-		type: 'chat',
-		department: 'NSCAD',
-		account: 'NSCAD',
-	},
-	pageNSCAD: {
-		number: '***REMOVED***', // 'phoneNumberNSCADpage',
-		type: 'page',
-		department: 'NSCAD',
-		account: 'NSCAD',
-	},
-	pageSaguache: {
-		number: '***REMOVED***', // 'phoneNumberSaguachepage',
-		type: 'page',
-		department: 'Saguache',
-		account: 'Saguache',
-	},
-};
-export const twilioPhoneNumbers: { [key: string]: PhoneNumberConfig } = Object.keys(twilioPhoneCategories)
-	.reduce((agg: {
-		[key: string]: PhoneNumberConfig;
-	}, key) => {
-		agg[twilioPhoneCategories[key].number] = {
-			name: key,
-			...twilioPhoneCategories[key]
-		};
+type TwilioPhoneCategories = {
+	[key in PhoneNumberTypes]?: PhoneNumberConfig;
+}
 
-		return agg;
-	}, {});
+const twilioSecretId = process.env.TWILIO_SECRET as string;
+let cachedTwilioPhoneCategories: null | Promise<TwilioPhoneCategories> = null;
+export const twilioPhoneCategories: () => Promise<TwilioPhoneCategories> = async () => {
+	if (cachedTwilioPhoneCategories === null) {
+		cachedTwilioPhoneCategories = (async () => {
+			const baseObject: TwilioPhoneCategories = {
+				pageBaca: {
+					type: 'page',
+					number: '',
+					numberKey: 'phoneNumberBacapage',
+					account: 'Baca',
+					department: 'Baca',
+				},
+				page: {
+					number: '',
+					numberKey: 'phoneNumberCrestonepage',
+					type: 'page',
+					account: 'Crestone',
+				},
+				alert: {
+					number: '',
+					numberKey: 'phoneNumberalert',
+					type: 'alert',
+				},
+				chatCrestone: {
+					number: '',
+					numberKey: 'phoneNumberCrestonechat',
+					type: 'chat',
+					department: 'Crestone',
+					account: 'Crestone',
+				},
+				chatNSCAD: {
+					number: '',
+					numberKey: 'phoneNumberNSCADchat',
+					type: 'chat',
+					department: 'NSCAD',
+					account: 'NSCAD',
+				},
+				pageNSCAD: {
+					number: '',
+					numberKey: 'phoneNumberNSCADpage',
+					type: 'page',
+					department: 'NSCAD',
+					account: 'NSCAD',
+				},
+				pageSaguache: {
+					number: '',
+					numberKey: 'phoneNumberSaguachepage',
+					type: 'page',
+					department: 'Saguache',
+					account: 'Saguache',
+				},
+			};
+
+			const twilioConf = await getTwilioSecret();
+
+			(Object.keys(baseObject) as (keyof TwilioPhoneCategories)[]).forEach(key => {
+				if (
+					typeof baseObject[key] === 'undefined' ||
+					typeof twilioConf[baseObject[key].numberKey] === 'undefined'
+				) {
+					delete baseObject[key];
+					return;
+				}
+
+				baseObject[key].number = twilioConf[baseObject[key].numberKey] as string;
+			});
+			return baseObject;
+		})();
+	}
+
+	return cachedTwilioPhoneCategories;
+};
+
+interface TwilioPhoneNumbers {
+	[key: string]: PhoneNumberConfig;
+};
+let cachedTwilioPhoneNumbers: null | Promise<TwilioPhoneNumbers> = null;
+export const twilioPhoneNumbers: () => Promise<TwilioPhoneNumbers> = async () => {
+	if (cachedTwilioPhoneNumbers === null) {
+		cachedTwilioPhoneNumbers = (async () => {
+			const phoneCategories = await twilioPhoneCategories();
+			return (Object.keys(phoneCategories) as (keyof TwilioPhoneCategories)[])
+				.reduce((agg: TwilioPhoneNumbers, key) => {
+					if (typeof phoneCategories[key] !== 'undefined') {
+						agg[phoneCategories[key].number] = {
+							name: key,
+							...phoneCategories[key]
+						};
+					}
+
+					return agg;
+				}, {});
+			})();
+	}
+	return cachedTwilioPhoneNumbers;
+}
 
 let twilioSecret: null | Promise<TwilioConfig> = null;
 export async function getTwilioSecret(): Promise<TwilioConfig> {
@@ -290,7 +336,7 @@ export async function saveMessageData(
 }
 
 const DEFAULT_PAGE_NUMBER = 'page';
-export function getPageNumber(user: AWS.DynamoDB.AttributeMap): string {
+export async function getPageNumber(user: AWS.DynamoDB.AttributeMap): Promise<PhoneNumberTypes> {
 	// Loop over the departments the person is a member of and look for paging groups
 	let possibleDepartments: UserDepartment[] = [];
 	for (let i = 0; i < validDepartments.length; i++) {
@@ -302,9 +348,10 @@ export function getPageNumber(user: AWS.DynamoDB.AttributeMap): string {
 	}
 
 	// Use the only department if there is one
+	const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
 	if (possibleDepartments.length === 1) {
-		return typeof twilioPhoneCategories[`page${possibleDepartments[0]}`] !== 'undefined'
-			? `page${possibleDepartments[0]}`
+		return typeof resolvedTwilioPhoneCategories[`page${possibleDepartments[0]}` as PhoneNumberTypes] !== 'undefined'
+			? `page${possibleDepartments[0]}` as PhoneNumberTypes
 			: DEFAULT_PAGE_NUMBER;
 	}
 
@@ -312,9 +359,9 @@ export function getPageNumber(user: AWS.DynamoDB.AttributeMap): string {
 	if (
 		typeof user.pagingPhone?.S !== 'undefined' &&
 		validDepartments.includes(user.pagingPhone.S as UserDepartment) &&
-		typeof twilioPhoneCategories[`page${user.pagingPhone.S as UserDepartment}`] !== 'undefined'
+		typeof resolvedTwilioPhoneCategories[`page${user.pagingPhone.S as UserDepartment}` as PhoneNumberTypes] !== 'undefined'
 	) {
-		return `page${user.pagingPhone.S as UserDepartment}`;
+		return `page${user.pagingPhone.S as UserDepartment}` as PhoneNumberTypes;
 	}
 
 	// Use the global paging number if the user is:
@@ -336,13 +383,14 @@ export async function sendMessage(
 	messageType: MessageType,
 	messageId: string | null,
 	phone: string,
-	sendNumberCategory: string,
+	sendNumberCategory: PhoneNumberTypes,
 	body: string,
 	mediaUrl: string[] = []
 ) {
 	logger.trace('sendMessage', ...arguments);
 
-	if (typeof twilioPhoneCategories[sendNumberCategory] === 'undefined') {
+	const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
+	if (typeof resolvedTwilioPhoneCategories[sendNumberCategory] === 'undefined') {
 		logger.error('sendMessage', `Invalid number category - ${sendNumberCategory}`);
 		await incrementMetric('Error', {
 			source: metricSource,
@@ -350,7 +398,7 @@ export async function sendMessage(
 		});
 		return;
 	}
-	const numberConfig = twilioPhoneCategories[sendNumberCategory];
+	const numberConfig = resolvedTwilioPhoneCategories[sendNumberCategory];
 
 	let saveMessageDataPromise: Promise<any> = new Promise(res => res(null));
 	if (messageId === null) {
@@ -421,7 +469,7 @@ export async function sendAlertMessage(metricSource: string, alertType: AlertTyp
 				'alert',
 				messageId,
 				user.phone.N as string,
-				'alerts',
+				'alert',
 				body,
 				[]
 			))
