@@ -6,6 +6,7 @@ const dynamodb = new aws.DynamoDB();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
+const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 
 interface SourceListItem {
 	pos: number;
@@ -87,6 +88,32 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
+
+				const talkgroupBody: AWS.DynamoDB.UpdateItemInput = {
+					TableName: talkgroupTable,
+					ExpressionAttributeNames: {
+						'#count': 'Count'
+					},
+					ExpressionAttributeValues: {
+						':initial': {
+							N: '0'
+						},
+						':num': {
+							N: '1'
+						}
+					},
+					Key: {
+						'ID': {
+							N: headInfo.Metadata?.talkgroup_num
+						}
+					},
+					UpdateExpression: 'SET #count = if_not_exists(#count, :initial) + :num'
+				};
+				try {
+					await dynamodb.updateItem(talkgroupBody).promise();
+				} catch (e) {
+					console.log(`ERROR - `, e);
+				}
 			}
 
 			console.log(`Create: ${JSON.stringify(body)}`)
@@ -118,7 +145,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				},
 				TableName: trafficTable
 			};
-			console.log(`Delete: ${JSON.stringify(body)}`)
+			console.log(`Delete: ${JSON.stringify(body)}`);
 			await dynamodb.deleteItem(body).promise();
 		}
 	} catch (e) {

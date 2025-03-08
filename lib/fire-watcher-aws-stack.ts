@@ -76,6 +76,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING
       }
     });
+    const talkgroupTable = new dynamodb.Table(this, 'cvfd-talkgroups', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'ID',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     trafficTable.addGlobalSecondaryIndex({
       indexName: 'ToneIndex',
@@ -123,6 +130,18 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    talkgroupTable.addGlobalSecondaryIndex({
+      indexName: 'CountIndex',
+      partitionKey: {
+        name: 'Count',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'ID',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
     // Create the dead letter queue
     const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
 
@@ -142,6 +161,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_TRAFFIC: trafficTable.tableName,
         TABLE_DTR: dtrTable.tableName,
+        TABLE_TALKGROUP: talkgroupTable.tableName,
         SQS_QUEUE: queue.queueUrl
       }
     });
@@ -150,6 +170,7 @@ export class FireWatcherAwsStack extends Stack {
     bucket.grantRead(s3Handler);
     trafficTable.grantReadWriteData(s3Handler);
     dtrTable.grantReadWriteData(s3Handler);
+    talkgroupTable.grantReadWriteData(s3Handler);
     queue.grantSendMessages(s3Handler);
 
     // Create a handler for the SQS queue
@@ -242,6 +263,7 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
         TABLE_DTR: dtrTable.tableName,
+        TABLE_TALKGROUP: talkgroupTable.tableName,
         TABLE_MESSAGES: messagesTable.tableName,
         TABLE_STATUS: statusTable.tableName,
         SQS_QUEUE: queue.queueUrl,
@@ -255,6 +277,7 @@ export class FireWatcherAwsStack extends Stack {
     phoneNumberTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
     dtrTable.grantReadWriteData(apiHandler);
+    talkgroupTable.grantReadData(apiHandler);
     messagesTable.grantReadWriteData(apiHandler);
     statusTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
