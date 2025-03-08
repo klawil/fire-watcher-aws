@@ -256,7 +256,6 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
-        TABLE_TRAFFIC: vhfTable.tableName,
         TABLE_MESSAGES: textsTable.tableName,
         TWILIO_SECRET: secretArn,
         SERVER_CODE: apiCode
@@ -267,7 +266,6 @@ export class FireWatcherAwsStack extends Stack {
 
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
-    vhfTable.grantReadData(queueHandler);
     textsTable.grantReadWriteData(queueHandler);
     twilioSecret.grantRead(queueHandler);
 
@@ -450,6 +448,24 @@ export class FireWatcherAwsStack extends Stack {
           }),
           alarmDescription: 'S3 API error occured',
           alarmName: 'S3 API Error'
+        }
+      },
+      {
+        codeName: 'queue-api',
+        okayAction: false,
+        alarm: {
+          ...baseApiAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Error',
+            namespace: 'CVFD API',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.SUM,
+            dimensionsMap: {
+              source: 'Queue'
+            }
+          }),
+          alarmDescription: 'Queue API error occured',
+          alarmName: 'Queue API Error'
         }
       },
     ];
