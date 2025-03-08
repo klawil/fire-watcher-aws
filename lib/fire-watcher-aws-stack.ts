@@ -169,7 +169,8 @@ export class FireWatcherAwsStack extends Stack {
     });
     const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
       requestTemplates: {
-        'application/json': '{"statusCode":"200"}'
+        'application/json': '{"statusCode":"200"}',
+        'application/xml': '<Response></Response>'
       }
     });
     const apiResource = api.root.addResource('api');

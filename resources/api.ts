@@ -308,6 +308,25 @@ async function registerPhase2(event: APIGatewayProxyEventV2): Promise<APIGateway
 	};
 }
 
+async function handleMessage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+	await sqs.sendMessage({
+		MessageBody: JSON.stringify({
+			action: 'twilio',
+			sig: event.headers['X-Twilio-Signature'],
+			body: event.body
+		}),
+		QueueUrl: queueUrl
+	}).promise();
+
+	return {
+		statusCode: 200,
+		headers: {
+			'Content-Type': 'application/xml'
+		},
+		body: '<Response></Response>'
+	};
+}
+
 export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	try {
 		const action = event.queryStringParameters?.action || 'list';
@@ -319,8 +338,9 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 			case 'register1':
 				return registerPhase1(event);
 			case 'register2':
-				console.log(event.body);
 				return registerPhase2(event);
+			case 'message':
+				return handleMessage(event);
 		}
 
 		return {

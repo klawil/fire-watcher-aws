@@ -47,7 +47,7 @@ function parsePhone(num: string, toHuman: boolean = false): string {
 		.join('-');
 }
 
-async function sendMessage(phone: string, body: string) {
+async function sendMessage(phone: string, body: string, mediaUrl: string[] = []) {
 	const twilioConf = await twilioSecretPromise;
 	if (twilioConf === null) {
 		throw new Error('Cannot get twilio secret');
@@ -56,6 +56,7 @@ async function sendMessage(phone: string, body: string) {
 	return twilio(twilioConf.accountSid, twilioConf.authToken)
 		.messages.create({
 			body,
+			mediaUrl,
 			from: twilioConf.fromNumber as string,
 			to: `+1${parsePhone(phone)}`
 		});
@@ -184,6 +185,87 @@ async function handleActivation(body: ActivateBody) {
 	return Promise.all(promises);
 }
 
+interface TwilioBody {
+	action: 'twilio';
+	sig: string;
+	body: string;
+}
+
+interface TwilioParams {
+	From: string;
+	Body: string;
+	MediaUrl0?: string;
+}
+
+async function handleTwilio(body: TwilioBody) {
+	// Pull out the information needed to validate the Twilio request
+	const requestUrl = 'https://fire.klawil.net/api?action=message';
+	const authToken = (await twilioSecretPromise).authToken;
+	const eventData = body.body
+		?.split('&')
+		.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
+		.reduce((acc, curr) => ({
+			...acc,
+			[curr[0]]: curr[1] || ''
+		}), {}) as TwilioParams;
+	eventData.Body = eventData.Body.replace(/\+/g, ' ');
+	
+	// Verify the message
+	if (!twilio.validateRequest(
+		authToken,
+		body.sig,
+		requestUrl,
+		eventData
+	)) {
+		console.error('INVALID REQUEST - TWILIO FAILED');
+		return;
+	}
+	
+	// Validate the sender
+	const sender = await dynamodb.getItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: eventData.From.slice(2)
+			}
+		}
+	}).promise();
+	if (!sender.Item) {
+		console.error('INVALID REQUEST - SENDER INVALID');
+		return;
+	}
+	if (!sender.Item.isActive.BOOL) {
+		console.error('INVALID REQUEST - SENDER INACTIVE');
+		return;
+	}
+
+	const recepients = await dynamodb.scan({
+		TableName: phoneTable,
+		FilterExpression: '#a = :a AND #p <> :p',
+		ExpressionAttributeNames: {
+			'#a': 'isActive',
+			'#p': 'phone'
+		},
+		ExpressionAttributeValues: {
+			':a': {
+				BOOL: true
+			},
+			':p': {
+				N: sender.Item.phone.N
+			}
+		}
+	}).promise();
+
+	// Build the message
+	const messageBody = `${sender.Item.name.S}: ${eventData.Body}`;
+	const mediaUrls: string[] = Object.keys(eventData)
+		.filter((key) => key.indexOf('MediaUrl') === 0)
+		.map((key) => eventData[key as keyof TwilioParams] as string);
+
+	await Promise.all(recepients.Items
+		?.map((number) =>  sendMessage(number.phone.N as string, messageBody, mediaUrls)) || []);
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
 	switch (body.action) {
@@ -191,6 +273,8 @@ async function parseRecord(event: lambda.SQSRecord) {
 			return handleRegister(body);
 		case 'activate':
 			return handleActivation(body);
+		case 'twilio':
+			return handleTwilio(body);
 	}
 }
 
