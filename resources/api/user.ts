@@ -381,7 +381,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	};
 
 	if (!user.isDistrictAdmin?.BOOL) {
-		body.pageOnly = false;
+		body.pageOnly = user.department?.S === 'Baca';
 		body.department = user.department?.S as string;
 	}
 
