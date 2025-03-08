@@ -1,4 +1,5 @@
 *.js
+website/js
 !website/webpack.conf.js
 *.d.ts
 node_modules
