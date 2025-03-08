@@ -368,16 +368,26 @@ async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGate
 				}
 			},
 			ExpressionAttributeNames: {
-				'#eventName': eventData.MessageStatus
+				'#eventName': eventData.MessageStatus,
+				'#eventPhoneList': `${eventData.MessageStatus}Phone`,
+				'#from': 'fromNumber'
 			},
 			ExpressionAttributeValues: {
 				':eventListItem': {
 					NS: [
 						eventDatetime.toString()
 					]
+				},
+				':eventPhoneListItem': {
+					SS: [
+						eventData.To
+					]
+				},
+				':from': {
+					S: eventData.From
 				}
 			},
-			UpdateExpression: 'ADD #eventName :eventListItem'
+			UpdateExpression: 'ADD #eventName :eventListItem, #eventPhoneList :eventPhoneListItem SET #from = :from'
 		}).promise();
 	}
 
