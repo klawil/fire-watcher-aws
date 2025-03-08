@@ -1013,6 +1013,11 @@ const statsMap: {
 			Stat: 'p80'
 		}
 	},
+	'twilio-delivered-sent-time': {
+		Id: 'twilio_delivered_sent_time',
+		Label: 'Time To Deliver Texts',
+		Expression: 'twilio_delivered_time-twilio_sent_time'
+	}
 };
 const periodToTime: {
 	period: number; // seconds

@@ -96,7 +96,8 @@ const charts = [
 		id: 'texts-time',
 		val: val => Math.ceil(val / 1000),
 		yMax: 120, // 2 minutes
-		query: 'metrics=twilio-sent-time,twilio-delivered-time,twilio-page-time&period=86400&timerange=2419200000'
+		stacked: true,
+		query: 'metrics=twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000'
 	},
 ];
 
@@ -155,6 +156,15 @@ charts.forEach(chart => {
 						max: chart.yMax
 					}
 				};
+			}
+			if (chart.stacked) {
+				chartConfig.options.scales = {
+					...chartConfig.options.scales,
+					y: {
+						...chartConfig.options.scales.y,
+						stacked: true
+					}
+				}
 			}
 			if (chart.fill && datasets.length === 2) {
 				chartConfig.options.scales = {
