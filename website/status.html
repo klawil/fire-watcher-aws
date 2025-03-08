@@ -5,6 +5,26 @@ requireAdmin: true
 hasMap: true
 ---
 
+<h3 class="text-center">Adjacent Sites (Updates Every 30s)</h3>
+<div class="row">
+	<div class="col-md-6 offset-md-3">
+		<div id="map"></div>
+	</div>
+</div>
+<table class="table table-striped">
+	<thead><tr>
+		<th>Site</th>
+		<th>Name</th>
+		<th>County</th>
+		<th>Failed</th>
+		<th>Flags</th>
+		<th>Services</th>
+		<th>Seen By</th>
+		<th>Updated</th>
+	</tr></thead>
+<tbody id="adjacent-sites"></tbody>
+</table>
+
 <div class="row">
 	<div class="form-check form-switch col">
 		<input class="form-check-input" type="checkbox" role="switch" id="realtime-switch">
@@ -33,26 +53,6 @@ hasMap: true
 		</select>
 	</div>
 </div>
-
-<h3 class="text-center">Adjacent Sites (Updates Every 30s)</h3>
-<div class="row">
-	<div class="col-md-6 offset-md-3">
-		<div id="map"></div>
-	</div>
-</div>
-<table class="table table-striped">
-	<thead><tr>
-		<th>Site</th>
-		<th>Name</th>
-		<th>County</th>
-		<th>Failed</th>
-		<th>Flags</th>
-		<th>Services</th>
-		<th>Seen By</th>
-		<th>Updated</th>
-	</tr></thead>
-<tbody id="adjacent-sites"></tbody>
-</table>
 
 <h3 class="text-center">Saguache Tower Decode Rate</h3>
 <div class="row"><div class="col-12"><canvas id="sag-tower"></canvas></div></div>
