@@ -89,7 +89,11 @@ async function sendMessage(
 	};
 
 	return twilio(twilioConf.accountSid, twilioConf.authToken)
-		.messages.create(messageConfig);
+		.messages.create(messageConfig)
+		.catch((e: any) => {
+			console.log(`QUEUE - ERROR - sendMessage`);
+			console.error(e);
+		});
 }
 
 function randomString(len: number, numeric = false): string {
