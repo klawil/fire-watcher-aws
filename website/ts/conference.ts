@@ -400,10 +400,7 @@ async function createInvitableTable() {
 	await new Promise(res => afterAuthUpdate.push(res));
 
 	const invitableUsers = departmentUsers.users
-		.filter(u => u.isActive && (
-			typeof u.department === 'undefined' ||
-			u.department === user.department
-		))
+		.filter(u => u.isActive)
 		.sort((a, b) => {
 			if (a.lName > b.lName) {
 				return 1;

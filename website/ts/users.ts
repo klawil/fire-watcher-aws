@@ -2,7 +2,7 @@ import { ApiUserListResponse, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUser
 import { UserDepartment, pagingConfig, pagingTalkgroupOrder, validDepartments } from "../../common/userConstants";
 import { showAlert } from "./utils/alerts";
 import { user } from "./utils/auth";
-import { changeButtonColor } from "./utils/button";
+import { modifyButton } from "./utils/button";
 import { doneLoading } from "./utils/loading";
 import { RowConfig, createTableRow } from "./utils/table";
 import { formatPhone } from "./utils/userConstants";
@@ -29,7 +29,7 @@ interface InputConfig {
 
 const tbody = <HTMLTableSectionElement>document.getElementById('tbody');
 
-function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, doHighlight: boolean): RowConfig {
+function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment): RowConfig {
 	logger.trace('getUserDepartmentRowConfig', ...arguments);
 	const defaultDepartmentValues = u[department] || {
 		active: false,
@@ -64,13 +64,7 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, d
 
 	return {
 		id: `${u.phone.toString()}-${department}`,
-		classList: [
-			'right-border-cell',
-			'no-border',
-			...(doHighlight ? [ 'alternate' ] : []),
-		],
 		columns: [
-			{ html: '', },
 			{ // active
 				classList: [ 'text-center', 'ps-3', ],
 				create: td => {
@@ -109,7 +103,7 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, d
 					const label = document.createElement('span');
 					div.appendChild(label);
 					label.classList.add('input-group-text');
-					label.innerHTML = 'Call Sign';
+					label.innerHTML = 'CS';
 
 					div.appendChild(callsignInput);
 					callsignInput.type = 'text';
@@ -154,12 +148,11 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, d
 				classList: [ 'text-center', ],
 				create: (td) => {
 					td.appendChild(saveButton);
-					saveButton.classList.add('btn', 'btn-success', 'mv-1');
+					saveButton.classList.add('btn', 'btn-success', 'my-1');
 					saveButton.innerHTML = 'Save';
 					saveButton.disabled = true;
 					saveButton.addEventListener('click', async () => {
-						saveButton.disabled = true;
-						changeButtonColor(saveButton, 'secondary');
+						modifyButton(saveButton, 'secondary', 'Saving', true, false);
 						
 						const parent = td.parentElement;
 						let inputs: (HTMLInputElement | HTMLSelectElement)[] = [];
@@ -182,7 +175,7 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, d
 						}).then(r => r.json());
 						saveButton.blur();
 						if (apiResult.success) {
-							changeButtonColor(saveButton, 'success');
+							modifyButton(saveButton, 'success', 'Save', false, false);
 							(Object.keys(apiNewValues) as (keyof UserObject[UserDepartment])[])
 								.forEach(key => {
 									defaultDepartmentValues[key] = apiNewValues[key];
@@ -190,7 +183,7 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, d
 								});
 						} else {
 							saveButton.disabled = false;
-							changeButtonColor(saveButton, 'danger');
+							modifyButton(saveButton, 'danger', 'Save', false, true);
 							showAlert('danger', 'Failed to update user group');
 							apiResult.errors = apiResult.errors || [];
 							inputs
@@ -204,171 +197,25 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, d
 	};
 }
 
-function getUserRowConfig(u: UserObject, doHighlight: boolean, numDepartments: number): RowConfig {
-	logger.trace('getUserRowConfig', ...arguments);
+function makeTextInput(conf: InputConfig, parent: HTMLElement, userValues: ApiUserUpdateBody) {
+	const container = document.createElement('div');
+	parent.appendChild(container);
+	container.classList.add('input-group', 'p-2');
 
-	const saveButton: HTMLButtonElement = document.createElement('button');
+	const label = document.createElement('span');
+	container.appendChild(label);
+	label.classList.add('input-group-text');
+	label.innerHTML = conf.placeholder;
 
-	const defaultUserValues: ApiUserUpdateBody = {
-		phone: u.phone,
-		talkgroups: u.talkgroups || [],
-		fName: u.fName,
-		lName: u.lName,
-		getTranscript: !!u.getTranscript,
-		pageOnly: !!u.pageOnly,
-		getApiAlerts: !!u.getApiAlerts,
-		getVhfAlerts: !!u.getVhfAlerts,
-		getDtrAlerts: !!u.getDtrAlerts,
-		isDistrictAdmin: !!u.isDistrictAdmin,
-	};
-	const changedValues: Partial<ApiUserUpdateBody> = {};
-	const proxyBase: ApiUserUpdateBody = {
-		...defaultUserValues,
-		talkgroups: [ ...defaultUserValues.talkgroups || [] ],
-	};
-	const userValues = new Proxy(proxyBase, {
-		set: (target, prop: keyof ApiUserUpdateBody, value) => {
-			if (JSON.stringify(value) === JSON.stringify(defaultUserValues[prop])) {
-				delete changedValues[prop];
-			} else {
-				(changedValues as any)[prop] = value;
-			}
-			saveButton.disabled = Object.keys(changedValues).length === 0;
-
-			(target as any)[prop] = value;
-			return true;
-		}
-	});
-
-	userRows.push(userValues);
-
-	const makeInputCreationFn = (conf: InputConfig) => (td: HTMLTableCellElement) => {
-		if (conf.maxWidth)
-			td.style.maxWidth = conf.maxWidth;
-
-		let span: HTMLSpanElement;
-		if (!conf.editable) {
-			span = document.createElement('span');
-			td.appendChild(span);
-			span.innerHTML = conf.val(u);
-		}
-
-		if (conf.editable) {
-			const input = document.createElement('input');
-			td.appendChild(input);
-			input.type = 'text';
-			input.name = conf.name;
-			input.classList.add('form-control');
-			input.placeholder = conf.placeholder;
-			input.value = typeof conf.iVal !== 'undefined'
-				? conf.iVal(userValues)
-				: conf.val(userValues);
-			input.addEventListener('change', () => (userValues[conf.name] as string) = input.value);
-		}
-	}
-
-	return {
-		id: defaultUserValues.phone,
-		classList: [ 'no-border', ...(doHighlight ? ['alternate'] : []) ],
-		columns: [
-			{ // phone
-				classList: [ 'text-center' ],
-				create: makeInputCreationFn({
-					name: 'phone',
-					placeholder: 'Phone',
-					editable: false,
-					val: u => formatPhone(u.phone),
-					iVal: u => u.phone,
-					format: phone => formatPhone(phone),
-					maxWidth: '100px',
-				})
-			},
-			{ // fName
-				classList: [ 'ps-3', 'text-center', ],
-				create: makeInputCreationFn({
-					name: 'fName',
-					placeholder: 'First Name',
-					editable: true,
-					val: u => u.fName || '',
-				}),
-			},
-			{ // lName
-				classList: [ 'ps-3', 'text-center', ],
-				create: makeInputCreationFn({
-					name: 'lName',
-					placeholder: 'Last Name',
-					editable: true,
-					val: u => u.lName || '',
-				}),
-			},
-			{ // roles
-				create: td => {
-					const input = buildCheckboxes(userValues, userRoleCheckboxes);
-					td.appendChild(input);
-				}
-			},
-			{ // alerts
-				create: td => {
-					if (!!user.isDistrictAdmin) {
-						const input = buildCheckboxes(userValues, userAlertCheckboxes);
-						td.appendChild(input);
-					}
-				},
-			},
-			{ // talkgroups
-				classList: [ 'ps-3', ],
-				create: td => {
-					td.setAttribute('ROWSPAN', (numDepartments + 1).toString());
-
-					const input = buildTalkgroupCheckboxes(userValues);
-					td.appendChild(input);
-				}
-			},
-			{ // button
-				classList: [ 'text-center', ],
-				create: td => {
-					td.setAttribute('ROWSPAN', (numDepartments + 1).toString());
-
-					td.appendChild(saveButton);
-					saveButton.classList.add('btn', 'btn-success', 'mv-1');
-					saveButton.innerHTML = 'Save';
-					saveButton.disabled = true;
-					saveButton.addEventListener('click', async () => {
-						saveButton.disabled = true;
-						changeButtonColor(saveButton, 'secondary');
-						const parent = td.parentElement;
-						let inputs: (HTMLInputElement | HTMLSelectElement)[] = [];
-						if (parent !== null) {
-							inputs = [
-								...Array.from(parent.querySelectorAll('input')),
-							];
-							inputs.forEach(input => input.classList.remove('is-invalid'));
-						}
-
-						const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
-							method: 'POST',
-							body: JSON.stringify({
-								phone: defaultUserValues.phone.toString(),
-								...changedValues,
-							}),
-						}).then(r => r.json());
-						saveButton.blur();
-						if (apiResult.success) {
-							changeButtonColor(saveButton, 'success');
-						} else {
-							saveButton.disabled = false;
-							changeButtonColor(saveButton, 'danger');
-							showAlert('danger', 'Failed to save user');
-							apiResult.errors = apiResult.errors || [];
-							inputs
-								.filter(input => apiResult.errors.includes(input.getAttribute('name') || ''))
-								.forEach(input => input.classList.add('is-invalid'));
-						}
-					});
-				}
-			},
-		]
-	};
+	const input = document.createElement('input');
+	container.appendChild(input);
+	input.type = 'text';
+	input.name = conf.name;
+	input.classList.add('form-control');
+	input.value = typeof conf.iVal !== 'undefined'
+		? conf.iVal(userValues)
+		: conf.val(userValues);
+	input.addEventListener('change', () => (userValues[conf.name] as string) = input.value);
 }
 
 const userRoleCheckboxes: CheckboxConfig[] = [
@@ -379,32 +226,27 @@ const userRoleCheckboxes: CheckboxConfig[] = [
 		districtAdmin: true
 	},
 	{
-		name: 'pageOnly',
-		label: 'Pages Only',
-		val: user => user.pageOnly || false,
-	},
-	{
 		name: 'getTranscript',
 		label: 'Get Transcripts',
 		val: user => user.getTranscript || false,
 	},
-];
-
-const userAlertCheckboxes: CheckboxConfig[] = [
 	{
 		name: 'getApiAlerts',
-		label: 'API',
-		val: user => user.getApiAlerts || false
+		label: 'API Alerts',
+		val: user => user.getApiAlerts || false,
+		districtAdmin: true
 	},
 	{
 		name: 'getVhfAlerts',
-		label: 'VHF',
-		val: user => user.getVhfAlerts || false
+		label: 'VHF Alerts',
+		val: user => user.getVhfAlerts || false,
+		districtAdmin: true
 	},
 	{
 		name: 'getDtrAlerts',
-		label: 'DTR',
-		val: user => user.getDtrAlerts || false
+		label: 'DTR Alerts',
+		val: user => user.getDtrAlerts || false,
+		districtAdmin: true
 	},
 ];
 
@@ -488,100 +330,140 @@ function buildCheckboxes(
 	return container;
 }
 
-let lastSort = 'lName,fName';
-let currentSortIndex = 0;
-let userRows: ApiUserUpdateBody[] = [];
-function sortRows(keysString: string) {
-	logger.trace('sortRows', ...arguments);
-	const keys = <(keyof ApiUserUpdateBody)[]>keysString.split(',');
-	const numPossibilities = Math.pow(2, keys.length);
+function buildUserEdit(u: UserObject, parent: HTMLElement) {
+	const saveButton = document.createElement('button');
 
-	if (lastSort === keysString) {
-		currentSortIndex++;
-		if (currentSortIndex === numPossibilities)
-			currentSortIndex = 0;
-	} else {
-		currentSortIndex = 0;
-	}
-	lastSort = keysString;
-	let sortRemainder = currentSortIndex;
-	const direction = keys
-		.map((key, index) => {
-			const power = Math.pow(2, keys.length - index - 1);
-			const isGreater = sortRemainder >= power;
-			if (isGreater)
-				sortRemainder -= power;
-			return isGreater;
-		})
-		.reverse();
-	
-	userRows
-		.sort((a, b) => {
-			let i = 0;
-			while (i < keys.length && a[keys[i]] === b[keys[i]]) {
-				i++;
+	// Set up the proxy to make the API call easier
+	const defaultUserValues: ApiUserUpdateBody = {
+		phone: u.phone,
+		talkgroups: u.talkgroups || [],
+		fName: u.fName,
+		lName: u.lName,
+		getTranscript: !!u.getTranscript,
+		getApiAlerts: !!u.getApiAlerts,
+		getVhfAlerts: !!u.getVhfAlerts,
+		getDtrAlerts: !!u.getDtrAlerts,
+		isDistrictAdmin: !!u.isDistrictAdmin,
+	};
+	const changedValues: Partial<ApiUserUpdateBody> = {};
+	const proxyBase: ApiUserUpdateBody = {
+		...defaultUserValues,
+		talkgroups: [ ...defaultUserValues.talkgroups || [] ],
+	};
+	const userValues = new Proxy(proxyBase, {
+		set: (target, prop: keyof ApiUserUpdateBody, value) => {
+			if (JSON.stringify(value) === JSON.stringify(defaultUserValues[prop])) {
+				delete changedValues[prop];
+			} else {
+				(changedValues as any)[prop] = value;
 			}
+			saveButton.disabled = Object.keys(changedValues).length === 0;
 
-			let aGreater = 1;
-			let aLesser = -1;
-			if (direction[i]) {
-				aGreater = -1;
-				aLesser = 1;
+			(target as any)[prop] = value;
+			return true;
+		}
+	});
+
+	// Global info - fName, lName, roles, alerts, pages
+	const mainContainer = document.createElement('div');
+	parent.appendChild(mainContainer);
+	mainContainer.classList.add('col-xl-6', 'row', 'px-4');
+
+	// Name
+	const mainSubContainer1 = document.createElement('div');
+	mainContainer.appendChild(mainSubContainer1);
+	mainSubContainer1.classList.add('col-lg-6', 'offset-lg-3', 'col-md-8', 'offset-md-2', 'col-xl-8', 'offset-xl-2');
+	makeTextInput({
+		editable: true,
+		name: 'fName',
+		placeholder: 'First Name',
+		val: u => u.fName || '',
+	}, mainSubContainer1, userValues);
+	makeTextInput({
+		editable: true,
+		name: 'lName',
+		placeholder: 'Last Name',
+		val: u => u.lName || '',
+	}, mainSubContainer1, userValues);
+
+	// Pages
+	const pagesContainer = document.createElement('div');
+	mainContainer.appendChild(pagesContainer);
+	pagesContainer.classList.add('col-6', 'col-lg-3', 'col-md-4', 'col-sm-5', 'col-xl-6');
+	const pagesTitle = document.createElement('h6');
+	pagesContainer.appendChild(pagesTitle);
+	pagesTitle.classList.add('text-center');
+	pagesTitle.innerHTML = 'Pages';
+	const pageGroups = buildTalkgroupCheckboxes(userValues);
+	pagesContainer.appendChild(pageGroups);
+
+	// Roles and Alerts
+	const rolesAndAlertsContainer = document.createElement('div');
+	mainContainer.appendChild(rolesAndAlertsContainer);
+	rolesAndAlertsContainer.classList.add('col-6', 'col-lg-3', 'offset-lg-3', 'col-md-4', 'offset-md-2', 'col-sm-5', 'offset-sm-1', 'col-xl-6', 'offset-xl-0');
+	const rolesTitle = document.createElement('h6');
+	rolesAndAlertsContainer.appendChild(rolesTitle);
+	rolesTitle.classList.add('text-center');
+	rolesTitle.innerHTML = 'Roles';
+	const rolesAndAlerts = buildCheckboxes(userValues, userRoleCheckboxes);
+	rolesAndAlertsContainer.appendChild(rolesAndAlerts);
+
+	// Add the save button
+	const btnContainer = document.createElement('div');
+	mainContainer.appendChild(btnContainer);
+	btnContainer.classList.add('col-lg-6', 'offset-lg-3', 'col-md-8', 'offset-md-2', 'd-grid', 'p-2');
+	btnContainer.appendChild(saveButton);
+	saveButton.classList.add('btn');
+	modifyButton(saveButton, 'success', 'Save', false, false);
+	saveButton.addEventListener('click', async () => {
+		modifyButton(saveButton, 'secondary', 'Saving', true, false);
+		saveButton.blur();
+
+		try {
+			const inputs = Array.from(mainContainer.querySelectorAll('input'));
+			inputs.forEach(input => input.classList.remove('is-invalid'));
+		
+			const apiBody: ApiUserUpdateBody = {
+				phone: u.phone.toString(),
+				...changedValues,
+			};
+			const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
+				method: 'POST',
+				body: JSON.stringify(apiBody),
+			}).then(r => r.json());
+			if (apiResult.success) {
+				modifyButton(saveButton, 'success', 'Save', false, false);
+			} else {
+				modifyButton(saveButton, 'danger', 'Save', false, true);
+				showAlert('danger', 'Failed to save user');
+				apiResult.errors = apiResult.errors || [];
+				inputs
+					.filter(input => apiResult.errors.includes(input.name))
+					.forEach(input => input.classList.add('is-invalid'));
 			}
+		} catch (e) {
+			logger.error(`Save user ${u.phone} error`, e);
+			modifyButton(saveButton, 'danger', 'Save', false, true);
+			showAlert('danger', 'Failed to save user');
+		}
+	});
 
-			if (i === keys.length) {
-				return aGreater;
-			}
-			let key = keys[i];
-
-			if (typeof a[key] === 'undefined') {
-				return aLesser;
-			} else if (typeof b[key] === 'undefined') {
-				return aGreater;
-			}
-
-			return (a[key] as any) > (b[key] as any)
-				? aGreater
-				: aLesser;
-		})
-		.forEach((user, idx) => {
-			let method: 'add' | 'remove' = idx % 2 === 0 ? 'add' : 'remove';
-			const tr = document.getElementById(user.phone);
-			if (tr !== null) {
-				tbody.appendChild(tr);
-				tr.classList[method]('alternate');
-			}
-
-			validDepartments.forEach(rowIdPart => {
-				const tr = document.getElementById(`${user.phone}-${rowIdPart}`);
-				if (tr !== null) {
-					tbody.appendChild(tr);
-					tr.classList[method]('alternate');
-				}
-			});
-		});
-	// tbody.appendChild(<HTMLTableRowElement>document.getElementById('new-user-row'));
+	// Department information
+	const depContainer = document.createElement('div');
+	parent.appendChild(depContainer);
+	depContainer.classList.add('table-responsive', 'col-xl-6', 'col-lg-10', 'offset-lg-1', 'offset-xl-0');
+	const departmentTable = document.createElement('table');
+	depContainer.appendChild(departmentTable);
+	departmentTable.classList.add('table', 'mb-0', 'text-center', 'no-bg');
+	departmentTable.innerHTML = `<thead><tr><th colspan="4">Departments</th></tr></thead><tbody></tbody>`;
+	const departmentTbody = departmentTable.querySelector('tbody');
+	validDepartments
+		.filter(dep => user.isDistrictAdmin || (
+			user[dep]?.admin &&
+			user[dep]?.active
+		) || u[dep])
+		.forEach(dep => createTableRow(departmentTbody, getUserDepartmentRowConfig(u, dep)));
 }
-function resortRows() {
-	logger.trace('resortRows', ...arguments);
-	if (currentSortIndex > 0) {
-		currentSortIndex--;
-		sortRows(lastSort);
-	} else {
-		const sort = lastSort;
-		lastSort = '';
-		sortRows(sort);
-	}
-}
-declare global {
-	interface Window {
-		resortRows: Function;
-	}
-}
-window.resortRows = resortRows;
-Array.from(document.querySelectorAll('.sortLabel'))
-	.forEach(label => label.addEventListener('click', () =>
-		sortRows(label.getAttribute('data-keys') || '')));
 
 async function init() {
 	logger.trace('init', ...arguments);
@@ -596,13 +478,6 @@ async function init() {
 		return;
 	}
 
-	// Get the departments the user can modify
-	const userDepartments = validDepartments
-		.filter(dep => user.isDistrictAdmin || (
-			user[dep]?.admin &&
-			user[dep]?.active
-		))
-
 	apiResult.users
 		.sort((a, b) => {
 			if (a.lName === b.lName)
@@ -612,13 +487,74 @@ async function init() {
 		})
 		.map((u, idx) => {
 			let doHighlight = idx % 2 === 0;
+			let editRow: HTMLTableRowElement;
 
 			// Create the main row
-			createTableRow(tbody, getUserRowConfig(u, doHighlight, userDepartments.length));
-			
-			// Create the department rows
-			userDepartments
-				.forEach(dep => createTableRow(tbody, getUserDepartmentRowConfig(u, dep, doHighlight)));
+			createTableRow(tbody, {
+				id: `user-${u.phone}`,
+				classList: [
+					...(doHighlight ? [ 'alternate' ] : []),
+				],
+				columns: [
+					{
+						classList: [ 'text-center' ],
+						html: formatPhone(u.phone),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: `${u.lName}, ${u.fName}`,
+					},
+					{
+						classList: [ 'text-center' ],
+						html: validDepartments
+							.filter(dep => u[dep]?.active)
+							.join(', '),
+					},
+					{
+						classList: [ 'text-center' ],
+						create: td => {
+							let editButton = document.createElement('button');
+							td.appendChild(editButton);
+							editButton.classList.add('btn');
+							modifyButton(editButton, 'primary', 'Edit');
+
+							let editRowOpen = false;
+							editButton.addEventListener('click', () => {
+								editRow.hidden = editRowOpen;
+								if (!editRowOpen) {
+									modifyButton(editButton, 'secondary', 'Close');
+								} else {
+									modifyButton(editButton, 'primary', 'Edit');
+								}
+								editRowOpen = !editRowOpen;
+							});
+						},
+					},
+				],
+			});
+
+			// Create the edit row
+			editRow = createTableRow(tbody, {
+				id: `user-${u.phone}-edit`,
+				classList: [
+					...(doHighlight ? [ 'alternate' ] : []),
+				],
+				columns: [
+					{
+						create: td => {
+							td.setAttribute('colspan', '4');
+							const container = document.createElement('div');
+							td.appendChild(container);
+							container.classList.add('container');
+							const row = document.createElement('div');
+							container.appendChild(row);
+							row.classList.add('row');
+							buildUserEdit(u, row);
+						}
+					}
+				]
+			});
+			editRow.hidden = true;
 		});
 
 	// createTableRow(tbody, getUserRowConfig(null, apiResult.users.length % 2 === 0, 0));

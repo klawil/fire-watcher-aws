@@ -22,14 +22,40 @@ layout: base
 		border-top-style: dashed;
 	}
 
-	.alternate td {
+	.alternate > td {
 		background-color: var(--bs-table-striped-bg);
+	}
+
+	.no-bg td, .no-bg th {
+		background: none;
+	}
+
+	.userSpinner .spinner-border {
+		width: 5rem;
+		height: 5rem;
+	}
+	.userSpinnerContainer .spinner-border {
+		position: absolute;
+		width: 5rem;
+		height: 5rem;
+		left: calc(50% - 2.5rem);
+		top: calc(50% - 2.5rem);
+	}
+
+	.userSpinnerContainer {
+		position: absolute;
+		left: 0;
+		top: 0;
+		height: 100%;
+		width: 100%;
+		z-index: 50;
+		background-color: rgba(0, 0, 0, 0.25);
 	}
 </style>
 
 <div class="table-responsive">
 	<table class="table">
-		<thead>
+		{% comment %} <thead>
 			<tr class="text-center">
 				<th class="sortLabel" data-keys="phone">Phone Number</th>
 				<th class="sortLabel" data-keys="fName,lName">First Name</th>
@@ -39,7 +65,7 @@ layout: base
 				<th>Pages</th>
 				<th></th>
 			</tr>
-		</thead>
+		</thead> {% endcomment %}
 		<tbody id="tbody"></tbody>
 	</table>
 </div>

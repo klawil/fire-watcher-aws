@@ -17,8 +17,8 @@ interface PageConfig {
 }
 
 export const validDepartments: UserDepartment[] = [
-	'Crestone',
 	'Baca',
+	'Crestone',
 	'NSCAD',
 ];
 

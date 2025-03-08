@@ -42,7 +42,7 @@ export function modifyButton(
 	color?: ButtonColors,
 	text?: string,
 	spinner?: boolean,
-	enabled?: boolean
+	enabled: boolean | null = null
 ) {
 	logger.trace('modifyButton', ...arguments);
 	if (color)

@@ -2,13 +2,11 @@ import { ApiResponseBase } from "./common";
 import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
 export type UserObjectBooleans = 'isActive' | 'isAdmin' | 'isDistrictAdmin'
-	| 'pageOnly' | 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
+	| 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
 export type UserObjectStrings = 'phone' | 'fName' | 'lName';
 
 interface UserObjectBase {
 	talkgroups: PagingTalkgroup[];
-	department?: UserDepartment;
-
 	isMe?: boolean;
 }
 type UserObjectBaseBooleans = {
@@ -57,7 +55,6 @@ export interface ApiUserUpdateBody {
 	fName?: string;
 	lName?: string;
 	getTranscript?: boolean;
-	pageOnly?: boolean;
 	getApiAlerts?: boolean;
 	getVhfAlerts?: boolean;
 	getDtrAlerts?: boolean;
