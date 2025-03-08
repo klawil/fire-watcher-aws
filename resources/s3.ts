@@ -134,10 +134,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				body.Item = {
 					...body.Item,
 					StartTime: {
-						N: headInfo.Metadata?.datetime
+						N: (Number(headInfo.Metadata?.datetime) / 1000).toString()
 					},
 					EndTime: {
-						N: (parseInt(headInfo.Metadata?.datetime || '0', 10) + (parseInt(headInfo.Metadata?.len || '0', 10) * 1000)).toString()
+						N: ((Number(headInfo.Metadata?.datetime) / 1000) + Number(headInfo.Metadata?.len || '0')).toString()
 					},
 					Len: {
 						N: headInfo.Metadata?.len
