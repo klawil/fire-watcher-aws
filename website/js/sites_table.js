@@ -129,4 +129,4 @@ function updateUpdateTime() {
 			timeElem.innerHTML = newHtml;
 	});
 }
-setInterval(updateUpdateTime, 200);
+setInterval(updateUpdateTime, 100);
