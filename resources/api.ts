@@ -119,9 +119,18 @@ async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.
 	}
 }
 
-async function runDynamoQueries(queryConfigs: AWS.DynamoDB.QueryInput[]): Promise<AWS.DynamoDB.QueryOutput> {
+type DynamoOutput = AWS.DynamoDB.QueryOutput & {
+	LastEvaluatedKeys: (AWS.DynamoDB.Key | null)[];
+	MinSortKey: number | null;
+	MaxSortKey: number | null;
+};
+
+async function runDynamoQueries(
+	queryConfigs: AWS.DynamoDB.QueryInput[],
+	sortKey: string = ''
+): Promise<DynamoOutput> {
 	return await Promise.all(queryConfigs.map((queryConfig) => dynamodb.query(queryConfig).promise()))
-		.then((data) => data.reduce((agg: AWS.DynamoDB.QueryOutput, result) => {
+		.then((data) => data.reduce((agg: DynamoOutput, result) => {
 			if (
 				typeof result.Count !== 'undefined' &&
 				typeof agg.Count !== 'undefined'
@@ -146,12 +155,63 @@ async function runDynamoQueries(queryConfigs: AWS.DynamoDB.QueryInput[]): Promis
 				];
 			}
 
+			if (typeof result.LastEvaluatedKey !== 'undefined') {
+				agg.LastEvaluatedKeys.push(result.LastEvaluatedKey);
+			} else {
+				agg.LastEvaluatedKeys.push(null);
+			}
+
 			return agg;
 		}, {
 			Items: [],
 			Count: 0,
-			ScannedCount: 0
-		}));
+			ScannedCount: 0,
+			LastEvaluatedKeys: [],
+			MinSortKey: null,
+			MaxSortKey: null
+		}))
+		.then((data) => {
+			if (sortKey !== '') {
+				data.Items = data.Items?.sort((a, b) => {
+					if (
+						typeof a[sortKey].N === 'undefined' ||
+						typeof b[sortKey].N === 'undefined'
+					) return 0;
+
+					return Number(a[sortKey].N) > Number(b[sortKey].N)
+						? -1
+						: 1
+				});
+			}
+
+			if (typeof queryConfigs[0].Limit !== 'undefined') {
+				data.Items = data.Items?.slice(0, queryConfigs[0].Limit);
+				data.Count = data.Items?.length || 0;
+			}
+
+			if (sortKey !== '') {
+				let minSortKey: null | number = null;
+				let maxSortKey: null | number = null;
+				data.Items?.forEach((item) => {
+					const sortKeyValue = Number(item[sortKey].N);
+
+					if (
+						minSortKey === null ||
+						sortKeyValue < minSortKey
+					) minSortKey = sortKeyValue;
+
+					if (
+						maxSortKey === null ||
+						sortKeyValue > maxSortKey
+					) maxSortKey = sortKeyValue;
+				});
+
+				data.MinSortKey = minSortKey;
+				data.MaxSortKey = maxSortKey;
+			}
+
+			return data;
+		});
 }
 
 async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -159,7 +219,6 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	// Set the default query parameters
 	event.queryStringParameters = event.queryStringParameters || {};
 	event.queryStringParameters = {
-		after: (Date.now() - (1000 * 60 * 60 * 24 * 28 * 2)).toString(),
 		minLen: '0',
 		...event.queryStringParameters
 	};
@@ -178,34 +237,103 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		queryConfigs.push({
 			TableName: trafficTable,
 			IndexName: 'ToneIndex',
+			Limit: 500,
+			ScanIndexForward: false,
 			ExpressionAttributeNames: {
 				'#t': 'ToneIndex',
-				'#dt': 'Datetime',
 				'#l': 'Len'
 			},
 			ExpressionAttributeValues: {
 				':t': {
 					S: tone
 				},
-				':dt': {
-					N: event.queryStringParameters?.after
-				},
 				':l': {
 					N: event.queryStringParameters?.minLen
 				}
 			},
-			KeyConditionExpression: '#t = :t AND #dt > :dt',
+			KeyConditionExpression: '#t = :t',
 			FilterExpression: '#l >= :l'
 		});
 	});
 
-	const data = await runDynamoQueries(queryConfigs);
+	// Check for a start scanning key
+	if (typeof event.queryStringParameters.next !== 'undefined') {
+		const scanningKeys: (AWS.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
+			.split('|')
+			.map((str) => {
+				if (str === '') return;
+
+				const parts = str.split(',');
+				return {
+					ToneIndex: {
+						S: parts[0]
+					},
+					Datetime: {
+						N: parts[1]
+					},
+					Key: {
+						S: parts[2]
+					}
+				};
+			});
+
+			queryConfigs.forEach((queryConfig, index) => {
+				if (!scanningKeys[index]) return;
+
+				queryConfig.ExclusiveStartKey = scanningKeys[index];
+			});
+	}
+
+	// Check for a before
+	if (
+		typeof event.queryStringParameters.before !== 'undefined' &&
+		!isNaN(Number(event.queryStringParameters.before))
+	) {
+		const before = event.queryStringParameters.before;
+		queryConfigs.forEach((queryConfig) => {
+			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+
+			queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
+			queryConfig.ExpressionAttributeValues[':dt'] = {
+				N: before
+			};
+			queryConfig.KeyConditionExpression += ' AND #dt < :dt';
+		});
+	}
+	// Check for an after
+	else if (
+		typeof event.queryStringParameters.after !== 'undefined' &&
+		!isNaN(Number(event.queryStringParameters.after))
+	) {
+		const after = event.queryStringParameters.after;
+		queryConfigs.forEach((queryConfig) => {
+			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+
+			queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
+			queryConfig.ExpressionAttributeValues[':dt'] = {
+				N: after
+			};
+			queryConfig.KeyConditionExpression += ' AND #dt > :dt';
+		});
+	}
+
+	const data = await runDynamoQueries(queryConfigs, 'Datetime');
 
 	// Parse the results
 	const body = JSON.stringify({
 		success: true,
 		count: data.Count,
 		scanned: data.ScannedCount,
+		continueToken: data.LastEvaluatedKeys
+			.map((item) => {
+				if (item === null) return '';
+
+				return `${item.ToneIndex.S},${item.Datetime.N},${item.Key.S}`;
+			}).join('|'),
+		before: data.MinSortKey,
+		after: data.MaxSortKey,
 		data: data.Items?.map((item) => Object.keys(item).reduce((coll: { [key: string]: any; }, key) => {
 			if (typeof item[key].N !== 'undefined') {
 				coll[key] = Number.parseFloat(item[key].N as string);
@@ -249,10 +377,6 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Set the default query parameters
 	event.queryStringParameters = event.queryStringParameters || {};
-	event.queryStringParameters = {
-		after: (Math.round(Date.now() / 1000) - (60 * 60 * 6)).toString(),
-		...event.queryStringParameters
-	};
 
 	const queryConfigs: AWS.DynamoDB.QueryInput[] = [];
 
@@ -262,19 +386,17 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		talkgroups.forEach((tg) => {
 			queryConfigs.push({
 				TableName: dtrTable,
+				ScanIndexForward: false,
 				ExpressionAttributeNames: {
-					'#tg': 'Talkgroup',
-					'#st': 'StartTime'
+					'#tg': 'Talkgroup'
 				},
 				ExpressionAttributeValues: {
 					':tg': {
 						N: tg
-					},
-					':after': {
-						N: event.queryStringParameters?.after
 					}
 				},
-				KeyConditionExpression: '#tg = :tg AND #st > :after'
+				Limit: 50,
+				KeyConditionExpression: '#tg = :tg'
 			});
 		});
 	} else {
@@ -282,20 +404,64 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			queryConfigs.push({
 				TableName: dtrTable,
 				IndexName: dtrStartTimeIndex,
+				ScanIndexForward: false,
 				ExpressionAttributeNames: {
-					'#emerg': 'Emergency',
-					'#st': 'StartTime'
+					'#emerg': 'Emergency'
 				},
 				ExpressionAttributeValues: {
 					':emerg': {
 						N: emerg.toString()
-					},
-					':after': {
-						N: event.queryStringParameters?.after
 					}
 				},
-				KeyConditionExpression: '#emerg = :emerg AND #st > :after'
+				Limit: 50,
+				KeyConditionExpression: '#emerg = :emerg'
 			});
+		});
+	}
+
+	// Check for a start scanning key
+	if (typeof event.queryStringParameters.next !== 'undefined') {
+		const scanningKeys: (AWS.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
+			.split('|')
+			.map((str) => {
+				if (str === '') return;
+
+				const parts = str.split(',');
+				return {
+					Emergency: {
+						N: parts[0]
+					},
+					Talkgroup: {
+						N: parts[1]
+					},
+					StartTime: {
+						N: parts[2]
+					}
+				}
+			});
+
+		queryConfigs.forEach((queryConfig, index) => {
+			if (!scanningKeys[index]) return;
+
+			queryConfig.ExclusiveStartKey = scanningKeys[index];
+		});
+	}
+
+	// Check for a before filter
+	if (
+		typeof event.queryStringParameters.before !== 'undefined' &&
+		!isNaN(Number(event.queryStringParameters.before))
+	) {
+		const before = event.queryStringParameters.before;
+		queryConfigs.forEach((queryConfig) => {
+			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+
+			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+			queryConfig.ExpressionAttributeValues[':st'] = {
+				N: before
+			};
+			queryConfig.KeyConditionExpression += ' AND #st < :st';
 		});
 	}
 
@@ -330,11 +496,16 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		success: true,
 		count: data.Count,
 		scanned: data.ScannedCount,
+		continueToken: data.LastEvaluatedKeys
+			.map((item) => {
+				if (item === null) return '';
+
+				return `${item.Emergency.N},${item.Talkgroup.N},${item.StartTime.N}`;
+			}).join('|'),
+		before: data.MinSortKey,
+		after: data.MaxSortKey,
 		data: data.Items
 			?.map((item) => parseDynamoDbAttributeMap(item))
-			.sort((a, b) => (a.datetime as number) > (b.datetime as number) ? -1 : 1),
-		query: queryConfigs.map((queryConfig) => queryConfig.FilterExpression),
-		values: queryConfigs.map((queryConfig) => queryConfig.ExpressionAttributeValues)
 	});
 
 	return {
