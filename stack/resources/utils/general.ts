@@ -131,18 +131,18 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 		department: 'NSCAD',
 		account: 'NSCAD',
 	},
-	// pageNSCAD: {
-	// 	number: '***REMOVED***',
-	// 	type: 'page',
-	// 	department: 'NSCAD',
-	// 	account: 'NSCAD',
-	// },
-	// pageSaguache: {
-	// 	number: '***REMOVED***',
-	// 	type: 'page',
-	// 	department: 'Saguache',
-	// 	account: 'Saguache',
-	// },
+	pageNSCAD: {
+		number: '***REMOVED***',
+		type: 'page',
+		department: 'NSCAD',
+		account: 'NSCAD',
+	},
+	pageSaguache: {
+		number: '***REMOVED***',
+		type: 'page',
+		department: 'Saguache',
+		account: 'Saguache',
+	},
 	// pageCrestone: {
 	// 	number: '+',
 	// 	type: 'page',
