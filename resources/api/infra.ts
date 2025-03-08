@@ -52,6 +52,10 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		response.success = false;
 		response.errors.push('key');
 	}
+	if (!body.tg) {
+		response.success = false;
+		response.errors.push('tg');
+	}
 
 	if (
 		response.success &&
@@ -61,6 +65,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		const sqsEvent = {
 			action: 'page',
 			key: body.key,
+			tg: body.tg,
 			isTest: !!body.isTest
 		};
 		response.data = [ sqsEvent ];
@@ -69,10 +74,6 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			MessageBody: JSON.stringify(sqsEvent),
 			QueueUrl: sqsQueue
 		}).promise();
-	// } else {
-	// 	await incrementMetric('Error', {
-	// 		source: metricSource
-	// 	});
 	}
 
 	return {
