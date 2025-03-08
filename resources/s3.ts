@@ -20,15 +20,18 @@ const vhfConfig: {
 	[key: string]: {
 		tg: string;
 		freq: string;
+		sendPage: boolean;
 	}
 } = {
 	'BG_FIRE_VHF': {
 		tg: '18331',
-		freq: '154445000'
+		freq: '154445000',
+		sendPage: true
 	},
 	'SAG_FIRE_VHF': {
 		tg: '18332',
-		freq: '154190000'
+		freq: '154190000',
+		sendPage: false
 	}
 };
 
@@ -66,6 +69,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			};
 
 			const sourceList: string[] = [];
+			let config: {
+				tg: string;
+				freq: string;
+				sendPage: boolean;
+			} = {
+				tg: '999999',
+				freq: '0',
+				sendPage: true
+			};
 			if (Key.indexOf('/dtr') !== -1) {
 				try {
 					if (typeof headInfo.Metadata?.source_list !== 'undefined') {
@@ -113,13 +125,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					delete body.Item.Sources;
 				}
 			} else {
-				let config: {
-					tg: string;
-					freq: string;
-				} = {
-					tg: '999999',
-					freq: '0'
-				};
 				for (let vhfKey in vhfConfig) {
 					if (Key.indexOf(vhfKey) !== -1) {
 						config = vhfConfig[vhfKey];
@@ -160,8 +165,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			await dynamodb.putItem(body).promise();
 
 			if (Key.indexOf('/dtr') !== -1) {
-				const startTime: number = Number(headInfo.Metadata?.start_time);
-				const endTime: number = Number(headInfo.Metadata?.stop_time);
+				const startTime: number = Number(body.Item.StartTime?.N);
+				const endTime: number = Number(body.Item.EndTime?.N);
 				const existingItems: AWS.DynamoDB.QueryOutput = await dynamodb.query({
 					TableName: dtrTable,
 					IndexName: 'StartTimeTgIndex',
@@ -172,7 +177,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					ExpressionAttributeValues: {
 						':tg': {
-							N: headInfo.Metadata?.talkgroup_num
+							N: body.Item?.Talkgroup?.N
 						},
 						':st1': {
 							N: (startTime - selectDuplicateBuffer).toString()
@@ -181,7 +186,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							N: (endTime + selectDuplicateBuffer).toString()
 						},
 						':e': {
-							N: headInfo.Metadata?.emergency
+							N: body.Item?.Emergency?.N
 						}
 					},
 					KeyConditionExpression: '#tg = :tg AND #st BETWEEN :st1 AND :st2',
@@ -241,10 +246,11 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			}
 
 			let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
-			if (body.Item.Tone?.BOOL) {
+			if (body.Item.Tone?.BOOL && config.sendPage) {
 				queuePromise = sqs.sendMessage({
 					MessageBody: JSON.stringify({
 						action: 'page',
+						tg: body.Item.Talkgroup?.N,
 						key: Key.split('/')[2]
 					}),
 					QueueUrl: sqsQueue
@@ -271,7 +277,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				},
 				Key: {
 					'ID': {
-						N: headInfo.Metadata?.talkgroup_num
+						N: body.Item?.Talkgroup?.N
 					}
 				},
 				UpdateExpression: 'SET #iu = :iu, #dev = if_not_exists(#dev, :dev) ADD #count :num'
@@ -290,7 +296,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				},
 				Key: {
 					'ID': {
-						N: headInfo.Metadata?.talkgroup_num
+						N: body.Item.Talkgroup?.N
 					}
 				}
 			};
@@ -328,7 +334,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					TableName: deviceTable,
 					ExpressionAttributeNames: {
 						'#tg': 'Talkgroups',
-						'#tgId': headInfo.Metadata?.talkgroup_num as string
+						'#tgId': body.Item?.Talkgroup?.N as string
 					},
 					ExpressionAttributeValues: {
 						':num': {
