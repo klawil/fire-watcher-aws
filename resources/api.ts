@@ -715,6 +715,32 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	};
 }
 
+interface CurrentUserAPIResponse {
+	isUser: boolean;
+	isAdmin: boolean;
+	user: string | null;
+}
+
+async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+	const response: CurrentUserAPIResponse = {
+		isUser: false,
+		isAdmin: false,
+		user: null
+	};
+
+	if (user !== null) {
+		response.isUser = true;
+		response.isAdmin = !!user.isAdmin?.BOOL;
+		response.user = user.name?.S || null;
+	}
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'list';
 	try {
@@ -740,6 +766,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleLocationUpdate(event);
 			case 'getTexts':
 				return await getTexts(event);
+			case 'getUser':
+				return await getUser(event);
 		}
 
 		console.log(`API - 404`);
