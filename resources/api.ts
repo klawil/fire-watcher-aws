@@ -7,6 +7,8 @@ const sqs = new AWS.SQS();
 
 const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 
+const defaultLimit = 100;
+
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const phoneTable = process.env.TABLE_PHONE as string;
@@ -237,7 +239,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		queryConfigs.push({
 			TableName: trafficTable,
 			IndexName: 'ToneIndex',
-			Limit: 50,
+			Limit: defaultLimit,
 			ScanIndexForward: false,
 			ExpressionAttributeNames: {
 				'#t': 'ToneIndex',
@@ -395,7 +397,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 						N: tg
 					}
 				},
-				Limit: 50,
+				Limit: defaultLimit,
 				KeyConditionExpression: '#tg = :tg'
 			});
 		});
@@ -413,7 +415,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 						N: emerg.toString()
 					}
 				},
-				Limit: 50,
+				Limit: defaultLimit,
 				KeyConditionExpression: '#emerg = :emerg'
 			});
 		});
