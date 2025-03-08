@@ -492,9 +492,7 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			headers: event.headers
-		}),
+		body: JSON.stringify(response),
 		multiValueHeaders: {
 			'Set-Cookie': [
 				`cvfd-user=${cookies['cvfd-user']}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`,
