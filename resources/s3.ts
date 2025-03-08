@@ -200,8 +200,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					queuePromise = sqs.sendMessage({
 						MessageBody: JSON.stringify({
 							action: 'page',
-							key: Key.split('/')[2],
-							isTest: true
+							key: Key.split('/')[2]
 						}),
 						QueueUrl: sqsQueue
 					}).promise();
