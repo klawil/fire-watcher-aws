@@ -70,15 +70,14 @@ async function updateUser() {
 
 	const userBody: ApiUserUpdateBody = {
 		isMe: true,
-		phone: user.phone,
+		phone: user.phone.toString(),
 		fName: (<HTMLInputElement>document.getElementById('fName')).value,
 		lName: (<HTMLInputElement>document.getElementById('lName')).value,
 		talkgroups: Array.from(<NodeListOf<HTMLInputElement>>document.querySelectorAll('.talkgroup'))
 			.filter(v => v.checked)
-			.map(v => v.value),
+			.map(v => parseInt(v.value, 10)),
 	};
 
-	console.log(userBody);
 	const result: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
 		method: 'POST',
 		body: JSON.stringify(userBody),
@@ -91,7 +90,7 @@ async function updateUser() {
 		updateUserButton.classList.add('btn-success');
 	else {
 		updateUserButton.classList.add('btn-danger');
-		if (result.errors.length > 0) {
+		if (result.errors && result.errors.length > 0) {
 			result.errors.forEach(key => {
 				if (key === 'talkgroups') {
 					Array.from(document.querySelectorAll('.talkgroup'))
@@ -103,6 +102,9 @@ async function updateUser() {
 				}
 			});
 		} else {
+			if (result.message) {
+				showAlert('danger', result.message);
+			}
 			Array.from(document.querySelectorAll('.update-input'))
 				.forEach(elem => elem.classList.add('is-invalid'));
 		}

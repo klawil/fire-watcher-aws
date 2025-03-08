@@ -30,7 +30,7 @@ export interface ApiUserUpdateBody {
 	lName: string;
 	isMe: boolean;
 	phone: string;
-	talkgroups: string[];
+	talkgroups: number[];
 }
 export interface ApiUserFidoAuthBody {
 	rawId: string;
