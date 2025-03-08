@@ -419,6 +419,58 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
+async function getDtrTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	event.queryStringParameters = event.queryStringParameters || {};
+	const queryConfigs: QueryInputWithAttributes[] = [];
+
+	// Build the partitions
+	const partitions = [ 'Y' ];
+	if (event.queryStringParameters.all === 'y')
+		partitions.push('N');
+
+	// Build the base query parameters
+	partitions.forEach(partition => queryConfigs.push({
+		TableName: talkgroupTable,
+		IndexName: 'InUseIndex',
+		ExpressionAttributeNames: {
+			'#iu': 'InUse',
+			'#name': 'Name',
+			'#id': 'ID',
+			'#c': 'Count'
+		},
+		ExpressionAttributeValues: {
+			':iu': {
+				S: partition
+			}
+		},
+		KeyConditionExpression: '#iu = :iu',
+		ProjectionExpression: '#id,#name,#c'
+	}));
+
+	// Get the data and build the response
+	const data = await mergeDynamoQueries(queryConfigs, 'Count');
+	data.Items.map(item => {
+		if (typeof item.Count === 'undefined') {
+			item.Count = {
+				N: '0'
+			};
+		}
+	});
+	const body = JSON.stringify({
+		success: true,
+		count: data.Count,
+		scanned: data.ScannedCount,
+		data: data.Items
+			.map(parseDynamoDbAttributeMap)
+	});
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action;
 	try {
@@ -429,6 +481,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			case 'dtr':
 				return await getDtrList(event);
 			case 'talkgroups':
+				return await getDtrTalkgroups(event);
 			case 'listTexts':
 		}
 

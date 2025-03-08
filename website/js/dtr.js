@@ -313,7 +313,7 @@ class TalkgroupFilter {
 const numberFormatter = new Intl.NumberFormat('en-us', {
 	maximumFractionDigits: 0
 });
-fetch(`${host}/api?action=talkgroups`)
+fetch(`${host}/api/frontend?action=talkgroups`)
 	.then(r => r.json())
 	.then(data => {
 		if (!data.success) return;
