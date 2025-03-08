@@ -200,13 +200,12 @@ async function runDynamoQueries(
 				let minSortKey: null | number = null;
 				let maxSortKey: null | number = null;
 				data.Items?.forEach((item) => {
-					const sortKeyValue = Number(item[sortKey].N);
 					const afterKeyValue = Number(item[afterKey].N);
 
 					if (
 						minSortKey === null ||
-						sortKeyValue < minSortKey
-					) minSortKey = sortKeyValue;
+						afterKeyValue < minSortKey
+					) minSortKey = afterKeyValue;
 
 					if (
 						maxSortKey === null ||
@@ -378,9 +377,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 }
 
-const dtrStartTimeIndex = 'StartTimeIndex';
 const dtrAddedIndex = 'AddedIndex';
-const dtrAddedTgIndex = 'AddedTgIndex';
 
 async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const filters: string[] = [];
@@ -413,7 +410,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		[ '0', '1' ].forEach((emerg) => {
 			queryConfigs.push({
 				TableName: dtrTable,
-				IndexName: dtrStartTimeIndex,
+				IndexName: dtrAddedIndex,
 				ScanIndexForward: false,
 				ExpressionAttributeNames: {
 					'#emerg': 'Emergency'
@@ -444,7 +441,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 					Talkgroup: {
 						N: parts[1]
 					},
-					StartTime: {
+					Added: {
 						N: parts[2]
 					}
 				}
@@ -467,7 +464,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+			queryConfig.ExpressionAttributeNames['#st'] = 'Added';
 			queryConfig.ExpressionAttributeValues[':st'] = {
 				N: before
 			};
@@ -481,10 +478,6 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	) {
 		const after = event.queryStringParameters.after;
 		queryConfigs.forEach((queryConfig) => {
-			queryConfig.IndexName = queryConfig.IndexName === dtrStartTimeIndex
-				? dtrAddedIndex
-				: dtrAddedTgIndex;
-
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 

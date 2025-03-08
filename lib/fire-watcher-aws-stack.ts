@@ -66,6 +66,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    const dtrTable2 = new dynamodb.Table(this, 'cvfd-dtr-added', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'Talkgroup',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'Added',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
     const messagesTable = new dynamodb.Table(this, 'cvfd-messages', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -97,6 +108,17 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    dtrTable2.addGlobalSecondaryIndex({
+      indexName: 'AddedIndex',
+      partitionKey: {
+        name: 'Emergency',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'Added',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'StartTimeIndex',
       partitionKey: {
@@ -149,7 +171,7 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_TRAFFIC: trafficTable.tableName,
-        TABLE_DTR: dtrTable.tableName,
+        TABLE_DTR: dtrTable2.tableName,
         SQS_QUEUE: queue.queueUrl
       }
     });
@@ -157,7 +179,7 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the S3 handler
     bucket.grantRead(s3Handler);
     trafficTable.grantReadWriteData(s3Handler);
-    dtrTable.grantReadWriteData(s3Handler);
+    dtrTable2.grantReadWriteData(s3Handler);
     queue.grantSendMessages(s3Handler);
 
     // Create a handler for the SQS queue
@@ -249,7 +271,8 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
-        TABLE_DTR: dtrTable.tableName,
+        TABLE_DTR: dtrTable2.tableName,
+        TABLE_DTR_OLD: dtrTable.tableName,
         TABLE_MESSAGES: messagesTable.tableName,
         TABLE_STATUS: statusTable.tableName,
         SQS_QUEUE: queue.queueUrl,
@@ -260,7 +283,8 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the API handler
     phoneNumberTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
-    dtrTable.grantReadData(apiHandler);
+    dtrTable.grantReadWriteData(apiHandler);
+    dtrTable2.grantReadWriteData(apiHandler);
     messagesTable.grantReadWriteData(apiHandler);
     statusTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);

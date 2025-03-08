@@ -3,7 +3,6 @@ import * as aws from 'aws-sdk';
 
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
-const sqs = new aws.SQS();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
