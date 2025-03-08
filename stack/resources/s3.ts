@@ -256,9 +256,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							.slice(0, -1);
 						const keptItem = allItems.slice(-1)[0];
 						const keepingCurrentItem: boolean = keptItem.Key.S === Key;
-						logger.debug('itemsToDelete', itemsToDelete);
-						logger.debug('keptItem', keptItem);
-						logger.debug('body', body.Item);
+						if (isPage) {
+							logger.error('itemsToDelete', itemsToDelete);
+							logger.error('keptItem', keptItem);
+							logger.error('body', body.Item);
+						} else {
+							logger.debug('itemsToDelete', itemsToDelete);
+							logger.debug('keptItem', keptItem);
+							logger.debug('body', body.Item);
+						}
 						promises.push(dynamodb.batchWriteItem({
 							RequestItems: {
 								[dtrTable]: itemsToDelete.map(itemToDelete => ({
@@ -275,7 +281,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								}))
 							}
 						}).promise());
-						if (shouldDoTranscript) {
+						if (shouldDoTranscript && !keepingCurrentItem) {
 							promises.push(dynamodb.batchWriteItem({
 								RequestItems: {
 									[dtrTranslationTable]: itemsToDelete.map(itemToDelete => ({
@@ -291,7 +297,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							}).promise()
 								.catch(e => logger.error('parseRecord', 'translate table', e)));
 						}
-						if (transcript !== null) {
+						if (transcript !== null && keepingCurrentItem) {
 							promises.push(dynamodb.updateItem({
 								TableName: dtrTable,
 								Key: {
@@ -312,7 +318,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						if (
 							isPage &&
 							keepingCurrentItem &&
-							itemsToDelete.reduce((agg, item) => agg || !!(item.PageSent?.BOOL), false)
+							!itemsToDelete.reduce((agg, item) => agg || !!(item.PageSent?.BOOL), false)
 						) {
 							// Update the current item to indicate a page will have been sent
 							doTranscriptOnly = false;
