@@ -47,7 +47,27 @@ function parsePhone(num: string, toHuman: boolean = false): string {
 		.join('-');
 }
 
-async function sendMessage(phone: string, body: string, mediaUrl: string[] = []) {
+async function getRecipients() {
+	return dynamodb.scan({
+		TableName: phoneTable,
+		FilterExpression: '#a = :a',
+		ExpressionAttributeNames: {
+			'#a': 'isActive'
+		},
+		ExpressionAttributeValues: {
+			':a': {
+				BOOL: true
+			}
+		}
+	}).promise()
+		.then((data) => data.Items || []);
+}
+
+async function sendMessage(phone: string | undefined, body: string, mediaUrl: string[] = []) {
+	if (typeof phone === 'undefined') {
+		return;
+	}
+
 	const twilioConf = await twilioSecretPromise;
 	if (twilioConf === null) {
 		throw new Error('Cannot get twilio secret');
@@ -62,10 +82,10 @@ async function sendMessage(phone: string, body: string, mediaUrl: string[] = [])
 		});
 }
 
-function createPageMessage(fileInfo: AWS.DynamoDB.ItemResponse['Item']): string {
-	const queryParam = fileInfo?.Key.S?.split('/')[1];
+function createPageMessage(fileKey: string): string {
+	const queryParam = fileKey.split('/')[1];
 
-	return `TONE - https://fire.klawil.net/?f=${queryParam}`;
+	return `S.O.: PAGE - https://fire.klawil.net/?f=${queryParam}`;
 }
 
 interface RegisterBody {
@@ -162,7 +182,7 @@ async function handleActivation(body: ActivateBody) {
 	}).promise()
 		.then((admins) => Promise.all((admins.Items || []).map((item) => {
 			return sendMessage(
-				item.phone.N as string,
+				item.phone.N,
 				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
 			);
 		}))));
@@ -180,7 +200,7 @@ async function handleActivation(body: ActivateBody) {
 		Limit: 1,
 		ScanIndexForward: false
 	}).promise()
-		.then((data) => sendMessage(body.phone, `S.O.: ${createPageMessage(data.Items && data.Items[0])}`)));
+		.then((data) => sendMessage(body.phone, createPageMessage(data.Items && data.Items[0].Key.S || ''))));
 
 	return Promise.all(promises);
 }
@@ -239,22 +259,8 @@ async function handleTwilio(body: TwilioBody) {
 		return;
 	}
 
-	const recepients = await dynamodb.scan({
-		TableName: phoneTable,
-		FilterExpression: '#a = :a AND #p <> :p',
-		ExpressionAttributeNames: {
-			'#a': 'isActive',
-			'#p': 'phone'
-		},
-		ExpressionAttributeValues: {
-			':a': {
-				BOOL: true
-			},
-			':p': {
-				N: sender.Item.phone.N
-			}
-		}
-	}).promise();
+	const recipients = await getRecipients()
+		.then((data) => data.filter((number) => number.phone.N !== sender.Item?.phone.N));
 
 	// Build the message
 	const messageBody = `${sender.Item.name.S}: ${eventData.Body}`;
@@ -262,8 +268,26 @@ async function handleTwilio(body: TwilioBody) {
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
 
-	await Promise.all(recepients.Items
-		?.map((number) =>  sendMessage(number.phone.N as string, messageBody, mediaUrls)) || []);
+	await Promise.all(recipients
+		.map((number) =>  sendMessage(number.phone.N, messageBody, mediaUrls)) || []);
+}
+
+interface PageBody {
+	action: 'page';
+	key: string;
+}
+
+async function handlePage(body: PageBody) {
+	// Build the message body
+	const messageBody = createPageMessage(body.key);
+	const recipients = await getRecipients();
+
+	// Send the messages
+	await Promise.all(recipients
+		.map((phone) => sendMessage(
+			phone.phone.N,
+			messageBody
+		)));
 }
 
 async function parseRecord(event: lambda.SQSRecord) {
@@ -275,6 +299,8 @@ async function parseRecord(event: lambda.SQSRecord) {
 			return handleActivation(body);
 		case 'twilio':
 			return handleTwilio(body);
+		case 'page':
+			return handlePage(body);
 	}
 }
 
