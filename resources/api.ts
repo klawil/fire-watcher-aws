@@ -786,7 +786,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		response.errors.push('key');
 	}
 
-	if (response.success) {
+	if (response.success && body.key.indexOf('BG_FIRE') === -1) {
 		const event = {
 			action: 'page',
 			key: body.key
