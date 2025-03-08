@@ -1,5 +1,6 @@
 const siteMarkers = {};
 const siteUpdateTime = {};
+const fadeSiteTime = 1000 * 60 * 15; // 15 minutes out of date
 
 const makeSiteString = (keysAndNames) => (site) => {
 	let flags = [];
@@ -77,10 +78,12 @@ function updateSitesTable(hasMap) {
 
 			// Handle the marker
 			if (hasMap) {
+				const markerOpacity = Date.now() - site.UpdateTime >= fadeSiteTime ? 0.5 : 1;
 				const popupContent = `<b>${site.SiteName}</b><br>Failed: ${newData.failed}<br>Seen By: ${newData.seen}<br>Updated: ${newData.updated}`;
 				if (typeof siteMarkers[site.SiteId] === 'undefined') {
 					siteMarkers[site.SiteId] = L
 						.marker([ site.SiteLat, site.SiteLon ], {
+							opacity: markerOpacity,
 							icon: L.icon({
 								iconUrl: `/libs/images/${site.SiteFailed ? 'red' : 'black'}.png`,
 								shadowUrl: null,
@@ -95,6 +98,8 @@ function updateSitesTable(hasMap) {
 					siteMarkers[site.SiteId]
 						.getPopup()
 						.setContent(popupContent);
+					siteMarkers[site.SiteId]
+						.setOpacity(markerOpacity);
 				}
 			}
 		}))
