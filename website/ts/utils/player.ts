@@ -19,6 +19,7 @@ const downloadButtons: HTMLButtonElement[] = [
 
 let playButtonAction: 'play' | 'pause' = 'play';
 export let autoPlayEnabled: boolean = true;
+export let playNewFiles: boolean = false;
 
 playButtons.forEach(btn => btn.addEventListener('click', () => {
 	btn.blur();
@@ -76,15 +77,25 @@ player.addEventListener('ended', () => {
 
 	// Get the next row
 	const currentFile = player.getAttribute('data-file');
-	if (currentFile === null) return;
+	if (currentFile === null) {
+		playNewFiles = true;
+		return;
+	}
 
 	const row = <HTMLTableRowElement>document.getElementById(btoa(currentFile));
-	if (row === null) return;
+	if (row === null) {
+		playNewFiles = true;
+		return;
+	}
 
 	const nextFile = row.previousElementSibling;
-	if (nextFile === null) return;
+	if (nextFile === null) {
+		playNewFiles = true;
+		return;
+	}
 
-	setTimeout(playFile, 500, atob(nextFile.id));
+	playNewFiles = false;
+	setTimeout(playFile, 100, atob(nextFile.id));
 });
 
 playerBarContainer.addEventListener('click', e => {
@@ -108,6 +119,7 @@ function markRowAsPlaying(fileName: string) {
 }
 
 export function playFile(fileName: string) {
+	playNewFiles = false;
 	try {
 		player.src = `https://fire.klawil.net/${fileName}`;
 		player.play();

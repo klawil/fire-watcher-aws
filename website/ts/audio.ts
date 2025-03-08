@@ -1,7 +1,7 @@
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject } from '../../common/audioApi';
 import { showAlert } from './utils/alerts';
 import { doneLoading } from './utils/loading';
-import { playFile } from './utils/player';
+import { playFile, playNewFiles } from './utils/player';
 import { ColumnConfig, createTableRow } from './utils/table';
 import { changeUrlParams, deleteUrlParams, getUrlParams } from './utils/url';
 import { AudioFilter, TalkgroupFilter, ToggleFilter } from './utils/filter';
@@ -32,7 +32,7 @@ declare global {
 	}
 }
 
-const dataUpdateFrequency = 10000;
+const dataUpdateFrequency = 5000;
 
 function dateToStr(d: Date) {
 	let dateString = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -92,8 +92,8 @@ const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => [
 ];
 
 let tgPromise: Promise<void>;
-let isLive: boolean = true; // Is the user at the top of the page
-let updateLive: boolean = true; // Should we be periodically polling to see if there are new files
+let isAtTopOfPage: boolean = true; // Is the user at the top of the page?
+let isUpToLive: boolean = false; // Are there any new files after this file?
 
 function displayRows(newFiles: AudioFileObject[], direction: 'after' | 'before', restart: boolean) {
 	if (restart) fileTable.innerHTML = '';
@@ -123,8 +123,7 @@ async function updateData(
 ) {
 	if (date !== null) {
 		restart = true;
-		isLive = false;
-		updateLive = false;
+		isUpToLive = false;
 	}
 
 	if (restart) {
@@ -151,13 +150,13 @@ async function updateData(
 		parameters.push(`${direction}=${nextDataFields.before}`);
 	} else if (
 		direction === 'after' &&
-		!isLive &&
+		!isUpToLive &&
 		typeof nextDataFields.after !== 'undefined'
 	) {
 		parameters.push(`${direction}=${nextDataFields.after}`);
 	} else if (
 		direction === 'after' &&
-		isLive &&
+		isUpToLive &&
 		typeof nextDataFields.afterAdded !== 'undefined'
 	) {
 		parameters.push(`afterAdded=${nextDataFields.afterAdded}`);
@@ -207,8 +206,9 @@ async function updateData(
 		nextDataFields.afterAdded = apiResults.afterAdded;
 	}
 
-	if (direction === 'after' && apiResults.files.length === 0)
-		isLive = true;
+	if (direction === 'after' && apiResults.files.length === 0) {
+		isUpToLive = true;
+	}
 
 	await tgPromise;
 
@@ -225,19 +225,25 @@ async function updateData(
 		const row = document.getElementById(btoa(rowToPlay.Key));
 		if (row === null) return;
 		row.scrollIntoView({ block: 'center' });
-		handleLoadNewFiles(null);
-	} else if (direction === 'after' && !isLive) {
+		handleLoadNewFiles();
+	} else if (direction === 'after' && !isUpToLive) {
 		const row = document.getElementById(btoa(apiResults.files[0].Key));
 		if (row === null) return;
 		row.scrollIntoView({ block: 'center' });
 		setTimeout(() => row.classList.add('tg-row-highlight'), 100);
 		setTimeout(() => row.classList.remove('tg-row-highlight'), 800);
+	} else if (direction === 'after' && playNewFiles && apiResults.files.length > 0) {
+		let rowToPlay = apiResults.files[0];
+		playFile(rowToPlay.Key);
+		const row = document.getElementById(btoa(rowToPlay.Key));
+		if (row === null) return;
+		row.scrollIntoView({ block: 'center' });
+		handleLoadNewFiles();
 	}
 
 	if (
 		direction === 'after' &&
-		updateLive &&
-		isLive
+		isAtTopOfPage
 	) {
 		updateTimeouts.forEach(to => clearTimeout(to));
 		updateTimeouts = [];
@@ -247,53 +253,48 @@ async function updateData(
 		date !== null
 	) {
 		updateData('before');
-		lastScrollEventDown = Date.now();
 	}
 }
 
-// Load new files if within 10% of the screen of the top or bottom of the page
-let lastScrollY: number = 0;
-let lastScrollEventDown: number = 0;
-let lastScrollEventUp: number = 0;
-const scrollDebounce = 2000;
-function handleLoadNewFiles(e: Event | null) {
-	let scrollingDown: boolean | null = null;
-	if (e !== null) {
-		scrollingDown = window.scrollY > lastScrollY;
-		lastScrollY = window.scrollY;
-	}
+function debounce(fn: Function, minDelay: number): EventListenerOrEventListenerObject {
+	let timerId: NodeJS.Timeout | null = null;
+	let lastCalledTime: number = 0;
 
+	return function () {
+		const nowTime = Date.now();
+		if (nowTime - lastCalledTime < minDelay) {
+			if (timerId === null) {
+				timerId = setTimeout(() => {
+					lastCalledTime = Date.now();
+					timerId = null;
+					fn();
+				}, minDelay);
+			}
+			return;
+		}
+
+		lastCalledTime = nowTime;
+		fn();
+	};
+}
+
+// Load new files if within 10% of the screen of the top or bottom of the page
+const scrollDebounce: number = 500; // Max 2 events per second
+function handleLoadNewFiles() {
 	const scrollY = window.scrollY;
 	const winHeight = window.innerHeight;
 	const bodyHeight = document.body.getBoundingClientRect().height;
 
 	const offsetHeight = winHeight * 0.1 > 120 ? winHeight * 0.1 : 120;
-	
-	updateLive = false;
-	if (
-		scrollY + winHeight >= bodyHeight - offsetHeight &&
-		scrollingDown === true
-	) {
-		if (
-			e !== null &&
-			lastScrollEventDown - Date.now() >= scrollDebounce
-		) return;
-		if (e !== null) lastScrollEventDown = Date.now();
-		updateData('before')
-	} else if (
-		scrollY <= offsetHeight &&
-		scrollingDown === false
-	) {
-		updateLive = true;
-		if (
-			e !== null &&
-			lastScrollEventUp - Date.now() >= scrollDebounce
-		) return;
-		if (e !== null) lastScrollEventUp = Date.now();
+
+	isAtTopOfPage = scrollY <= offsetHeight;
+	if (scrollY + winHeight >= bodyHeight - offsetHeight) {
+		updateData('before');
+	} else if (scrollY <= offsetHeight) {
 		updateData('after');
 	}
 }
-window.addEventListener('scroll', handleLoadNewFiles);
+window.addEventListener('scroll', debounce(handleLoadNewFiles, scrollDebounce));
 
 let talkgroups: {
 	[key: string]: {
