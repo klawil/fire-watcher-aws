@@ -55,6 +55,15 @@ const periodFormatters = [
 	},
 ];
 
+const color1 = {
+	backgroundColor: 'rgba(54, 162, 235, 0.5)',
+	borderColor: 'rgb(54, 162, 235)'
+};
+const color2 = {
+	backgroundColor: 'rgba(255, 99, 132, 0.5)',
+	borderColor: 'rgb(255, 99, 132)'
+};
+
 const charts = [
 	{
 		id: 'api-calls',
@@ -95,7 +104,6 @@ charts.forEach(chart => {
 	fetch(`${baseHost}/api/frontend?action=stats&${chart.query}`)
 		.then(r => r.json())
 		.then(data => {
-			console.log(data);
 			chart.val = chart.val || (val => val);
 
 			const names = data.data.names;
@@ -150,7 +158,42 @@ charts.forEach(chart => {
 			}
 			if (chart.fill && datasets.length === 2) {
 				datasets.forEach(dataset => dataset.label = dataset.label.split(' - ').pop());
-				datasets[1].fill = '-1';
+				datasets[0].borderColor = color1.borderColor;
+				datasets[0].backgroundColor = color1.backgroundColor;
+				datasets[0].showLine = false;
+				datasets[0].fill = {
+					target: 2,
+					above: color1.backgroundColor,
+					below: 'rgba(0, 0, 0, 0)'
+				};
+				datasets[1].borderColor = color2.borderColor;
+				datasets[1].backgroundColor = color2.backgroundColor;
+				datasets[1].showLine = false;
+				datasets[1].fill = {
+					target: 2,
+					below: color2.backgroundColor,
+					above: 'rgba(0, 0, 0, 0)'
+				};
+				datasets.push(({
+					backgroundColor: 'rgba(0,0,0,0)',
+					fillColor: 'rgba(0,0,0,0)',
+					fill: false,
+					pointStyle: false,
+					tension: 0.0,
+					label: 'none',
+					data: labels.map((label, i) => {
+						const dataA = datasets[0].data[i];
+						const dataB = datasets[1].data[i];
+
+						if (dataA < 30 && dataB < 30) {
+							return dataA;
+						}
+						if (dataA > 30 && dataB > 30) {
+							return dataB;
+						}
+						return 30;
+					})
+				}))
 				chartConfig.options.plugins = {
 					annotation: {
 						annotations: {
@@ -169,6 +212,16 @@ charts.forEach(chart => {
           			borderWidth: 2
 							}
 						}
+					},
+					legend: {
+						display: false,
+						labels: {
+							filter: a => a.text !== 'none'
+						}
+					},
+					tooltip: {
+						filter: (a, b, c) => a.dataset.label !== 'none' &&
+							c.map(v => v.dataset.label).indexOf(a.dataset.label) === b
 					}
 				};
 			}
