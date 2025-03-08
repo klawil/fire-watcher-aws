@@ -83,7 +83,7 @@ const pageConfigs: {
 		pagingParty: string;
 		partyBeingPaged: string;
 		pageService: string;
-		fToTime: (fNAme: string) => string;
+		fToTime: (fName: string) => Date;
 	}
 } = {
 	'8198': {
@@ -127,7 +127,7 @@ const codeTtl = 1000 * 60 * 5; // 5 minutes
 
 const timeZone = 'America/Denver';
 
-function dtrFnameToDate(fileName: string): string {
+function dtrFnameToDate(fileName: string): Date {
 	let d = new Date(0);
 	try {
 		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
@@ -137,25 +137,10 @@ function dtrFnameToDate(fileName: string): string {
 		}
 	} catch (e) {}
 
-	const dateString = d.toLocaleDateString('en-US', {
-		timeZone: timeZone,
-		weekday: 'short',
-		month: 'short',
-		day: '2-digit'
-	});
-	
-	const timeString = d.toLocaleTimeString('en-US', {
-		timeZone: timeZone,
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit'
-	});
-
-	return `on ${dateString} at ${timeString}`;
+	return d;
 }
 
-function vhfFnameToDate(fileName: string): string {
+function vhfFnameToDate(fileName: string): Date {
 	let d = new Date(0);
 	try {
 		const parts = fileName.match(/(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/);
@@ -164,16 +149,20 @@ function vhfFnameToDate(fileName: string): string {
 			d = new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`);
 		}
 	} catch (e) {}
+	
+	return d;
+}
 
+function dateToTimeString(d: Date): string {
 	const dateString = d.toLocaleDateString('en-US', {
-		timeZone: 'America/Denver',
+		timeZone: timeZone,
 		weekday: 'short',
 		month: 'short',
 		day: '2-digit'
 	});
 	
 	const timeString = d.toLocaleTimeString('en-US', {
-		timeZone: 'America/Denver',
+		timeZone: timeZone,
 		hour12: false,
 		hour: '2-digit',
 		minute: '2-digit',
@@ -273,7 +262,7 @@ function createPageMessage(
 
 	let pageStr = `${pageConfig.pageService} PAGE\n`;
 	pageStr += `${pageConfig.pagingParty} paged ${pageConfig.partyBeingPaged} `
-	pageStr += `${pageConfig.fToTime(fileKey)}\n`;
+	pageStr += `${dateToTimeString(pageConfig.fToTime(fileKey))}\n`;
 	pageStr += `https://fire.klawil.net/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
 	if (callSign !== null) {
 		pageStr += `&cs=${callSign}`;
@@ -503,7 +492,7 @@ async function handlePage(body: PageBody) {
 	let metricPromise: Promise<any> = new Promise(res => res(null));
 	if (!body.isTest) {
 		const pageConfig = pageConfigs[body.tg];
-		const pageTime = new Date(Number(pageConfig.fToTime(body.key)));
+		const pageTime = pageConfig.fToTime(body.key);
 		metricPromise = cloudWatch.putMetricData({
 			Namespace: 'Twilio Health',
 			MetricData: [
@@ -514,7 +503,11 @@ async function handlePage(body: PageBody) {
 					Value: pageInitTime.getTime() - pageTime.getTime()
 				}
 			]
-		}).promise();
+		}).promise()
+			.catch(e => {
+				console.error('Error with metrics');
+				console.error(e);
+			});
 	}
 
 	const messageId = Date.now().toString();
@@ -662,6 +655,7 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			case 'transcribe':
 				response = await handleTranscribe(body);
+				break;
 			default:
 				await incrementMetric('Error', {
 					source: metricSource
