@@ -5,10 +5,8 @@ let lastUpdateId = {
 let allowUpdateAfter = true;
 let fromDate = false;
 const dataUpdateFrequency = 10000;
-const sourceMap = {
-	SAG_FIRE_VHF: 'Saguache Fire VHF',
-	BG_FIRE_VHF: 'Baca Fire/EMS VHF'
-};
+window.talkgroupMap = window.talkgroupMap || {};
+window.talkgroupOptions = window.talkgroupOptions || {};
 
 const nextDataFields = {};
 
@@ -26,7 +24,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 	if (lastUpdateId[direction] !== null) return;
 	lastUpdateId[direction] = updateId;
 
-	let apiUrl = `${baseHost}/api/frontend?action=vhf`;
+	let apiUrl = `${baseHost}/api/frontend?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
 		if (direction === 'after') {
@@ -36,12 +34,13 @@ function updateData(direction = 'after', restart = false, date = false) {
 		}
 	} else if (date !== false) {
 		fromDate = true;
+		if (`${date}`.length < 13) date *= 1000;
 		apiUrl += `&after=${date}`;
 	}
 
 	const queryParams = Object.keys(urlFilters)
 		.filter((filterKey) => urlFilters[filterKey].get())
-		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl())}`);
+		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl(true))}`);
 	if (queryParams.length > 0) {
 		apiUrl += `&${queryParams.join('&')}`;
 	}
@@ -77,7 +76,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 
 			r.data = r.data.map((f) => ({
 				...f,
-				Local: dateToStr(new Date(f.Datetime)),
+				Local: dateToStr(new Date(f.StartTime * 1000)),
 				File: f.Key.split('/').pop()
 			}));
 			if (direction === 'before') {
@@ -101,34 +100,32 @@ setInterval(() => {
 	if (allowUpdateAfter || playNewFiles) updateData('after');
 }, dataUpdateFrequency);
 
-function playLastTone() {
-	const tones = files.filter(file => file.Tone);
-	let fileToPlay = tones[0];
+function playLive() {
+	let fileToPlay = files[0].File;
 	if (fromDate) {
-		fileToPlay = tones[tones.length - 1];
+		fileToPlay = files[files.length - 1].File;
 	}
 
-	if (!fileToPlay && fromDate) {
-		fileToPlay = files[files.length - 1];
-	} else if (!fileToPlay) {
-		fileToPlay = files[0];
-	}
-
-	if (fileToPlay) {
-		play(fileToPlay.File);
-		scrollRowIntoView(fileToPlay.File);
-	}
+	play(fileToPlay);
+	scrollRowIntoView(fileToPlay);
 }
 
-const fileNameRegex = /(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
-const dataTimeKey = 'Datetime';
-const dataFileKey = 'Key';
+const fileNameRegex = /\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/;
+const vhfFileNameRegex = /(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
+const dataTimeKey = 'StartTime';
+const dataFileKey = 'File';
 
 function fileToTime(name) {
-	if (!name || !fileNameRegex.test(name)) return false;
+	if (!name) return false;
+	if (!fileNameRegex.test(name) && !vhfFileNameRegex.test(name)) return false;
 
-	const parts = name.match(fileNameRegex);
-	return new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`).getTime();
+	if (fileNameRegex.test(name)) {
+		const parts = name.match(fileNameRegex);
+		return parseInt(parts[1], 10);
+	} else {
+		const parts = name.match(vhfFileNameRegex);
+		return new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`).getTime() / 1000;
+	}
 }
 
 window.addEventListener('scroll', () => {
@@ -145,18 +142,261 @@ window.addEventListener('scroll', () => {
 	}
 });
 
+class TalkgroupFilter {
+	activeTab = 'all';
+	chosenPreset = 'NSCFPD';
+	chosenTalkgroups = [];
+
+	/**
+	 * 8090 - ARCC 5
+	 * 8198 - Ambo
+	 * 8330 - Mac
+	 * 8331 - BG Tac
+	 * 8332 - Fire Dispatch
+	 * 8333 - Fire Tac
+	 * 8335 - SO Dispatch
+	 * 8336 - SO Tac
+	 */
+	presets = {
+		'NSCAD': [ '8198' ],
+		'NSCFPD': [ '8332', '8333', '18332' ],
+		'Sag Mac': [ '8330' ],
+		'BGFD/BGEMS': [ '8090', '8331', '18331' ],
+		'SC Sheriff': [ '8335', '8336' ],
+		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333', '18332' ],
+		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
+		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
+	};
+
+	constructor() {
+		const tabs = [
+			'all',
+			'presets',
+			'talkgroups'
+		];
+
+		this.tabButtons = tabs
+			.map(t => `${t}-tab`)
+			.map(id => document.getElementById(id));
+		this.tabContents = tabs
+			.map(id => document.getElementById(id));
+
+		this.emergOnlyCheckbox = document.getElementById('only-emerg');
+
+		this.presetSelect = document.getElementById('preset-select');
+		Object.keys(this.presets)
+			.sort()
+			.forEach(key => {
+				const elem = document.createElement('option');
+				elem.value = key;
+				elem.innerHTML = key;
+				if (key === this.chosenPreset) elem.selected = true;
+				this.presetSelect.appendChild(elem);
+			});
+
+		this.talkgroupSelect = document.getElementById('talkgroup-select');
+		this.talkgroupSelected = document.getElementById('talkgroup-select-active');
+		document.getElementById('tg-search').addEventListener('input', (e) => {
+			const searchValue = e.target.value.toLowerCase();
+			let filterFunc = (elem) => elem.innerHTML.toLowerCase().indexOf(searchValue) !== -1;
+			if (searchValue === '') {
+				filterFunc = () => true;
+			}
+
+			[ ...this.talkgroupSelect.querySelectorAll('tr') ]
+				.forEach(elem => {
+					const show = filterFunc(elem);
+					elem.hidden = !show;
+				});
+		});
+		
+		Object.keys(talkgroupOptions)
+			.forEach(key => this.createTalkgroupElem(key, talkgroupOptions[key]));
+
+		this.update();
+		this.defaultUrl = this.getUrl();
+	}
+
+	createTalkgroupElem(id, name) {
+		const elemParent = document.createElement('tr');
+		elemParent.id = `tg-${id}`;
+		elemParent.classList.add('tg-row');
+		elemParent.setAttribute('data-selected', '0');
+		elemParent.addEventListener('click', () => {
+			let newHome;
+			if (elemParent.getAttribute('data-selected') === '0') {
+				newHome = this.talkgroupSelected;
+				elemParent.setAttribute('data-selected', '1');
+			} else {
+				newHome = this.talkgroupSelect;
+				elemParent.setAttribute('data-selected', '0');
+			}
+
+			newHome.appendChild(elemParent);
+		});
+
+		const elem = document.createElement('td');
+		elem.innerHTML = name;
+		elemParent.appendChild(elem);
+
+		this.talkgroupSelect.appendChild(elemParent);
+
+		return elemParent;
+	}
+
+	update() {
+		this.activeTab = this.tabContents
+			.filter(div => div.classList.contains('show'))[0]
+			.id;
+
+		if (this.activeTab === 'all') return;
+
+		this.emergOnlyCheckbox.checked = false;
+
+		if (this.activeTab === 'presets'){
+			if (this.chosenPreset === null) return;
+
+			this.chosenPreset = this.presetSelect.value;
+			return;
+		}
+		 
+		this.chosenTalkgroups = [ ...this.talkgroupSelected.querySelectorAll('tr') ]
+			.map(elem => elem.id.slice(3));
+	}
+	
+	get() {
+		if (this.activeTab === 'all') return undefined;
+
+		if (this.activeTab === 'presets'){
+			if (this.chosenPreset === null) return undefined;
+
+			return this.presets[this.chosenPreset];
+		}
+
+		if (this.chosenTalkgroups.length === 0) return undefined;
+
+		return this.chosenTalkgroups;
+	}
+
+	set(urlValue) {
+		urlValue = decodeURIComponent(urlValue);
+
+		if (urlValue.indexOf('p') === 0) {
+			this.activeTab = 'presets';
+			this.chosenPreset = urlValue.slice(1);
+			this.presetSelect.value = this.chosenPreset;
+		} else if (urlValue.indexOf('tg') === 0) {
+			this.activeTab = 'talkgroups';
+			this.chosenTalkgroups = urlValue.slice(2).split('|');
+
+			this.chosenTalkgroups.forEach(tg => {
+				let elem = document.getElementById(`tg-${tg}`);
+				if (elem === null) {
+					elem = this.createTalkgroupElem(tg, tg);
+				};
+
+				this.talkgroupSelected.appendChild(elem);
+				elem.setAttribute('data-selected', '1');
+			});
+		} else {
+			this.activeTab = 'all';
+		}
+
+		this.tabButtons.forEach(div => div.classList.remove('active'));
+		this.tabButtons
+			.filter(div => div.id === `${this.activeTab}-tab`)
+			.forEach(div => div.classList.add('active'));
+
+		this.tabContents.forEach(div => div.classList.remove('active', 'show'));
+		this.tabContents
+			.filter(div => div.id === this.activeTab)
+			.forEach(div => div.classList.add('active', 'show'));
+
+		this.update();
+	}
+
+	getUrl(forApi = false) {
+		const responseForAll = forApi ? undefined : 'all';
+
+		switch (this.activeTab) {
+			case 'all':
+				return responseForAll;
+			case 'presets':
+				if (this.chosenPreset === null) return responseForAll;
+				if (forApi) return this.presets[this.chosenPreset].join('|');
+				return encodeURIComponent(`p${this.chosenPreset}`);
+			default:
+				if (this.chosenTalkgroups.length === 0) return responseForAll;
+				if (forApi) return this.chosenTalkgroups.join('|');
+				return encodeURIComponent(`tg${this.chosenTalkgroups.join('|')}`);
+		}
+	}
+
+	isDefault() {
+		return this.getUrl() === this.defaultUrl;
+	}
+}
+
+// Check for a callsign and `f` parameter
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
-	afterFilters.Source = new CheckBoxFilter('input[name="vhf-source"]');
-	urlFilters.tone = new ToggleFilter('only-pages');
-
-	rowConfig = [
-		f => f.Len,
-		f => sourceMap[f.Source] || f.Source,
-		f => f.Local,
-		f => f.Tone ? '<i class="bi bi-star-fill"></i>' : ''
-	];
-	defaultFunc = playLastTone;
-	
-	init();
+	const currentParams = getUrlParams();
+	if (
+		typeof currentParams.cs !== 'undefined' &&
+		currentParams.cs !== '' &&
+		typeof currentParams.f !== 'undefined' &&
+		currentParams.f !== ''
+	) {
+		fetch(`/api/frontend?action=pageView`, {
+			method: 'POST',
+			body: JSON.stringify({
+				cs: currentParams.cs,
+				f: currentParams.f
+			})
+		})
+			.then(r => r.json())
+			.then(console.log);
+	}
 });
+
+const numberFormatter = new Intl.NumberFormat('en-us', {
+	maximumFractionDigits: 0
+});
+fetch(`${baseHost}/api/frontend?action=talkgroups`)
+	.then(r => r.json())
+	.then(data => {
+		if (!data.success) return;
+
+		window.talkgroupMap = data.data
+			.reduce((agg, item) => {
+				agg[item.ID] = item.Name || item.ID;
+
+				return agg;
+			}, {});
+
+		window.talkgroupOptions = data.data
+		.reduce((agg, item) => {
+			const countStr = item.Count > 100000
+				? '>100,000'
+				: numberFormatter.format(item.Count);
+
+			agg[item.ID] = `${item.Name || item.ID} (${countStr} recordings)`;
+
+			return agg;
+		}, {});
+
+		window.audioQ.push(() => {	
+			urlFilters.tg = new TalkgroupFilter();
+			urlFilters.emerg = new ToggleFilter('only-emerg');
+			
+			rowConfig = [
+				f => f.Len,
+				f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
+				f => f.Local,
+				f => f.Emergency === 1 || f.Tone ? '<i class="bi bi-star-fill"></i>' : ''
+			];
+			defaultFunc = playLive;
+			
+			init();
+		});
+	});

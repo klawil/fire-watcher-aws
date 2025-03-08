@@ -1,10 +1,10 @@
 ---
-titleBarTitle: VHF
+titleBarTitle: DTR
 layout: base
 centerAll: true
 isAudio: true
 hasFilter: true
-latestLabel: Last Tone
+latestLabel: Live
 ---
 
 <div class="row row-cols-auto text-start g-1" id="select-inputs-container"></div>
@@ -14,7 +14,7 @@ latestLabel: Last Tone
 		<thead>
 			<tr>
 				<th>Len</th>
-				<th>Channel</th>
+				<th>Talkgroup</th>
 				<th>Date</th>
 				<th><i class="bi bi-star-fill"></i></th>
 			</tr>
@@ -24,26 +24,57 @@ latestLabel: Last Tone
 </div>
 
 <div class="modal fade" id="filter-modal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
+	<div class="modal-dialog modal-lg">
 		<div class="modal-content">
 			<div class="modal-header">
 				<h5 class="modal-title" id="filterModalLabel">Filters</h5>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				<h5>Sources</h5>
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" role="switch" id="vhf-source-cvfd" name="vhf-source" value="SAG_FIRE_VHF" checked>
-					<label class="form-check-label" for="vhf-source-cvfd">NSCFPD</label>
-				</div>
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" role="switch" id="vhf-source-baca" name="vhf-source" value="BG_FIRE_VHF">
-					<label class="form-check-label" for="vhf-source-baca">Baca</label>
-				</div>
-				<h5>Paging Only</h5>
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" role="switch" id="only-pages">
-					<label class="form-check-label" for="only-pages">Only show pages</label>
+				<ul class="nav nav-tabs">
+					<li class="nav-item">
+						<button class="nav-link" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">All</button>
+					</li>
+					<li class="nav-item">
+						<button class="nav-link active" id="presets-tab" data-bs-toggle="tab" data-bs-target="#presets" type="button" role="tab">Presets</button>
+					</li>
+					<li class="nav-item">
+						<button class="nav-link" id="talkgroups-tab" data-bs-toggle="tab" data-bs-target="#talkgroups" type="button" role="tab">Talkgroups</button>
+					</li>
+				</ul>
+				<div class="tab-content">
+					<div class="tab-pane fade" id="all">
+						All recorded DTR traffic will be displayed
+				
+						<div class="form-check form-switch">
+							<input class="form-check-input" type="checkbox" role="switch" id="only-emerg">
+							<label class="form-check-label" for="only-emerg">Only show emergency traffic</label>
+						</div>
+					</div>
+					<div class="tab-pane fade show active" id="presets">
+						<select class="form-select" id="preset-select"></select>
+					</div>
+					<div class="tab-pane fade container" id="talkgroups">
+						<div class="row">
+							<input class="form-control col-xs-12" type="text" id="tg-search" placeholder="Filter">
+							<div class="col-sm-12 col-md-6">
+								<h5>Select From</h5>
+								<div style="height: 200px; overflow-y: scroll">
+									<table class="table">
+										<tbody id="talkgroup-select"></tbody>
+									</table>
+								</div>
+							</div>
+							<div class="col-sm-12 col-md-6">
+								<h5>Selected</h5>
+								<div style="height: 200px; overflow-y: scroll">
+									<table class="table">
+										<tbody id="talkgroup-select-active"></tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div class="modal-footer justify-content-between">
