@@ -500,6 +500,7 @@ const allowedToEditDistrictAdmin: EditKeyConfig[] = [
 	{
 		name: 'pagingPhone',
 		type: 'optDepartment',
+		required: false,
 	},
 ];
 const fieldsForCreate: EditKeyConfig[] = [
@@ -564,7 +565,9 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			...fieldsForCreate,
 		].map(item => ({
 			...item,
-			required: true,
+			required: typeof item.required !== 'undefined' && !item.required
+				? false
+				: true,
 		}));
 	}
 	let keysToSet: EditKeyConfig[] = [];

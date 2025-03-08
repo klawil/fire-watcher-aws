@@ -77,14 +77,9 @@ function parseMediaUrls(mediaUrls: string) {
 		.join(',');
 }
 
-function getPercentile(values: number[], percentile: number) {
-	logger.trace('getPercentile', ...arguments);
-	if (values.length === 0) return '';
+function secondsToTime(valueSeconds: number) {
+	logger.trace('secondsToTime', ...arguments);
 
-	values = values.sort((a, b) => a > b ? 1 : -1);
-	const index = Math.ceil(values.length * percentile / 100) - 1;
-
-	let valueSeconds = Math.round(values[index] / 1000);
 	const maxValue = valueSeconds;
 	let timeStr = '';
 	if (maxValue >= 60 * 60) {
@@ -98,6 +93,17 @@ function getPercentile(values: number[], percentile: number) {
 	timeStr += `${valueSeconds.toString().padStart(2, '0')}`;
 
 	return timeStr;
+}
+
+function getPercentile(values: number[], percentile: number) {
+	logger.trace('getPercentile', ...arguments);
+	if (values.length === 0) return '';
+
+	values = values.sort((a, b) => a > b ? 1 : -1);
+	const index = Math.ceil(values.length * percentile / 100) - 1;
+
+	let valueSeconds = Math.round(values[index] / 1000);
+	return secondsToTime(valueSeconds);
 }
 
 async function loadAndDisplayTexts(isPage: boolean, before: number | null = null) {
@@ -161,7 +167,7 @@ async function loadAndDisplayTexts(isPage: boolean, before: number | null = null
 					{
 						filter: isPage,
 						classList: [ 'text-center' ],
-						html: `${Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000)}s`,
+						html: secondsToTime(Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000)),
 					},
 					{
 						classList: [ 'text-center' ],
