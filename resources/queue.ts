@@ -34,6 +34,34 @@ function dtrFnameToDate(fileName: string): string {
 	} catch (e) {}
 
 	const dateString = d.toLocaleDateString('en-US', {
+		timeZone: timeZone,
+		weekday: 'short',
+		month: 'short',
+		day: '2-digit'
+	});
+	
+	const timeString = d.toLocaleTimeString('en-US', {
+		timeZone: timeZone,
+		hour12: false,
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit'
+	});
+
+	return `on ${dateString} at ${timeString}`;
+}
+
+function vhfFnameToDate(fileName: string): string {
+	let d = new Date(0);
+	try {
+		const parts = fileName.match(/(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/);
+
+		if (parts !== null) {
+			d = new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`);
+		}
+	} catch (e) {}
+
+	const dateString = d.toLocaleDateString('en-US', {
 		timeZone: 'America/Denver',
 		weekday: 'short',
 		month: 'short',
@@ -74,11 +102,13 @@ const pageConfigs: {
 		pageService: 'FIRE',
 		fToTime: dtrFnameToDate
 	},
-};
-
-const pageTgNames: { [key: string]: string } = {
-	'8198': 'AMBO',
-	'8332': 'FIRE'
+	'18331': {
+		linkPreset: 'pBGFD%252FBGEMS',
+		pagingParty: 'Alamosa',
+		partyBeingPaged: 'BGEMS/BGFD',
+		pageService: 'BACA',
+		fToTime: vhfFnameToDate
+	},
 };
 
 async function getRecipients(
@@ -142,6 +172,7 @@ async function saveMessageData(
 	body: string,
 	mediaUrls: string[] = [],
 	pageId: string | null = null,
+	pageTg: string | null = null,
 	isTest: boolean = false
 ) {
 	await dynamodb.updateItem({
@@ -157,6 +188,7 @@ async function saveMessageData(
 			'#m': 'mediaUrls',
 			'#p': 'isPage',
 			'#pid': 'pageId',
+			'#tg': 'talkgroup',
 			'#t': 'isTest',
 			'#ts': 'isTestString'
 		},
@@ -176,6 +208,9 @@ async function saveMessageData(
 			':pid': {
 				S: pageId !== null ? pageId : 'n'
 			},
+			':tg': {
+				S: pageTg !== null ? pageTg : ''
+			},
 			':t': {
 				BOOL: isTest
 			},
@@ -183,7 +218,7 @@ async function saveMessageData(
 				S: isTest ? 'y' : 'n'
 			}
 		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #pid = :pid, #t = :t, #ts = :ts'
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #pid = :pid, #tg = :tg, #t = :t, #ts = :ts'
 	}).promise();
 }
 
@@ -377,6 +412,7 @@ async function handleTwilio(body: TwilioBody) {
 		messageBody,
 		mediaUrls,
 		null,
+		null,
 		isTest
 	);
 
@@ -396,14 +432,14 @@ async function handleTwilio(body: TwilioBody) {
 interface PageBody {
 	action: 'page';
 	key: string;
+	tg: string;
 	isTest?: boolean;
 }
 
 async function handlePage(body: PageBody) {
 	// Build the message body
-	const pageTg = (body.key.match(/(\d{4})-\d{10}_\d{9}-call_\d+\.m4a/) as RegExpMatchArray)[1];
-	const messageBody = createPageMessage(body.key, pageTg);
-	const recipients = await getRecipients('all', pageTg, !!body.isTest);
+	const messageBody = createPageMessage(body.key, body.tg);
+	const recipients = await getRecipients('all', body.tg, !!body.isTest);
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
@@ -412,6 +448,7 @@ async function handlePage(body: PageBody) {
 		messageBody,
 		[],
 		body.key,
+		body.tg,
 		!!body.isTest
 	);
 
@@ -431,7 +468,7 @@ async function handlePage(body: PageBody) {
 		.map((phone) => sendMessage(
 			messageId,
 			phone.phone.N,
-			createPageMessage(body.key, pageTg, phone.callSign.N),
+			createPageMessage(body.key, body.tg, phone.callSign.N),
 			[],
 			true
 		)));
