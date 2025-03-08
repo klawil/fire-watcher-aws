@@ -214,6 +214,13 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create a handler for the SQS queue
     const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/queue.ts',
       handler: 'main',

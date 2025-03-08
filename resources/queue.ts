@@ -1,12 +1,14 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
-import { getTwilioSecret, parsePhone, sendMessage } from './utils/general';
+import { getTwilioSecret, incrementMetric, parsePhone, sendMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
+
+const metricSource = 'Queue';
 
 const welcomeMessage = `Welcome to the {{department}} Fire Department text group!
 
@@ -385,7 +387,10 @@ async function handleLogin(body: ActivateOrLoginBody) {
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
 	try {
-		console.log(`QUEUE - CALL - ${body.action || 'invalid'}`);
+		await incrementMetric('Call', {
+			source: metricSource,
+			action: body.action
+		});
 		let response;
 		switch (body.action) {
 			case 'activate':
@@ -401,12 +406,18 @@ async function parseRecord(event: lambda.SQSRecord) {
 				response = await handleLogin(body);
 				break;
 			default:
-				console.log(`QUEUE - 404`);
+				await incrementMetric('Error', {
+					source: metricSource,
+					type: '404'
+				});
 		}
 		return response;
 	} catch (e) {
-		console.log(`QUEUE - ERROR - ${body.action || 'invalid'}`);
 		console.error(e);
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'general'
+		});
 		throw e;
 	}
 }
