@@ -4,43 +4,54 @@
 
 		<style>
 			.img {
-				width: 815px;
-				height: 555px;
-				border: 0;
-				left: 0px;
-				top: 0px;
 				position: absolute;
-			}
-
-			.dot {
-				width: 6px;
-				height: 6px;
-				border-radius: 50%;
-				background-color: black;
-				position: absolute;
-				left: 278px;
-				top: 275px;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
 			}
 
 			.img-container {
 				position: relative;
 				display: block;
-				width: 815px;
-				height: 555px;
+				margin: 5px 0;
 			}
 		</style>
+
+		<link href="/libs/bootstrap.min.css" rel="stylesheet">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 	</head>
 	<body>
-		<div class="img-container">
-			<img src="https://www.spc.noaa.gov/products/fire_wx/day1otlk_fire.gif" width="815" height="555" class="img" />
-			<!-- <img src="https://www.spc.noaa.gov/products/fire_wx/imgs/HPC_day1_sfc.gif" width="815" height="555" class="img" /> -->
-			<div class="dot"></div>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-6">
+					<h2 class="text-center">Readiness Level</h2>
+					<div class="col-xs-12 font-monospace" id="readiness"></div>
+					<h2 class="text-center">Active Fires</h2>
+					<div class="col-xs-12 font-monospace" id="fires"></div>
+					<h2 class="text-center">Weather Alerts</h2>
+					<div class="col-xs-12 font-monospace" id="alerts"></div>
+					<h2 class="text-center">Fire Restrictions</h2>
+					<div class="col-xs-12 font-monospace" id="restrictions"></div>
+				</div>
+				<div class="col-md-6">
+					<h2 class="text-center">Fire Weather Maps</h2>
+					<h3 class="text-center">Today</h3>
+					<a class="img-container" href="https://www.spc.noaa.gov/products/fire_wx/fwdy1.html">
+						<img src="https://www.spc.noaa.gov/products/fire_wx/day1otlk_fire.gif" width="815" height="555" class="img img-fluid" />
+						<svg height="555" width="815" class="img img-fluid" viewBox="0 0 815 555">
+							<circle cx="281" cy="278" r="3" stroke-width="0" fill="black" />
+						</svg>
+					</a>
+					<h3 class="text-center">Tomorrow</h3>
+					<a class="img-container" href="https://www.spc.noaa.gov/products/fire_wx/fwdy2.html">
+						<img src="https://www.spc.noaa.gov/products/fire_wx/day2otlk_fire.gif" width="815" height="555" class="img img-fluid" />
+						<svg height="555" width="815" class="img img-fluid" viewBox="0 0 815 555">
+							<circle cx="281" cy="278" r="3" stroke-width="0" fill="black" />
+						</svg>
+					</a>
+				</div>
+			</div>
 		</div>
-		<a class="img-container" href="https://www.spc.noaa.gov/products/fire_wx/fwdy2.html">
-			<img src="https://www.spc.noaa.gov/products/fire_wx/day2otlk_fire.gif" width="815" height="555" class="img" />
-			<!-- <img src="https://www.spc.noaa.gov/products/fire_wx/imgs/HPC_day1_sfc.gif" width="815" height="555" class="img" /> -->
-			<div class="dot"></div>
-		</a>
 
 		<script src="/js/weather.js"></script>
 	</body>
