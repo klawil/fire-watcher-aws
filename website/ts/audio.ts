@@ -352,9 +352,6 @@ let talkgroups: {
 	}
 };
 
-const numberFormatter = new Intl.NumberFormat('en-us', {
-	maximumFractionDigits: 0
-});
 async function init() {
 	logger.trace('init', ...arguments);
 	if (window.location.href.indexOf('nostart') !== -1) {
@@ -423,13 +420,13 @@ async function init() {
 	
 	talkgroups = tgData.talkgroups
 		.reduce((agg: typeof talkgroups, item) => {
-			const countStr = item.Count > 100000
-				? '>100,000'
-				: numberFormatter.format(item.Count);
+			const countStr = item.InUse === 'Y'
+				? ''
+				: ' (No Recordings)';
 
 			agg[item.ID.toString()] = {
 				name: item.Name || item.ID.toString(),
-				selectName: `${item.Name || item.ID} (${countStr} recordings)`,
+				selectName: `${item.Name || item.ID}${countStr}`,
 			};
 
 			return agg;

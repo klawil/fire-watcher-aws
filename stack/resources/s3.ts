@@ -441,34 +441,43 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			}
 
-			const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
-				TableName: talkgroupTable,
-				ExpressionAttributeNames: {
-					'#count': 'Count',
-					'#dev': 'Devices',
-					'#iu': 'InUse'
-				},
-				ExpressionAttributeValues: {
-					':dev': {
-						M: {}
+			const talkgroupCreate: Promise<any> = (async () => {
+				const item = await dynamodb.query({
+					TableName: talkgroupTable,
+					ExpressionAttributeNames: {
+						'#id': 'ID',
 					},
-					':num': {
-						N: '1'
+					ExpressionAttributeValues: {
+						':id': {
+							N: body.Item?.Talkgroup?.N
+						}
 					},
-					':iu': {
-						S: 'Y'
-					}
-				},
-				Key: {
-					'ID': {
-						N: body.Item?.Talkgroup?.N
-					}
-				},
-				UpdateExpression: 'SET #iu = :iu, #dev = if_not_exists(#dev, :dev) ADD #count :num'
-			};
+					KeyConditionExpression: '#id = :id',
+				}).promise();
+
+				if (!item.Items) {
+					await dynamodb.updateItem({
+						TableName: talkgroupTable,
+						ExpressionAttributeNames: {
+							'#iu': 'InUse'
+						},
+						ExpressionAttributeValues: {
+							':iu': {
+								S: 'Y'
+							}
+						},
+						Key: {
+							'ID': {
+								N: body.Item?.Talkgroup?.N
+							}
+						},
+						UpdateExpression: 'SET #iu = :iu'
+					}).promise();
+				}
+			})();
+			promises.push(talkgroupCreate);
 
 			try {
-				promises.push(dynamodb.updateItem(talkgroupCreate).promise());
 				await Promise.all(promises);
 			} catch (e) {
 				await incrementMetric('Error', {
@@ -507,40 +516,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				logger.info('parseRecord', 'delete', body);
 				const promises: Promise<any>[] = [];
 				promises.push(dynamodb.deleteItem(body).promise());
-
-				promises.push(
-					dynamodb.getItem({
-						TableName: talkgroupTable,
-						Key: {
-							ID: dynamoQuery.Items[0].Talkgroup
-						}
-					}).promise()
-						.then(result => {
-							if (!result.Item) return;
-
-							const newCount = Number(result.Item.Count.N) - 1;
-
-							return dynamodb.updateItem({
-								TableName: talkgroupTable,
-								Key: {
-									ID: (dynamoQuery.Items as aws.DynamoDB.ItemList)[0].Talkgroup
-								},
-								ExpressionAttributeNames: {
-									'#c': 'Count',
-									'#iu': 'InUse'
-								},
-								ExpressionAttributeValues: {
-									':c': {
-										N: newCount >= 0 ? newCount.toString() : '0'
-									},
-									':iu': {
-										S: newCount > 0 ? 'Y' : 'N'
-									}
-								},
-								UpdateExpression: 'SET #c = :c, #iu = :iu'
-							}).promise();
-						})
-				);
 			
 				await Promise.all(promises);
 			} else {

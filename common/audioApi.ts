@@ -13,7 +13,7 @@ export interface AudioFileObject {
 export interface TalkgroupObject {
 	ID: number;
 	Name?: string;
-	Count: number;
+	InUse?: 'Y' | 'N';
 }
 
 export interface ApiAudioListResponse extends ApiResponseBase {

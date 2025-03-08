@@ -167,22 +167,16 @@ async function getTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 			'#iu': 'InUse',
 			'#name': 'Name',
 			'#id': 'ID',
-			'#c': 'Count',
 		},
 		ExpressionAttributeValues: {
 			':iu': { S: partition, },
 		},
 		KeyConditionExpression: '#iu = :iu',
-		ProjectionExpression: '#id,#name,#c',
+		ProjectionExpression: '#id,#name,#iu',
 	}));
 
 	// Retrieve the data
 	const data = await mergeDynamoQueries(queryConfigs, 'Count');
-	data.Items.forEach(item => {
-		if (typeof item.Count === 'undefined') {
-			item.Count = { N: '0' };
-		}
-	});
 
 	const body: ApiAudioTalkgroupsResponse = {
 		success: true,

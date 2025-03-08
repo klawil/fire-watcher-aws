@@ -57,10 +57,14 @@ export async function mergeDynamoQueries(
 		}))
 		.then(data => {
 			data.Items = data.Items.sort((a, b) => {
-				if (typeof b[sortKey].N === 'undefined')
+				if (
+					typeof b[sortKey] === 'undefined' ||
+					typeof b[sortKey].N === 'undefined'
+				)
 					return sortDirGreater;
 
 				if (
+					typeof a[sortKey] === 'undefined' ||
 					typeof a[sortKey].N === 'undefined'
 				) return sortDirLesser;
 
