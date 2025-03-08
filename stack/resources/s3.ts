@@ -225,7 +225,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					});
 
 					if (matchingItems.length > 1) {
-						doTranscriptOnly = true; // So we don't accidentally double page
+						// doTranscriptOnly = true; // So we don't accidentally double page
 						const metric = incrementMetric('Event', {
 							source: metricSource,
 							type: 'dtr',
