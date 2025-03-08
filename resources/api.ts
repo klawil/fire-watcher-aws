@@ -407,7 +407,15 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			});
 		});
 	} else {
-		[ '0', '1' ].forEach((emerg) => {
+		let emergencyValues = [ '0', '1' ];
+		if (
+			typeof event.queryStringParameters.emerg !== 'undefined' &&
+			event.queryStringParameters.emerg === 'y'
+		) {
+			emergencyValues = [ '1' ];
+		}
+
+		emergencyValues.forEach((emerg) => {
 			queryConfigs.push({
 				TableName: dtrTable,
 				IndexName: dtrAddedIndex,
