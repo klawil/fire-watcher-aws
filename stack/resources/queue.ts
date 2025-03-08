@@ -1,8 +1,8 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
-import { getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage } from './utils/general';
-import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
+import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneNumbers } from './utils/general';
+import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig, validDepartments } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
 import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
@@ -74,7 +74,7 @@ function randomString(len: number, numeric = false): string {
 function createPageMessage(
 	fileKey: string,
 	pageTg: PagingTalkgroup,
-	callSign: string | null = null,
+	number: string | null = null,
 	transcript: string | null = null
 ): string {
 	logger.trace('createPageMessage', ...arguments);
@@ -90,8 +90,8 @@ function createPageMessage(
 		pageStr += `\n${transcript}\n\n`;
 	}
 	pageStr += `https://fire.klawil.net/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
-	if (callSign !== null) {
-		pageStr += `&cs=${callSign}`;
+	if (number !== null) {
+		pageStr += `&cs=${number}`;
 	}
 	return pageStr;
 }
@@ -109,7 +109,8 @@ async function handleActivation(body: ActivateBody) {
 			}
 		},
 		ExpressionAttributeNames: {
-			'#a': 'isActive',
+			'#dep': body.department,
+			'#a': 'active',
 			'#c': 'code',
 			'#ce': 'codeExpiry'
 		},
@@ -118,7 +119,7 @@ async function handleActivation(body: ActivateBody) {
 				BOOL: true
 			}
 		},
-		UpdateExpression: 'SET #a = :a REMOVE #c, #ce',
+		UpdateExpression: 'SET #dep.#a = :a REMOVE #c, #ce',
 		ReturnValues: 'ALL_NEW'
 	}).promise();
 
@@ -144,38 +145,32 @@ async function handleActivation(body: ActivateBody) {
 		metricSource,
 		null,
 		body.phone,
-		updateResult.Attributes?.department?.S as UserDepartment,
+		config[`${groupType}Phone`] || config.pagePhone,
 		customWelcomeMessage,
-		[],
-		groupType === 'page'
+		[]
 	));
 
 	// Send the message to the admins
-	if (updateResult.Attributes?.department?.S !== 'Baca') {
-		promises.push(dynamodb.query({
-			TableName: phoneTable,
-			IndexName: 'StationIndex2',
-			ExpressionAttributeNames: {
-				'#admin': 'isAdmin',
-				'#dep': 'department'
-			},
-			ExpressionAttributeValues: {
-				':a': { BOOL: true },
-				':dep': { S: updateResult.Attributes?.department?.S }
-			},
-			KeyConditionExpression: '#dep = :dep',
-			FilterExpression: '#admin = :a'
-		}).promise()
-			.then((admins) => Promise.all((admins.Items || []).map((item) => {
-				return sendMessage(
-					metricSource,
-					null,
-					item.phone.N,
-					item.department.S as UserDepartment,
-					`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
-				);
-			}))));
-	}
+	promises.push(dynamodb.scan({
+		TableName: phoneTable,
+		ExpressionAttributeNames: {
+			'#admin': 'admin',
+			'#dep': body.department,
+		},
+		ExpressionAttributeValues: {
+			':a': { BOOL: true },
+		},
+		FilterExpression: '#dep.#admin = :a'
+	}).promise()
+		.then((admins) => Promise.all((admins.Items || [])
+			.filter(item => typeof item.phone.N !== 'undefined')
+			.map((item) => sendMessage(
+				metricSource,
+				null,
+				item.phone.N as string,
+				getPageNumber(item),
+				`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)}) has been added to the ${body.department} group`
+			)))));
 
 	// Send the sample page
 	promises.push(dynamodb.query({
@@ -206,10 +201,9 @@ async function handleActivation(body: ActivateBody) {
 				metricSource,
 				null,
 				body.phone,
-				updateResult.Attributes?.department?.S as UserDepartment,
+				config.pagePhone,
 				createPageMessage(pageKey, pageTg),
-				[],
-				true
+				[]
 			)
 		}));
 
@@ -234,6 +228,15 @@ async function handleTwilio(body: TwilioBody) {
 			[curr[0]]: curr[1] || ''
 		}), {}) as TwilioParams;
 	eventData.Body = eventData.Body.replace(/\+/g, ' ');
+
+	// Get the configuration for the number the text was sent to
+	if (typeof twilioPhoneNumbers[eventData.To] === 'undefined') {
+		throw new Error(`Message to unkown Twilio number - ${eventData.To}`);
+	}
+	const phoneNumberConfig = twilioPhoneNumbers[eventData.To];
+	if (typeof phoneNumberConfig.department === 'undefined') {
+		throw new Error(`Message to Twilio number without assigned department - ${eventData.To}`);
+	}
 	
 	// Validate the sender
 	const sender = await dynamodb.getItem({
@@ -247,14 +250,22 @@ async function handleTwilio(body: TwilioBody) {
 	if (!sender.Item) {
 		throw new Error(`Invalid sender`);
 	}
-	if (!sender.Item.isActive.BOOL) {
-		throw new Error(`Invactive sender`);
+	if (
+		typeof phoneNumberConfig.department !== 'undefined' &&
+		!sender.Item[phoneNumberConfig.department].M?.active?.BOOL
+	) {
+		throw new Error(`Invactive sender (${phoneNumberConfig.department})`);
+	}
+	if (
+		typeof phoneNumberConfig.department === 'undefined' &&
+		!validDepartments.reduce((active, dep) => active ||
+			!sender.Item ||
+			!!sender.Item[dep]?.M?.active?.BOOL, false)
+	) {
+		throw new Error(`Invactive sender (global)`);
 	}
 	if (sender.Item.pageOnly?.BOOL) {
 		throw new Error(`Page only sender`);
-	}
-	if (sender.Item.department?.S === 'Baca') {
-		throw new Error(`Baca sender`);
 	}
 
 	// Get the number that was messaged
@@ -262,13 +273,13 @@ async function handleTwilio(body: TwilioBody) {
 	if (typeof depConf === 'undefined')
 		throw new Error('Invalid department');
 	const messageTo = eventData.To;
-	const adminSender = !!sender.Item?.isAdmin?.BOOL;
+	const adminSender = !!sender.Item[phoneNumberConfig.department]?.M?.admin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await getTwilioSecret();
-	const pageNumber = depConf.pagingPhone;
-	const isFromPageNumber = adminSender && messageTo === pageNumber;
+	const pageNumber = depConf.pagePhone;
+	const isFromPageNumber = adminSender && phoneNumberConfig.type === 'page';
 
-	const recipients = await getRecipients(sender.Item?.department.S || '', null, isTest)
+	const recipients = await getRecipients(phoneNumberConfig.department, null, isTest)
 		.then((data) => data.filter((number) => {
 			if (isTest) return true;
 
@@ -277,7 +288,8 @@ async function handleTwilio(body: TwilioBody) {
 		}));
 
 	// Build the message
-	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item.callSignS.S})`}: ${eventData.Body}${isFromPageNumber ? ` - ${sender.Item.callSignS.S}` : ''}`;
+	const sendingUserInfo = `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item[phoneNumberConfig.department]?.M?.callSign?.S || 'N/A'})`;
+	const messageBody = `${isFromPageNumber ? `${phoneNumberConfig.department} Announcement` : sendingUserInfo}: ${eventData.Body}${isFromPageNumber ? ` - ${sendingUserInfo}` : ''}`;
 	const mediaUrls: string[] = Object.keys(eventData)
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
@@ -294,15 +306,15 @@ async function handleTwilio(body: TwilioBody) {
 	);
 
 	await Promise.all(recipients
+		.filter(number => typeof number.phone.N !== 'undefined')
 		.map((number) =>  sendMessage(
 			metricSource,
 			messageId,
-			number.phone.N,
-			number.department.S as UserDepartment,
+			number.phone.N as string,
+			depConf[`${isFromPageNumber ? 'page' : 'text'}Phone`] || depConf.pagePhone,
 			messageBody,
 			mediaUrls
-				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`)),
-			isFromPageNumber
+				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`))
 		)) || []);
 
 	await insertMessage;
@@ -311,11 +323,16 @@ async function handleTwilio(body: TwilioBody) {
 async function handleTwilioError(body: TwilioErrorBody) {
 	logger.trace('handleTwilioError', ...arguments);
 	const recipients = (await getRecipients('all', null))
-		.filter(user => user.getSystemAlerts?.BOOL ||
-			(
-				user.department?.S === body.department &&
-				user.isAdmin?.BOOL
-			));
+		.filter(user => {
+			for (let i = 0; i < body.department.length; i++) {
+				const dep = body.department[i];
+				if (user[dep]?.M?.admin?.BOOL && user[dep]?.M?.active?.BOOL) {
+					return true;
+				}
+			}
+
+			return false;
+		});
 	const message = `Possible issue with ${body.name} phone (number is ${body.number})\n\nLast ${body.count} messages have not been delivered.`;
 
 	let messageId = Date.now().toString();
@@ -331,11 +348,10 @@ async function handleTwilioError(body: TwilioErrorBody) {
 	await Promise.all(recipients.map(user => sendMessage(
 		metricSource,
 		messageId,
-		user.phone.N,
-		user.department.S as UserDepartment,
+		user.phone.N as string,
+		getPageNumber(user),
 		message,
-		[],
-		true
+		[]
 	)));
 	await insertMessage;
 }
@@ -403,14 +419,14 @@ async function handlePage(body: PageBody) {
 
 	// Send the messages
 	await Promise.all(recipients
-		.map((phone) => sendMessage(
+		.filter(phone => typeof phone.phone.N !== 'undefined')
+		.map(phone => sendMessage(
 			metricSource,
 			messageId,
-			phone.phone.N,
-			phone.department.S as UserDepartment,
-			createPageMessage(body.key, body.tg, phone.callSignS.S),
+			phone.phone.N as string,
+			getPageNumber(phone),
+			createPageMessage(body.key, body.tg, phone.phone.N),
 			[],
-			true
 		)));
 
 	await insertMessage;
@@ -445,14 +461,17 @@ async function handleLogin(body: LoginBody) {
 		ReturnValues: 'ALL_NEW'
 	}).promise();
 
+	if (!updateResult.Attributes) {
+		throw new Error(`Failed to add login code to user`);
+	}
+
 	await sendMessage(
 		metricSource,
 		null,
 		body.phone,
-		updateResult.Attributes?.department?.S as UserDepartment,
+		getPageNumber(updateResult.Attributes),
 		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`,
-		[],
-		true
+		[]
 	);
 }
 
@@ -601,30 +620,32 @@ async function handleTranscribe(body: TranscribeBody) {
 	);
 
 	if (jobInfo.File) {
-		await Promise.all(recipients.map(phone => sendMessage(
-			metricSource,
-			messageId,
-			phone.phone.N,
-			phone.department.S as UserDepartment,
-			createPageMessage(
-				jobInfo.File as string,
-				tg,
-				phone.callSignS.S,
-				transcript
-			),
-			[],
-			true
-		)));
+		await Promise.all(recipients
+			.filter(phone => typeof phone.phone.N !== 'undefined')
+			.map(phone => sendMessage(
+				metricSource,
+				messageId,
+				phone.phone.N as string,
+				getPageNumber(phone),
+				createPageMessage(
+					jobInfo.File as string,
+					tg,
+					phone.phone.N,
+					transcript
+				),
+				[]
+			)));
 	} else {
-		await Promise.all(recipients.map(number => sendMessage(
-			metricSource,
-			messageId,
-			number.phone.N,
-			number.department?.S as UserDepartment,
-			messageBody,
-			[],
-			true
-		)));
+		await Promise.all(recipients
+			.filter(number => typeof number.phone.N !== 'undefined')
+			.map(number => sendMessage(
+				metricSource,
+				messageId,
+				number.phone.N as string,
+				getPageNumber(number),
+				messageBody,
+				[]
+			)));
 	}
 	await insertMessage;
 	await promise;
@@ -670,7 +691,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 			source: metricSource,
 			type: 'Thrown exception'
 		});
-		throw e;
 	}
 }
 

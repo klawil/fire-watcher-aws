@@ -1,6 +1,7 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
+import { getTwilioSecret, incrementMetric, validateBodyIsJson } from '../utils/general';
+import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { PageBody } from '../types/queue';
 import { PagingTalkgroup } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';

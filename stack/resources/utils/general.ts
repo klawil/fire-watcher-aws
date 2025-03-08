@@ -1,5 +1,5 @@
 import * as aws from 'aws-sdk';
-import { UserDepartment, defaultDepartment, departmentConfig } from '../../../common/userConstants';
+import { UserDepartment, validDepartments } from '../../../common/userConstants';
 import { getLogger } from './logger';
 
 const logger = getLogger('u-gen');
@@ -11,45 +11,6 @@ const phoneTable = process.env.TABLE_USER as string;
 const secretManager = new aws.SecretsManager();
 const cloudWatch = new aws.CloudWatch();
 const dynamodb = new aws.DynamoDB();
-
-type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
-
-export function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): DynamoDbValues {
-	logger.trace('parseDynamoDbAttributeValue', ...arguments);
-	if (typeof value.S !== 'undefined') {
-		return value.S;
-	} else if (typeof value.N !== 'undefined') {
-		return parseFloat(value.N as string);
-	} else if (typeof value.BOOL !== 'undefined') {
-		return value.BOOL;
-	} else if (typeof value.L !== 'undefined') {
-		return value.L?.map(parseDynamoDbAttributeValue);
-	} else if (typeof value.NS !== 'undefined') {
-		return value.NS?.map(val => parseFloat(val));
-	} else if (typeof value.SS !== 'undefined') {
-		return value.SS;
-	} else if (typeof value.M !== 'undefined') {
-		return parseDynamoDbAttributeMap(value.M);
-	}
-
-	return value;
-}
-
-interface NewObject {
-	[key: string]: DynamoDbValues | NewObject;
-}
-
-export function parseDynamoDbAttributeMap(item: aws.DynamoDB.AttributeMap): NewObject {
-	logger.trace('parseDynamoDbAttributeMap', ...arguments);
-	const newObj: NewObject = {};
-
-	Object.keys(item)
-		.forEach(key => {
-			newObj[key] = parseDynamoDbAttributeValue(item[key]);
-		});
-
-	return newObj;
-}
 
 export function parsePhone(num: string, toHuman: boolean = false): string {
 	logger.trace('parsePhone', ...arguments);
@@ -73,13 +34,9 @@ export async function getRecipients(
 	logger.trace('getRecipients', ...arguments);
 	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
-		FilterExpression: '#a = :a',
-		ExpressionAttributeNames: {
-			'#a': 'isActive'
-		},
-		ExpressionAttributeValues: {
-			':a': { BOOL: true }
-		}
+		FilterExpression: '',
+		ExpressionAttributeNames: {},
+		ExpressionAttributeValues: {},
 	};
 	if (pageTg === null) {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
@@ -89,23 +46,23 @@ export async function getRecipients(
 		scanInput.ExpressionAttributeValues[':po'] = {
 			BOOL: false
 		};
-		scanInput.FilterExpression += ' AND (#po = :po OR attribute_not_exists(#po))';
+		scanInput.FilterExpression = '(#po = :po OR attribute_not_exists(#po))';
 	} else {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
 
-		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
+		scanInput.FilterExpression = 'contains(#tg, :tg)';
 		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
 		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg.toString() };
 	}
 	if (department !== 'all') {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.IndexName = 'StationIndex2';
-		scanInput.KeyConditionExpression = '#dep = :dep';
-		scanInput.ExpressionAttributeNames['#dep'] = 'department';
-		scanInput.ExpressionAttributeValues[':dep'] = { S: department };
+		
+		scanInput.ExpressionAttributeNames['#dep'] = department;
+		scanInput.ExpressionAttributeNames['#ac'] = 'active';
+		scanInput.ExpressionAttributeValues[':ac'] = { BOOL: true };
+		scanInput.FilterExpression += ' AND #dep.#ac = :ac';
 	}
 
 	if (isTest) {
@@ -119,12 +76,7 @@ export async function getRecipients(
 		scanInput.FilterExpression += ' AND #t = :t';
 	}
 
-	let promise;
-	if (department !== 'all') {
-		promise = dynamodb.query(scanInput).promise();
-	} else {
-		promise = dynamodb.scan(scanInput).promise();
-	}
+	let promise = dynamodb.scan(scanInput).promise();
 
 	return promise
 		.then((data) => data.Items || []);
@@ -144,7 +96,59 @@ interface TwilioConfig {
 	voiceApiSecret: string;
 }
 
+interface PhoneNumberConfig {
+	name?: string;
+	number: string;
+	account?: 'Baca';
+	type: 'page' | 'alert' | 'chat';
+	department?: UserDepartment;
+}
+
 const twilioSecretId = process.env.TWILIO_SECRET as string;
+const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
+	pageBaca: {
+		type: 'page',
+		number: '***REMOVED***',
+		account: 'Baca',
+		department: 'Baca',
+	},
+	page: {
+		number: '***REMOVED***',
+		type: 'page',
+		department: 'Crestone',
+	},
+	alerts: {
+		number: '***REMOVED***',
+		type: 'alert',
+	},
+	chatCrestone: {
+		number: '***REMOVED***',
+		type: 'chat',
+		department: 'Crestone',
+	},
+	chatBaca: {
+		number: '',
+		account: 'Baca',
+		type: 'chat',
+		department: 'Baca',
+	},
+	chatNSCAD: {
+		number: '',
+		type: 'chat',
+		department: 'NSCAD',
+	},
+};
+export const twilioPhoneNumbers: { [key: string]: PhoneNumberConfig } = Object.keys(twilioPhoneCategories)
+	.reduce((agg: {
+		[key: string]: PhoneNumberConfig;
+	}, key) => {
+		agg[twilioPhoneCategories[key].number] = {
+			name: key,
+			...twilioPhoneCategories[key]
+		};
+
+		return agg;
+	}, {});
 
 let twilioSecret: null | Promise<TwilioConfig> = null;
 export async function getTwilioSecret(): Promise<TwilioConfig> {
@@ -241,6 +245,25 @@ export async function saveMessageData(
 	await Promise.all(promises);
 }
 
+export function getPageNumber(user: AWS.DynamoDB.AttributeMap): string {
+	let phoneToUse = 'page';
+	for (let i = 0; i < validDepartments.length; i++) {
+		const dep = validDepartments[i];
+		if (!user[dep]?.M?.active?.BOOL) {
+			continue;
+		}
+
+		// Determine if the department has a different page number
+		if (typeof twilioPhoneCategories[`page${dep}`] === 'undefined') {
+			return 'page';
+		}
+
+		phoneToUse = `page${dep}`;
+	}
+
+	return phoneToUse;
+}
+
 interface TwilioMessageConfig {
 	body: string;
 	mediaUrl?: string[];
@@ -252,28 +275,22 @@ interface TwilioMessageConfig {
 export async function sendMessage(
 	metricSource: string,
 	messageId: string | null,
-	phone: string | undefined,
-	department: UserDepartment,
+	phone: string,
+	sendNumberCategory: string,
 	body: string,
-	mediaUrl: string[] = [],
-	isPage: boolean = false,
-	isAlert: boolean = false
+	mediaUrl: string[] = []
 ) {
 	logger.trace('sendMessage', ...arguments);
-	const depConf = departmentConfig[department || defaultDepartment] || departmentConfig[defaultDepartment];
 
-	if (
-		typeof phone === 'undefined' ||
-		typeof department === 'undefined' ||
-		typeof depConf === 'undefined'
-	) {
-		logger.error('sendMessage', 'invalid destination', phone, department, depConf);
+	if (typeof twilioPhoneCategories[sendNumberCategory] === 'undefined') {
+		logger.error('sendMessage', `Invalid number category - ${sendNumberCategory}`);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Invalid destination'
 		});
 		return;
 	}
+	const numberConfig = twilioPhoneCategories[sendNumberCategory];
 
 	let saveMessageDataPromise: Promise<any> = new Promise(res => res(null));
 	if (messageId === null) {
@@ -293,26 +310,20 @@ export async function sendMessage(
 	if (twilioConf === null)
 		throw new Error('Cannot get twilio secret');
 
-	let fromNumberType: 'paging' | 'textGroup' | 'alerts' = isPage
-		? 'paging'
-		: isAlert
-			? 'alerts'
-			: 'textGroup';
-	let fromNumber = depConf[`${fromNumberType}Phone`];
-	let accountSid: string = twilioConf[`accountSid${depConf.twilioAccount}`];
-	let authToken: string = twilioConf[`authToken${depConf.twilioAccount}`];
+	let fromNumber = numberConfig.number;
+	let accountSid: string = twilioConf[`accountSid${numberConfig.account || ''}`];
+	let authToken: string = twilioConf[`authToken${numberConfig.account || ''}`];
 	if (
 		typeof fromNumber === 'undefined' ||
 		typeof accountSid === 'undefined' ||
 		typeof authToken === 'undefined'
 	) {
-		accountSid = twilioConf.accountSid;
-		authToken = twilioConf.authToken;
-		fromNumber = departmentConfig[defaultDepartment][`${fromNumberType}Phone`] as string;
+		logger.error(`Invalid phone information`, fromNumber, accountSid, authToken);
 		await incrementMetric('Error', {
 			source: metricSource,
-			type: `Invalid combination of department and type: ${department} and ${fromNumberType}`
+			type: `Invalid phone information`
 		});
+		return;
 	}
 
 	const messageConfig: TwilioMessageConfig = {
@@ -341,16 +352,16 @@ export async function sendAlertMessage(metricSource: string, alertType: AlertTyp
 		.filter(user => user[`get${alertType}Alerts`]?.BOOL);
 	await Promise.all([
 		saveMessageData(messageId, recipients.length, body),
-		...recipients.map(user => sendMessage(
-			metricSource,
-			messageId,
-			user.phone.N,
-			defaultDepartment,
-			body,
-			[],
-			false,
-			true
-		))
+		...recipients
+			.filter(user => typeof user.phone.N !== 'undefined')
+			.map(user => sendMessage(
+				metricSource,
+				messageId,
+				user.phone.N as string,
+				'alerts',
+				body,
+				[]
+			))
 	]);
 }
 

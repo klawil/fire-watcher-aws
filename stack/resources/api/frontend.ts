@@ -1,6 +1,7 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
+import { incrementMetric, validateBodyIsJson } from '../utils/general';
+import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { getLoggedInUser } from '../utils/auth';
 import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, TextObject } from '../../../common/frontendApi';
 import { getLogger } from '../utils/logger';
@@ -94,8 +95,7 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isActive?.BOOL ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedResponse;
 	}
@@ -987,8 +987,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isActive?.BOOL ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedResponse;
 	}
@@ -1321,8 +1320,7 @@ async function getSites(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isActive?.BOOL ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedResponse;
 	}

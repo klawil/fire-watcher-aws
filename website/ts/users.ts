@@ -1,4 +1,4 @@
-import { ApiUserListResponse, ApiUserUpdateResponse, UserObject, UserObjectBooleans, UserObjectStrings } from "../../common/userApi";
+import { ApiUserListResponse, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, UserObject } from "../../common/userApi";
 import { UserDepartment, pagingConfig, pagingTalkgroupOrder, validDepartments } from "../../common/userConstants";
 import { showAlert } from "./utils/alerts";
 import { user } from "./utils/auth";
@@ -11,76 +11,249 @@ import { getLogger } from "../../stack/resources/utils/logger";
 const logger = getLogger('users');
 
 interface CheckboxConfig {
-	name: UserObjectBooleans;
+	name: keyof ApiUserUpdateBody;
 	label: string;
 	districtAdmin?: boolean;
 	val: (a: UserObject) => boolean;
 }
 
 interface InputConfig {
-	name: UserObjectStrings;
+	name: keyof ApiUserUpdateBody;
 	placeholder: string;
 	editable: boolean;
-	val: (u: UserObject) => string;
-	iVal?: (u: UserObject) => string;
+	val: (u: ApiUserUpdateBody) => string;
+	iVal?: (u: ApiUserUpdateBody) => string;
 	format?: (a: string) => string;
 	maxWidth?: string;
 }
 
 const tbody = <HTMLTableSectionElement>document.getElementById('tbody');
-const modalItems = {
-	name: <HTMLDivElement>document.getElementById('deleteUser'),
-	button: <HTMLButtonElement>document.getElementById('deleteConfirm'),
-};
 
-const defaultUserObject: UserObject = {
-	talkgroups: [],
-	phone: '',
-	fName: '',
-	lName: '',
-	callSignS: '',
-	isActive: true,
-	isAdmin: false,
-	pageOnly: false,
-	getTranscript: false,
-};
-
-function getUserRowConfig(u: UserObject | null): RowConfig {
-	logger.trace('getUserRowConfig', ...arguments);
-	const newUserObj: UserObject = {
-		...defaultUserObject,
-		phone: u === null ? '' : u.phone.toString(),
-		fName: u === null ? '' : u.fName,
-		lName: u === null ? '' : u.lName,
-		callSignS: u === null ? '' : u.callSignS.toString(),
-		talkgroups: u === null ? [] : u.talkgroups,
+function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment, doHighlight: boolean): RowConfig {
+	logger.trace('getUserDepartmentRowConfig', ...arguments);
+	const defaultDepartmentValues = u[department] || {
+		active: false,
+		callSign: '',
+		admin: false,
 	};
-	let enableProxy = false;
-	const newUser = new Proxy(newUserObj, {
-		set: (target, prop: UserObjectStrings, value) => {
-			if (enableProxy)
-				button.disabled = false;
-			target[prop] = value;
+
+	let canEditThisDepartment = !!user.isDistrictAdmin || (
+		typeof user[department] !== 'undefined' &&
+		user[department]?.admin &&
+		user[department]?.active
+	);
+
+	const changedValues: Partial<UserObject[UserDepartment]> = {};
+	const callsignInput: HTMLInputElement = document.createElement('input');
+	const saveButton: HTMLButtonElement = document.createElement('button');
+
+	const proxyBase: Partial<UserObject[UserDepartment]> = {};
+	const departmentValues = new Proxy(proxyBase, {
+		set: (target, prop, value) => {
+			if (value === (defaultDepartmentValues as any)[prop]) {
+				delete (changedValues as any)[prop];
+			} else {
+				(changedValues as any)[prop] = value;
+			}
+			saveButton.disabled = Object.keys(changedValues).length === 0;
+
+			(target as any)[prop] = value;
 			return true;
 		}
 	});
-	if (u !== null)
-		userRows.push(newUser);
-	const resetInputs: Function[] = [];
-	let button: HTMLButtonElement;
+
+	return {
+		id: `${u.phone.toString()}-${department}`,
+		classList: [
+			'right-border-cell',
+			'no-border',
+			...(doHighlight ? [ 'alternate' ] : []),
+		],
+		columns: [
+			{ html: '', },
+			{ // active
+				classList: [ 'text-center', 'ps-3', ],
+				create: td => {
+					const div = document.createElement('div');
+					td.appendChild(div);
+					div.classList.add('form-check', 'form-switch', 'text-start');
+
+					const checkbox = document.createElement('input');
+					div.appendChild(checkbox);
+					checkbox.type = 'checkbox';
+					checkbox.setAttribute('role', 'switch');
+					checkbox.name = 'active';
+					checkbox.id = `${u.phone}-${department}-active`;
+					checkbox.checked = !!(u[department]?.active);
+					checkbox.classList.add('form-check-input');
+					checkbox.addEventListener('change', () => {
+						departmentValues.active = checkbox.checked;
+					});
+					checkbox.disabled = !canEditThisDepartment;
+
+					const label = document.createElement('label');
+					div.appendChild(label);
+					label.classList.add('form-check-label');
+					label.innerHTML = department;
+					label.setAttribute('for', checkbox.id);
+
+				},
+			},
+			{ // callsign
+				classList: [ 'ps-3', ],
+				create: td => {
+					const div = document.createElement('div');
+					td.appendChild(div);
+					div.classList.add('input-group');
+
+					const label = document.createElement('span');
+					div.appendChild(label);
+					label.classList.add('input-group-text');
+					label.innerHTML = 'Call Sign';
+
+					div.appendChild(callsignInput);
+					callsignInput.type = 'text';
+					callsignInput.name = 'callSign',
+					callsignInput.classList.add('form-control');
+					callsignInput.value = u[department]?.callSign || '';
+					callsignInput.addEventListener('change', () => {
+						departmentValues.callSign = callsignInput.value;
+					});
+					callsignInput.style.maxWidth = '85px';
+					callsignInput.disabled = !canEditThisDepartment;
+				},
+			},
+			{ // roles (admin checkbox)
+				create: td => {
+					const div = document.createElement('div');
+					td.appendChild(div);
+					div.classList.add('form-check', 'form-switch', 'text-start');
+
+					const isAdminInput: HTMLInputElement = document.createElement('input');
+					div.appendChild(isAdminInput);
+					isAdminInput.type = 'checkbox';
+					isAdminInput.setAttribute('role', 'switch');
+					isAdminInput.name = 'admin';
+					isAdminInput.id = `${u.phone}-${department}-admin`;
+					isAdminInput.checked = defaultDepartmentValues.admin;
+					isAdminInput.classList.add('form-check-input');
+					isAdminInput.addEventListener('change', () => {
+						departmentValues.admin = isAdminInput.checked;
+					});
+					isAdminInput.disabled = !canEditThisDepartment;
+
+					const label = document.createElement('label');
+					div.appendChild(label);
+					label.classList.add('form-check-label');
+					label.innerHTML = 'Admin';
+					label.setAttribute('for', isAdminInput.id);
+				},
+				classList: [],
+			},
+			{ // save button
+				classList: [ 'text-center', ],
+				create: (td) => {
+					td.appendChild(saveButton);
+					saveButton.classList.add('btn', 'btn-success', 'mv-1');
+					saveButton.innerHTML = 'Save';
+					saveButton.disabled = true;
+					saveButton.addEventListener('click', async () => {
+						saveButton.disabled = true;
+						changeButtonColor(saveButton, 'secondary');
+						
+						const parent = td.parentElement;
+						let inputs: (HTMLInputElement | HTMLSelectElement)[] = [];
+						if (parent !== null) {
+							inputs = [
+								...Array.from(parent.querySelectorAll('input')),
+							]
+							inputs.forEach(input => input.classList.remove('is-invalid'));
+						}
+
+						// Make the API call
+						let apiNewValues = { ...changedValues };
+						const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=updateGroup`, {
+							method: 'POST',
+							body: JSON.stringify({
+								phone: u.phone.toString(),
+								department,
+								...changedValues
+							} as ApiUserUpdateGroupBody),
+						}).then(r => r.json());
+						saveButton.blur();
+						if (apiResult.success) {
+							changeButtonColor(saveButton, 'success');
+							(Object.keys(apiNewValues) as (keyof UserObject[UserDepartment])[])
+								.forEach(key => {
+									defaultDepartmentValues[key] = apiNewValues[key];
+									departmentValues[key] = apiNewValues[key];
+								});
+						} else {
+							saveButton.disabled = false;
+							changeButtonColor(saveButton, 'danger');
+							showAlert('danger', 'Failed to update user group');
+							apiResult.errors = apiResult.errors || [];
+							inputs
+								.filter(input => apiResult.errors.includes(input.name))
+								.forEach(input => input.classList.add('is-invalid'));
+						}
+					});
+				},
+			},
+		],
+	};
+}
+
+function getUserRowConfig(u: UserObject, doHighlight: boolean, numDepartments: number): RowConfig {
+	logger.trace('getUserRowConfig', ...arguments);
+
+	const saveButton: HTMLButtonElement = document.createElement('button');
+
+	const defaultUserValues: ApiUserUpdateBody = {
+		phone: u.phone,
+		talkgroups: u.talkgroups || [],
+		fName: u.fName,
+		lName: u.lName,
+		getTranscript: !!u.getTranscript,
+		pageOnly: !!u.pageOnly,
+		getApiAlerts: !!u.getApiAlerts,
+		getVhfAlerts: !!u.getVhfAlerts,
+		getDtrAlerts: !!u.getDtrAlerts,
+		isDistrictAdmin: !!u.isDistrictAdmin,
+	};
+	const changedValues: Partial<ApiUserUpdateBody> = {};
+	const proxyBase: ApiUserUpdateBody = {
+		...defaultUserValues,
+		talkgroups: [ ...defaultUserValues.talkgroups || [] ],
+	};
+	const userValues = new Proxy(proxyBase, {
+		set: (target, prop: keyof ApiUserUpdateBody, value) => {
+			if (JSON.stringify(value) === JSON.stringify(defaultUserValues[prop])) {
+				delete changedValues[prop];
+			} else {
+				(changedValues as any)[prop] = value;
+			}
+			saveButton.disabled = Object.keys(changedValues).length === 0;
+
+			(target as any)[prop] = value;
+			return true;
+		}
+	});
+
+	userRows.push(userValues);
 
 	const makeInputCreationFn = (conf: InputConfig) => (td: HTMLTableCellElement) => {
 		if (conf.maxWidth)
 			td.style.maxWidth = conf.maxWidth;
 
 		let span: HTMLSpanElement;
-		if (u !== null && !conf.editable) {
+		if (!conf.editable) {
 			span = document.createElement('span');
 			td.appendChild(span);
 			span.innerHTML = conf.val(u);
 		}
 
-		if (u === null || conf.editable) {
+		if (conf.editable) {
 			const input = document.createElement('input');
 			td.appendChild(input);
 			input.type = 'text';
@@ -88,36 +261,15 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 			input.classList.add('form-control');
 			input.placeholder = conf.placeholder;
 			input.value = typeof conf.iVal !== 'undefined'
-				? conf.iVal(newUser)
-				: conf.val(newUser);
-			input.addEventListener('change', () => newUser[conf.name] = input.value);
-
-			if (u !== null && false) {
-				input.classList.add('d-none');
-				let listenerRun = false;
-				td.addEventListener('click', () => {
-					if (listenerRun) return;
-					listenerRun = true;
-				
-					input.classList.remove('d-none');
-					span.classList.add('d-none');
-					input.focus();
-				});
-			
-				resetInputs.push(() => {
-					span.innerHTML = conf.format
-						? conf.format(conf.val(newUser))
-						: conf.val(newUser);
-
-					span.classList.remove('d-none');
-					input.classList.add('d-none');
-				});
-			}
+				? conf.iVal(userValues)
+				: conf.val(userValues);
+			input.addEventListener('change', () => (userValues[conf.name] as string) = input.value);
 		}
 	}
 
 	return {
-		id: newUser.phone === '' ? 'new-user-row' : newUser.phone,
+		id: defaultUserValues.phone,
+		classList: [ 'no-border', ...(doHighlight ? ['alternate'] : []) ],
 		columns: [
 			{ // phone
 				classList: [ 'text-center' ],
@@ -132,146 +284,125 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 				})
 			},
 			{ // fName
-				classList: [ 'ps-3', 'text-center' ],
+				classList: [ 'ps-3', 'text-center', ],
 				create: makeInputCreationFn({
 					name: 'fName',
 					placeholder: 'First Name',
 					editable: true,
-					val: u => u.fName,
+					val: u => u.fName || '',
 				}),
 			},
 			{ // lName
-				classList: [ 'ps-3', 'text-center' ],
+				classList: [ 'ps-3', 'text-center', ],
 				create: makeInputCreationFn({
 					name: 'lName',
 					placeholder: 'Last Name',
 					editable: true,
-					val: u => u.lName,
-				}),
-			},
-			{ // department
-				filter: !!user.isDistrictAdmin,
-				create: td => {
-					const input = buildDepartmentSelect(u, newUser);
-					td.appendChild(input);
-				}
-			},
-			{ // callSign
-				classList: [ 'text-center' ],
-				create: makeInputCreationFn({
-					name: 'callSignS',
-					placeholder: 'Callsign',
-					editable: true,
-					val: u => u.callSignS,
-					maxWidth: '85px',
+					val: u => u.lName || '',
 				}),
 			},
 			{ // roles
 				create: td => {
-					const input = buildCheckboxes(newUser, userRoleCheckboxes, u);
+					const input = buildCheckboxes(userValues, userRoleCheckboxes);
 					td.appendChild(input);
 				}
 			},
 			{ // alerts
-				filter: !!user.isDistrictAdmin,
 				create: td => {
-					const input = buildCheckboxes(newUser, userAlertCheckboxes, u);
-					td.appendChild(input);
-				}
+					if (!!user.isDistrictAdmin) {
+						const input = buildCheckboxes(userValues, userAlertCheckboxes);
+						td.appendChild(input);
+					}
+				},
 			},
 			{ // talkgroups
+				classList: [ 'ps-3', ],
 				create: td => {
-					const input = buildTalkgroupCheckboxes(u, newUser);
+					td.setAttribute('ROWSPAN', (numDepartments + 1).toString());
+
+					const input = buildTalkgroupCheckboxes(userValues);
 					td.appendChild(input);
 				}
 			},
 			{ // button
-				classList: [ 'text-center' ],
+				classList: [ 'text-center', ],
 				create: td => {
-					button = document.createElement('button');
-					td.appendChild(button);
-					button.classList.add('btn', 'btn-success', 'mv-1');
-					button.innerHTML = u === null ? 'Create' : 'Save';
-					button.disabled = true;
-					button.addEventListener('click', async () => {
-						button.disabled = true;
-						changeButtonColor(button, 'secondary');
+					td.setAttribute('ROWSPAN', (numDepartments + 1).toString());
+
+					td.appendChild(saveButton);
+					saveButton.classList.add('btn', 'btn-success', 'mv-1');
+					saveButton.innerHTML = 'Save';
+					saveButton.disabled = true;
+					saveButton.addEventListener('click', async () => {
+						saveButton.disabled = true;
+						changeButtonColor(saveButton, 'secondary');
 						const parent = td.parentElement;
 						let inputs: (HTMLInputElement | HTMLSelectElement)[] = [];
 						if (parent !== null) {
 							inputs = [
 								...Array.from(parent.querySelectorAll('input')),
-								...Array.from(parent.querySelectorAll('select')),
 							];
 							inputs.forEach(input => input.classList.remove('is-invalid'));
 						}
 
-						const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=${u === null ? 'create' : 'update'}`, {
+						const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
 							method: 'POST',
-							body: JSON.stringify(newUser),
+							body: JSON.stringify({
+								phone: defaultUserValues.phone.toString(),
+								...changedValues,
+							}),
 						}).then(r => r.json());
-						button.blur();
+						saveButton.blur();
 						if (apiResult.success) {
-							resetInputs.forEach(fn => fn());
-							changeButtonColor(button, 'success');
-							if (u === null) {
-								createTableRow(tbody, getUserRowConfig(newUser));
-								createTableRow(tbody, getUserRowConfig(null));
-								if (parent !== null && parent.parentElement !== null)
-									parent.parentElement.removeChild(parent);
-								userRows.push(newUser);
-							}
-							resortRows();
+							changeButtonColor(saveButton, 'success');
 						} else {
-							button.disabled = false;
-							changeButtonColor(button, 'danger');
+							saveButton.disabled = false;
+							changeButtonColor(saveButton, 'danger');
 							showAlert('danger', 'Failed to save user');
 							apiResult.errors = apiResult.errors || [];
 							inputs
-								.filter(input => apiResult.errors.indexOf(input.getAttribute('name') || '') !== -1)
+								.filter(input => apiResult.errors.includes(input.getAttribute('name') || ''))
 								.forEach(input => input.classList.add('is-invalid'));
 						}
 					});
 
-					if (u !== null) {
-						const deleteButton = document.createElement('button');
-						td.appendChild(deleteButton);
-						deleteButton.classList.add('btn', 'btn-danger', 'm-1');
-						deleteButton.innerHTML = 'Delete';
-						deleteButton.setAttribute('data-bs-toggle', 'modal');
-						deleteButton.setAttribute('data-bs-target', '#delete-modal');
-						deleteButton.addEventListener('click', () => {
-							deleteButton.blur();
+					// if (u !== null) {
+					// 	const deleteButton = document.createElement('button');
+					// 	td.appendChild(deleteButton);
+					// 	deleteButton.classList.add('btn', 'btn-danger', 'm-1');
+					// 	deleteButton.innerHTML = 'Delete';
+					// 	deleteButton.setAttribute('data-bs-toggle', 'modal');
+					// 	deleteButton.setAttribute('data-bs-target', '#delete-modal');
+					// 	deleteButton.addEventListener('click', () => {
+					// 		deleteButton.blur();
 
-							modalItems.name.innerHTML = `${newUser.fName} ${newUser.lName}`;
-							const newButton = <HTMLButtonElement>modalItems.button.cloneNode(true);
-							if (modalItems.button.parentElement !== null)
-								modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
-							modalItems.button = newButton;
+					// 		modalItems.name.innerHTML = `${userValues.fName} ${userValues.lName}`;
+					// 		const newButton = <HTMLButtonElement>modalItems.button.cloneNode(true);
+					// 		if (modalItems.button.parentElement !== null)
+					// 			modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
+					// 		modalItems.button = newButton;
 
-							newButton.addEventListener('click', async () => {
-								changeButtonColor(deleteButton, 'secondary');
-								deleteButton.blur();
+					// 		newButton.addEventListener('click', async () => {
+					// 			changeButtonColor(deleteButton, 'secondary');
+					// 			deleteButton.blur();
 
-								const result = await fetch(`/api/user?action=delete`, {
-									method: 'POST',
-									body: JSON.stringify({
-										phone: newUser.phone,
-									}),
-								}).then(r => r.json());
+					// 			const result = await fetch(`/api/user?action=delete`, {
+					// 				method: 'POST',
+					// 				body: JSON.stringify({
+					// 					phone: userValues.phone,
+					// 				}),
+					// 			}).then(r => r.json());
 
-								if (result.success) {
-									if (td.parentElement !== null && td.parentElement.parentElement !== null)
-										td.parentElement.parentElement.removeChild(td.parentElement);
-								} else {
-									changeButtonColor(deleteButton, 'danger');
-									showAlert('danger', 'Failed to delete user');
-								}
-							});
-						});
-					}
-				
-					enableProxy = true;
+					// 			if (result.success) {
+					// 				if (td.parentElement !== null && td.parentElement.parentElement !== null)
+					// 					td.parentElement.parentElement.removeChild(td.parentElement);
+					// 			} else {
+					// 				changeButtonColor(deleteButton, 'danger');
+					// 				showAlert('danger', 'Failed to delete user');
+					// 			}
+					// 		});
+					// 	});
+					// }
 				}
 			},
 		]
@@ -280,26 +411,20 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 
 const userRoleCheckboxes: CheckboxConfig[] = [
 	{
-		name: 'isActive',
-		label: 'Active',
-		val: user => user.isActive || false
-	},
-	{
-		name: 'isAdmin',
-		label: 'Admin',
-		val: user => user.isAdmin || false
+		name: 'isDistrictAdmin',
+		label: 'District Admin',
+		val: user => user.isDistrictAdmin || false,
+		districtAdmin: true
 	},
 	{
 		name: 'pageOnly',
 		label: 'Pages Only',
 		val: user => user.pageOnly || false,
-		districtAdmin: true
 	},
 	{
 		name: 'getTranscript',
 		label: 'Get Transcripts',
 		val: user => user.getTranscript || false,
-		districtAdmin: true
 	}
 ];
 
@@ -321,31 +446,7 @@ const userAlertCheckboxes: CheckboxConfig[] = [
 	},
 ];
 
-function buildDepartmentSelect(u: UserObject | null, newUser: UserObject) {
-	logger.trace('buildDepartmentSelect', ...arguments);
-	const select = document.createElement('select');
-	select.classList.add('form-select');
-	select.name = 'department';
-	select.id = `${u === null ? 'new' : u.callSignS}-department`;
-	validDepartments.forEach(value => {
-		const option = document.createElement('option');
-		select.appendChild(option);
-		option.value = value;
-		option.innerHTML = value;
-		if (
-			(u === null && user.department === value) ||
-			(u !== null && u.department === value)
-		)
-			option.selected = true;
-	});
-
-	newUser.department = select.value as UserDepartment;
-	select.addEventListener('change', () => newUser.department = select.value as UserDepartment);
-
-	return select;
-}
-
-function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
+function buildTalkgroupCheckboxes(u: ApiUserUpdateBody, isNew: boolean = false) {
 	logger.trace('buildTalkgroupCheckboxes', ...arguments);
 	const inputs: HTMLInputElement[] = [];
 
@@ -361,20 +462,20 @@ function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
 		div.appendChild(input);
 		input.type = 'checkbox';
 		input.setAttribute('role', 'switch');
-		input.id = `talkgroups-${key}-${u === null ? 'new' : u.callSignS}`;
+		input.id = `talkgroups-${key}-${isNew ? 'new' : u.phone}`;
 		input.value = key.toString();
 		input.name = 'talkgroups';
 		input.classList.add('form-check-input');
 		input.addEventListener('change', () => {
-			if (input.checked && newUser.talkgroups.indexOf(key) === -1)
-				newUser.talkgroups = [
-					...newUser.talkgroups,
+			if (input.checked && !u.talkgroups?.includes(key))
+				u.talkgroups = [
+					...u.talkgroups || [],
 					key,
 				];
-			else if (!input.checked && newUser.talkgroups.indexOf(key) !== -1)
-				newUser.talkgroups = newUser.talkgroups.filter(v => v !== key);
+			else if (!input.checked && u.talkgroups?.includes(key))
+				u.talkgroups = (u.talkgroups || []).filter(v => v !== key);
 		});
-		if (newUser.talkgroups.indexOf(key) !== -1)
+		if (u.talkgroups?.includes(key))
 			input.checked = true;
 		inputs.push(input);
 
@@ -389,9 +490,9 @@ function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
 }
 
 function buildCheckboxes(
-	u: UserObject,
+	u: ApiUserUpdateBody,
 	checkboxConfigs: CheckboxConfig[],
-	uOld: UserObject | null
+	isNew: boolean = false
 ) {
 	logger.trace('buildCheckboxes', ...arguments);
 	const container = document.createElement('div');
@@ -403,21 +504,16 @@ function buildCheckboxes(
 			container.appendChild(div);
 			div.classList.add('form-check', 'form-switch', 'text-start');
 
-			if (uOld === null)
-				u[checkbox.name] = !!defaultUserObject[checkbox.name];
-			else
-				u[checkbox.name] = !! uOld[checkbox.name];
-
 			const input = document.createElement('input');
 			div.appendChild(input);
 			input.type = 'checkbox';
 			input.setAttribute('role', 'switch');
 			input.name = checkbox.name;
-			input.id = `checkboxes-${checkbox.name}-${u === null ? 'new' : u.callSignS}`;
-			input.checked = !!u[checkbox.name];
+			input.id = `checkboxes-${checkbox.name}-${isNew ? 'new' : u.phone}`;
+			input.checked = !isNew && !!u[checkbox.name];
 			input.classList.add('form-check-input');
 			input.addEventListener('change', () => {
-				u[checkbox.name] = input.checked;
+				(u[checkbox.name] as boolean) = input.checked;
 			});
 			
 			const label = document.createElement('label');
@@ -432,10 +528,10 @@ function buildCheckboxes(
 
 let lastSort = 'lName,fName';
 let currentSortIndex = 0;
-let userRows: UserObject[] = [];
+let userRows: ApiUserUpdateBody[] = [];
 function sortRows(keysString: string) {
 	logger.trace('sortRows', ...arguments);
-	const keys = <UserObjectStrings[]>keysString.split(',');
+	const keys = <(keyof ApiUserUpdateBody)[]>keysString.split(',');
 	const numPossibilities = Math.pow(2, keys.length);
 
 	if (lastSort === keysString) {
@@ -476,16 +572,33 @@ function sortRows(keysString: string) {
 			}
 			let key = keys[i];
 
-			return a[key] > b[key]
+			if (typeof a[key] === 'undefined') {
+				return aLesser;
+			} else if (typeof b[key] === 'undefined') {
+				return aGreater;
+			}
+
+			return (a[key] as any) > (b[key] as any)
 				? aGreater
 				: aLesser;
 		})
-		.forEach(user => {
+		.forEach((user, idx) => {
+			let method: 'add' | 'remove' = idx % 2 === 0 ? 'add' : 'remove';
 			const tr = document.getElementById(user.phone);
-			if (tr !== null)
+			if (tr !== null) {
 				tbody.appendChild(tr);
+				tr.classList[method]('alternate');
+			}
+
+			validDepartments.forEach(rowIdPart => {
+				const tr = document.getElementById(`${user.phone}-${rowIdPart}`);
+				if (tr !== null) {
+					tbody.appendChild(tr);
+					tr.classList[method]('alternate');
+				}
+			});
 		});
-	tbody.appendChild(<HTMLTableRowElement>document.getElementById('new-user-row'));
+	// tbody.appendChild(<HTMLTableRowElement>document.getElementById('new-user-row'));
 }
 function resortRows() {
 	logger.trace('resortRows', ...arguments);
@@ -521,6 +634,13 @@ async function init() {
 		return;
 	}
 
+	// Get the departments the user can modify
+	const userDepartments = validDepartments
+		.filter(dep => user.isDistrictAdmin || (
+			user[dep]?.admin &&
+			user[dep]?.active
+		))
+
 	apiResult.users
 		.sort((a, b) => {
 			if (a.lName === b.lName)
@@ -528,9 +648,18 @@ async function init() {
 
 			return a.lName > b.lName ? 1 : -1;
 		})
-		.map(u => createTableRow(tbody, getUserRowConfig(u)));
+		.map((u, idx) => {
+			let doHighlight = idx % 2 === 0;
 
-	createTableRow(tbody, getUserRowConfig(null));
+			// Create the main row
+			createTableRow(tbody, getUserRowConfig(u, doHighlight, userDepartments.length));
+			
+			// Create the department rows
+			userDepartments
+				.forEach(dep => createTableRow(tbody, getUserDepartmentRowConfig(u, dep, doHighlight)));
+		});
+
+	// createTableRow(tbody, getUserRowConfig(null, apiResult.users.length % 2 === 0, 0));
 
 	doneLoading();
 }

@@ -216,14 +216,14 @@ function showParticipants(participants: ConferenceAttendeeObject[]) {
 	});
 
 	(<HTMLButtonElement[]>Array.from(invitableUsersTable.querySelectorAll('.invite-button'))).forEach(btn => {
-		const callSign = btn.getAttribute('data-callsign') || '999';
+		const phone = btn.getAttribute('data-phone') || '999';
 		if (
-			!inMeetingCallsign.includes(callSign) &&
+			!inMeetingCallsign.includes(phone) &&
 			btn.getAttribute('data-state') === 'on_call'
 		) {
 			updateButton(btn, 'can_invite');
 		} else if (
-			inMeetingCallsign.includes(callSign) &&
+			inMeetingCallsign.includes(phone) &&
 			btn.getAttribute('data-state') !== 'on_call'
 		) {
 			updateButton(btn, 'on_call');
@@ -413,21 +413,21 @@ async function createInvitableTable() {
 				return 1;
 			} else if (a.fName < b.fName) {
 				return 1;
-			} else if (a.callSignS > b.callSignS) {
-				return 1;
+			// } else if (a.callSign > b.callSign) {
+			// 	return 1;
 			}
 			return -1;
 		});
 
 	invitableUsers.forEach(u => {
-		const existingRow = document.getElementById(`${u.callSignS}-invite`);
+		const existingRow = document.getElementById(`${u.phone}-invite`);
 		if (existingRow !== null) return;
 
 		createTableRow(invitableUsersTable, {
-			id: `${u.callSignS}-invite`,
+			id: `${u.phone}-invite`,
 			columns: [
 				{
-					html: `${u.fName} ${u.lName} (${u.callSignS})`,
+					html: `${u.fName} ${u.lName}`,
 				},
 				{
 					html: formatPhone(u.phone),
@@ -437,8 +437,8 @@ async function createInvitableTable() {
 						const inviteBtn = document.createElement('button');
 						td.appendChild(inviteBtn);
 						inviteBtn.classList.add('btn', 'invite-button');
-						inviteBtn.id = `${u.callSignS}-invite-btn`;
-						inviteBtn.setAttribute('data-callsign', u.callSignS);
+						inviteBtn.id = `${u.phone}-invite-btn`;
+						inviteBtn.setAttribute('data-phone', u.phone);
 						inviteBtn.addEventListener('click', createInviteBtnFn(inviteBtn, u));
 						updateButton(inviteBtn, 'can_invite');
 					},

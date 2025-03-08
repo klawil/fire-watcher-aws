@@ -2,8 +2,9 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
-import { UserDepartment } from '../../../common/userConstants';
+import { validDepartments } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';
+import { isUserActive } from '../types/auth';
 
 const logger = getLogger('twilio');
 
@@ -109,13 +110,15 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		return response;
 	}
 
-	// Validate the sending number
+	// Get the event data
 	const eventData = event.body?.split('&')
 		.map(str => str.split('=').map(str => decodeURIComponent(str)))
 		.reduce((acc, curr) => ({
 			...acc,
 			[curr[0]]: curr[1] || ''
 		}), {}) as TwilioTextEvent;
+	
+	// Validate the sending number
 	const sender = await dynamodb.getItem({
 		TableName: userTable,
 		Key: {
@@ -126,7 +129,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}).promise();
 	if (
 		!sender.Item ||
-		!sender.Item.isActive?.BOOL ||
+		!isUserActive(sender.Item) ||
 		sender.Item.pageOnly?.BOOL
 	) {
 		response.body = `<Response><Message>You do not have access to use the text group. Contact your station chief to request access.</Message></Response>`
@@ -260,6 +263,24 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 				.then(result => {
 					if (!result || !result.Item) return null;
 
+					if (eventData.MessageStatus === 'delivered') {
+						return dynamodb.updateItem({
+							TableName: userTable,
+							Key: {
+								phone: { N: eventData.To.slice(2) },
+							},
+							ExpressionAttributeNames: {
+								'#ls': 'lastStatus',
+								'#lsc': 'lastStatusCount',
+							},
+							ExpressionAttributeValues: {
+								':ls': { S: eventData.MessageStatus },
+							},
+							UpdateExpression: 'SET #ls = :ls REMOVE #lsc',
+							ReturnValues: 'ALL_NEW'
+						}).promise();
+					}
+
 					return dynamodb.updateItem({
 						TableName: userTable,
 						Key: {
@@ -290,9 +311,9 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 						const queueMessage: TwilioErrorBody = {
 							action: 'twilio_error',
 							count: parseInt(result.Attributes?.lastStatusCount?.N || '0', 10),
-							name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S} (${result.Attributes?.callSignS?.S})`,
+							name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S}`,
 							number: parsePhone(result.Attributes?.phone?.N || '', true),
-							department: result.Attributes?.department?.S as UserDepartment,
+							department: validDepartments.filter(dep => result.Attributes && result.Attributes[dep]?.M?.active?.BOOL)
 						};
 						return sqs.sendMessage({
 							MessageBody: JSON.stringify(queueMessage),
@@ -382,7 +403,7 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	}).promise();
 	if (
 		!sender.Item ||
-		!sender.Item.isActive?.BOOL ||
+		!isUserActive(sender.Item) ||
 		sender.Item.pageOnly?.BOOL ||
 		sender.Item.department?.S === 'Baca'
 	) {

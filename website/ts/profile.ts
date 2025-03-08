@@ -1,6 +1,6 @@
 import { ApiUserFidoChallengeResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
 import { afterAuthUpdate, base64ToBuffer, bufferToBase64, useFidoKey, user } from './utils/auth';
-import { PagingTalkgroup, pagingConfig, pagingTalkgroupOrder } from '../../common/userConstants';
+import { PagingTalkgroup, pagingConfig, pagingTalkgroupOrder, validDepartments } from '../../common/userConstants';
 import { formatPhone } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
@@ -11,10 +11,6 @@ const logger = getLogger('profile');
 
 const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
 	'phone',
-	'isActive',
-	'isAdmin',
-	'department',
-	'callSignS',
 	'fName',
 	'lName',
 ];
@@ -124,9 +120,9 @@ async function testFidoKey(btn: HTMLButtonElement, key: string) {
 	btn.disabled = true;
 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 	btn.classList.add('btn-secondary');
-	if (typeof user.fidoKeys === 'undefined' || typeof user.fidoKeys[key] === 'undefined') return;
+	if (typeof user.fidoKeyIds === 'undefined' || typeof user.fidoKeyIds[key] === 'undefined') return;
 
-	await useFidoKey([ user.fidoKeys[key] ], true);
+	await useFidoKey([ user.fidoKeyIds[key] ], true);
 
 	btn.disabled = false;
 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
@@ -213,12 +209,30 @@ function init() {
 		}
 	});
 
+	const departmentContainer = document.getElementById('department');
+	if (departmentContainer !== null) {
+		validDepartments.forEach(dep => {
+			const depConf = user[dep];
+			if (typeof depConf === 'undefined') return;
+
+			createTableRow(departmentContainer, {
+				classList: [ 'text-center', 'align-middle', ],
+				columns: [
+					{ html: dep, },
+					{ html: formatValue(depConf.active as boolean), },
+					{ html: formatValue(depConf.callSign as string), },
+					{ html: formatValue(depConf.admin as boolean), },
+				],
+			});
+		});
+	}
+
 	const pageGroupContainer = document.getElementById('talkgroups');
 	if (pageGroupContainer !== null)
 		pagingTalkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
 
 	const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
-	Object.keys(user.fidoKeys || {}).forEach(key => {
+	Object.keys(user.fidoKeyIds || {}).forEach(key => {
 		const tr = createTableRow(null, {
 			columns: [
 				{

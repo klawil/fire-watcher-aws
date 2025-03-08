@@ -8,21 +8,16 @@ layout: base
 	<div class="col-2 m-1 text-end">Phone Number</div>
 	<div class="col-2 m-1" id="phone"></div>
 </div>
-<div class="row justify-content-center">
-	<div class="col-2 m-1 text-end">Department</div>
-	<div class="col-2 m-1" id="department"></div>
-</div>
-<div class="row justify-content-center">
-	<div class="col-2 m-1 text-end">Call Sign</div>
-	<div class="col-2 m-1" id="callSignS"></div>
-</div>
-<div class="row justify-content-center">
-	<div class="col-2 m-1 text-end">Active User</div>
-	<div class="col-2 m-1" id="isActive"></div>
-</div>
-<div class="row justify-content-center">
-	<div class="col-2 m-1 text-end">Admin</div>
-	<div class="col-2 m-1" id="isAdmin"></div>
+<div class="row justify-content-center table-responsive">
+	<table class="table table-striped">
+		<thead><tr class="text-center">
+			<th>Department</th>
+			<th>Active</th>
+			<th>Call Sign</th>
+			<th>Admin</th>
+		</tr></thead>
+		<tbody id="department"></tbody>
+	</table>
 </div>
 
 <h2 class="text-center">Information You Can Edit:</h2>

@@ -1,6 +1,7 @@
 import { ApiUserFidoAuthBody, ApiUserFidoAuthResponse, ApiUserFidoGetAuthResponse, ApiUserGetUserResponse } from '../../../common/userApi';
 import { showAlert } from './alerts';
 import { getLogger } from '../../../stack/resources/utils/logger';
+import { validDepartments } from '../../../common/userConstants';
 
 const logger = getLogger('auth');
 
@@ -69,7 +70,35 @@ export let user: ApiUserGetUserResponse = {
 	isAdmin: document.cookie.indexOf('cvfd-user-admin=1') !== -1,
 	isDistrictAdmin: document.cookie.indexOf('cvfd-user-super=1') !== -1,
 	fName: typeof fNameCookie !== 'undefined' ? fNameCookie.split(';')[0] : undefined,
-}; 
+};
+const cookies: {
+	[key: string]: string | null;
+} = {};
+document.cookie.split('; ').forEach(cookie => {
+	let eqSign = cookie.indexOf('=');
+	if (eqSign === -1) {
+		cookies[cookie] = null;
+		return;
+	}
+
+	cookies[cookie.slice(0, eqSign)] = cookie.slice(eqSign + 1);
+});
+validDepartments.forEach(dep => {
+	const cookieName = `cvfd-user-${dep}`;
+	if (typeof cookies[cookieName] === 'string') {
+		try {
+			user[dep] = JSON.parse(cookies[cookieName] as string);
+		} catch (e) {
+			logger.error(`Error parsing cookie ${cookieName}`, e);
+		}
+	} else {
+		user[dep] = {
+			active: false,
+			callSign: '',
+			admin: false,
+		};
+	}
+});
 logger.debug('Initial User:', user);
 
 // Show the available links

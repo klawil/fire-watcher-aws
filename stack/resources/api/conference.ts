@@ -1,7 +1,8 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getLoggedInUser } from '../utils/auth';
-import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
+import { getTwilioSecret, incrementMetric } from '../utils/general';
+import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../../common/conferenceApi';
 import { unauthorizedApiResponse } from '../types/api';
 import { defaultDepartment, departmentConfig } from '../../../common/userConstants';
@@ -21,7 +22,7 @@ async function getToken(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isActive?.BOOL
+		!user.isActive
 	) {
 		return unauthorizedApiResponse;
 	}
@@ -163,7 +164,7 @@ async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedApiResponse;
 	}
@@ -232,7 +233,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedApiResponse;
 	}
@@ -272,7 +273,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	const callInfo = await twilioClient.calls.create({
 		twiml: `<?xml version="1.0" encoding="UTF-8"?>
 		<Response>
-			<Say>Hello ${invited.fName}. ${user.fName.S} has invited you to join the ${invited.department} call. Adding you now.</Say>
+			<Say>Hello ${invited.fName}. ${user.fName} has invited you to join the ${invited.department} call. Adding you now.</Say>
 			<Dial>
 				<Conference
 					participantLabel="${invited.fName} ${invited.lName} ${Math.round(Math.random() * 100)}"
@@ -323,7 +324,7 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isActive?.BOOL
+		!user.isActive
 	) {
 		return unauthorizedApiResponse;
 	}
@@ -334,7 +335,7 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 			'#r': 'Room',
 		},
 		ExpressionAttributeValues: {
-			':r': { S: user.department?.S },
+			':r': { S: user.department },
 		},
 		FilterExpression: '#r = :r',
 	}).promise();
@@ -356,7 +357,7 @@ async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
-		!user.isActive?.BOOL
+		!user.isActive
 	) {
 		return unauthorizedApiResponse;
 	}
@@ -367,7 +368,7 @@ async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 			'#r': 'Room',
 		},
 		ExpressionAttributeValues: {
-			':r': { S: user.department?.S },
+			':r': { S: user.department },
 		},
 		FilterExpression: '#r = :r',
 	}).promise();

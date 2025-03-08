@@ -1,21 +1,14 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { getLogger } from './logger';
+import { parseDynamoDbAttributeMap } from './dynamodb';
+import { InternalUserObject } from '../../../common/userApi';
+import { validDepartments } from '../../../common/userConstants';
+import { authTokenCookie, authUserCookie, isUserActive, isUserAdmin } from '../types/auth';
 
 const logger = getLogger('u-auth');
 
 const dynamodb = new aws.DynamoDB();
-
-export const authUserCookie = 'cvfd-user';
-export const authTokenCookie = 'cvfd-token';
-
-export const allUserCookies = [
-	authUserCookie,
-	authTokenCookie,
-	'cvfd-user-name',
-	'cvfd-user-admin',
-	'cvfd-user-super',
-];
 
 const userTable = process.env.TABLE_USER as string;
 
@@ -40,7 +33,7 @@ export function getCookies(event: APIGatewayProxyEvent): Cookies {
 		}, {});
 }
 
-export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.DynamoDB.AttributeMap> {
+export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | InternalUserObject> {
 	logger.trace('getLoggedInUser', event);
 
 	try {
@@ -83,7 +76,12 @@ export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null
 			return null;
 		}
 
-		return user.Item;
+		// Handle the isAdmin determination
+		const parsedUser = parseDynamoDbAttributeMap(user.Item) as unknown as InternalUserObject;
+		parsedUser.isAdmin = isUserAdmin(user.Item);
+		parsedUser.isActive = isUserActive(user.Item);
+
+		return parsedUser;
 	} catch (e) {
 		logger.error('getLoggedInUser', e);
 		return null;

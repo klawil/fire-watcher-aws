@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { CloudFrontRequestEvent, CloudFrontRequestResult, CloudFrontResultResponse } from 'aws-lambda';
-import { allUserCookies, authTokenCookie, authUserCookie } from './utils/auth';
+import { allUserCookies, authTokenCookie, authUserCookie, isUserActive, isUserAdmin } from './types/auth';
 import { getLogger } from './utils/logger';
 
 const logger = getLogger('auth-mid');
@@ -139,14 +139,14 @@ exports.main = async function main(event: CloudFrontRequestEvent): Promise<Cloud
 	}
 
 	// Check that this is an active user
-	if (!user.Item.isActive?.BOOL) {
+	if (!isUserActive(user.Item)) {
 		return loginRedirect;
 	}
 
 	// Check that the admin requirement is met
 	if (
 		adminRequiredRoutes.indexOf(requestUri) !== -1 &&
-		!user.Item.isAdmin?.BOOL
+		!isUserAdmin(user.Item)
 	) {
 		return homeRedirect;
 	}

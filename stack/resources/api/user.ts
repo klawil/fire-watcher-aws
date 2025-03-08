@@ -1,12 +1,14 @@
 import * as aws from 'aws-sdk';
 import * as crypto from 'crypto';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap, parseDynamoDbAttributeValue, randomString, validateBodyIsJson } from '../utils/general';
-import { allUserCookies, authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
+import { incrementMetric, randomString, validateBodyIsJson } from '../utils/general';
+import { parseDynamoDbAttributeMap, parseDynamoDbAttributeValue } from '../utils/dynamodb';
+import { getCookies, getLoggedInUser } from '../utils/auth';
+import { allUserCookies, authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
-import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, UserObject } from '../../../common/userApi';
+import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, InternalUserObject, UserObject } from '../../../common/userApi';
 import { unauthorizedApiResponse } from '../types/api';
-import { pagingTalkgroupOrder, validDepartments } from '../../../common/userConstants';
+import { PagingTalkgroup, pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { ActivateBody, LoginBody } from '../types/queue';
 import { getLogger } from '../utils/logger';
 
@@ -38,26 +40,24 @@ interface FidoKeys {
 	[key: string]: FidoKey;
 };
 
-async function loginUser(user: AWS.DynamoDB.AttributeMap) {
+async function loginUser(user: InternalUserObject) {
 	logger.trace('loginUser', ...arguments);
 	// Find the previous tokens that should be deleted
 	const now = Date.now();
-	const validUserTokens = user.loginTokens?.L
-		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
+	const validUserTokens = user.loginTokens
+		?.filter(token => (token.tokenExpiry || 0) > now) || [];
 
 	// Create a new token and attach it
 	const token = randomString(32);
 	const tokenExpiry = Date.now() + (loginDuration * 1000);
 	validUserTokens.push({
-		M: {
-			token: { S: token },
-			tokenExpiry: { N: tokenExpiry.toString() }
-		}
+		token,
+		tokenExpiry,
 	});
 	await dynamodb.updateItem({
 		TableName: userTable,
 		Key: {
-			phone: { N: user.phone?.N }
+			phone: { N: user.phone.toString() }
 		},
 		ExpressionAttributeNames: {
 			'#c': 'code',
@@ -65,19 +65,32 @@ async function loginUser(user: AWS.DynamoDB.AttributeMap) {
 			'#t': 'loginTokens',
 		},
 		ExpressionAttributeValues: {
-			':t': { L: validUserTokens },
+			':t': { L: validUserTokens.map(tkn => ({
+				M: {
+					token: { S: tkn.token },
+					tokenExpiry: { N: tkn.tokenExpiry.toString() },
+				}
+			})) },
 		},
 		UpdateExpression: 'REMOVE #c, #ce SET #t = :t'
 	}).promise();
+	
+	const userCookies: string[] = [
+		`${authUserCookie}=${user.phone}`,
+		`${authUserCookie}=${token}`,
+		`cvfd-user-name=${user.fName}`,
+		`cvfd-user-admin=${user.isAdmin ? '1' : '0'}`,
+		`cvfd-user-super=${user.isDistrictAdmin ? '1' : '0'}`,
+	];
+	validDepartments.map(dep => {
+		if (typeof user[dep] === 'undefined') return;
+
+		const value = JSON.stringify(user[dep] || {});
+		userCookies.push(`cvfd-user-${dep}=${value}`);
+	});
 
 	return {
-		'Set-Cookie': [
-			`${authUserCookie}=${user.phone.N}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-			`${authTokenCookie}=${token}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-			`cvfd-user-name=${user.fName.S}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-			`cvfd-user-admin=${user.isAdmin?.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-			`cvfd-user-super=${user.isDistrictAdmin?.BOOL ? '1' : '0'}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-		],
+		'Set-Cookie': userCookies.map(c => `${c}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
 	};
 }
 
@@ -107,7 +120,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}).promise();
 		if (
 			!user.Item ||
-			!user.Item.isActive?.BOOL
+			!isUserActive(user.Item)
 		) {
 			response.success = false;
 			response.errors.push('phone');
@@ -174,7 +187,7 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}).promise();
 	if (
 		!user.Item ||
-		!user.Item.isActive?.BOOL
+		!isUserActive(user.Item)
 	) {
 		response.success = false;
 		response.errors.push('phone');
@@ -198,7 +211,7 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		};
 	}
 
-	const headers = await loginUser(user.Item);
+	const headers = await loginUser(parseDynamoDbAttributeMap(user.Item) as unknown as InternalUserObject);
 	return {
 		statusCode: 200,
 		body: JSON.stringify(response),
@@ -223,21 +236,24 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 
 	if (user !== null) {
-		const parsedUser = parseDynamoDbAttributeMap(user) as unknown as UserObject;
 		response.isUser = true;
-		response.isActive = !!parsedUser.isActive;
-		response.isAdmin = !!parsedUser.isAdmin && !!parsedUser.isActive;
-		response.isDistrictAdmin = !!parsedUser.isDistrictAdmin;
-		response.phone = parsedUser.phone;
-		response.callSignS = parsedUser.callSignS;
-		response.fName = parsedUser.fName;
-		response.lName = parsedUser.lName;
-		response.department = parsedUser.department;
-		response.talkgroups = parsedUser.talkgroups;
+		response.isActive = !!user.isActive;
+		response.isAdmin = !!user.isAdmin;
+		response.isDistrictAdmin = !!user.isDistrictAdmin;
+		response.phone = user.phone;
+		response.fName = user.fName;
+		response.lName = user.lName;
+		response.department = user.department;
+		response.talkgroups = user.talkgroups;
+		validDepartments.forEach(dep => {
+			if (typeof user[dep] === 'undefined') return;
+			response[dep] = user[dep];
+		});
 		if (typeof user.fidoKeys !== 'undefined') {
-			const fidoKeys = parseDynamoDbAttributeValue(user.fidoKeys) as FidoKeys;
-			response.fidoKeys = Object.keys(fidoKeys).reduce((agg: {[key: string]: string }, key) => {
-				agg[key] = fidoKeys[key].rawId;
+			response.fidoKeyIds = Object.keys(user.fidoKeys).reduce((agg: {[key: string]: string }, key) => {
+				if (user.fidoKeys && user.fidoKeys[key]) {
+					agg[key] = user.fidoKeys[key].rawId;
+				}
 				return agg;
 			}, {});
 		}
@@ -249,6 +265,10 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 			'cvfd-user-admin': response.isAdmin ? '1' : '0',
 			'cvfd-user-super': response.isDistrictAdmin ? '1' : '0',
 		};
+		validDepartments.forEach(dep => {
+			if (typeof response[dep] === 'undefined') return;
+			cookieMap[`cvfd-user-${dep}`] = JSON.stringify(response[dep]);
+		});
 		const cookieValues: string[] = [];
 		Object.keys(cookieMap).forEach(cookie => {
 			if (
@@ -268,7 +288,7 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 			TableName: userTable,
 			Key: {
 				phone: {
-					N: user.phone.N,
+					N: user.phone.toString(),
 				},
 			},
 			ExpressionAttributeNames: {
@@ -313,13 +333,19 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	// Delete the needed tokens
 	const loginToken = getCookies(event)[authTokenCookie];
 	const now = Date.now();
-	const validUserTokens = user.loginTokens?.L
-		?.filter(token => token.M?.token?.S !== loginToken)
-		.filter(token => parseInt(token.M?.tokenExpiry?.N || '0', 10) > now);
+	const validUserTokens = user.loginTokens
+		?.filter(token => token.token !== loginToken)
+		.filter(token => (token.tokenExpiry || 0) > now)
+		.map(token => ({
+			M: {
+				token: { S: token.token },
+				tokenExpiry: { N: token.tokenExpiry.toString() },
+			}
+		}));
 	const updateConfig: aws.DynamoDB.UpdateItemInput = {
 		TableName: userTable,
 		Key: {
-			phone: { N: user.phone?.N }
+			phone: { N: user.phone.toString() }
 		},
 		ExpressionAttributeNames: {
 			'#t': 'loginTokens'
@@ -341,6 +367,25 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	return response;
 }
 
+const adminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
+	'#d': 'department',
+	'#fn': 'fName',
+	'#ln': 'lName',
+	'#p': 'phone',
+	'#tg': 'talkgroups',
+	'#lli': 'lastLogin',
+	'#po': 'pageOnly',
+	'#gt': 'getTranscript',
+};
+const districtAdminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
+	...adminUserKeys,
+	'#gaa': 'getApiAlerts',
+	'#gva': 'getVhfAlerts',
+	'#gda': 'getDtrAlerts',
+	'#da': 'isDistrictAdmin',
+};
+validDepartments.forEach((dep, idx) => districtAdminUserKeys[`#dep${idx}`] = dep);
+
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.trace('handleList', ...arguments);
 	const user = await getLoggedInUser(event);
@@ -353,54 +398,32 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 	if (
 		user === null ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedResponse;
 	}
 
 	// Get the users to return
-	let usersItems: aws.DynamoDB.ScanOutput | aws.DynamoDB.QueryOutput;
-	if (user.isDistrictAdmin?.BOOL) {
+	const keysToGet = user.isDistrictAdmin ? districtAdminUserKeys : adminUserKeys;
+	let usersItems: aws.DynamoDB.ScanOutput;
+	if (user.isDistrictAdmin) {
 		usersItems = await dynamodb.scan({
 			TableName: userTable,
-			ExpressionAttributeNames: {
-				'#fn': 'fName',
-				'#ln': 'lName',
-				'#d': 'department',
-				'#p': 'phone',
-				'#cs': 'callSignS',
-				'#active': 'isActive',
-				'#admin': 'isAdmin',
-				'#tg': 'talkgroups',
-				'#po': 'pageOnly',
-				'#gt': 'getTranscript',
-				'#gaa': 'getApiAlerts',
-				'#gva': 'getVhfAlerts',
-				'#gda': 'getDtrAlerts',
-				'#lli': 'lastLogin',
-			},
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt,#gaa,#gva,#gda,#lli'
+			ExpressionAttributeNames: keysToGet,
+			ProjectionExpression: Object.keys(keysToGet).join(','),
 		}).promise();
 	} else {
-		usersItems = await dynamodb.query({
+		// Get the departments the user is admin for
+		let departmentsUserCanSee: UserDepartment[] = validDepartments
+			.filter(dep => !!user[dep]?.admin);
+		departmentsUserCanSee.forEach(dep => {
+			keysToGet[`#${dep}`] = dep;
+		});
+		usersItems = await dynamodb.scan({
 			TableName: userTable,
-			IndexName: 'StationIndex2',
-			ExpressionAttributeNames: {
-				'#d': 'department',
-				'#fn': 'fName',
-				'#ln': 'lName',
-				'#p': 'phone',
-				'#cs': 'callSignS',
-				'#active': 'isActive',
-				'#admin': 'isAdmin',
-				'#tg': 'talkgroups',
-				'#lli': 'lastLogin',
-			},
-			ExpressionAttributeValues: {
-				':d': { S: user.department?.S }
-			},
-			KeyConditionExpression: '#d = :d',
-			ProjectionExpression: '#fn,#ln,#p,#cs,#active,#admin,#tg,#lli'
+			ExpressionAttributeNames: keysToGet,
+			FilterExpression: departmentsUserCanSee.map(dep => `attribute_exists(#${dep})`).join(' OR '),
+			ProjectionExpression: Object.keys(keysToGet).join(','),
 		}).promise();
 	}
 
@@ -423,6 +446,76 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
+interface EditKeyConfig {
+	required?: boolean;
+	name: keyof ApiUserUpdateBody;
+	type: 'phone' | 'string' | 'talkgroups' | 'boolean' | 'department';
+	regex?: RegExp;
+	partOfDepartment?: boolean;
+}
+
+const allowedToEditSelf: EditKeyConfig[] = [
+	{
+		name: 'phone',
+		required: true,
+		type: 'phone',
+	},
+	{
+		name: 'fName',
+		type: 'string',
+	},
+	{
+		name: 'lName',
+		type: 'string',
+	},
+	{
+		name: 'talkgroups',
+		type: 'talkgroups',
+	},
+];
+const allowedToEditAdmin: EditKeyConfig[] = [
+	...allowedToEditSelf,
+	{
+		name: 'getTranscript',
+		type: 'boolean',
+	},
+	{
+		name: 'pageOnly',
+		type: 'boolean',
+	}
+];
+const allowedToEditDistrictAdmin: EditKeyConfig[] = [
+	...allowedToEditAdmin,
+	{
+		name: 'getApiAlerts',
+		type: 'boolean',
+	},
+	{
+		name: 'getVhfAlerts',
+		type: 'boolean',
+	},
+	{
+		name: 'getDtrAlerts',
+		type: 'boolean',
+	},
+	{
+		name: 'isDistrictAdmin',
+		type: 'boolean',
+	},
+];
+const fieldsForCreate: EditKeyConfig[] = [
+	{
+		name: 'department',
+		type: 'department',
+	},
+	{
+		name: 'callSign',
+		type: 'string',
+		regex: /^[0-9A-Z\-]+$/,
+		partOfDepartment: true,
+	},
+];
+
 async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean): Promise<APIGatewayProxyResult> {
 	logger.trace('createOrUpdateUser', ...arguments);
 	const user = await getLoggedInUser(event);
@@ -439,120 +532,109 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 
 	// Validate and parse the body
 	validateBodyIsJson(event.body);
-	const body = JSON.parse(event.body as string) as UserObject;
+	const body = JSON.parse(event.body as string) as ApiUserUpdateBody;
 	const response: ApiResponse = {
 		success: true,
 		errors: []
 	};
 	if (body.isMe) {
-		user.isAdmin = { BOOL: false };
-		user.isDistrictAdmin = { BOOL: false };
+		user.isAdmin = false;
+		user.isDistrictAdmin = false;
 	}
 
 	// Validate the person has the right permissions
 	if (
 		(
-			!(user.isAdmin?.BOOL || user.isDistrictAdmin?.BOOL) &&
-			user.phone.N !== body.phone.toString()
+			!(user.isAdmin || user.isDistrictAdmin) &&
+			user.phone !== body.phone
 		) ||
-		!user.isActive?.BOOL
+		!user.isActive
 	) {
 		return unauthorizedResponse;
 	}
 
 	// Validate the request
-	if (
-		typeof body.phone !== 'string' ||
-		body.phone.replace(/[^0-9]/g, '').length !== 10
-	) {
+	let keysToValidate = body.isMe
+		? allowedToEditSelf
+		: user.isDistrictAdmin
+			? allowedToEditDistrictAdmin
+			: allowedToEditAdmin;
+	if (create) {
+		keysToValidate = [
+			...keysToValidate,
+			...fieldsForCreate,
+		].map(item => ({
+			...item,
+			required: true,
+		}));
+	}
+	let keysToSet: EditKeyConfig[] = [];
+	keysToValidate.forEach(item => {
+		// Check for missing required keys
+		if (
+			typeof body[item.name] === 'undefined' &&
+			item.required
+		) {
+			response.errors.push(item.name);
+			return;
+		} else if (
+			typeof body[item.name] === 'undefined'
+		) return;
+
+		const value = body[item.name];
+
+		let isInvalid = false;
+		switch (item.type) {
+			case 'boolean':
+				isInvalid = typeof value !== 'boolean';
+				break;
+			case 'department':
+				isInvalid = typeof value !== 'string' ||
+					!validDepartments.includes(value as UserDepartment);
+				break;
+			case 'phone':
+				isInvalid = typeof value !== 'string' ||
+					value.replace(/[^0-9]/g, '').length !== 10;
+				break;
+			case 'string':
+				isInvalid = typeof value !== 'string' ||
+					value.length === 0;
+				break;
+			case 'talkgroups':
+				isInvalid = !Array.isArray(value) ||
+					value.filter(v => pagingTalkgroupOrder.includes(v as PagingTalkgroup)).length !== value.length;
+				break;
+		}
+
+		if (!isInvalid && item.regex) {
+			isInvalid = item.regex.test(value as string);
+		}
+
+		if (isInvalid) {
+			response.errors.push(item.name);
+		} else if (item.name !== 'phone') {
+			keysToSet.push(item);
+		}
+	});
+
+	// Make sure we are going to set at least something
+	if (response.errors.length === 0 && keysToSet.length === 0) {
 		response.errors.push('phone');
-	} else {
-		body.phone = body.phone.replace(/[^0-9]/g, '');
-	}
-	if (
-		typeof body.fName !== 'string' ||
-		body.fName.length === 0
-	) {
-		response.errors.push('fName');
-	}
-	if (
-		typeof body.lName !== 'string' ||
-		body.lName.length === 0
-	) {
-		response.errors.push('lName');
-	}
-	if (
-		typeof body.talkgroups === 'undefined' ||
-		!Array.isArray(body.talkgroups) ||
-		body.talkgroups.filter(v => pagingTalkgroupOrder.indexOf(v) !== -1).length === 0
-	) {
-		response.errors.push('talkgroups');
-	}
-	if (user.isAdmin?.BOOL) {
-		if (
-			typeof body.callSignS !== 'string' ||
-			!/^[0-9A-Z\-]+$/.test(body.callSignS)
-		) {
-			response.errors.push('callSignS');
-		}
-		if (typeof body.isActive !== 'boolean') {
-			response.errors.push('isActive');
-		}
-		if (typeof body.isAdmin !== 'boolean') {
-			response.errors.push('isAdmin');
-		}
-	}
-	if (user.isDistrictAdmin?.BOOL) {
-		if (typeof body.pageOnly !== 'boolean') {
-			response.errors.push('pageOnly');
-		}
-		if (typeof body.getTranscript !== 'boolean') {
-			response.errors.push('getTranscript');
-		}
-		if (typeof body.getApiAlerts !== 'boolean') {
-			response.errors.push('getApiAlerts');
-		}
-		if (typeof body.getVhfAlerts !== 'boolean') {
-			response.errors.push('getVhfAlerts');
-		}
-		if (typeof body.getDtrAlerts !== 'boolean') {
-			response.errors.push('getDtrAlerts');
-		}
-		if (
-			typeof body.department !== 'undefined' &&
-			validDepartments.indexOf(body.department) === -1
-		) {
-			response.errors.push('department');
-		}
 	}
 
 	// Check to see if the phone number already exists
 	let newPhone: aws.DynamoDB.GetItemOutput | undefined;
 	if (response.errors.length === 0) {
+		body.phone = body.phone.replace(/[^0-9]/g, '');
 		newPhone = await dynamodb.getItem({
 			TableName: userTable,
 			Key: {
 				phone: { N: body.phone }
 			}
 		}).promise();
-		if (
-			(newPhone.Item && create) ||
-			(!newPhone.Item && !create)
-		) {
+		if (!newPhone.Item && !create) {
 			response.errors.push('phone');
 		}
-	}
-
-	// Check to see if someone is trying to edit a person from another department
-	if (
-		!body.isMe &&
-		newPhone &&
-		!create &&
-		newPhone.Item &&
-		newPhone.Item.department?.S !== user.department?.S &&
-		!user.isDistrictAdmin?.BOOL
-	) {
-		response.errors.push('phone');
 	}
 
 	if (response.errors.length > 0) {
@@ -563,81 +645,88 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		};
 	}
 	
-	// Create the user
-	const updateConfig: aws.DynamoDB.UpdateItemInput = {
+	// Create or update the user
+	let setExpressions: string[] = [];
+	let deleteExpressions: string[] = [];
+	const updateConfig: aws.DynamoDB.UpdateItemInput & Required<Pick<aws.DynamoDB.UpdateItemInput, 'ExpressionAttributeNames'>> = {
 		TableName: userTable,
 		Key: {
 			phone: { N: body.phone }
 		},
-		ExpressionAttributeNames: {
-			'#fn': 'fName',
-			'#ln': 'lName',
-			'#tg': 'talkgroups'
-		},
-		ExpressionAttributeValues: {
-			':fn': { S: body.fName },
-			':ln': { S: body.lName },
-			':tg': { NS: body.talkgroups.map(v => v.toString()) }
-		},
-		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #tg = :tg',
+		ExpressionAttributeNames: {},
+		UpdateExpression: '',
 		ReturnValues: 'UPDATED_NEW'
 	};
-	if (user.isAdmin?.BOOL) {
-		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
-		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+	keysToSet.forEach(item => {
+		// Exit early for items that are a part of the department but not the department name
+		if (
+			item.partOfDepartment &&
+			item.name !== 'department'
+		) return;
 
-		updateConfig.ExpressionAttributeNames['#cs'] = 'callSignS';
-		updateConfig.ExpressionAttributeNames['#act'] = 'isActive';
-		updateConfig.ExpressionAttributeNames['#adm'] = 'isAdmin';
+		// Handle the special department case
+		if (item.type === 'department') {
+			updateConfig.ExpressionAttributeNames[`#${item.name}`] = body[item.name] as string;
+			updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+			updateConfig.ExpressionAttributeValues[`:${item.name}`] = {
+				M: {
+					active: { BOOL: true },
+					callSign: { S: body.callSign },
+				}
+			};
+			setExpressions.push(`#${item.name} = :${item.name}`);
+			return;
+		}
 
-		updateConfig.ExpressionAttributeValues[':cs'] = { S: body.callSignS };
-		updateConfig.ExpressionAttributeValues[':act'] = { BOOL: body.isActive };
-		updateConfig.ExpressionAttributeValues[':adm'] = { BOOL: body.isAdmin };
+		// The name to use
+		updateConfig.ExpressionAttributeNames[`#${item.name}`] = item.name;
 
-		updateConfig.UpdateExpression += `, #cs = :cs, #act = :act, #adm = :adm`;
+		// Determine how we should use the item
+		let setValue: AWS.DynamoDB.AttributeValue | false = false;
+		switch (item.type) {
+			case 'string':
+				setValue = { S: body[item.name] as string };
+				break;
+			case 'talkgroups':
+				if ((body[item.name] as any[]).length > 0) {
+					setValue = {
+						NS: (body[item.name] as number[]).map(v => v.toString())
+					};
+				}
+				break;
+			case 'boolean':
+				if (body[item.name]) {
+					setValue = { BOOL: true };
+				}
+				break;
+		}
+
+		if (setValue === false) {
+			deleteExpressions.push(`#${item.name}`);
+		} else {
+			updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+			updateConfig.ExpressionAttributeValues[`:${item.name}`] = setValue;
+			setExpressions.push(`#${item.name} = :${item.name}`);
+		}
+	});
+	
+	updateConfig.UpdateExpression = '';
+	if (setExpressions.length > 0) {
+		updateConfig.UpdateExpression = `SET ${setExpressions.join(', ')}`;
+		if (deleteExpressions.length > 0) {
+			updateConfig.UpdateExpression += ' ';
+		}
 	}
-	if (user.isDistrictAdmin?.BOOL) {
-		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
-		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
-
-		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
-		updateConfig.ExpressionAttributeNames['#po'] = 'pageOnly';
-		updateConfig.ExpressionAttributeNames['#gt'] = 'getTranscript';
-		updateConfig.ExpressionAttributeNames['#gaa'] = 'getApiAlerts';
-		updateConfig.ExpressionAttributeNames['#gva'] = 'getVhfAlerts';
-		updateConfig.ExpressionAttributeNames['#gda'] = 'getDtrAlerts';
-
-		updateConfig.ExpressionAttributeValues[':dep'] = { S: body.department };
-		updateConfig.ExpressionAttributeValues[':po'] = { BOOL: body.pageOnly };
-		updateConfig.ExpressionAttributeValues[':gt'] = { BOOL: body.getTranscript };
-		updateConfig.ExpressionAttributeValues[':gaa'] = { BOOL: body.getApiAlerts };
-		updateConfig.ExpressionAttributeValues[':gva'] = { BOOL: body.getVhfAlerts };
-		updateConfig.ExpressionAttributeValues[':gda'] = { BOOL: body.getDtrAlerts };
-
-		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gaa = :gaa, #gva = :gva, #gda = :gda`;
-	} else {
-		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
-		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
-
-		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
-
-		updateConfig.ExpressionAttributeValues[':dep'] = { S: user.department?.S };
-
-		updateConfig.UpdateExpression += `, #dep = :dep`;
+	if (deleteExpressions.length > 0) {
+		updateConfig.UpdateExpression += `REMOVE ${deleteExpressions.join(', ')}`;
 	}
-	const result = await dynamodb.updateItem(updateConfig).promise();
-	if (!result.Attributes) {
-		response.success = false;
-	} else if (
-		body.isActive &&
-		(
-			!newPhone ||
-			!newPhone.Item?.isActive?.BOOL
-		)
-	) {
+
+	await dynamodb.updateItem(updateConfig).promise();
+	if (create) {
 		const queueMessage: ActivateBody = {
 			action: 'activate',
 			phone: body.phone,
+			department: body.department as UserDepartment,
 		};
 		await sqs.sendMessage({
 			MessageBody: JSON.stringify(queueMessage),
@@ -647,7 +736,187 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 
 	return {
 		statusCode: response.success ? 200 : 400,
-		body: JSON.stringify(response)
+		body: JSON.stringify(response),
+	};
+}
+
+async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('updateUserGroup', ...arguments);
+	const user = await getLoggedInUser(event);
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		}),
+	};
+	if (user === null || !user.isAdmin) {
+		return unauthorizedResponse;
+	}
+
+	// Validate and parse the body
+	validateBodyIsJson(event.body);
+	const body = JSON.parse(event.body as string) as ApiUserUpdateGroupBody;
+	const response: ApiResponse = {
+		success: true,
+		errors: [],
+	};
+
+	// Validate the department
+	if (
+		typeof body.department !== 'string' ||
+		!validDepartments.includes(body.department)
+	) {
+		response.errors.push('department');
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response),
+		};
+	}
+
+	// Validate the permissions
+	if (
+		!user.isDistrictAdmin &&
+		!user[body.department]?.admin
+	) {
+		return unauthorizedApiResponse;
+	}
+
+	// Validate the body
+	if (
+		typeof body.phone !== 'string' ||
+		body.phone.replace(/[^0-9]/g, '').length !== 10
+	) {
+		response.errors.push('phone');
+	} else {
+		body.phone = body.phone.replace(/[^0-9]/g, '');
+	}
+	if (
+		typeof body.active !== 'undefined' &&
+		typeof body.active !== 'boolean'
+	) {
+		response.errors.push('active');
+	}
+	if (
+		(
+			typeof body.callSign !== 'undefined' &&
+			typeof body.callSign !== 'string'
+		) ||
+		(
+			typeof body.callSign === 'string' &&
+			body.callSign.length < 1
+		)
+	) {
+		response.errors.push('callSign');
+	}
+	if (
+		typeof body.admin !== 'undefined' &&
+		typeof body.admin !== 'boolean'
+	) {
+		response.errors.push('admin');
+	}
+	if (
+		typeof body.admin === 'undefined' &&
+		typeof body.active === 'undefined' &&
+		typeof body.callSign === 'undefined'
+	) {
+		response.errors.push('admin', 'active', 'callSign');
+	}
+
+	// Make sure the phone number exists
+	let phoneUser: aws.DynamoDB.AttributeMap | undefined;
+	if (response.errors.length === 0) {
+		phoneUser = (await dynamodb.getItem({
+			TableName: userTable,
+			Key: {
+				phone: { N: body.phone },
+			},
+		}).promise()).Item;
+		if (!phoneUser) {
+			response.errors.push('phone');
+		}
+	}
+
+	// Check to make sure there will be a callSign
+	if (
+		typeof phoneUser !== 'undefined' &&
+		typeof phoneUser[body.department] === 'undefined' &&
+		typeof body.callSign === 'undefined'
+	) {
+		response.errors.push('callSign');
+	}
+
+	if (response.errors.length > 0 || typeof phoneUser === 'undefined') {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response),
+		};
+	}
+
+	// Perform the update
+	const updateConfig: aws.DynamoDB.UpdateItemInput & Required<Pick<aws.DynamoDB.UpdateItemInput, 'ExpressionAttributeNames' | 'ExpressionAttributeValues'>> = {
+		TableName: userTable,
+		Key: {
+			phone: { N: body.phone },
+		},
+		ExpressionAttributeNames: {
+			'#dep': body.department,
+		},
+		ExpressionAttributeValues: {},
+		UpdateExpression: '',
+		ReturnValues: 'UPDATED_NEW',
+	};
+	if (typeof phoneUser[body.department] === 'undefined') {
+		updateConfig.ExpressionAttributeValues[':dep'] = {
+			M: {
+				active: { BOOL: body.active || false },
+				callSign: { S: body.callSign || '' },
+				admin: { BOOL: body.admin || false },
+			}
+		};
+		updateConfig.UpdateExpression = 'SET #dep = :dep';
+	} else {
+		let updateStrings: string[] = [];
+		if (typeof body.active !== 'undefined') {
+			updateConfig.ExpressionAttributeNames['#ac'] = 'active';
+			updateConfig.ExpressionAttributeValues[':ac'] = { BOOL: body.active };
+			updateStrings.push('#dep.#ac = :ac');
+		}
+		if (typeof body.callSign !== 'undefined') {
+			updateConfig.ExpressionAttributeNames['#cs'] = 'callSign';
+			updateConfig.ExpressionAttributeValues[':cs'] = { S: body.callSign };
+			updateStrings.push('#dep.#cs = :cs');
+		}
+		if (typeof body.admin !== 'undefined') {
+			updateConfig.ExpressionAttributeNames['#ad'] = 'admin';
+			updateConfig.ExpressionAttributeValues[':ad'] = { BOOL: body.admin };
+			updateStrings.push('#dep.#ad = :ad');
+		}
+		updateConfig.UpdateExpression = `SET ${updateStrings.join(', ')}`;
+	}
+	const result = await dynamodb.updateItem(updateConfig).promise();
+	if (!result.Attributes) {
+		response.success = false;
+	} else if (
+		body.active &&
+		!phoneUser[body.department]?.M?.active?.BOOL
+	) {
+		const queueMessage: ActivateBody = {
+			action: 'activate',
+			phone: body.phone,
+			department: body.department,
+		};
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify(queueMessage),
+			QueueUrl: queueUrl
+		}).promise();
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response),
 	};
 }
 
@@ -663,8 +932,7 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 	if (
 		user === null ||
-		!user.isAdmin?.BOOL ||
-		!user.isActive?.BOOL
+		!user.isAdmin
 	) {
 		return unauthorizedResponse;
 	}
@@ -741,8 +1009,8 @@ async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGateway
 		name: string;
 	};
 	if (
-		typeof user.fidoKeys?.M !== 'undefined' &&
-		typeof user.fidoKeys.M[body.name] !== 'undefined'
+		typeof user.fidoKeys !== 'undefined' &&
+		typeof user.fidoKeys[body.name] !== 'undefined'
 	) {
 		return {
 			statusCode: 400,
@@ -757,8 +1025,8 @@ async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGateway
 
 	const options = await f2l.attestationOptions();
 
-	const userId = typeof user.fidoUserId?.S !== 'undefined'
-		? base64ToBuffer(user.fidoUserId.S)
+	const userId = typeof user.fidoUserId !== 'undefined'
+		? base64ToBuffer(user.fidoUserId)
 		: crypto.randomBytes(32);
 
 	const response: ApiUserFidoChallengeResponse = {
@@ -767,8 +1035,8 @@ async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGateway
 			challenge: bufferToBase64(options.challenge),
 			rp: options.rp,
 			user: {
-				name: user.phone?.N as string,
-				displayName: `${user.fName?.S} ${user.lName?.S}`,
+				name: user.phone as string,
+				displayName: `${user.fName} ${user.lName}`,
 				id: bufferToBase64(userId),
 			},
 			pubKeyCredParams: options.pubKeyCredParams,
@@ -817,7 +1085,7 @@ async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			await dynamodb.updateItem({
 				TableName: userTable,
 				Key: {
-					phone: user.phone,
+					phone: { N: user.phone.toString() },
 				},
 				ExpressionAttributeNames: {
 					'#fk': 'fidoKeys',
@@ -833,7 +1101,7 @@ async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			await dynamodb.updateItem({
 				TableName: userTable,
 				Key: {
-					phone: user.phone,
+					phone: { N: user.phone.toString() },
 				},
 				ExpressionAttributeNames: {
 					'#fk': 'fidoKeys',
@@ -887,7 +1155,7 @@ async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	const body = JSON.parse(event.body as string) as ApiUserFidoAuthBody;
 
 	// Get the user
-	let user: AWS.DynamoDB.AttributeMap | null = null;
+	let user: InternalUserObject | null = null;
 	if (body.test) {
 		user = await getLoggedInUser(event);
 	} else if (typeof body.phone !== 'undefined') {
@@ -896,7 +1164,9 @@ async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 			Key: {
 				phone: { N: body.phone }
 			}
-		}).promise().then(data => data.Item || null);
+		}).promise()
+			.then(data => data.Item || null)
+			.then(data => data === null ? data : parseDynamoDbAttributeMap(data) as unknown as InternalUserObject);
 	}
 	if (
 		user === null ||
@@ -935,7 +1205,7 @@ async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		factor: 'either',
 		publicKey: fidoKey.pubKey,
 		prevCounter: fidoKey.prevCount,
-		userHandle: user.fidoUserId?.S as string,
+		userHandle: user.fidoUserId as string,
 		// userHandle: null,
 	};
 	const f2l = getFidoLib();
@@ -993,6 +1263,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await createOrUpdateUser(event, true);
 			case 'update':
 				return await createOrUpdateUser(event, false);
+			case 'updateGroup':
+				return await updateUserGroup(event);
 			case 'delete':
 				return await deleteUser(event);
 			case 'fido-challenge':

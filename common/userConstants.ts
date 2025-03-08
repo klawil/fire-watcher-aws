@@ -1,16 +1,13 @@
-export type UserDepartment = 'Crestone' | 'Moffat' | 'Baca';
+export type UserDepartment = 'Crestone' | 'NSCAD' | 'Baca';
 export type PagingTalkgroup = 8332 | 18332 | 18331 | 8198 | 8334
  | 8281 | 8181;
 
 interface DepartmentConfig {
 	name: string;
-	twilioAccount: string;
 	defaultTalkgroups: PagingTalkgroup[];
 	type: 'text' | 'page';
-	// nameShort: string;
-	pagingPhone: string;
-	textGroupPhone?: string;
-	alertsPhone?: string;
+	pagePhone: string;
+	textPhone?: string;
 }
 
 interface PageConfig {
@@ -21,8 +18,8 @@ interface PageConfig {
 
 export const validDepartments: UserDepartment[] = [
 	'Crestone',
-	'Moffat',
 	'Baca',
+	'NSCAD',
 ];
 
 export const pagingTalkgroupOrder: PagingTalkgroup[] = [
@@ -48,19 +45,22 @@ export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseTy
 	Crestone: {
 		name: 'Crestone Volunteer Fire Department',
 		type: 'text',
-		twilioAccount: '',
 		defaultTalkgroups: [ 8332 ],
-		pagingPhone: '***REMOVED***',
-		textGroupPhone: '***REMOVED***',
-		alertsPhone: '***REMOVED***',
+		pagePhone: 'page',
+		textPhone: 'chatCrestone',
 	},
 	Baca: {
 		name: 'Baca Emergency Services',
 		type: 'page',
-		twilioAccount: 'Baca',
 		defaultTalkgroups: [ 18331 ],
-		pagingPhone: '***REMOVED***',
+		pagePhone: 'pageBaca',
 	},
+	NSCAD: {
+		name: 'NSCAD',
+		type: 'page',
+		defaultTalkgroups: [ 8198 ],
+		pagePhone: 'page',
+	}
 };
 
 export const pagingConfig: {
@@ -83,7 +83,7 @@ export const pagingConfig: {
 	},
 	18332: {
 		linkPreset: 'pNSCFPD',
-		partyBeingPaged: 'NSCFPD',
+		partyBeingPaged: 'NSCFPD VHF',
 		pageService: 'FIRE',
 	},
 	8334: {

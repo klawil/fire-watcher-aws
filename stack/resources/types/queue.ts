@@ -3,6 +3,7 @@ import { PagingTalkgroup, UserDepartment } from "../../../common/userConstants";
 export interface ActivateBody {
 	action: 'activate';
 	phone: string;
+	department: UserDepartment;
 }
 
 export interface TwilioBody {
@@ -15,7 +16,7 @@ export interface TwilioErrorBody {
 	count: number;
 	name: string;
 	number: string;
-	department: UserDepartment;
+	department: UserDepartment[];
 }
 
 export interface PageBody {

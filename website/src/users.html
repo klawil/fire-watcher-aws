@@ -9,17 +9,33 @@ layout: base
 	}
 </style>
 
+<style>
+	.no-border td {
+		border-bottom: 0 !important;
+	}
+
+	.right-border-cell td:first-child {
+		border-top: 0 !important;
+	}
+	.right-border-cell td {
+		border-top-width: 1px;
+		border-top-style: dashed;
+	}
+
+	.alternate td {
+		background-color: var(--bs-table-striped-bg);
+	}
+</style>
+
 <div class="table-responsive">
-	<table class="table table-striped">
+	<table class="table">
 		<thead>
 			<tr class="text-center">
 				<th class="sortLabel" data-keys="phone">Phone Number</th>
 				<th class="sortLabel" data-keys="fName,lName">First Name</th>
 				<th class="sortLabel" data-keys="lName,fName">Last Name</th>
-				<th class="sortLabel districtAdmin" data-keys="department,lName,fName">Department</th>
-				<th class="sortLabel" data-keys="callSignS,lName,fName">Callsign</th>
 				<th>Roles</th>
-				<th class="districtAdmin">Alerts</th>
+				<th>Alerts</th>
 				<th>Pages</th>
 				<th></th>
 			</tr>

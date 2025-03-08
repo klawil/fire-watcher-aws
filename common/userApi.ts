@@ -3,21 +3,46 @@ import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
 export type UserObjectBooleans = 'isActive' | 'isAdmin' | 'isDistrictAdmin'
 	| 'pageOnly' | 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
-export type UserObjectStrings = 'phone' | 'fName' | 'lName' | 'callSignS';
+export type UserObjectStrings = 'phone' | 'fName' | 'lName';
 
-interface UserObjectBase1 {
+interface UserObjectBase {
 	talkgroups: PagingTalkgroup[];
 	department?: UserDepartment;
 
 	isMe?: boolean;
 }
-type UserObjectBase2 = {
+type UserObjectBaseBooleans = {
 	[key in UserObjectBooleans]?: boolean;
 }
-type UserObjectBase3 = {
+type UserObjectBaseStrings = {
 	[key in UserObjectStrings]: string;
 }
-export interface UserObject extends UserObjectBase1, UserObjectBase2, UserObjectBase3 {}
+type UserObjectBaseDepartments = {
+	[key in UserDepartment]?: {
+		active: boolean;
+		callSign: string;
+		admin: boolean;
+	};
+}
+export interface UserObject extends UserObjectBase, UserObjectBaseBooleans, UserObjectBaseStrings, UserObjectBaseDepartments {}
+
+export interface InternalUserObject extends UserObject {
+	fidoKeys?: {
+		[key: string]: {
+			prevCount: number;
+			pubKey: string;
+			rawId: string;
+		};
+	};
+	fidoUserId?: string;
+	lastLogin?: number;
+	lastStatus?: string;
+	lastStatusCount?: number;
+	loginTokens?: {
+		token: string;
+		tokenExpiry: number;
+	}[];
+}
 
 export interface ApiUserLoginBody {
 	phone: string;
@@ -26,11 +51,26 @@ export interface ApiUserAuthBody {
 	code: string;
 }
 export interface ApiUserUpdateBody {
-	fName: string;
-	lName: string;
-	isMe: boolean;
+	isMe?: boolean;
 	phone: string;
-	talkgroups: number[];
+	talkgroups?: number[];
+	fName?: string;
+	lName?: string;
+	getTranscript?: boolean;
+	pageOnly?: boolean;
+	getApiAlerts?: boolean;
+	getVhfAlerts?: boolean;
+	getDtrAlerts?: boolean;
+	isDistrictAdmin?: boolean;
+	department?: UserDepartment;
+	callSign?: string;
+}
+export interface ApiUserUpdateGroupBody {
+	phone: string;
+	department: UserDepartment;
+	active?: boolean;
+	callSign?: string;
+	admin?: boolean;
 }
 export interface ApiUserFidoAuthBody {
 	rawId: string;
@@ -69,7 +109,7 @@ export interface ApiUserAuthResponse extends ApiResponseBase {
 export interface ApiUserGetUserResponse extends ApiResponseBase, Partial<UserObject> {
 	isDistrictAdmin: boolean;
 	isUser: boolean;
-	fidoKeys?: {
+	fidoKeyIds?: {
 		[key: string]: string;
 	};
 }
