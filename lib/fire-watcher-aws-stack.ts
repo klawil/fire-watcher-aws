@@ -811,7 +811,7 @@ export class FireWatcherAwsStack extends Stack {
           TABLE_TEXT: textsTable.tableName,
           TABLE_STATUS: statusTable.tableName,
           TABLE_SITE: siteTable.tableName,
-          TABLE_TEXTS: textsTable.tableName
+          TABLE_MESSAGES: textsTable.tableName
         },
         read: [
           dtrTable,
