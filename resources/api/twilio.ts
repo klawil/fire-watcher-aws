@@ -6,11 +6,12 @@ const metricSource = 'Twilio';
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
+const cloudWatch = new aws.CloudWatch();
 
 const apiCode = process.env.SERVER_CODE as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
-const textTable = process.env.TABLE_TEXT as string;
+const textTable = process.env.TABLE_MESSAGES as string;
 
 interface TwilioTextEvent {
 	From: string;
@@ -200,7 +201,8 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 				[curr[0]]: curr[1] || ''
 			}), {}) as TwilioStatusEvent;
 
-		await dynamodb.updateItem({
+		let promises: Promise<any>[] = [];
+		promises.push(dynamodb.updateItem({
 			TableName: textTable,
 			Key: {
 				datetime: {
@@ -228,7 +230,31 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 				}
 			},
 			UpdateExpression: 'ADD #eventName :eventListItem, #eventPhoneList :eventPhoneListItem SET #from = :from'
-		}).promise();
+		}).promise());
+
+		if (eventData.MessageStatus !== 'undelivered') {
+			const metricName = eventData.MessageStatus.slice(0, 1).toUpperCase() + eventData.MessageStatus.slice(1);
+			const messageTime = new Date(Number(messageId));
+			promises.push(cloudWatch.putMetricData({
+				Namespace: 'Twilio Health',
+				MetricData: [
+					{
+						MetricName: metricName,
+						Timestamp: messageTime,
+						Unit: 'Count',
+						Value: 1
+					},
+					{
+						MetricName: `${metricName}Time`,
+						Timestamp: messageTime,
+						Unit: 'Milliseconds',
+						Value: eventDatetime - messageTime.getTime()
+					}
+				]
+			}).promise());
+		}
+
+		await Promise.all(promises);
 	}
 
 	return response;

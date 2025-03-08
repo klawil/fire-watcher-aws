@@ -1,13 +1,12 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
-import { getTwilioSecret, incrementMetric, parsePhone, sendMessage } from './utils/general';
+import { getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
 
 const phoneTable = process.env.TABLE_PHONE as string;
-const messagesTable = process.env.TABLE_MESSAGES as string;
 const dtrTable = process.env.TABLE_DTR as string;
 
 const metricSource = 'Queue';
@@ -245,62 +244,6 @@ async function getRecipients(
 
 	return promise
 		.then((data) => data.Items || []);
-}
-
-async function saveMessageData(
-	messageId: string,
-	recipients: number,
-	body: string,
-	mediaUrls: string[] = [],
-	pageId: string | null = null,
-	pageTg: string | null = null,
-	isTest: boolean = false
-) {
-	await dynamodb.updateItem({
-		TableName: messagesTable,
-		Key: {
-			datetime: {
-				N: messageId
-			}
-		},
-		ExpressionAttributeNames: {
-			'#r': 'recipients',
-			'#b': 'body',
-			'#m': 'mediaUrls',
-			'#p': 'isPage',
-			'#pid': 'pageId',
-			'#tg': 'talkgroup',
-			'#t': 'isTest',
-			'#ts': 'isTestString'
-		},
-		ExpressionAttributeValues: {
-			':r': {
-				N: recipients.toString()
-			},
-			':b': {
-				S: body
-			},
-			':m': {
-				S: mediaUrls.join(',')
-			},
-			':p': {
-				S: pageId !== null ? 'y' : 'n'
-			},
-			':pid': {
-				S: pageId !== null ? pageId : 'n'
-			},
-			':tg': {
-				S: pageTg !== null ? pageTg : ''
-			},
-			':t': {
-				BOOL: isTest
-			},
-			':ts': {
-				S: isTest ? 'y' : 'n'
-			}
-		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #pid = :pid, #tg = :tg, #t = :t, #ts = :ts'
-	}).promise();
 }
 
 function randomString(len: number, numeric = false): string {

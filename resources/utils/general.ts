@@ -1,8 +1,11 @@
 import * as aws from 'aws-sdk';
 const twilio = require('twilio');
 
+const messagesTable = process.env.TABLE_MESSAGES as string;
+
 const secretManager = new aws.SecretsManager();
 const cloudWatch = new aws.CloudWatch();
+const dynamodb = new aws.DynamoDB();
 
 type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
 
@@ -83,6 +86,78 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
 	return twilioSecret;
 }
 
+export async function saveMessageData(
+	messageId: string,
+	recipients: number,
+	body: string,
+	mediaUrls: string[] = [],
+	pageId: string | null = null,
+	pageTg: string | null = null,
+	isTest: boolean = false
+) {
+	let promises: Promise<any>[] = [];
+	promises.push(dynamodb.updateItem({
+		TableName: messagesTable,
+		Key: {
+			datetime: {
+				N: messageId
+			}
+		},
+		ExpressionAttributeNames: {
+			'#r': 'recipients',
+			'#b': 'body',
+			'#m': 'mediaUrls',
+			'#p': 'isPage',
+			'#pid': 'pageId',
+			'#tg': 'talkgroup',
+			'#t': 'isTest',
+			'#ts': 'isTestString'
+		},
+		ExpressionAttributeValues: {
+			':r': {
+				N: recipients.toString()
+			},
+			':b': {
+				S: body
+			},
+			':m': {
+				S: mediaUrls.join(',')
+			},
+			':p': {
+				S: pageId !== null ? 'y' : 'n'
+			},
+			':pid': {
+				S: pageId !== null ? pageId : 'n'
+			},
+			':tg': {
+				S: pageTg !== null ? pageTg : ''
+			},
+			':t': {
+				BOOL: isTest
+			},
+			':ts': {
+				S: isTest ? 'y' : 'n'
+			}
+		},
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #pid = :pid, #tg = :tg, #t = :t, #ts = :ts'
+	}).promise());
+
+	const dataDate = new Date(Number(messageId));
+	promises.push(cloudWatch.putMetricData({
+		Namespace: `Twilio Health`,
+		MetricData: [
+			{
+				MetricName: 'Initiated',
+				Timestamp: dataDate,
+				Unit: 'Count',
+				Value: recipients
+			}
+		]
+	}).promise());
+
+	await Promise.all(promises);
+}
+
 interface TwilioMessageConfig {
 	body: string;
 	mediaUrl?: string[];
@@ -103,6 +178,20 @@ export async function sendMessage(
 		return;
 	}
 
+	let saveMessageDataPromise: Promise<any> = new Promise(res => res(null));
+	if (messageId === null) {
+		messageId = Date.now().toString();
+		saveMessageDataPromise = saveMessageData(
+			messageId,
+			1,
+			body,
+			mediaUrl,
+			null,
+			null,
+			true
+		);
+	}
+
 	const twilioConf = await getTwilioSecret();
 	if (twilioConf === null) {
 		throw new Error('Cannot get twilio secret');
@@ -120,12 +209,14 @@ export async function sendMessage(
 		to: `+1${parsePhone(phone)}`
 	};
 
-	if (messageId !== null) {
-		messageConfig.statusCallback = `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
-	}
+	messageConfig.statusCallback = `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
 
-	return twilio(twilioConf.accountSid, twilioConf.authToken)
-		.messages.create(messageConfig)
+	return Promise.all([
+		twilio(twilioConf.accountSid, twilioConf.authToken)
+			.messages.create(messageConfig),
+		saveMessageDataPromise
+	])
+		.then(results => results[0])
 		.catch((e: any) => {
 			console.log(`QUEUE - ERROR - sendMessage`);
 			console.error(e);

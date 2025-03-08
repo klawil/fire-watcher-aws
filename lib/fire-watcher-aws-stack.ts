@@ -270,15 +270,24 @@ export class FireWatcherAwsStack extends Stack {
     // Create a queue for cloudwatch alarms
     const alarmQueue = new sqs.Queue(this, 'cvfd-alarm-queue');
     const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/alarms.ts',
       handler: 'main',
       timeout: Duration.seconds(30),
       environment: {
-        TWILIO_SECRET: secretArn
+        TWILIO_SECRET: secretArn,
+        TABLE_MESSAGES: textsTable.tableName
       }
     });
     alarmQueueHandler.addEventSource(new lambdaEventSources.SqsEventSource(alarmQueue));
+    textsTable.grantReadWriteData(alarmQueueHandler);
     twilioSecret.grantRead(alarmQueueHandler);
 
     const alarmTopic = new sns.Topic(this, 'cvfd-alarm-topic');
@@ -505,18 +514,27 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the status parser function
     const statusHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-status-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/status.ts',
       handler: 'main',
       environment: {
         TABLE_STATUS: statusTable.tableName,
-        TWILIO_SECRET: secretArn
+        TWILIO_SECRET: secretArn,
+        TABLE_MESSAGES: textsTable.tableName
       },
       timeout: Duration.minutes(1)
     });
 
     // Grant access for the status handler
     statusTable.grantReadWriteData(statusHandler);
+    textsTable.grantReadWriteData(statusHandler);
     twilioSecret.grantRead(statusHandler);
 
     // Schedule the function for every minute
@@ -620,7 +638,7 @@ export class FireWatcherAwsStack extends Stack {
           SERVER_CODE: apiCode,
           SQS_QUEUE: queue.queueUrl,
           TABLE_USER: phoneNumberTable.tableName,
-          TABLE_TEXT: textsTable.tableName
+          TABLE_MESSAGES: textsTable.tableName
         },
         readWrite: [
           phoneNumberTable,
