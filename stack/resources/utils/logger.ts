@@ -95,18 +95,18 @@ class Logger {
 
     // Build the first portion of the log
     let logPrefix = ''; 
-    if (typeof process === 'undefined') {
+    if (!isNodeEnv) {
       logPrefix = `${level < LogLevel.Error ? '  ' : ''}[ ${stylePlaceholder}${levelStrings[level].padEnd(maxLevelStringLen, ' ')}${stylePlaceholder} ]`;
-      styles.push(
-        nameStyleString,
-        resetStyleString,
-      );
-    }
-    logPrefix += loggerName;
-
-    if (isNodeEnv) {
+      if (level !== LogLevel.Trace) {
+        styles.push(
+          nameStyleString,
+          resetStyleString,
+        );
+      }
+    } else {
       styles = [];
     }
+    logPrefix += loggerName;
 
     // Build the argument array
     let consoleArgs: [
@@ -119,7 +119,7 @@ class Logger {
     ];
     // Remove the title for trace
     if (level === LogLevel.Trace) {
-      consoleArgs.splice(0, 3, loggerName);
+      consoleArgs.splice(0, 1, loggerName);
     }
 
     // Pass it to the console
