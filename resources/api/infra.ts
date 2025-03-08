@@ -206,6 +206,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	const action = event.queryStringParameters?.action;
 
 	try {
+		console.log(`API - INFRA - CALL - ${action}`);
 		switch (action) {
 			case 'text':
 				return await handleText(event);
