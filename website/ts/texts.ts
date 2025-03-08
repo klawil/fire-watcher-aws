@@ -1,6 +1,10 @@
 import { ApiFrontendListTextsResponse, TextObject } from '../../common/frontendApi';
 import { showAlert } from './utils/alerts';
 import { doneLoading } from './utils/loading';
+import { createTableRow } from './utils/table';
+import { authInit } from './utils/auth';
+
+authInit();
 
 const vhfPageRegex = /(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/;
 const dtrPageRegex = /\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/;
@@ -84,47 +88,70 @@ function getPercentile(values: number[], percentile: number) {
 	return timeStr;
 }
 
-function buildTable(items: TextObject[], isPage: boolean) {
-	const rows = items.map(text => {
+function buildTable(
+	tbody: HTMLTableSectionElement,
+	items: TextObject[],
+	isPage: boolean
+) {
+	items.forEach(text => {
 		text.sent = text.sent || [];
 		text.delivered = text.delivered || [];
 		text.undelivered = text.undelivered || [];
-		const cells = [
-			dateTimeToTimeStr(text.datetime),
-			text.body,
-			parseMediaUrls(text.mediaUrls),
-			text.recipients,
-			makePercentString(text.sent.length, text.recipients),
-			makePercentString(text.delivered.length, text.recipients),
-			makePercentString(text.undelivered.length, text.recipients),
-			getPercentile(text.delivered, 50),
-			getPercentile(text.delivered, 75),
-			getPercentile(text.delivered, 100),
-		];
+		text.csLooked = text.csLooked || [];
 
-		if (isPage && typeof text.pageTime !== 'undefined') {
-			text.csLooked = text.csLooked || [];
-			cells.splice(
-				7, 0,
-				makePercentString(text.csLooked.length, text.recipients),
-				`${Math.round((text.datetime - text.pageTime) / 1000)}s`
-			);
-			cells.splice(2, 1);
-		}
-
-		return cells;
+		createTableRow(tbody, {
+			columns: [
+				{
+					html: dateTimeToTimeStr(text.datetime),
+				},
+				{
+					html: text.body.replace(/\n/g, '<br>'),
+				},
+				{
+					filter: !isPage,
+					html: parseMediaUrls(text.mediaUrls),
+				},
+				{
+					classList: [ 'text-center' ],
+					html: text.recipients.toString(),
+				},
+				{
+					classList: [ 'text-center' ],
+					html: makePercentString(text.sent.length, text.recipients),
+				},
+				{
+					classList: [ 'text-center' ],
+					html: makePercentString(text.delivered.length, text.recipients),
+				},
+				{
+					classList: [ 'text-center' ],
+					html: makePercentString(text.undelivered.length, text.recipients),
+				},
+				{
+					filter: isPage,
+					classList: [ 'text-center' ],
+					html: makePercentString(text.csLooked.length, text.recipients),
+				},
+				{
+					filter: isPage,
+					classList: [ 'text-center' ],
+					html: `${Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000)}s`,
+				},
+				{
+					classList: [ 'text-center' ],
+					html: getPercentile(text.delivered, 50),
+				},
+				{
+					classList: [ 'text-center' ],
+					html: getPercentile(text.delivered, 75),
+				},
+				{
+					classList: [ 'text-center' ],
+					html: getPercentile(text.delivered, 100),
+				},
+			]
+		});
 	});
-
-	const startCenter = isPage ? 2 : 3;
-	const rowsHtml = rows
-		.map(row => row
-			.map((cell, idx) => `<td${idx >= startCenter ? ' class="text-center"' : ''}>${cell}</td>`)
-			.join('')
-		);
-	
-	return rowsHtml
-		.map(row => `<tr>${row}</tr>`)
-		.join('\n');
 }
 
 async function init() {
@@ -166,8 +193,16 @@ async function init() {
 		return agg;
 	}, { page: [], other: [] });
 
-	(<HTMLTableSectionElement>document.getElementById('texts')).innerHTML = buildTable(textsByType.other, false);
-	(<HTMLTableSectionElement>document.getElementById('pages')).innerHTML = buildTable(textsByType.page, true);
+	buildTable(
+		<HTMLTableSectionElement>document.getElementById('texts'),
+		textsByType.other,
+		false
+	);
+	buildTable(
+		<HTMLTableSectionElement>document.getElementById('pages'),
+		textsByType.page,
+		true
+	);
 
 	doneLoading();
 }

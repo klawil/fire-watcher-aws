@@ -1,7 +1,10 @@
 import { ApiFrontendStatsResponse } from '../../common/frontendApi';
+import { authInit } from './utils/auth';
 import { buildMap, updateSitesTable } from './utils/sites';
 import { Chart, ChartConfiguration, ChartDataset, Point, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
+
+authInit();
 
 Chart.register(...registerables);
 Chart.register(annotationPlugin);
