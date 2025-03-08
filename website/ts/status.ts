@@ -486,14 +486,17 @@ async function buildCostChart(account?: PhoneNumberAccount, lastMonth: boolean =
 				)
 			) return;
 
+			const data = keysToData[key];
+			let label = `${labels[data.type] || data.type} - `;
+
 			layerTotal += keysToData[key].cost;
 			if (typeof labels[key] !== 'undefined') {
-				chartLabels.push(labels[key]);
-				chartDataLookup[labels[key]] = keysToData[key];
+				label += labels[key];
 			} else {
-				chartLabels.push(key);
-				chartDataLookup[key] = keysToData[key];
+				label += key;
 			}
+			chartLabels.push(label);
+			chartDataLookup[label] = data;
 			chartData[0].data.push(keysToData[key].cost);
 		});
 	if (
@@ -518,6 +521,8 @@ async function buildCostChart(account?: PhoneNumberAccount, lastMonth: boolean =
 			datasets: chartData,
 		},
 		options: {
+			responsive: true,
+			maintainAspectRatio: false,
 			plugins: {
 				legend: {
 					position: 'right',
@@ -549,7 +554,7 @@ async function buildCostChart(account?: PhoneNumberAccount, lastMonth: boolean =
 							}
 
 							const data = chartDataLookup[labelKey];
-							let baseLabel = `${labels[data.type] || data.type} - ${labelKey}: ${moneyFormatter.format(Number(context.raw))}`;
+							let baseLabel = `${labelKey}: ${moneyFormatter.format(Number(context.raw))}`;
 							if (data.unit !== 'N/A') {
 								baseLabel += ` for ${unitFormatter.format(data.count)} ${data.unit}`;
 							}
@@ -574,8 +579,6 @@ async function refreshCharts() {
 		promises.push(
 			buildCostChart(),
 			...validPhoneNumberAccounts.map(a => buildCostChart(a)),
-		);
-		promises.push(
 			buildCostChart(undefined, false),
 			...validPhoneNumberAccounts.map(a => buildCostChart(a, false)),
 		);
