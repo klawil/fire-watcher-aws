@@ -1,7 +1,6 @@
 ---
 title: Profile
 layout: base
-requireUser: true
 ---
 
 <h2 class="text-center">Information Only Your Chief Can Edit:</h2>
@@ -29,11 +28,11 @@ requireUser: true
 <h2 class="text-center">Information You Can Edit:</h2>
 <div class="row justify-content-center">
 	<div class="col-2 m-1 text-end">First Name</div>
-	<div class="col-2 m-1"><input class="form-control" id="fName"></div>
+	<div class="col-2 m-1"><input class="form-control update-input" id="fName"></div>
 </div>
 <div class="row justify-content-center">
 	<div class="col-2 m-1 text-end">Last Name</div>
-	<div class="col-2 m-1"><input class="form-control" id="lName"></div>
+	<div class="col-2 m-1"><input class="form-control update-input" id="lName"></div>
 </div>
 <div class="row justify-content-center">
 	<div class="col-2 m-1 text-end">Pages You Will Receive</div>
@@ -65,5 +64,5 @@ requireUser: true
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}
-<script async src="/js/userConstants.js?v={{ randomNumber }}"></script>
+{% comment %} <script async src="/js/userConstants.js?v={{ randomNumber }}"></script> {% endcomment %}
 <script async src="/js/profile.js?v={{ randomNumber }}"></script>

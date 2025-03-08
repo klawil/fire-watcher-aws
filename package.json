@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "build-lambda": "tsc resources/auth_middleware.ts",
-    "watch": "tsc -w",
+    "build-website": "webpack -c website/webpack.conf.js",
+    "watch": "webpack -c website/webpack.conf.js --watch",
     "cdk": "cdk"
   },
   "devDependencies": {
@@ -23,6 +24,9 @@
     "aws-cdk-lib": "2.144.0",
     "constructs": "^10.0.0",
     "node-fetch": "^2.6.8",
-    "source-map-support": "^0.5.16"
+    "source-map-support": "^0.5.16",
+    "ts-loader": "^9.5.1",
+    "webpack": "^5.92.1",
+    "webpack-cli": "^5.1.4"
   }
 }

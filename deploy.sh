@@ -6,6 +6,7 @@ nvm use 18
 npm run build-lambda
 cdk deploy --all
 
+# npm run build-website
 # cd website
 # jekyll build
 # cd ..

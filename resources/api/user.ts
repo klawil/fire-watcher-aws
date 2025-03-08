@@ -4,6 +4,8 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, parseDynamoDbAttributeValue, randomString, validateBodyIsJson } from '../utils/general';
 import { allUserCookies, authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
+import { ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse } from '../../common/userApi';
+import { unauthorizedApiResponse } from '../../common/common';
 
 const metricSource = 'User';
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
@@ -38,22 +40,6 @@ interface ApiResponse {
 	errors: string[];
 	message?: string;
 	data?: any[];
-}
-
-interface CurrentUser {
-	isUser: boolean;
-	isActive?: boolean;
-	isAdmin?: boolean;
-	isDistrictAdmin?: boolean;
-	phone?: string;
-	callSign?: string;
-	fName?: string;
-	lName?: string;
-	department?: string;
-	talkgroups?: string[];
-	fidoKeys?: {
-		[key: string]: string;
-	};
 }
 
 interface FidoKey {
@@ -244,8 +230,10 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-	const response: CurrentUser = {
+	const response: ApiUserGetUserResponse = {
+		success: true,
 		isUser: false,
+		isActive: false,
 		isAdmin: false,
 		isDistrictAdmin: false
 	};
@@ -746,16 +734,14 @@ function base64ToBuffer(base64: string): Buffer {
 	return Buffer.from(base64, 'base64');
 }
 
+function bufferToBase64(buffer: ArrayBuffer): string {
+	return Buffer.from(buffer).toString('base64');
+}
+
 async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
 	if (user === null)
-		return {
-			statusCode: 400,
-			body: JSON.stringify({
-				success: false,
-				error: 'You must be logged in to access this endpoint',
-			}),
-		};
+		return unauthorizedApiResponse;
 
 	// Validate and parse the body
 	validateBodyIsJson(event.body);
@@ -778,52 +764,40 @@ async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGateway
 	const f2l = getFidoLib();
 
 	const options = await f2l.attestationOptions();
-	options.challenge = Buffer.from(options.challenge);
-	options.user.name = user.phone?.N as string;
-	options.user.displayName = `${user.fName?.S} ${user.lName?.S}`;
 
-	if (typeof user.fidoUserId?.S !== 'undefined') {
-		options.user.id = base64ToBuffer(user.fidoUserId.S);
-	} else {
-		options.user.id = crypto.randomBytes(32);
-	}
+	const userId = typeof user.fidoUserId?.S !== 'undefined'
+		? base64ToBuffer(user.fidoUserId.S)
+		: crypto.randomBytes(32);
 
+	const response: ApiUserFidoChallengeResponse = {
+		success: true,
+		options: {
+			challenge: bufferToBase64(options.challenge),
+			rp: options.rp,
+			user: {
+				name: user.phone?.N as string,
+				displayName: `${user.fName?.S} ${user.lName?.S}`,
+				id: bufferToBase64(userId),
+			},
+			pubKeyCredParams: options.pubKeyCredParams,
+			timeout: options.timeout,
+			attestation: options.attestation,
+		},
+	};
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			options,
-		}),
+		body: JSON.stringify(response),
 	};
 }
-
-interface FidoRegisterBody {
-	challenge: string;
-	name: string;
-	userId: string;
-	credential: {
-		rawId: string;
-		response: {
-			attestationObject: string;
-			clientDataJSON: string;
-		};
-	};
-};
 
 async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
 	if (user === null)
-		return {
-			statusCode: 400,
-			body: JSON.stringify({
-				success: false,
-				error: 'You must be logged in to access this endpoint',
-			}),
-		};
+		return unauthorizedApiResponse;
 
 	// Validate and parse the body
 	validateBodyIsJson(event.body);
-	const body = JSON.parse(event.body as string) as FidoRegisterBody;
+	const body = JSON.parse(event.body as string) as ApiUserFidoRegisterBody;
 	const { credential } = body;
 	const f2l = getFidoLib();
 	const result = {
@@ -900,36 +874,22 @@ async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 async function fidoGetAuth(): Promise<APIGatewayProxyResult> {
 	const f2l = getFidoLib();
 	const options = await f2l.assertionOptions();
+	const responseBody: ApiUserFidoGetAuthResponse = {
+		success: true,
+		challenge: bufferToBase64(options.challenge),
+	};
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			challenge: Buffer.from(options.challenge),
-		}),
+		body: JSON.stringify(responseBody),
 	};
 }
-
-interface FidoAuthBody {
-	rawId: string;
-	challenge: string;
-	test?: boolean;
-	phone?: string;
-	response: {
-		authenticatorData: string;
-		signature: string;
-		userHandle: string;
-		clientDataJSON: string;
-		id: string;
-		type: string;
-	};
-};
 
 async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
 	validateBodyIsJson(event.body);
 
 	// Parse the body
-	const body = JSON.parse(event.body as string) as FidoAuthBody;
+	const body = JSON.parse(event.body as string) as ApiUserFidoAuthBody;
 
 	// Get the user
 	let user: AWS.DynamoDB.AttributeMap | null = null;

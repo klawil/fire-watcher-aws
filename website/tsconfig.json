@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "ES6",
+		"lib": [
+			"ESNext",
+			"DOM",
+		],
+		"sourceMap": true,
+		"outDir": "js",
+		"removeComments": true,
+		"moduleResolution": "Node",
+		"alwaysStrict": true,
+		"allowUnreachableCode": true,
+		"noImplicitAny": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
+	},
+	"include": [ "./ts/*.ts", "ts/utils/auth.ts", "ts/utils/userConstants.ts" ]
+}

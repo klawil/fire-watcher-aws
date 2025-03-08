@@ -35,14 +35,15 @@
 				left: calc(50% - 5rem);
 				top: calc(50% - 5rem);
 			}
-		</style>
 
-		<script>
-			window.authConfig = {
-				requireAdmin: {% if page.requireAdmin %}true{% else %}false{% endif %},
-				requireUser: {% if page.requireAdmin or page.requireUser %}true{% else %}false{% endif %}
-			};
-		</script>
+			.alert-fixed {
+				position: fixed;
+				top: 60px;
+				left: 5px;
+				right: 5px;
+				z-index: 99999;
+			}
+		</style>
 	</head>
 	<body>
 		<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
@@ -113,6 +114,8 @@
 
 		{% if page.title %}<h1 class="text-center">{{ page.title }}</h1>{% endif %}
 
+		<div id="alert-container"></div>
+
 		<div id="pageContent" class="container{% if page.centerAll %} text-center{% endif %}">
 			{{ content }}
 		</div>
@@ -173,7 +176,7 @@
 		<script async src="/js/audio.js?v={{ randomNumber }}"></script>
 		{% endif %}
 	
-		<script async src="/js/auth.js?v={{ randomNumber }}"></script>
+		{% comment %} <script async src="/js/auth.js?v={{ randomNumber }}"></script> {% endcomment %}
 		<script async src="/libs/bootstrap.min.js?v={{ randomNumber }}"></script>
 		{% if page.hasFilter %}<script async src="/libs/datepicker.min.js?v={{ randomNumber }}"></script>{% endif %}
 	</body>

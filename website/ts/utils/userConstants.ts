@@ -1,4 +1,6 @@
-const pageNames = {
+export const pageNames: {
+	[key: string]: string;
+} = {
 	'8332': 'NSCFPD DTR',
 	'18332': 'NSCFPD VHF',
 	'18331': 'Baca',
@@ -8,7 +10,7 @@ const pageNames = {
 	'8181': 'Alamosa EMS',
 };
 
-const talkgroupOrder = [
+export const talkgroupOrder: string[] = [
 	'8332',
 	'18332',
 	'18331',
@@ -18,21 +20,19 @@ const talkgroupOrder = [
 	'8181',
 ];
 
-const defaultTalkgroups = {
+export const defaultTalkgroups: {
+	[key: string]: string[];
+} = {
 	default: [ '8332' ],
 	Baca: [ '18331' ],
 	Center: [ '8334' ],
-	NSCAD: [ '8198' ]
+	NSCAD: [ '8198' ],
 };
 
-function formatPhone(phone) {
+export function formatPhone(phone: number | string): string {
 	const first = phone.toString().substring(0, 3);
 	const middle = phone.toString().substring(3, 6);
 	const last = phone.toString().substring(6, 10);
 
 	return `${first}-${middle}-${last}`;
 }
-
-window.userQueue = window.userQueue || []
-window.userQueue.forEach(f => f());
-window.userQueue.push = f => f();

@@ -1,0 +1,290 @@
+import { ApiUserFidoAuthBody, ApiUserFidoAuthResponse, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
+import { afterAuthUpdate, user } from './utils/auth';
+import { formatPhone, pageNames, talkgroupOrder } from './utils/userConstants';
+import { doneLoading } from './utils/loading';
+import { showAlert } from './utils/alerts';
+
+const fieldsToFill: (keyof ApiUserGetUserResponse)[] = [
+	'phone',
+	'isActive',
+	'isAdmin',
+	'department',
+	'callSign',
+	'fName',
+	'lName',
+];
+
+const base64ToBuffer = (base64: string) => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+const bufferToBase64 = (buffer: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buffer)));
+
+function formatValue(value: string | boolean | number): string {
+	if (
+		typeof value === 'number' ||
+		(
+			typeof value === 'string' &&
+			/^[0-9]{10}$/.test(value)
+		)
+	) {
+		return formatPhone(value);
+	}
+
+	if (typeof value === 'string') {
+		return value;
+	}
+
+	if (typeof value === 'boolean') {
+		return `<i class="bi bi-${value ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}">`;
+	}
+}
+
+function makePageCheckbox(container: HTMLElement, key: string) {
+	const div = document.createElement('div');
+	div.classList.add('form-check', 'form-switch');
+	container.appendChild(div);
+
+	const input = document.createElement('input');
+	input.type = 'checkbox';
+	input.setAttribute('role', 'switch');
+	input.id = `talkgroups-${key}`;
+	input.value = key;
+	input.classList.add('form-check-input', 'talkgroup', 'update-input');
+	if (user.talkgroups?.indexOf(key) !== -1)
+		input.checked = true;
+	div.appendChild(input);
+
+	const label = document.createElement('label');
+	label.classList.add('form-check-label');
+	label.innerHTML = `${pageNames[key]}`;
+	label.setAttribute('for', input.id);
+	div.appendChild(label);
+}
+
+const updateUserButton = <HTMLButtonElement>document.getElementById('submit-button');
+updateUserButton.disabled = true;
+async function updateUser() {
+	updateUserButton.classList.remove('btn-success', 'btn-secondary', 'btn-danger');
+	updateUserButton.classList.add('btn-secondary');
+	updateUserButton.disabled = true;
+
+	Array.from(document.querySelectorAll('.update-input'))
+		.forEach(elem => elem.classList.remove('is-invalid'));
+
+	const userBody: ApiUserUpdateBody = {
+		isMe: true,
+		phone: user.phone,
+		fName: (<HTMLInputElement>document.getElementById('fName')).value,
+		lName: (<HTMLInputElement>document.getElementById('lName')).value,
+		talkgroups: Array.from(<NodeListOf<HTMLInputElement>>document.querySelectorAll('.talkgroup'))
+			.filter(v => v.checked)
+			.map(v => v.value),
+	};
+
+	console.log(userBody);
+	const result: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
+		method: 'POST',
+		body: JSON.stringify(userBody),
+	})
+		.then(r => r.json());
+	updateUserButton.blur();
+
+	updateUserButton.classList.remove('btn-success', 'btn-secondary', 'btn-danger');
+	if (result.success)
+		updateUserButton.classList.add('btn-success');
+	else {
+		updateUserButton.classList.add('btn-danger');
+		if (result.errors.length > 0) {
+			result.errors.forEach(key => {
+				if (key === 'talkgroups') {
+					Array.from(document.querySelectorAll('.talkgroup'))
+						.forEach(elem => elem.classList.add('is-invalid'));
+				} else {
+					const elem = document.getElementById(key);
+					if (elem === null) return;
+					elem.classList.add('is-invalid');
+				}
+			});
+		} else {
+			Array.from(document.querySelectorAll('.update-input'))
+				.forEach(elem => elem.classList.add('is-invalid'));
+		}
+	}
+
+	updateUserButton.disabled = false;
+}
+
+async function testFidoKey(btn: HTMLButtonElement, key: string) {
+	btn.disabled = true;
+	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+	btn.classList.add('btn-secondary');
+
+	let result: ApiUserFidoAuthResponse = {
+		success: false,
+		message: 'Failed to authenticate',
+	};
+	try {
+		const challengeData: ApiUserFidoGetAuthResponse = await fetch(`/api/user?action=fido-get-auth`).then(r => r.json());
+		
+		const challengeArr = base64ToBuffer(challengeData.challenge);
+		const challenge: CredentialRequestOptions = {
+			publicKey: {
+				challenge: challengeArr,
+				allowCredentials: [{
+					id: base64ToBuffer(user.fidoKeys[key]),
+					type: 'public-key',
+					transports: [ 'internal' ],
+				}]
+			}
+		};
+		const credential = (await navigator.credentials.get(challenge)) as PublicKeyCredential & {
+			response: AuthenticatorAssertionResponse;
+		};
+
+		const userAuthBody: ApiUserFidoAuthBody = {
+			rawId: bufferToBase64(credential.rawId),
+			challenge: bufferToBase64(challengeArr),
+			test: true,
+			response: {
+				authenticatorData: bufferToBase64(credential.response.authenticatorData),
+				signature: bufferToBase64(credential.response.signature),
+				userHandle: bufferToBase64(credential.response.userHandle),
+				clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+				id: credential.id,
+				type: credential.type,
+			},
+		};
+
+		result = await fetch(`/api/user?action=fido-auth`, {
+			method: 'POST',
+			body: JSON.stringify(userAuthBody),
+		}).then(r => r.json());
+	} catch (e) {
+		result.message = e.message;
+		console.error(e);
+	}
+
+	const alertMessage = `${key} Test: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
+	showAlert(result.success ? 'success' : 'danger', alertMessage);
+
+	btn.disabled = false;
+	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+	btn.classList.add('btn-success');
+}
+
+const addFidoButton = <HTMLButtonElement>document.getElementById('add-fido-button');
+const addFidoKeyName = <HTMLInputElement>document.getElementById('fidoName');
+async function addFidoKey() {
+	if (addFidoKeyName.value === '') {
+		showAlert('danger', 'A name is required to add a Fido key');
+		return;
+	}
+	const newName = addFidoKeyName.value;
+	addFidoButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
+	addFidoButton.classList.add('btn-secondary');
+	addFidoButton.disabled = true;
+
+	let result: ApiUserFidoRegisterResponse = {
+		success: false,
+		message: 'Unknown failure',
+	};
+	try {
+		// Get the attestation
+		const attestationOptions: ApiUserFidoChallengeResponse = await fetch(`/api/user?action=fido-challenge`, {
+			method: 'POST',
+			body: JSON.stringify({ name: newName }),
+		}).then(r => r.json());
+		const credential = (await navigator.credentials.create({
+			publicKey: {
+				...attestationOptions.options,
+				challenge: base64ToBuffer(attestationOptions.options.challenge),
+				user: {
+					...attestationOptions.options.user,
+					id: base64ToBuffer(attestationOptions.options.user.id),
+				}
+			},
+		})) as PublicKeyCredential & {
+			response: AuthenticatorAttestationResponse;
+		};
+		const credentialId = bufferToBase64(credential.rawId);
+
+		const registerCredentialBody: ApiUserFidoRegisterBody = {
+			challenge: attestationOptions.options.challenge,
+			name: newName,
+			userId: attestationOptions.options.user.id,
+			credential: {
+				rawId: credentialId,
+				response: {
+					attestationObject: bufferToBase64(credential.response.attestationObject),
+					clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+				}
+			}
+		};
+		result = await fetch(`/api/user?action=fido-register`, {
+			method: 'POST',
+			body: JSON.stringify(registerCredentialBody),
+		}).then(r => r.json());
+	} catch (e) {
+		console.error(e);
+		result.message = e.message;
+	}
+
+	const alertMessage = `New Key Registration: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
+	showAlert(result.success ? 'success' : 'danger', alertMessage);
+
+	addFidoButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
+	addFidoButton.classList.add('btn-success');
+	addFidoButton.disabled = false;
+}
+addFidoButton.addEventListener('click', addFidoKey);
+
+function init() {
+	fieldsToFill.forEach(key => {
+		const elem = <HTMLInputElement>document.getElementById(key);
+		if (elem === null) return;
+
+		if (typeof elem.value !== 'undefined') {
+			elem.value = formatValue(user[key] as string | boolean | number);
+		} else {
+			elem.innerHTML = formatValue(user[key] as string | boolean | number);
+		}
+	});
+
+	const pageGroupContainer = document.getElementById('talkgroups');
+	talkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
+
+	const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
+	Object.keys(user.fidoKeys || {}).forEach(key => {
+		const tr = document.createElement('tr');
+		fidoRow.parentElement.insertBefore(tr, fidoRow);
+
+		const td1 = document.createElement('td');
+		tr.appendChild(td1);
+		td1.innerHTML = key;
+
+		const td2 = document.createElement('td');
+		tr.appendChild(td2);
+		if (window.PublicKeyCredential) {
+			const testBtn = document.createElement('button');
+			td2.appendChild(testBtn);
+			testBtn.classList.add('btn', 'btn-success');
+			testBtn.innerHTML = 'Test';
+			testBtn.addEventListener('click', testFidoKey.bind(null, testBtn, key));
+		}
+		const deleteBtn = document.createElement('button');
+		td2.appendChild(deleteBtn);
+		deleteBtn.classList.add('btn', 'btn-danger', 'ms-3');
+		deleteBtn.innerHTML = 'Delete';
+	});
+
+	updateUserButton.disabled = false;
+	updateUserButton.addEventListener('click', updateUser);
+
+	doneLoading();
+}
+
+if (window.PublicKeyCredential) {
+	Array.from(document.getElementsByClassName('hide-no-fido')).forEach((div: HTMLDivElement) => {
+		div.hidden = false;
+	});
+}
+
+afterAuthUpdate.push(init);
