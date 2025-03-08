@@ -27,7 +27,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 	if (lastUpdateId[direction] !== null) return;
 	lastUpdateId[direction] = updateId;
 
-	let apiUrl = `${host}/api?action=dtr`;
+	let apiUrl = `${host}/api/frontend?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
 		if (direction === 'after') {

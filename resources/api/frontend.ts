@@ -12,6 +12,13 @@ const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const deviceTable = process.env.TABLE_DEVICE as string;
 const textsTable = process.env.TABLE_TEXTS as string;
 
+const dtrTableIndexes: {
+	[key: string]: undefined | string;
+} = {
+	StartTimeEmergIndex: 'AddedIndex',
+	StartTimeTgIndex: undefined
+};
+
 interface QueryInputWithAttributes extends AWS.DynamoDB.QueryInput {
 	ExpressionAttributeValues: AWS.DynamoDB.ExpressionAttributeValueMap;
 	ExpressionAttributeNames: AWS.DynamoDB.ExpressionAttributeNameMap;
@@ -251,6 +258,167 @@ async function getVhfList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
+async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const filters: string[] = [];
+
+	// Set the default query parameters
+	event.queryStringParameters = event.queryStringParameters || {};
+	const queryConfigs: QueryInputWithAttributes[] = [];
+
+	// Determine which index to use and generate the configs
+	if (typeof event.queryStringParameters.tg !== 'undefined') {
+		const talkgroups = event.queryStringParameters.tg.split('|');
+		talkgroups.forEach(tg => {
+			queryConfigs.push({
+				TableName: dtrTable,
+				IndexName: 'StartTimeTgIndex',
+				ScanIndexForward: false,
+				ExpressionAttributeNames: {
+					'#tg': 'Talkgroup'
+				},
+				ExpressionAttributeValues: {
+					':tg': {
+						N: tg
+					}
+				},
+				Limit: defaultListLimit,
+				KeyConditionExpression: '#tg = :tg'
+			});
+		});
+	} else {
+		let emergencyValues = [ '0', '1' ];
+		if (
+			typeof event.queryStringParameters.emerg !== 'undefined' &&
+			event.queryStringParameters.emerg === 'y'
+		)
+			emergencyValues = [ '1' ];
+
+		emergencyValues.forEach(emerg => queryConfigs.push({
+			TableName: dtrTable,
+			IndexName: 'StartTimeEmergIndex',
+			ScanIndexForward: false,
+			ExpressionAttributeNames: {
+				'#emerg': 'Emergency'
+			},
+			ExpressionAttributeValues: {
+				':emerg': {
+					N: emerg
+				}
+			},
+			Limit: defaultListLimit,
+			KeyConditionExpression: '#emerg = :emerg'
+		}));
+	}
+
+	// Check for a key to start scanning at
+	if (typeof event.queryStringParameters.next !== 'undefined') {
+		const scanningKeys: (AWS.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
+			.split('|')
+			.map(str => {
+				if (str === '') return;
+
+				const parts = str.split(',');
+				return {
+					Emergency: {
+						N: parts[0]
+					},
+					Talkgroup: {
+						N: parts[1]
+					},
+					Added: {
+						N: parts[2]
+					}
+				};
+			});
+
+		queryConfigs.forEach((queryConfig, index) => {
+			if (!scanningKeys[index]) return;
+
+			queryConfig.ExclusiveStartKey = scanningKeys[index];
+		});
+	}
+
+	// Check for a timing filter
+	if (
+		typeof event.queryStringParameters.before !== 'undefined' &&
+		!isNaN(Number(event.queryStringParameters.before))
+	) {
+		const before = event.queryStringParameters.before;
+
+		queryConfigs.forEach(queryConfig => {
+			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+			queryConfig.ExpressionAttributeValues[':st'] = {
+				N: before
+			};
+			queryConfig.KeyConditionExpression += ' AND #st < :st';
+		});
+	} else if (
+		typeof event.queryStringParameters.after !== 'undefined' &&
+		!isNaN(Number(event.queryStringParameters.after))
+	) {
+		const after = event.queryStringParameters.after;
+
+		queryConfigs.forEach(queryConfig => {
+			const newIndexName: string | undefined = dtrTableIndexes[queryConfig.IndexName as string];
+			if (newIndexName === undefined) {
+				delete queryConfig.IndexName;
+			} else {
+				queryConfig.IndexName = newIndexName;
+			}
+			queryConfig.ScanIndexForward = true;
+		
+			queryConfig.ExpressionAttributeNames['#st'] = 'Added';
+			queryConfig.ExpressionAttributeValues[':st'] = {
+				N: after
+			};
+			queryConfig.KeyConditionExpression += ' AND #st > :st';
+		});
+	}
+
+	// Check for a source filter
+	if (typeof event.queryStringParameters.source !== 'undefined') {
+		const sources = event.queryStringParameters.source.split('|');
+		const localFilters: string[] = [];
+		sources.forEach((source, index) => {
+			localFilters.push(`contains(#src, :src${index})`);
+
+			queryConfigs.forEach(queryConfig => {
+				queryConfig.ExpressionAttributeNames['#src'] = 'Sources';
+				queryConfig.ExpressionAttributeValues[`:src${index}`] = {
+					N: source
+				};
+			});
+		});
+		filters.push(`(${localFilters.join(' OR ')})`);
+	}
+
+	if (filters.length > 0)
+		queryConfigs.forEach(queryConfig => queryConfig.FilterExpression = filters.join(' AND '));
+
+	const data = await mergeDynamoQueries(queryConfigs, 'StartTime', 'Added');
+	const body = JSON.stringify({
+		success: true,
+		count: data.Count,
+		scanned: data.ScannedCount,
+		continueToken: data.LastEvaluatedKeys
+			.map(item => {
+				if (item === null) return '';
+
+				return `${item.Emergency?.N},${item.Talkgroup?.N},${item.StartTime?.N}`;
+			})
+			.join('|'),
+		before: data.MinSortKey,
+		after: data.MaxSortKey,
+		data: data.Items.map(parseDynamoDbAttributeMap)
+	});
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action;
 	try {
@@ -259,6 +427,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			case 'vhf':
 				return await getVhfList(event);
 			case 'dtr':
+				return await getDtrList(event);
 			case 'talkgroups':
 			case 'listTexts':
 		}
