@@ -69,11 +69,15 @@ function buildTable(items, isPage = false) {
 			`${Math.round(getPercentile(text.delivered, 1) / 1000)}s`,
 			`${Math.round(getPercentile(text.delivered, 50) / 1000)}s`,
 			`${Math.round(getPercentile(text.delivered, 75) / 1000)}s`,
-			`${Math.round(getPercentile(text.delivered, 100) / 1000)}s`
 		];
 		
 		if (isPage) {
-			cells.splice(7, 0, `${Math.round((text.datetime - text.pageTime) / 1000)}s`);
+			text.csLooked = text.csLooked || [];
+			cells.splice(
+				7, 0,
+				`${Math.round(text.csLooked.length * 100 / text.recipients)}% (${text.csLooked.length})`,
+				`${Math.round((text.datetime - text.pageTime) / 1000)}s`
+			);
 			cells.splice(2, 1);
 		}
 		
