@@ -580,10 +580,11 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		};
 	}
 	const twilioData: TwilioUsageItem[] = await new Promise((res, rej) => {
-		require('twilio')(accountSid, authToken).api.v2010.account.usage.records.lastMonth
+		require('twilio')(accountSid, authToken).api.v2010.account.usage.records
 			.list({
 				limit: 1000,
 				includeSubaccounts: true,
+				startDate: '-30days',
 			}, (err: any, items: TwilioUsageItem[]) => err ? rej(err) : res(items));
 	});
 
