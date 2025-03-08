@@ -16,6 +16,7 @@ const messagesTable = process.env.TABLE_MESSAGES as string;
 const statusTable = process.env.TABLE_STATUS as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
+const s3Bucket = process.env.S3_BUCKET as string;
 
 const ignorePrefixes = [
 	'Liked',
@@ -544,6 +545,28 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		statusCode: 200,
 		headers: {},
 		body
+	};
+}
+
+const dtrS3Prefix = 'audio/dtr';
+async function dtrFileExists(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	validateBodyIsJson(event.body);
+
+	const s3 = new AWS.S3();
+
+	const files: string[] = JSON.parse(event.body as string).files;
+	const badFiles: (AWS.S3.HeadObjectOutput | string)[] = await Promise.all(files
+		.map(f => s3.headObject({
+			Bucket: s3Bucket,
+			Key: `${dtrS3Prefix}/${f}`
+		}).promise()
+			.catch(() => f)))
+		.then(data => data.filter(f => typeof f === 'string'));
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body: JSON.stringify(badFiles)
 	};
 }
 
@@ -1239,6 +1262,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getUser(event);
 			case 'heartbeat':
 				return await handleHeartbeat(event);
+			case 'dtrCheck':
+				return await dtrFileExists(event);
 		}
 
 		console.log(`API - 404`);

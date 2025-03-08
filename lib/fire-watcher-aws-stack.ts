@@ -231,8 +231,10 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_MESSAGES: messagesTable.tableName,
         TABLE_STATUS: statusTable.tableName,
         SQS_QUEUE: queue.queueUrl,
-        SERVER_CODE: apiCode
-      }
+        SERVER_CODE: apiCode,
+        S3_BUCKET: bucket.bucketName
+      },
+      timeout: Duration.seconds(10)
     });
 
     // Grant access for the API handler
@@ -242,6 +244,7 @@ export class FireWatcherAwsStack extends Stack {
     messagesTable.grantReadWriteData(apiHandler);
     statusTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
+    bucket.grantRead(apiHandler);
 
     // Create a rest API
     const api = new apigateway.RestApi(this, 'cvfd-api-gateway', {
