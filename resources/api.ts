@@ -138,6 +138,10 @@ async function runDynamoQueries(
 		afterKey = sortKey;
 	}
 
+	const scanForward = queryConfigs[0].ScanIndexForward;
+	const sortDirGreater = scanForward ? 1 : -1;
+	const sortDirLesser = scanForward ? -1 : 1;
+
 	return await Promise.all(queryConfigs.map((queryConfig) => dynamodb.query(queryConfig).promise()))
 		.then((data) => data.reduce((agg: DynamoOutput, result) => {
 			if (
@@ -188,8 +192,8 @@ async function runDynamoQueries(
 					) return 0;
 
 					return Number(a[sortKey].N) > Number(b[sortKey].N)
-						? -1
-						: 1
+						? sortDirGreater
+						: sortDirLesser;
 				});
 			}
 
@@ -218,6 +222,10 @@ async function runDynamoQueries(
 
 				data.MinSortKey = minSortKey;
 				data.MaxSortKey = maxSortKey;
+			}
+
+			if (scanForward) {
+				data.Items?.reverse();
 			}
 
 			return data;
@@ -501,6 +509,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			} else {
 				queryConfig.IndexName = newIndexName;
 			}
+			queryConfig.ScanIndexForward = true;
 
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
