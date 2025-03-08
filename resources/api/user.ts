@@ -217,10 +217,8 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 }
 
-async function handleLogout(): Promise<APIGatewayProxyResult> {
-	// @TODO delete the old token if it is valid
-
-	return {
+async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const response: APIGatewayProxyResult = {
 		statusCode: 301,
 		body: 'Logged Out',
 		multiValueHeaders: {
@@ -233,6 +231,41 @@ async function handleLogout(): Promise<APIGatewayProxyResult> {
 			Location: '/'
 		}
 	};
+
+	// Validate the tokens
+	const user = await getLoggedInUser(event);
+	if (user === null)
+		return response;
+
+	// Delete the needed tokens
+	const loginToken = getCookies(event)[authTokenCookie];
+	const now = Date.now();
+	const validUserTokens = user.loginTokens?.L
+		?.filter(token => token.M?.token?.S !== loginToken)
+		.filter(token => parseInt(token.M?.tokenExpiry?.N || '0', 10) > now);
+	const updateConfig: aws.DynamoDB.UpdateItemInput = {
+		TableName: userTable,
+		Key: {
+			phone: { N: user.phone?.N }
+		},
+		ExpressionAttributeNames: {
+			'#t': 'loginTokens'
+		},
+		ExpressionAttributeValues: {
+			':t': { L: validUserTokens }
+		},
+		UpdateExpression: 'SET #t = :t'
+	};
+	if (
+		typeof validUserTokens === 'undefined' ||
+		validUserTokens.length === 0
+	) {
+		delete updateConfig.ExpressionAttributeValues;
+		updateConfig.UpdateExpression = 'REMOVE #t';
+	}
+	await dynamodb.updateItem(updateConfig).promise();
+
+	return response;
 }
 
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -519,7 +552,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			case 'getUser':
 				return await getUser(event);
 			case 'logout':
-				return await handleLogout();
+				return await handleLogout(event);
 			case 'list':
 				return await handleList(event);
 			case 'create':
