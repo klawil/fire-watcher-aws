@@ -5,7 +5,6 @@ import { getTwilioSecret, incrementMetric, parsePhone, sendMessage } from './uti
 const dynamodb = new AWS.DynamoDB();
 
 const phoneTable = process.env.TABLE_PHONE as string;
-const trafficTable = process.env.TABLE_TRAFFIC as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
 
 const metricSource = 'Queue';
@@ -118,12 +117,14 @@ async function getRecipients(
 ) {
 	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
-		FilterExpression: '#a = :a',
+		FilterExpression: '#a = :a AND #po = :po',
 		ExpressionAttributeNames: {
-			'#a': 'isActive'
+			'#a': 'isActive',
+			'#po': 'pageOnly'
 		},
 		ExpressionAttributeValues: {
-			':a': { BOOL: true }
+			':a': { BOOL: true },
+			':po': { BOOL: false }
 		}
 	};
 	if (department !== 'all') {
@@ -393,6 +394,9 @@ async function handleTwilio(body: TwilioBody) {
 	}
 	if (!sender.Item.isActive.BOOL) {
 		throw new Error(`Invactive sender`);
+	}
+	if (sender.Item.pageOnly?.BOOL || sender.Item.department?.S === 'None') {
+		throw new Error(`Page only sender`);
 	}
 
 	// Get the number that was messaged
