@@ -7,12 +7,24 @@ const sqs = new aws.SQS();
 const apiCode = process.env.SERVER_CODE as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
+const textTable = process.env.TABLE_TEXT as string;
 
-interface TwilioEvent {
+interface TwilioTextEvent {
 	From: string;
 	To: string;
 	Body: string;
 	MediaUrl0?: string;
+}
+
+interface TwilioStatusEvent {
+	SmsSid: string;
+	SmsStatus: string;
+	MessageStatus: string; // Use me!
+	To: string;
+	MessageSid: string;
+	AccountSid: string;
+	From: string;
+	ApiVersion: string;
 }
 
 interface TextCommand {
@@ -83,7 +95,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		.reduce((acc, curr) => ({
 			...acc,
 			[curr[0]]: curr[1] || ''
-		}), {}) as TwilioEvent;
+		}), {}) as TwilioTextEvent;
 	const sender = await dynamodb.getItem({
 		TableName: userTable,
 		Key: {
@@ -134,6 +146,62 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	return response;
 }
 
+async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const eventDatetime = Date.now();
+	const code = event.queryStringParameters?.code;
+	const messageId = event.queryStringParameters?.msg || null;
+	const response: APIGatewayProxyResult = {
+		statusCode: 204,
+		body: ''
+	};
+
+	// Validate the call is from Twilio
+	if (code !== apiCode) {
+		console.log('API - INFRA - ERROR - INVALID CODE');
+	} else if (messageId === null) {
+		console.log('API - INFRA - ERROR - INVALID MESSAGE ID');
+	} else {
+		const eventData = event.body?.split('&')
+			.map(str => str.split('=').map(str => decodeURIComponent(str)))
+			.reduce((agg, curr) => ({
+				...agg,
+				[curr[0]]: curr[1] || ''
+			}), {}) as TwilioStatusEvent;
+
+		await dynamodb.updateItem({
+			TableName: textTable,
+			Key: {
+				datetime: {
+					N: messageId
+				}
+			},
+			ExpressionAttributeNames: {
+				'#eventName': eventData.MessageStatus,
+				'#eventPhoneList': `${eventData.MessageStatus}Phone`,
+				'#from': 'fromNumber'
+			},
+			ExpressionAttributeValues: {
+				':eventListItem': {
+					NS: [
+						eventDatetime.toString()
+					]
+				},
+				':eventPhoneListItem': {
+					SS: [
+						eventData.To
+					]
+				},
+				':from': {
+					S: eventData.From
+				}
+			},
+			UpdateExpression: 'ADD #eventName :eventListItem, #eventPhoneList :eventPhoneListItem SET #from = :from'
+		}).promise();
+	}
+
+	return response;
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action;
 
@@ -141,6 +209,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		switch (action) {
 			case 'text':
 				return await handleText(event);
+			case 'textStatus':
+				return await handleTextStatus(event);
 		}
 
 		console.log(`API - INFRA - 404`);

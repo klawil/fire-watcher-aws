@@ -8,7 +8,6 @@ const sqs = new AWS.SQS();
 const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 
 const phoneTable = process.env.TABLE_PHONE as string;
-const messagesTable = process.env.TABLE_MESSAGES as string;
 const statusTable = process.env.TABLE_STATUS as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
@@ -146,75 +145,6 @@ function validateBodyIsJson(body: string | null): true {
 	JSON.parse(body);
 
 	return true;
-}
-
-interface TwilioMessageStatus {
-	SmsSid: string;
-	SmsStatus: string;
-	MessageStatus: string; // Use me!
-	To: string;
-	MessageSid: string;
-	AccountSid: string;
-	From: string;
-	ApiVersion: string;
-}
-
-async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const eventDatetime = Date.now();
-	const code = event.queryStringParameters?.code || '';
-	const messageId = event.queryStringParameters?.msg || null;
-	const response = {
-		statusCode: 204,
-		body: ''
-	};
-
-	// Validate the call is from Twilio
-	if (code !== apiCode) {
-		console.log('API - ERROR - INVALID CODE');
-	} else if (messageId === null) {
-		console.log('API - ERROR - INVALID MESSAGE ID');
-	} else {
-		// Build the event data
-		const eventData = event.body
-			?.split('&')
-			.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
-			.reduce((acc, curr) => ({
-				...acc,
-				[curr[0]]: curr[1] || ''
-			}), {}) as TwilioMessageStatus;
-
-		await dynamodb.updateItem({
-			TableName: messagesTable,
-			Key: {
-				datetime: {
-					N: messageId
-				}
-			},
-			ExpressionAttributeNames: {
-				'#eventName': eventData.MessageStatus,
-				'#eventPhoneList': `${eventData.MessageStatus}Phone`,
-				'#from': 'fromNumber'
-			},
-			ExpressionAttributeValues: {
-				':eventListItem': {
-					NS: [
-						eventDatetime.toString()
-					]
-				},
-				':eventPhoneListItem': {
-					SS: [
-						eventData.To
-					]
-				},
-				':from': {
-					S: eventData.From
-				}
-			},
-			UpdateExpression: 'ADD #eventName :eventListItem, #eventPhoneList :eventPhoneListItem SET #from = :from'
-		}).promise();
-	}
-
-	return response;
 }
 
 async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -660,8 +590,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	try {
 		console.log(`API - CALL - ${action}`);
 		switch (action) {
-			case 'messageStatus':
-				return await handleMessageStatus(event);
 			case 'page':
 				return await handlePage(event);
 			case 'login':

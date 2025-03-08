@@ -284,7 +284,6 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_TRAFFIC: vhfTable.tableName,
         TABLE_DTR: dtrTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
-        TABLE_MESSAGES: textsTable.tableName,
         TABLE_STATUS: statusTable.tableName,
         SQS_QUEUE: queue.queueUrl,
         SERVER_CODE: apiCode,
@@ -298,7 +297,6 @@ export class FireWatcherAwsStack extends Stack {
     vhfTable.grantReadData(apiHandler);
     dtrTable.grantReadWriteData(apiHandler);
     talkgroupTable.grantReadData(apiHandler);
-    textsTable.grantReadWriteData(apiHandler);
     statusTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
     bucket.grantRead(apiHandler);
@@ -354,11 +352,13 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         SERVER_CODE: apiCode,
         SQS_QUEUE: queue.queueUrl,
-        TABLE_USER: phoneNumberTable.tableName
+        TABLE_USER: phoneNumberTable.tableName,
+        TABLE_TEXT: textsTable.tableName
       }
     });
     queue.grantSendMessages(infraApiHandler);
     phoneNumberTable.grantReadWriteData(infraApiHandler);
+    textsTable.grantReadWriteData(infraApiHandler);
     const infraApiIntegration = new apigateway.LambdaIntegration(infraApiHandler, {
       requestTemplates: {
         'application/json': '{"statusCode":"200"}'

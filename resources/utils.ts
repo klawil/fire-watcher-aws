@@ -111,7 +111,7 @@ export async function sendMessage(
 	};
 
 	if (messageId !== null) {
-		messageConfig.statusCallback = `https://fire.klawil.net/api?action=messageStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
+		messageConfig.statusCallback = `https://fire.klawil.net/api/infra?action=textStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
 	}
 
 	return twilio(twilioConf.accountSid, twilioConf.authToken)
