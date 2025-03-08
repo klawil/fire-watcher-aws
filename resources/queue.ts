@@ -798,10 +798,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 		body.action = 'transcribe';
 	}
 	try {
-		await incrementMetric('Call', {
-			source: metricSource,
-			action: body.action
-		}, true, false);
 		let response;
 		switch (body.action) {
 			case 'activate':

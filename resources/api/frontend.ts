@@ -15,6 +15,65 @@ const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const textsTable = process.env.TABLE_TEXTS as string;
 const siteTable = process.env.TABLE_SITE as string;
 
+const lambdaFunctionNames: { [key: string]: {
+	name: string,
+	fn: string,
+	errName?: string,
+} } = {
+	S3: {
+		name: 'S3 Lambda',
+		fn: process.env.S3_LAMBDA as string,
+		errName: 's3',
+	},
+	queue: {
+		name: 'Queue Lambda',
+		fn: process.env.QUEUE_LAMBDA as string,
+		errName: 'queue',
+	},
+	alarmQueue: {
+		name: 'Alarm Queue Lambda',
+		fn: process.env.ALARM_QUEUE_LAMBDA as string,
+	},
+	status: {
+		name: 'Status Lambda',
+		fn: process.env.STATUS_LAMBDA as string,
+	},
+	weather: {
+		name: 'Weather Lambda',
+		fn: process.env.WEATHER_LAMBDA as string,
+	},
+	infraApi: {
+		name: 'Infra API',
+		fn: process.env.INFRA_API_LAMBDA as string,
+		errName: 'infra',
+	},
+	userApi: {
+		name: 'User API',
+		fn: process.env.USER_API_LAMBDA as string,
+		errName: 'user',
+	},
+	twilioApi: {
+		name: 'Twilio API',
+		fn: process.env.TWILIO_API_LAMBDA as string,
+		errName: 'twilio',
+	},
+	eventsApi: {
+		name: 'Events API',
+		fn: process.env.EVENTS_API_LAMBDA as string,
+		errName: 'events',
+	},
+	conferenceApi: {
+		name: 'Conference API',
+		fn: process.env.CONFERENCE_API_LAMBDA as string,
+		errName: 'conference',
+	},
+	frontendApi: {
+		name: 'Frontend API',
+		fn: process.env.AWS_LAMBDA_FUNCTION_NAME as string,
+		errName: 'frontend',
+	},
+};
+
 const dtrTableIndexes: {
 	[key: string]: undefined | string;
 } = {
@@ -503,101 +562,6 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 const statsMap: {
 	[key: string]: aws.CloudWatch.MetricDataQuery;
 } = {
-	'api-frontend': {
-		Id: 'api_frontend',
-		Label: 'Frontend API Calls',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Call',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Frontend'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'api-infra': {
-		Id: 'api_infra',
-		Label: 'Infrastructure API Calls',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Call',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Infra'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'api-user': {
-		Id: 'api_user',
-		Label: 'User API Calls',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Call',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'User'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'api-twilio': {
-		Id: 'api_twilio',
-		Label: 'Twilio API Calls',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Call',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Twilio'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'api-events': {
-		Id: 'api_events',
-		Label: 'Event API Calls',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Call',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Events'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
 	's3-dtr': {
 		Id: 's3_dtr',
 		Label: 'DTR Files Uploaded',
@@ -676,34 +640,10 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
-	's3-calls': {
-		Id: 's3_calls',
-		Label: 'S3 Events',
-		Expression: 's3_dtr+s3_vhf'
-	},
 	's3-created': {
 		Id: 's3_created',
 		Label: 'S3 Files Created',
 		Expression: 's3_dtr+s3_vhf-s3_dtr_dup'
-	},
-	'queue': {
-		Id: 'queue',
-		Label: 'Queue Events',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Call',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Queue'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
 	},
 	'err-frontend': {
 		Id: 'err_frontend',
@@ -800,6 +740,25 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
+	'err-conference': {
+		Id: 'err_conference',
+		Label: 'Conference API Errors',
+		MetricStat: {
+			Metric: {
+				Namespace: 'CVFD API',
+				MetricName: 'Error',
+				Dimensions: [
+					{
+						Name: 'source',
+						Value: 'Conference'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count'
+		}
+	},
 	'err-s3': {
 		Id: 'err_s3',
 		Label: 'S3 Event Errors',
@@ -837,21 +796,6 @@ const statsMap: {
 			Stat: 'Sum',
 			Unit: 'Count'
 		}
-	},
-	'err-total-api': {
-		Id: 'err_total_api',
-		Label: 'Total API Errors',
-		Expression: 'err_frontend+err_infra+err_user+err_twilio'
-	},
-	'err-total-event': {
-		Id: 'err_total_event',
-		Label: 'Total Event Errors',
-		Expression: 'err_s3+err_queue'
-	},
-	'err-total': {
-		Id: 'err_total',
-		Label: 'Total Errors',
-		Expression: 'err_s3+err_queue+err_frontend+err_infra+err_user+err_twilio'
 	},
 	'tower-sag-min': {
 		Id: 'tower_sag_min',
@@ -1229,8 +1173,95 @@ const statsMap: {
 		Id: 'twilio_delivered_sent_time',
 		Label: 'Time To Deliver Texts',
 		Expression: 'twilio_delivered_time-twilio_sent_time'
-	}
+	},
 };
+Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
+	const baseId = lambdaFn.toLowerCase();
+	const {name, fn: fnName, errName } = lambdaFunctionNames[lambdaFn];
+	statsMap[`${baseId}-call`] = {
+		Id: `${baseId}_call`,
+		Label: `${name} Calls`,
+		MetricStat: {
+			Metric: {
+				Namespace: 'AWS/Lambda',
+				MetricName: 'Invocations',
+				Dimensions: [
+					{
+						Name: 'FunctionName',
+						Value: fnName,
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count',
+		},
+	};
+	statsMap[`${baseId}-err`] = {
+		Id: `${baseId}_err`,
+		Label: `${name} Errors`,
+		MetricStat: {
+			Metric: {
+				Namespace: 'AWS/Lambda',
+				MetricName: 'Errors',
+				Dimensions: [
+					{
+						Name: 'FunctionName',
+						Value: fnName,
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count',
+		},
+	};
+	if (typeof errName === 'string')
+		statsMap[`${baseId}-err-all`] = {
+			Id: `${baseId}_err_all`,
+			Label: `${name} Errors`,
+			Expression: `${baseId}_err+err_${errName}`,
+		};
+	statsMap[`${baseId}-dur`] = {
+		Id: `${baseId}_dur`,
+		Label: `${name} Duration`,
+		MetricStat: {
+			Metric: {
+				Namespace: 'AWS/Lambda',
+				MetricName: 'Duration',
+				Dimensions: [
+					{
+						Name: 'FunctionName',
+						Value: fnName,
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'p50',
+			Unit: 'Milliseconds',
+		},
+	};
+	statsMap[`${baseId}-dur-max`] = {
+		Id: `${baseId}_dur_max`,
+		Label: `${name} Max Duration`,
+		MetricStat: {
+			Metric: {
+				Namespace: 'AWS/Lambda',
+				MetricName: 'Duration',
+				Dimensions: [
+					{
+						Name: 'FunctionName',
+						Value: fnName,
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'Maximum',
+			Unit: 'Milliseconds',
+		},
+	};
+});
+
 const periodToTime: {
 	period: number; // seconds
 	timerange: number; // milliseconds
@@ -1633,10 +1664,6 @@ async function getSites(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 	try {
-		await incrementMetric('Call', {
-			source: metricSource,
-			action
-		}, true, false);
 		switch (action) {
 			case 'dtr':
 				return await getDtrList(event);

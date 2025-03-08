@@ -429,7 +429,8 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
         SQS_QUEUE: queue.queueUrl
-      }
+      },
+      timeout: Duration.minutes(1)
     });
     
     // Grant access for the S3 handler
@@ -559,6 +560,24 @@ export class FireWatcherAwsStack extends Stack {
     };
     const alarms: CvfdAlarm[] = [
       {
+        codeName: 'lambda-errors',
+        alarm: {
+          evaluationPeriods: 1,
+          datapointsToAlarm: 1,
+          metric: new cloudwatch.Metric({
+            metricName: 'Errors',
+            namespace: 'AWS/Lambda',
+            period: Duration.minutes(30),
+            statistic: cloudwatch.Stats.SUM,
+          }),
+          threshold: 0,
+          alarmDescription: 'Errors detected in the Lambda functions',
+          alarmName: 'Lambda Function Errors',
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+        }
+      },
+      {
         codeName: 'saguache-tower',
         alarm: {
           ...baseTowerAlarmConfig
@@ -624,13 +643,6 @@ export class FireWatcherAwsStack extends Stack {
         }
       },
       {
-        codeName: 'user-api',
-        okayAction: false,
-        alarm: {
-          ...baseApiAlarmConfig
-        }
-      },
-      {
         codeName: 'twilio-api',
         okayAction: false,
         alarm: {
@@ -646,42 +658,6 @@ export class FireWatcherAwsStack extends Stack {
           }),
           alarmDescription: 'Twilio API error occured',
           alarmName: 'Twilio API Error'
-        }
-      },
-      {
-        codeName: 'infra-api',
-        okayAction: false,
-        alarm: {
-          ...baseApiAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Error',
-            namespace: 'CVFD API',
-            period: Duration.minutes(30),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              source: 'Infra'
-            }
-          }),
-          alarmDescription: 'Infra API error occured',
-          alarmName: 'Infra API Error'
-        }
-      },
-      {
-        codeName: 'frontend-api',
-        okayAction: false,
-        alarm: {
-          ...baseApiAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Error',
-            namespace: 'CVFD API',
-            period: Duration.minutes(30),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              source: 'Frontend'
-            }
-          }),
-          alarmDescription: 'Frontend API error occured',
-          alarmName: 'Frontend API Error'
         }
       },
       {
@@ -835,27 +811,15 @@ export class FireWatcherAwsStack extends Stack {
       metrics?: boolean;
     }
 
+    const metricMappingEnv: { [key: string]: string } = {
+      S3_LAMBDA: s3Handler.functionName,
+      QUEUE_LAMBDA: queueHandler.functionName,
+      ALARM_QUEUE_LAMBDA: alarmQueueHandler.functionName,
+      STATUS_LAMBDA: statusHandler.functionName,
+      WEATHER_LAMBDA: weatherUpdater.functionName,
+    };
+
     const cvfdApis: ApiDefinition[] = [
-      {
-        name: 'frontend',
-        env: {
-          TABLE_DTR: dtrTable.tableName,
-          TABLE_TALKGROUP: talkgroupTable.tableName,
-          TABLE_TEXTS: textsTable.tableName,
-          TABLE_USER: phoneNumberTable.tableName,
-          TABLE_SITE: siteTable.tableName
-        },
-        read: [
-          dtrTable,
-          talkgroupTable,
-          phoneNumberTable,
-          siteTable
-        ],
-        readWrite: [
-          textsTable
-        ],
-        metrics: true
-      },
       {
         name: 'infra',
         env: {
@@ -932,6 +896,26 @@ export class FireWatcherAwsStack extends Stack {
         ],
         secret: twilioSecret,
       },
+      {
+        name: 'frontend',
+        env: {
+          TABLE_DTR: dtrTable.tableName,
+          TABLE_TALKGROUP: talkgroupTable.tableName,
+          TABLE_TEXTS: textsTable.tableName,
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_SITE: siteTable.tableName
+        },
+        read: [
+          dtrTable,
+          talkgroupTable,
+          phoneNumberTable,
+          siteTable
+        ],
+        readWrite: [
+          textsTable
+        ],
+        metrics: true,
+      },
     ];
 
     cvfdApis.forEach(config => {
@@ -953,6 +937,8 @@ export class FireWatcherAwsStack extends Stack {
           }, {}),
         timeout: Duration.seconds(10)
       });
+      if (!config.metrics)
+        metricMappingEnv[`${config.name.toUpperCase()}_API_LAMBDA`] = apiHandler.functionName;
 
       if (config.read)
         config.read.forEach(table => table.grantReadData(apiHandler));
@@ -973,6 +959,11 @@ export class FireWatcherAwsStack extends Stack {
         }));
       if (config.secret)
         config.secret.grantRead(apiHandler);
+      if (config.metrics) {
+        Object.keys(metricMappingEnv).forEach(key => {
+          apiHandler.addEnvironment(key, metricMappingEnv[key]);
+        });
+      }
     
       const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
         requestTemplates: {

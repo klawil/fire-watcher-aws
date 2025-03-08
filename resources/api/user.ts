@@ -661,10 +661,6 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 	try {
-		await incrementMetric('Call', {
-			source: metricSource,
-			action
-		}, true, false);
 		switch (action) {
 			case 'login':
 				return await handleLogin(event);

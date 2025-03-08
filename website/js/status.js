@@ -70,11 +70,19 @@ const color2 = {
 const baseCharts = [
 	{
 		id: 'api-calls',
-		query: 'metrics=api-frontend,api-user,api-twilio,s3-created,queue'
+		query: 'metrics=s3-call,queue-call,alarmqueue-call,status-call,weather-call,infraapi-call,userapi-call,twilioapi-call,eventsapi-call,conferenceapi-call,frontendapi-call'
 	},
 	{
 		id: 'api-errors',
-		query: 'metrics=err-frontend,err-infra,err-user,err-twilio,err-events,err-s3,err-queue&live=y'
+		query: 'metrics=s3-err-all,queue-err-all,alarmqueue-err,status-err,weather-err,infraapi-err-all,userapi-err-all,twilioapi-err-all,eventsapi-err-all,conferenceapi-err-all,frontendapi-err-all&live=y'
+	},
+	{
+		id: 'api-duration',
+		query: 'metrics=s3-dur,queue-dur,alarmqueue-dur,status-dur,weather-dur,infraapi-dur,userapi-dur,twilioapi-dur,eventsapi-dur,conferenceapi-dur,frontendapi-dur'
+	},
+	{
+		id: 'api-duration-max',
+		query: 'metrics=s3-dur-max,queue-dur-max,alarmqueue-dur-max,status-dur-max,weather-dur-max,infraapi-dur-max,userapi-dur-max,twilioapi-dur-max,eventsapi-dur-max,conferenceapi-dur-max,frontendapi-dur-max'
 	},
 	{
 		id: 's3-uploads',
