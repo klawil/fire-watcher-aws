@@ -6,7 +6,6 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
-const queueUrl = process.env.SQS_QUEUE as string;
 
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	try {
@@ -37,6 +36,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					ToneIndex: {
 						S: headInfo.Metadata?.tone || 'n'
+					},
+					Source: {
+						S: headInfo.Metadata?.source || 'n/a'
 					}
 				}
 			};
