@@ -316,21 +316,32 @@ async function handleActivation(body: ActivateOrLoginBody) {
 
 	// Send the sample page
 	promises.push(dynamodb.query({
-		TableName: trafficTable,
+		TableName: messagesTable,
 		ExpressionAttributeValues: {
-			':t': {
+			':ip': {
 				S: 'y'
+			},
+			':it': {
+				S: 'n'
+			},
+			':tg': {
+				S: (updateResult.Attributes?.talkgroups?.NS || [ '8332' ])[0]
 			}
 		},
-		KeyConditionExpression: 'isPage = :t',
+		ExpressionAttributeNames: {
+			'#ip': 'isPage',
+			'#it': 'isTestString',
+			'#tg': 'talkgroup'
+		},
+		KeyConditionExpression: '#ip = :ip',
+		FilterExpression: '#it = :it AND #tg = :tg',
 		IndexName: 'pageIndex',
-		Limit: 1,
 		ScanIndexForward: false
 	}).promise()
 		.then((data) => {
 			if (!data.Items || data.Items.length === 0) return;
 			const pageKey = data.Items[0].pageId.S || 'none';
-			const pageTg = (pageKey.match(/(\d{4})-\d{10}_\d{9}-call_\d+\.m4a/) || ['', '8332'])[1];
+			const pageTg = data.Items[0].talkgroup.N || '8332';
 
 			return sendMessage(
 				null,
