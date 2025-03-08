@@ -156,7 +156,7 @@ class TalkgroupFilter {
 		this.talkgroupSelect = document.getElementById('talkgroup-select');
 		this.talkgroupSelected = document.getElementById('talkgroup-select-active');
 		document.getElementById('tg-search').addEventListener('input', (e) => {
-			const searchValue = e.target.value;
+			const searchValue = e.target.value.toLowerCase();
 			let filterFunc = (elem) => elem.innerHTML.toLowerCase().indexOf(searchValue) !== -1;
 			if (searchValue === '') {
 				filterFunc = () => true;
