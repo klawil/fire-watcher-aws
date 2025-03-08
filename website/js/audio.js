@@ -169,6 +169,7 @@ let fileKeyField = 'File';
 let rowConfig = [];
 let defaultFunc = () => {};
 let isInit = true;
+const doStart = window.location.href.indexOf('nostart') === -1;
 
 // Display utilities
 function dateToStr(d) {
@@ -194,6 +195,8 @@ function getFileIndex(file) {
 }
 
 function display(dataToDisplay, location, restart) {
+	if (!doStart) return;
+
 	if (restart) {
 		fileTable.innerHTML = '';
 	}
@@ -397,6 +400,7 @@ function setUrlParams() {
 	const newParams = {
 		...getUrlParams()
 	};
+	delete newParams.nostart;
 	Object.keys(urlFilters)
 		.forEach((filterKey) => {
 			newParams[filterKey] = urlFilters[filterKey].getUrl();
