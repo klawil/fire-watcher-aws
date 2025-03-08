@@ -575,16 +575,15 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		};
 	} catch (e) {
-		const body = {
-			error: true,
-			message: JSON.stringify(e, null, 2)
-		};
 		console.log(`API - ERROR - ${action}`);
 		console.error(e);
 		return {
 			statusCode: 400,
 			headers: {},
-			body: JSON.stringify(body)
+			body: JSON.stringify({
+				error: true,
+				message: (e as Error).message
+			})
 		};
 	}
 };
