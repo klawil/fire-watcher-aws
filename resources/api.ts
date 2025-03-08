@@ -217,7 +217,8 @@ async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGate
 			...acc,
 			[curr[0]]: curr[1] || ''
 		}), {}) as TwilioParams;
-	console.log(`TWILIO STATUS BODY: ${eventData}`);
+	console.log(`TWILIO STATUS BODY: ${event.body}`);
+	console.log(eventData);
 
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
