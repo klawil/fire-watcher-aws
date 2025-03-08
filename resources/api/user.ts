@@ -226,7 +226,7 @@ async function handleLogout(): Promise<APIGatewayProxyResult> {
 
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-	const unathorizedResponse = {
+	const unauthorizedResponse = {
 		statusCode: 403,
 		body: JSON.stringify({
 			success: false,
@@ -237,7 +237,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		user === null ||
 		!user.isAdmin?.BOOL
 	) {
-		return unathorizedResponse;
+		return unauthorizedResponse;
 	}
 
 	// Get the users to return
@@ -299,7 +299,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-	const unathorizedResponse = {
+	const unauthorizedResponse = {
 		statusCode: 403,
 		body: JSON.stringify({
 			success: false,
@@ -310,7 +310,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		user === null ||
 		!user.isAdmin?.BOOL
 	) {
-		return unathorizedResponse;
+		return unauthorizedResponse;
 	}
 
 	// Validate and parse the body
@@ -427,6 +427,62 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	};
 }
 
+async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+	if (
+		user === null ||
+		!user.isAdmin?.BOOL
+	) {
+		return unauthorizedResponse;
+	}
+
+	// Validate and parse the body
+	validateBodyIsJson(event.body);
+	const body = JSON.parse(event.body as string) as UserObject;
+	const response: ApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the request
+	if (
+		typeof body.phone !== 'string' ||
+		body.phone.replace(/[^0-9]/g, '').length !== 10
+	) {
+		response.errors.push('phone');
+	} else {
+		body.phone = body.phone.replace(/[^0-9]/g, '');
+	}
+	if (response.errors.length > 0) {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Delete the user
+	const result = await dynamodb.deleteItem({
+		TableName: userTable,
+		Key: {
+			phone: { N: body.phone }
+		}
+	}).promise();
+
+	response.data = [ result ];
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 	try {
@@ -449,6 +505,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await createOrUpdateUser(event, true);
 			case 'update':
 				return await createOrUpdateUser(event, false);
+			case 'delete':
+				return await deleteUser(event);
 		}
 
 		await incrementMetric('Error', {

@@ -99,6 +99,32 @@ function addRow(user) {
 						});
 				});
 				td.appendChild(button);
+
+				const deleteButton = document.createElement('button');
+				deleteButton.classList.add('btn', 'btn-danger', 'ms-1');
+				deleteButton.innerHTML = 'Delete';
+				deleteButton.addEventListener('click', () => {
+					deleteButton.classList.remove('btn-danger', 'btn-secondary');
+					deleteButton.classList.add('btn-secondary');
+
+					fetch(`${baseHost}/api/user?action=delete`, {
+						method: 'POST',
+						body: JSON.stringify({
+							phone: user.phone.toString()
+						})
+					})
+						.then(r => r.json())
+						.then(data => {
+							if (data.success) {
+								tr.parentElement.removeChild(tr);
+							} else {
+								deleteButton.blur();
+								deleteButton.classList.remove('btn-danger', 'btn-secondary');
+								deleteButton.classList.add('btn-danger');
+							}
+						});
+				});
+				td.appendChild(deleteButton);
 			} else {
 				const span = document.createElement('span');
 				span.innerHTML = value.val;
@@ -190,7 +216,7 @@ function init() {
 				]
 					.forEach(item => {
 						const td = document.createElement('td');
-						td.classList.add('text-center');
+						td.classList.add('text-center', 'align-middle');
 						const input = document.createElement('input');
 						input.classList.add.apply(input.classList, item.class);
 						input.type = item.type;
