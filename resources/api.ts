@@ -237,7 +237,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		queryConfigs.push({
 			TableName: trafficTable,
 			IndexName: 'ToneIndex',
-			Limit: 500,
+			Limit: 50,
 			ScanIndexForward: false,
 			ExpressionAttributeNames: {
 				'#t': 'ToneIndex',
