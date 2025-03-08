@@ -4,7 +4,8 @@ const possibleDepartments = [
 	'Crestone',
 	'Moffat',
 	'Saguache',
-	'Villa Grove'
+	'Villa Grove',
+	'None'
 ];
 
 const tbody = document.getElementById('tbody');
@@ -85,6 +86,12 @@ function addRow(user) {
 			val: user.isAdmin || false,
 			name: 'isAdmin',
 			type: 'checkbox'
+		},
+		{
+			val: user.pageOnly || false,
+			tdClass: [ 'districtAdmin' ],
+			type: 'checkbox',
+			name: 'pageOnly'
 		},
 		{
 			type: 'button'
@@ -297,6 +304,11 @@ function init() {
 						type: 'checkbox',
 						class: [ 'form-check-input' ],
 						name: 'isAdmin'
+					},
+					{
+						type: 'checkbox',
+						class: [ 'form-check-input' ],
+						name: 'pageOnly'
 					},
 					{
 						type: 'button',
