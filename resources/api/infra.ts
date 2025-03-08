@@ -550,7 +550,7 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const action = event.queryStringParameters?.action || '';
+	const action = event.queryStringParameters?.action || 'none';
 
 	try {
 		await incrementMetric('Call', {
