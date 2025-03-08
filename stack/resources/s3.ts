@@ -181,8 +181,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			await dynamodb.putItem(body).promise();
 
 			let doTranscriptOnly: boolean = false;
+			const isPage: boolean = !!body.Item.Tone?.BOOL;
 			let shouldDoTranscript: boolean = body.Item.Emergency?.N === '1'
-				|| !!body.Item.Tone?.BOOL;
+				|| isPage;
 			if (Key.indexOf('/dtr') !== -1) {
 				const startTime: number = Number(body.Item.StartTime?.N);
 				const endTime: number = Number(body.Item.EndTime?.N);
@@ -254,6 +255,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						const itemsToDelete = allItems
 							.slice(0, -1);
 						const keptItem = allItems.slice(-1)[0];
+						const keepingCurrentItem: boolean = keptItem.Key.S === Key;
 						logger.debug('itemsToDelete', itemsToDelete);
 						logger.debug('keptItem', keptItem);
 						logger.debug('body', body.Item);
@@ -306,9 +308,37 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							}).promise());
 						}
 
+						// Check to see if we need to send a paging message
+						if (
+							isPage &&
+							keepingCurrentItem &&
+							itemsToDelete.reduce((agg, item) => agg || !!(item.PageSent?.BOOL), false)
+						) {
+							// Send a page as well as doing the transcript
+							doTranscriptOnly = false;
+						} else if (isPage && keepingCurrentItem) {
+							// Update the current item to indicate a page has already been sent
+							promises.push(dynamodb.updateItem({
+								TableName: dtrTable,
+								Key: {
+									Talkgroup: keptItem.Talkgroup,
+									Added: keptItem.Added,
+								},
+								ExpressionAttributeNames: {
+									'#ps': 'PageSent',
+								},
+								ExpressionAttributeValues: {
+									':ps': {
+										BOOL: true,
+									},
+								},
+								UpdateExpression: 'SET #ps = :ps',
+							}).promise());
+						}
+
 						// Check to see if we should redo the transcription
 						if (
-							keptItem.Key.S !== Key || // We're not saving this file
+							!keepingCurrentItem || // We're not saving this file
 							!shouldDoTranscript // This file doesn't need a transcript
 						) {
 							logger.debug('Duplicate, no transcript or page');

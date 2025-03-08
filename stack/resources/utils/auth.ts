@@ -24,7 +24,7 @@ interface Cookies {
 }
 
 export function getCookies(event: APIGatewayProxyEvent): Cookies {
-	logger.trace('getCookies', ...arguments);
+	logger.trace('getCookies', event);
 	return (event.headers.Cookie || '')
 		.split('; ')
 		.reduce((agg: Cookies, val) => {
@@ -41,7 +41,7 @@ export function getCookies(event: APIGatewayProxyEvent): Cookies {
 }
 
 export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.DynamoDB.AttributeMap> {
-	logger.trace('getLoggedInUser', ...arguments);
+	logger.trace('getLoggedInUser', event);
 
 	try {
 		const cookies = getCookies(event);

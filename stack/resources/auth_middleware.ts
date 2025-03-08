@@ -40,7 +40,7 @@ const dynamodb = new aws.DynamoDB({
 });
 
 exports.main = async function main(event: CloudFrontRequestEvent): Promise<CloudFrontRequestResult> {
-	logger.trace('main', ...arguments);
+	logger.trace('main', event);
 	const cfEvent = event.Records[0].cf;
 	const requestUri = cfEvent.request.uri;
 	const requestQueryString = cfEvent.request.querystring;
