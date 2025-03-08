@@ -586,21 +586,6 @@ export class FireWatcherAwsStack extends Stack {
           textsTable
         ],
         queue
-      },
-      {
-        name: 'test',
-        env: {
-          TABLE_DEVICE: deviceTable.tableName,
-          TABLE_TALKGROUPS: talkgroupTable.tableName,
-          TABLE_USER: phoneNumberTable.tableName,
-          TABLE_DTR: dtrTable.tableName
-        },
-        read: [
-          deviceTable,
-          talkgroupTable,
-          phoneNumberTable,
-          dtrTable
-        ]
       }
     ];
 
