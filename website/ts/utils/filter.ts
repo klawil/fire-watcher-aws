@@ -204,6 +204,8 @@ export class TalkgroupFilter implements AudioFilter {
 	}
 
 	set(urlValue: string) {
+		if (urlValue.indexOf('%') !== -1)
+			urlValue = decodeURIComponent(urlValue);
 		if (urlValue[0] === 'p') {
 			this.activeTab = 'presets';
 			this.chosenPreset = urlValue.slice(1);
