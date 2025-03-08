@@ -1081,7 +1081,7 @@ const statsMap: {
 				MetricName: 'Upload',
 				Dimensions: [ {
 					Name: 'Tower',
-					Value: 'montevista'
+					Value: 'monte'
 				} ]
 			},
 			Period: 60,
