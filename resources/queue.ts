@@ -87,10 +87,39 @@ function randomString(len: number, numeric = false): string {
 	return str.join('');
 }
 
+function convertFileDateTime(fileName: string): Date {
+	let d = new Date(0);
+	try {
+		const parts = fileName.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+
+		if (parts !== null) {
+			d = new Date(`${parts.slice(1, 4).join('-')}T${parts.slice(4, 7).join(':')}Z`);
+		}
+	} catch (e) {}
+
+	return d;
+}
+
 function createPageMessage(fileKey: string): string {
 	const queryParam = fileKey.split('/')[1];
+	const d = convertFileDateTime(queryParam);
 
-	return `Saguache Sheriff: PAGE - https://fire.klawil.net/?f=${queryParam}`;
+	const dateString = d.toLocaleDateString('en-US', {
+		timeZone: 'America/Denver',
+		weekday: 'short',
+		month: 'short',
+		day: '2-digit'
+	});
+	
+	const timeString = d.toLocaleTimeString('en-US', {
+		timeZone: 'America/Denver',
+		hour12: false,
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit'
+	});
+
+	return `Saguache Sheriff: PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/?f=${queryParam}`;
 }
 
 interface ActivateOrLoginBody {
