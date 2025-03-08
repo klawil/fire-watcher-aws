@@ -6,7 +6,10 @@ const makeSiteString = (keysAndNames) => (site) => {
 	let flags = [];
 	Object.keys(keysAndNames).forEach(key => {
 		let flagStr = keysAndNames[key];
-		if (site[key])
+		const numTrue = Object.keys(site[key]).filter(seen => site[key][seen]).length;
+		if (numTrue !== Object.keys(site[key]).length)
+			flagStr += '?';
+		if (numTrue > 0)
 			flags.push(flagStr);
 	});
 
@@ -48,13 +51,14 @@ function updateSitesTable(hasMap) {
 		.then(r => r.json())
 		.then(data => data.data)
 		.then(sites => sites.forEach(site => {
-			siteUpdateTime[site.SiteId] = site.UpdateTime;
+			const minUpdateTime = Math.floor(Date.now() / 1000) - (60 * 15);
+			siteUpdateTime[site.SiteId] = Math.max.apply(null, Object.keys(site.UpdateTime).map(key => site.UpdateTime[key] * 1000));
 			let newData = {
-				failed: site.SiteFailed ? 'FAILED' : 'N',
+				failed: Object.keys(site.SiteFailed).filter(key => site.SiteFailed[key]).length > 0 ? 'FAILED' : 'N',
 				flags: makeSiteFlags(site),
 				services: makeSiteServices(site),
-				seen: site.SysShortname.split(',').sort().join(', '),
-				updated: new Date(site.UpdateTime).toLocaleTimeString('en-US', localeTimeOptions),
+				seen: Object.keys(site.UpdateTime).filter(key => site.UpdateTime[key] >= minUpdateTime).sort().join(', '),
+				updated: new Date(siteUpdateTime[site.SiteId]).toLocaleTimeString('en-US', localeTimeOptions),
 			};
 			if (document.getElementById(`site-${site.SiteId}`) === null) {
 				const tr = document.createElement('tr');
@@ -78,14 +82,14 @@ function updateSitesTable(hasMap) {
 
 			// Handle the marker
 			if (hasMap) {
-				const markerOpacity = Date.now() - site.UpdateTime >= fadeSiteTime ? 0.5 : 1;
+				const markerOpacity = Date.now() - siteUpdateTime[site.SiteId] >= fadeSiteTime ? 0.5 : 1;
 				const popupContent = `<b>${site.SiteName}</b><br>Failed: ${newData.failed}<br>Seen By: ${newData.seen}<br>Updated: ${newData.updated}`;
 				if (typeof siteMarkers[site.SiteId] === 'undefined') {
 					siteMarkers[site.SiteId] = L
 						.marker([ site.SiteLat, site.SiteLon ], {
 							opacity: markerOpacity,
 							icon: L.icon({
-								iconUrl: `/libs/images/${site.SiteFailed ? 'red' : 'black'}.png`,
+								iconUrl: `/libs/images/${newData.failed === 'FAILED' ? 'red' : 'black'}.png`,
 								shadowUrl: null,
 								iconSize: [32, 32],
 								iconAnchor: [ 16, 32 ],
