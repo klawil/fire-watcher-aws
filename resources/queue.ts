@@ -17,6 +17,7 @@ To send a message to the group, just reply to this number.
 In a moment, you will receive a copy of the last page sent out over VHF.
 
 You can leave this group at any time by texting "STOP" to this number.`;
+const codeTtl = 1000 * 60 * 5; // 5 minutes
 
 interface TwilioConfig {
 	accountSid: string;
@@ -90,18 +91,32 @@ async function sendMessage(
 		.messages.create(messageConfig);
 }
 
+function randomString(len: number, numeric = false): string {
+	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	if (numeric) {
+		chars = '0123456789';
+	}
+	let str: string[] = [];
+
+	for (let i = 0; i < len; i++) {
+		str[i] = chars[Math.floor(Math.random() * chars.length)];
+	}
+
+	return str.join('');
+}
+
 function createPageMessage(fileKey: string): string {
 	const queryParam = fileKey.split('/')[1];
 
 	return `Saguache Sheriff: PAGE - https://fire.klawil.net/?f=${queryParam}`;
 }
 
-interface ActivateBody {
-	action: 'activate';
+interface ActivateOrLoginBody {
+	action: 'activate' | 'login';
 	phone: string;
 }
 
-async function handleActivation(body: ActivateBody) {
+async function handleActivation(body: ActivateOrLoginBody) {
 	const promises: Promise<any>[] = [];
 
 	// Update the user to active in the table
@@ -248,6 +263,35 @@ async function handlePage(body: PageBody) {
 		)));
 }
 
+async function handleLogin(body: ActivateOrLoginBody) {
+	const code = randomString(6, true);
+	const codeTimeout = Date.now() + codeTtl;
+
+	await dynamodb.updateItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: body.phone
+			}
+		},
+		ExpressionAttributeNames: {
+			'#c': 'code',
+			'#ce': 'codeExpiry'
+		},
+		ExpressionAttributeValues: {
+			':c': {
+				S: code
+			},
+			':ce': {
+				N: `${codeTimeout}`
+			}
+		},
+		UpdateExpression: 'SET #c = :c, #ce = :ce'
+	}).promise();
+
+	await sendMessage(body.phone, `Your login code is ${code}. This code expires in 5 minutes.`);
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
 	switch (body.action) {
@@ -257,6 +301,8 @@ async function parseRecord(event: lambda.SQSRecord) {
 			return handleTwilio(body);
 		case 'page':
 			return handlePage(body);
+		case 'login':
+			return handleLogin(body);
 	}
 }
 

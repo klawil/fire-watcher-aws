@@ -1,15 +1,52 @@
 import * as AWS from 'aws-sdk';
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
 const dynamodb = new AWS.DynamoDB();
 const sqs = new AWS.SQS();
+
+const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const phoneTable = process.env.TABLE_PHONE as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 const apiCode = process.env.SERVER_CODE as string;
 
-async function getList(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+interface Cookies {
+	[key: string]: string;
+}
+
+function getCookies(event: APIGatewayProxyEvent): Cookies {
+	return (event.headers.Cookie || '')
+		.split('; ')
+		.reduce((agg: Cookies, val) => {
+			let valSplit = val.split('=');
+			if (valSplit[0] !== '') {
+				if (valSplit.length < 2) {
+					valSplit.push('');
+				}
+
+				agg[valSplit[0]] = valSplit[1];
+			}
+
+			return agg;
+		}, {});
+}
+
+function randomString(len: number, numeric = false): string {
+	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	if (numeric) {
+		chars = '0123456789';
+	}
+	let str: string[] = [];
+
+	for (let i = 0; i < len; i++) {
+		str[i] = chars[Math.floor(Math.random() * chars.length)];
+	}
+
+	return str.join('');
+}
+
+async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const queryConfig: AWS.DynamoDB.ScanInput = {
 		TableName: trafficTable
 	};
@@ -85,18 +122,18 @@ interface ApiResponse {
 	message?: string;
 }
 
-function validateBodyIsJson(body: string | undefined): true | APIGatewayProxyResultV2 {
+function validateBodyIsJson(body: string | null): true | APIGatewayProxyResult {
 	const errorBody: ApiResponse = {
 		success: false,
 		message: 'Invalid API format',
 		errors: []
 	};
-	const errorResponse: APIGatewayProxyResultV2 = {
+	const errorResponse: APIGatewayProxyResult = {
 		statusCode: 400,
 		body: JSON.stringify(errorBody)
 	};
 
-	if (!body) {
+	if (body === null) {
 		return errorResponse;
 	}
 
@@ -116,7 +153,7 @@ interface TwilioParams {
 	MediaUrl0?: string;
 }
 
-async function handleMessage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const code = event.queryStringParameters?.code || '';
 	const response = {
 		statusCode: 200,
@@ -166,7 +203,7 @@ async function handleMessage(event: APIGatewayProxyEventV2): Promise<APIGatewayP
 	return response;
 }
 
-async function handlePage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
 	const bodyValidResponse = validateBodyIsJson(event.body);
 	if (bodyValidResponse !== true) {
@@ -209,13 +246,255 @@ async function handlePage(event: APIGatewayProxyEventV2): Promise<APIGatewayProx
 	};
 }
 
+async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	const bodyValidResponse = validateBodyIsJson(event.body);
+	if (bodyValidResponse !== true) {
+		return bodyValidResponse;
+	}
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: ApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the phone number
+	let user: AWS.DynamoDB.GetItemOutput;
+	if (typeof body.phone === 'undefined') {
+		response.success = false;
+		response.errors.push('phone');
+	} else {
+		user = await dynamodb.getItem({
+			TableName: phoneTable,
+			Key: {
+				phone: {
+					N: body.phone
+				}
+			}
+		}).promise();
+		if (!user.Item || !user.Item.isActive.BOOL) {
+			response.success = false;
+			response.errors.push('phone');
+		}
+	}
+	if (!response.success) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	await sqs.sendMessage({
+		MessageBody: JSON.stringify({
+			action: 'login',
+			phone: body.phone
+		}),
+		QueueUrl: queueUrl
+	}).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response),
+		headers: {
+			'Set-Cookie': `cvfd-user=${body.phone}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`
+		}
+	};
+}
+
+async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	const bodyValidResponse = validateBodyIsJson(event.body);
+	if (bodyValidResponse !== true) {
+		return bodyValidResponse;
+	}
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: ApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	const cookies = getCookies(event);
+
+	// Validate the phone number
+	let user: AWS.DynamoDB.GetItemOutput;
+	if (typeof cookies['cvfd-user'] === 'undefined') {
+		response.success = false;
+		response.errors.push('phone');
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	} else {
+		user = await dynamodb.getItem({
+			TableName: phoneTable,
+			Key: {
+				phone: {
+					N: cookies['cvfd-user']
+				}
+			}
+		}).promise();
+		if (!user.Item || !user.Item.isActive.BOOL) {
+			response.success = false;
+			response.errors.push('phone');
+			return {
+				statusCode: 400,
+				body: JSON.stringify(response)
+			};
+		}
+	}
+
+	// Validate the code
+	if (
+		typeof body.code === 'undefined' ||
+		body.code !== user.Item.code?.S ||
+		Date.now() > parseInt(user.Item.codeExpiry?.N || '0')
+	) {
+		response.success = false;
+		response.errors.push('code');
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Create a token and attach it
+	const token = randomString(32);
+	const tokenExpiry = Date.now() + (loginDuration * 1000);
+	await dynamodb.updateItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: cookies['cvfd-user']
+			}
+		},
+		ExpressionAttributeNames: {
+			'#c': 'code',
+			'#ce': 'codeExpiry',
+			'#t': 'token',
+			'#te': 'tokenExpiry'
+		},
+		ExpressionAttributeValues: {
+			':t': {
+				S: token
+			},
+			':te': {
+				N: `${tokenExpiry}`
+			}
+		},
+		UpdateExpression: 'SET #t = :t, #te = :te REMOVE #c, #ce'
+	}).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			headers: event.headers
+		}),
+		multiValueHeaders: {
+			'Set-Cookie': [
+				`cvfd-user=${cookies['cvfd-user']}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`,
+				`cvfd-token=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`
+			]
+		}
+	};
+}
+
+const EXPOSED_KEYS: {
+	[key: string]: string | boolean
+} = {
+	phone: '',
+	isActive: false,
+	isAdmin: false,
+	callSign: '',
+	name: ''
+};
+
+async function listUsers(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const cookies = getCookies(event);
+	const response = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+
+	if (
+		typeof cookies['cvfd-user'] === 'undefined' ||
+		typeof cookies['cvfd-token'] === 'undefined'
+	) {
+		console.log(`Missing cookies`);
+		console.log(cookies);
+		return response;
+	}
+	const user = await dynamodb.getItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: cookies['cvfd-user']
+			}
+		}
+	}).promise();
+	if (
+		!user.Item ||
+		Date.now() > parseInt(user.Item.tokenExpiry?.N || '0') ||
+		user.Item.token?.S !== cookies['cvfd-token']
+	) {
+		console.log(`Invalid token`);
+		console.log(user.Item);
+		console.log(Date.now());
+		console.log(cookies);
+		return response;
+	}
+
+	// Get the users to return
+	let usersItems: AWS.DynamoDB.ItemList = [ user.Item ];
+	if (user.Item.isAdmin?.BOOL) {
+		usersItems = await dynamodb.scan({
+			TableName: phoneTable
+		}).promise()
+			.then((r) => r.Items || []);
+	}
+
+	// Parse the users into a readable format
+	const users = usersItems
+		.map((item) => {
+			let itemObj: { [key: string]: string | boolean | undefined | null } = {};
+
+			Object.keys(EXPOSED_KEYS).forEach((key) => {
+				if (typeof item[key] === 'undefined') {
+					itemObj[key] = EXPOSED_KEYS[key];
+					return;
+				}
+
+				itemObj[key] = item[key].S
+					? item[key].S
+					: item[key].N
+						? item[key].N
+						: item[key].BOOL
+			});
+
+			return itemObj;
+		});
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+			users
+		})
+	};
+}
 interface ActivateApiResponse {
 	success: boolean;
 	errors: string[];
 	data?: (string | undefined)[];
 }
 
-async function handleAllActivate(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+async function handleAllActivate(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const response: ActivateApiResponse = {
 		success: true,
 		errors: []
@@ -261,7 +540,7 @@ async function handleAllActivate(event: APIGatewayProxyEventV2): Promise<APIGate
 	};
 }
 
-export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	try {
 		const action = event.queryStringParameters?.action || 'list';
 		switch (action) {
@@ -271,6 +550,12 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 				return handleMessage(event);
 			case 'page':
 				return handlePage(event);
+			case 'login':
+				return handleLogin(event);
+			case 'auth':
+				return handleAuthenticate(event);
+			case 'listUsers':
+				return listUsers(event);
 			case 'allActivate':
 				return handleAllActivate(event);
 		}

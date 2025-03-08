@@ -143,7 +143,7 @@ export class FireWatcherAwsStack extends Stack {
     });
 
     // Grant access for the API handler
-    phoneNumberTable.grantReadData(apiHandler);
+    phoneNumberTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
     queue.grantSendMessages(apiHandler);
 
