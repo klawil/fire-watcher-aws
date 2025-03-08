@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric } from '../utils/general';
+import { getTwilioSecret, incrementMetric } from '../utils/general';
 
 const metricSource = 'Twilio';
 
@@ -8,7 +8,6 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 
-const apiCode = process.env.SERVER_CODE as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_MESSAGES as string;
@@ -87,8 +86,11 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		body: '<Response></Response>'
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the call is from Twilio
-	if (code !== apiCode) {
+	if (code !== twilioConf.apiCode) {
 		await incrementMetric('Error', {
 			source: metricSource
 		});
@@ -184,9 +186,12 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 		body: ''
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the call is from Twilio
-	if (code !== apiCode) {
-		console.log(`Invalid API code - ${apiCode}`);
+	if (code !== twilioConf.apiCode) {
+		console.log(`Invalid API code - ${code}`);
 		await incrementMetric('Error', {
 			source: metricSource
 		});

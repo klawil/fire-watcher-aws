@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
+import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 
 const metricSource = 'Infra';
 
@@ -8,7 +8,6 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 
-const apiCode = process.env.SERVER_CODE as string;
 const s3Bucket = process.env.S3_BUCKET as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const dtrTable = process.env.TABLE_DTR as string;
@@ -42,8 +41,11 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		errors: []
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the body
-	if (!body.code || body.code !== apiCode) {
+	if (!body.code || body.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('code');
 		response.errors.push('key');
@@ -93,8 +95,11 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		errors: []
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the body
-	if (!body.code || body.code !== apiCode) {
+	if (!body.code || body.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('code');
 	}
@@ -254,9 +259,12 @@ async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Pr
 		errors: []
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the code
 	event.queryStringParameters = event.queryStringParameters || {};
-	if (event.queryStringParameters.code !== apiCode) {
+	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
 		return {
@@ -298,9 +306,12 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 		errors: []
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the code
 	event.queryStringParameters = event.queryStringParameters || {};
-	if (event.queryStringParameters.code !== apiCode) {
+	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
 		return {
@@ -339,9 +350,12 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		errors: []
 	};
 
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
 	// Validate the code
 	event.queryStringParameters = event.queryStringParameters || {};
-	if (event.queryStringParameters.code !== apiCode) {
+	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
 		return {

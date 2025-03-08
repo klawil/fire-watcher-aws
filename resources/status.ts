@@ -127,7 +127,10 @@ export async function main() {
 		await sendMessage(
 			null,
 			'***REMOVED***',
-			messages.join('\n')
+			messages.join('\n'),
+			[],
+			false,
+			true
 		);
 	}
 

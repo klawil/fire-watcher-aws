@@ -23,7 +23,6 @@ import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
 const secretArn = '***REMOVED***';
-const apiCode = '***REMOVED***';
 
 interface CvfdAlarm {
   codeName: string;
@@ -254,8 +253,7 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_MESSAGES: textsTable.tableName,
         TABLE_DTR: dtrTable.tableName,
-        TWILIO_SECRET: secretArn,
-        SERVER_CODE: apiCode
+        TWILIO_SECRET: secretArn
       },
       timeout: Duration.minutes(1)
     });
@@ -579,6 +577,7 @@ export class FireWatcherAwsStack extends Stack {
       readWrite?: dynamodb.Table[];
       bucket?: s3.IBucket;
       queue?: sqs.Queue;
+      secret?: secretsManager.ISecret;
     }
 
     const cvfdApis: ApiDefinition[] = [
@@ -602,9 +601,9 @@ export class FireWatcherAwsStack extends Stack {
       {
         name: 'infra',
         env: {
-          SERVER_CODE: apiCode,
           S3_BUCKET: bucket.bucketName,
           SQS_QUEUE: queue.queueUrl,
+          TWILIO_SECRET: secretArn,
           TABLE_DTR: dtrTable.tableName,
           TABLE_USER: phoneNumberTable.tableName,
           TABLE_TEXT: textsTable.tableName,
@@ -619,7 +618,8 @@ export class FireWatcherAwsStack extends Stack {
           statusTable
         ],
         bucket,
-        queue
+        queue,
+        secret: twilioSecret
       },
       {
         name: 'user',
@@ -635,8 +635,8 @@ export class FireWatcherAwsStack extends Stack {
       {
         name: 'twilio',
         env: {
-          SERVER_CODE: apiCode,
           SQS_QUEUE: queue.queueUrl,
+          TWILIO_SECRET: secretArn,
           TABLE_USER: phoneNumberTable.tableName,
           TABLE_MESSAGES: textsTable.tableName
         },
@@ -644,7 +644,8 @@ export class FireWatcherAwsStack extends Stack {
           phoneNumberTable,
           textsTable
         ],
-        queue
+        queue,
+        secret: twilioSecret
       }
     ];
 
@@ -676,6 +677,8 @@ export class FireWatcherAwsStack extends Stack {
         config.bucket.grantRead(apiHandler);
       if (config.queue)
         config.queue.grantSendMessages(apiHandler);
+      if (config.secret)
+        config.secret.grantRead(apiHandler);
     
       const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
         requestTemplates: {

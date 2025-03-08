@@ -63,10 +63,10 @@ interface TwilioConfig {
 	fromNumber: string;
 	pageNumber: string;
 	alertNumber: string;
+	apiCode: string;
 }
 
 const twilioSecretId = process.env.TWILIO_SECRET as string;
-const apiCode = process.env.SERVER_CODE as string;
 
 let twilioSecret: null | Promise<TwilioConfig> = null;
 export async function getTwilioSecret(): Promise<TwilioConfig> {
@@ -210,10 +210,9 @@ export async function sendMessage(
 		body,
 		mediaUrl,
 		from: fromNumber,
-		to: `+1${parsePhone(phone)}`
+		to: `+1${parsePhone(phone)}`,
+		statusCallback: `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
 	};
-
-	messageConfig.statusCallback = `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(apiCode)}&msg=${encodeURIComponent(messageId)}`;
 
 	return Promise.all([
 		twilio(twilioConf.accountSid, twilioConf.authToken)
