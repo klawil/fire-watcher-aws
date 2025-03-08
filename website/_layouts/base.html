@@ -16,6 +16,9 @@
 		{% if page.hasFilter %}
 		<link href="/libs/datepicker-bs5.min.css?v={{ randomNumber }}" rel="stylesheet">
 		{% endif %}
+		{%if page.hasMap %}
+		<link rel="stylesheet" href="/libs/leaflet.css" />
+		{% endif %}
 
 		<script>
 			window.authConfig = {
@@ -57,6 +60,7 @@
 								<li class="d-none requireAdmin"><a class="dropdown-item" href="/users.html">Manage Users</a></li>
 								<li class="d-none requireAdmin"><a class="dropdown-item" href="/texts.html">View Texts</a></li>
 								<li class="d-none requireAdmin"><a class="dropdown-item" href="/status.html">System Status</a></li>
+								<li class="d-none requireAdmin"><a class="dropdown-item" href="/site_map.html">Site Map</a></li>
 								<script>
 									document.getElementById('loginHref').setAttribute('href', `/login.html?redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
 									document.getElementById('logoutHref').setAttribute('href', `/api/user?action=logout&redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
