@@ -1023,7 +1023,7 @@ function getFidoLib() {
 	logger.trace('getFidoLib', ...arguments);
 	return new Fido2Lib({
 		timeout: 60,
-		rpId: 'fire.klawil.net',
+		rpId: 'cofrn.org',
 		rpName: 'CVFD DTR',
 		challengeSize: 128,
 	});
@@ -1111,7 +1111,7 @@ async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	try {
 		const regResult = await f2l.attestationResult(result, {
 			challenge: body.challenge,
-			origin: 'https://fire.klawil.net',
+			origin: 'https://cofrn.org',
 			factor: 'either',
 		});
 
@@ -1243,7 +1243,7 @@ async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 
 	const assertionExpectations: ExpectedAssertionResult = {
 		challenge: body.challenge,
-		origin: 'https://fire.klawil.net',
+		origin: 'https://cofrn.org',
 		factor: 'either',
 		publicKey: fidoKey.pubKey,
 		prevCounter: fidoKey.prevCount,

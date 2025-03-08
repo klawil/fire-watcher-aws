@@ -497,7 +497,7 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		<Dial>
 			<Conference
 				participantLabel="${sender.Item.fName.S} ${sender.Item.lName.S} ${Math.round(Math.random() * 100)}"
-				statusCallback="https://fire.klawil.net/api/conference?action=join&amp;code=${encodeURIComponent(twilioConf.apiCode)}"
+				statusCallback="https://cofrn.org/api/conference?action=join&amp;code=${encodeURIComponent(twilioConf.apiCode)}"
 				statusCallbackEvents="start end join leave mute">
 			${sender.Item.department.S}</Conference>
 		</Dial>

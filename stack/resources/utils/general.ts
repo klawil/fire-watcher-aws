@@ -123,6 +123,7 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 		number: '***REMOVED***',
 		type: 'chat',
 		department: 'Crestone',
+		// account: 'Crestone',
 	},
 	chatNSCAD: {
 		number: '***REMOVED***',
@@ -363,7 +364,7 @@ export async function sendMessage(
 		mediaUrl,
 		from: fromNumber,
 		to: `+1${parsePhone(phone)}`,
-		statusCallback: `https://fire.klawil.net/api/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
+		statusCallback: `https://cofrn.org/api/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`
 	};
 	return Promise.all([
 		twilio(accountSid, authToken)

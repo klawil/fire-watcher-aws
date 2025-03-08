@@ -100,7 +100,7 @@ function createPageMessage(
 	if (transcript !== null) {
 		pageStr += `\n${transcript}\n\n`;
 	}
-	pageStr += `https://fire.klawil.net/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
+	pageStr += `https://cofrn.org/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
 	if (number !== null) {
 		pageStr += `&cs=${number}`;
 	}
@@ -746,7 +746,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			});
 	} else {
 		tg = Number(body.detail.TranscriptionJobName.split('-')[0]) as PagingTalkgroup;
-		messageBody = `Transcript for ${pagingConfig[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pagingConfig[tg].linkPreset}`;
+		messageBody = `Transcript for ${pagingConfig[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://cofrn.org/?tg=${pagingConfig[tg].linkPreset}`;
 	}
 
 	// Exit early if this is transcribing an emergency transmission

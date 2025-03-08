@@ -277,7 +277,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			<Dial>
 				<Conference
 					participantLabel="${invited.fName} ${invited.lName} ${Math.round(Math.random() * 100)}"
-					statusCallback="https://fire.klawil.net/api/conference?action=join&amp;code=${encodeURIComponent(twilioConf.apiCode)}"
+					statusCallback="https://cofrn.org/api/conference?action=join&amp;code=${encodeURIComponent(twilioConf.apiCode)}"
 					statusCallbackEvents="start end join leave mute">
 				${invited.department}</Conference>
 			</Dial>
