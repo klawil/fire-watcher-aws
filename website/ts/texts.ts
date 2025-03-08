@@ -1,4 +1,4 @@
-import { ApiFrontendListTextsResponse, AnnouncementApiBody, TextObject } from '../../common/frontendApi';
+import { ApiFrontendListTextsResponse, AnnouncementApiBody } from '../../common/frontendApi';
 import { doneLoading } from './utils/loading';
 import { createTableRow } from './utils/table';
 import { authInit, user } from './utils/auth';
@@ -100,71 +100,103 @@ function getPercentile(values: number[], percentile: number) {
 	return timeStr;
 }
 
-function buildTable(
-	tbody: HTMLTableSectionElement,
-	items: TextObject[],
-	isPage: boolean
-) {
-	logger.trace('buildTable', ...arguments);
-	items.forEach(text => {
-		text.sent = text.sent || [];
-		text.delivered = text.delivered || [];
-		text.undelivered = text.undelivered || [];
-		text.csLooked = text.csLooked || [];
+async function loadAndDisplayTexts(isPage: boolean, before: number | null = null) {
+	const apiResults: ApiFrontendListTextsResponse = await fetch(`/api/frontend?action=listTexts${isPage ? '&page=y' : ''}${before !== null ? `&before=${before}` : ''}`)
+		.then(r => r.json());
 
-		createTableRow(tbody, {
-			columns: [
-				{
-					html: dateTimeToTimeStr(text.datetime),
-				},
-				{
-					html: text.body.replace(/\n/g, '<br>'),
-				},
-				{
-					filter: !isPage,
-					html: parseMediaUrls(text.mediaUrls || ''),
-				},
-				{
-					classList: [ 'text-center' ],
-					html: text.recipients.toString(),
-				},
-				{
-					classList: [ 'text-center' ],
-					html: makePercentString(text.sent.length, text.recipients),
-				},
-				{
-					classList: [ 'text-center' ],
-					html: makePercentString(text.delivered.length, text.recipients),
-				},
-				{
-					classList: [ 'text-center' ],
-					html: makePercentString(text.undelivered.length, text.recipients),
-				},
-				{
-					filter: isPage,
-					classList: [ 'text-center' ],
-					html: text.isPage ? makePercentString(text.csLooked.length, text.recipients) : '',
-				},
-				{
-					filter: isPage,
-					classList: [ 'text-center' ],
-					html: `${Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000)}s`,
-				},
-				{
-					classList: [ 'text-center' ],
-					html: getPercentile(text.delivered, 50),
-				},
-				{
-					classList: [ 'text-center' ],
-					html: getPercentile(text.delivered, 75),
-				},
-				{
-					classList: [ 'text-center' ],
-					html: getPercentile(text.delivered, 100),
-				},
-			]
+	const tbody = document.getElementById(isPage ? 'pages' : 'texts') as HTMLTableSectionElement;
+	(apiResults.data || [])
+		.sort((a, b) => a.datetime > b.datetime ? -1 : 1)
+		.map(text => {
+			if (text.isPage)
+				text.pageTime = parseForPageTime(text.body);
+		
+			const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;
+
+			text.delivered = text.delivered || [];
+			text.delivered = text.delivered.map(t => t - baselineTime);
+
+			return text;
+		})
+		.forEach((text, idx, arr) => {
+			text.delivered = text.delivered || [];
+			text.sent = text.sent || [];
+			text.undelivered = text.undelivered || [];
+			text.delivered = text.delivered || [];
+			text.csLooked = text.csLooked || [];
+
+			const row = createTableRow(tbody, {
+				columns: [
+					{
+						html: dateTimeToTimeStr(text.datetime),
+					},
+					{
+						html: text.body.replace(/\n/g, '<br>'),
+					},
+					{
+						filter: !isPage,
+						html: parseMediaUrls(text.mediaUrls || ''),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: text.recipients.toString(),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: makePercentString(text.sent.length, text.recipients),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: makePercentString(text.delivered.length, text.recipients),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: makePercentString(text.undelivered.length, text.recipients),
+					},
+					{
+						filter: isPage,
+						classList: [ 'text-center' ],
+						html: text.isPage ? makePercentString(text.csLooked.length, text.recipients) : '',
+					},
+					{
+						filter: isPage,
+						classList: [ 'text-center' ],
+						html: `${Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000)}s`,
+					},
+					{
+						classList: [ 'text-center' ],
+						html: getPercentile(text.delivered, 50),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: getPercentile(text.delivered, 75),
+					},
+					{
+						classList: [ 'text-center' ],
+						html: getPercentile(text.delivered, 100),
+					},
+				]
+			});
+			
+			// Add a listener for the last row to load the next row(s)
+			if (idx === arr.length - 1) {
+				const observer = new IntersectionObserver(entries => {
+					let wasSeen = entries.reduce((agg, entry) => {
+						if (agg) return agg;
+
+						return entry.isIntersecting;
+					}, false);
+					
+					if (wasSeen) {
+						observer.disconnect();
+						loadAndDisplayTexts(isPage, text.datetime);
+					}
+				}, {
+					threshold: 0.1,
+				});
+				observer.observe(row);
+			}
 		});
-	});
 }
 
 async function init() {
@@ -173,32 +205,7 @@ async function init() {
 	await Promise.all([
 		true,
 		false,
-	].map(async page => {
-		const apiResults: ApiFrontendListTextsResponse = await fetch(`/api/frontend?action=listTexts${page ? '&page=y' : ''}`)
-			.then(r => r.json());
-
-		const texts = (apiResults.data || [])
-			.sort((a, b) => a.datetime > b.datetime ? -1 : 1)
-			.map(text => {
-				text.delivered = text.delivered || [];
-				text.sent = text.sent || [];
-				text.undelivered = text.undelivered || [];
-
-				if (text.isPage)
-					text.pageTime = parseForPageTime(text.body);
-				
-				const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;
-
-				text.delivered = text.delivered.map(t => t - baselineTime);
-
-				return text;
-			});
-		buildTable(
-			<HTMLTableSectionElement>document.getElementById(page ? 'pages' : 'texts'),
-			texts,
-			page
-		)
-	}));
+	].map(v => loadAndDisplayTexts(v)));
 
 	const departmentSelect = document.getElementById('department') as HTMLSelectElement;
 	const talkgroupSelect = document.getElementById('talkgroup') as HTMLSelectElement;
