@@ -19,6 +19,8 @@ function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): Dynamo
 		return value.NS?.map(val => parseFloat(val));
 	} else if (typeof value.SS !== 'undefined') {
 		return value.SS;
+	} else if (typeof value.M !== 'undefined') {
+		return parseDynamoDbAttributeMap(value.M);
 	}
 
 	return value;
