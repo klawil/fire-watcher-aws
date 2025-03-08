@@ -13,7 +13,6 @@ const deviceTable = process.env.TABLE_DEVICE as string;
 const metricSource = 'S3';
 
 const startTimeBuffer = 1; // Check for calls 3s each way for DTR
-const lenBuffer = 1; // Check for calls 1s longer and shorter
 
 interface SourceListItem {
 	pos: number;
@@ -108,7 +107,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						'#tg': 'Talkgroup',
 						'#st': 'StartTime',
 						'#e': 'Emergency',
-						'#l': 'Len'
 					},
 					ExpressionAttributeValues: {
 						':tg': {
@@ -122,16 +120,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						},
 						':e': {
 							N: headInfo.Metadata?.emergency
-						},
-						':l1': {
-							N: (Number(headInfo.Metadata?.call_length) - lenBuffer).toString()
-						},
-						':l2': {
-							N: (Number(headInfo.Metadata?.call_length) + lenBuffer).toString()
 						}
 					},
 					KeyConditionExpression: '#tg = :tg AND #st BETWEEN :st1 AND :st2',
-					FilterExpression: '#e = :e AND #l BETWEEN :l1 AND :l2'
+					FilterExpression: '#e = :e'
 				}).promise();
 				if (
 					!!existingItems.Items &&
