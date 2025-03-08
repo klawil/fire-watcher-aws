@@ -135,14 +135,10 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
     dtrTable.addGlobalSecondaryIndex({
-      indexName: 'IsToneIndex',
+      indexName: 'KeyIndex',
       partitionKey: {
-        name: 'ToneIndex',
+        name: 'Key',
         type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'Added',
-        type: dynamodb.AttributeType.NUMBER
       }
     });
 
