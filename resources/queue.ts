@@ -75,7 +75,8 @@ const tgToPageDept: { [key: string]: string } = {
 	'18332': 'NSCFPD',
 	'8198': 'NSCAD',
 	'8334': 'Center ES',
-	'8281': 'Mineral ES'
+	'8281': 'Mineral ES',
+	'8181': 'Alamosa EMS',
 };
 
 const pageConfigs: {
@@ -128,7 +129,14 @@ const pageConfigs: {
 		partyBeingPaged: 'Mineral EMS/Fire',
 		pageService: 'MINERAL',
 		fToTime: dtrFnameToDate
-	}
+	},
+	'8181': {
+		linkPreset: 'tg8181',
+		pagingParty: 'Alamosa',
+		partyBeingPaged: 'Alamosa EMS',
+		pageService: 'ALAMOSA EMS',
+		fToTime: dtrFnameToDate
+	},
 };
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes

@@ -19,7 +19,7 @@ const validDepartments: string[] = [
 	'Villa Grove',
 	'Baca',
 	'NSCAD',
-	'Center'
+	'Center',
 ];
 const validTalkgroups: string[] = [
 	'8198',
@@ -27,7 +27,8 @@ const validTalkgroups: string[] = [
 	'8334',
 	'8281',
 	'18331',
-	'18332'
+	'18332',
+	'8181',
 ];
 
 interface ApiResponse {

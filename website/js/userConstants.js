@@ -4,7 +4,8 @@ const pageNames = {
 	'18331': 'Baca',
 	'8334': 'Center',
 	'8198': 'NSCAD',
-	'8281': 'Mineral Co'
+	'8281': 'Mineral Co',
+	'8181': 'Alamosa EMS',
 };
 
 const talkgroupOrder = [
@@ -13,7 +14,8 @@ const talkgroupOrder = [
 	'18331',
 	'8198',
 	'8334',
-	'8281'
+	'8281',
+	'8181',
 ];
 
 const defaultTalkgroups = {
