@@ -1,6 +1,8 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
 import { incrementMetric } from './utils/general';
+import { PageBody } from './types/queue';
+import { PagingTalkgroup } from '../common/userConstants';
 
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
@@ -319,13 +321,14 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					]
 				}).promise());
 
+				const queueMessage: PageBody = {
+					action: 'page',
+					tg: Number(body.Item.Talkgroup?.N) as PagingTalkgroup,
+					key: toneFile,
+					len: Number(body.Item.Len.N)
+				};
 				promises.push(sqs.sendMessage({
-					MessageBody: JSON.stringify({
-						action: 'page',
-						tg: body.Item.Talkgroup?.N,
-						key: toneFile,
-						len: Number(body.Item.Len.N)
-					}),
+					MessageBody: JSON.stringify(queueMessage),
 					QueueUrl: sqsQueue
 				}).promise());
 			}

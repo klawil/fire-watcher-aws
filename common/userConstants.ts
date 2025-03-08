@@ -1,0 +1,104 @@
+export type UserDepartment = 'Crestone' | 'Moffat' | 'Baca';
+export type PagingTalkgroup = 8332 | 18332 | 18331 | 8198 | 8334
+ | 8281 | 8181;
+
+interface DepartmentConfig {
+	name: string;
+	twilioAccount: string;
+	defaultTalkgroups: PagingTalkgroup[];
+	type: 'text' | 'page';
+	// nameShort: string;
+	pagingPhone: string;
+	textGroupPhone?: string;
+	alertsPhone?: string;
+}
+
+interface PageConfig {
+	linkPreset: string;
+	partyBeingPaged: string;
+	pageService: string;
+}
+
+export const validDepartments: UserDepartment[] = [
+	'Crestone',
+	'Moffat',
+	'Baca',
+];
+
+export const pagingTalkgroupOrder: PagingTalkgroup[] = [
+	8332,
+	18332,
+	18331,
+	8198,
+	8334,
+	8281,
+	8181,
+];
+
+export const defaultDepartment = 'Crestone';
+
+type DepartmentConfigBaseType = {
+	[key in UserDepartment]?: DepartmentConfig;
+}
+type DepartmentConfigBaseType2 = {
+	[defaultDepartment]: DepartmentConfig;
+}
+
+export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseType2 = {
+	Crestone: {
+		name: 'Crestone Volunteer Fire Department',
+		type: 'text',
+		twilioAccount: '',
+		defaultTalkgroups: [ 8332 ],
+		pagingPhone: '***REMOVED***',
+		textGroupPhone: '***REMOVED***',
+		alertsPhone: '***REMOVED***',
+	},
+	Baca: {
+		name: 'Baca Emergency Services',
+		type: 'page',
+		twilioAccount: 'Baca',
+		defaultTalkgroups: [ 18331 ],
+		pagingPhone: '***REMOVED***',
+	},
+};
+
+export const pagingConfig: {
+	[key in PagingTalkgroup]: PageConfig;
+} = {
+	8198: {
+		linkPreset: 'pNSCAD',
+		partyBeingPaged: 'NSCAD',
+		pageService: 'AMBO',
+	},
+	8332: {
+		linkPreset: 'pNSCFPD',
+		partyBeingPaged: 'NSCFPD',
+		pageService: 'FIRE',
+	},
+	18331: {
+		linkPreset: 'pBGFD%252FBGEMS',
+		partyBeingPaged: 'BGEMS/BGFD',
+		pageService: 'BACA',
+	},
+	18332: {
+		linkPreset: 'pNSCFPD',
+		partyBeingPaged: 'NSCFPD',
+		pageService: 'FIRE',
+	},
+	8334: {
+		linkPreset: 'tg8334',
+		partyBeingPaged: 'Center EMS/Fire',
+		pageService: 'CENTER',
+	},
+	8281: {
+		linkPreset: 'tg8281',
+		partyBeingPaged: 'Mineral EMS/Fire',
+		pageService: 'MINERAL',
+	},
+	8181: {
+		linkPreset: 'pACFE',
+		partyBeingPaged: 'Alamosa EMS',
+		pageService: 'ALAMOSA EMS',
+	},
+};

@@ -1,6 +1,8 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, sendAlertMessage, validateBodyIsJson } from '../utils/general';
+import { PageBody } from '../types/queue';
+import { PagingTalkgroup } from '../../common/userConstants';
 
 const metricSource = 'Infra';
 
@@ -31,12 +33,20 @@ interface HeartbeatBody {
 	IsActive: boolean;
 }
 
+interface PageHttpBody {
+	code: string;
+	key: string;
+	tg: PagingTalkgroup;
+	len: number;
+	isTest?: boolean;
+}
+
 async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
 	validateBodyIsJson(event.body);
 
 	// Parse the body
-	const body = JSON.parse(event.body as string);
+	const body: PageHttpBody = JSON.parse(event.body as string);
 	const response: GenericApiResponse = {
 		success: true,
 		errors: []
@@ -69,7 +79,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		body.key.indexOf('BG_FIRE') === -1 &&
 		event.queryStringParameters?.action === 'dtrPage'
 	) {
-		const sqsEvent = {
+		const sqsEvent: PageBody = {
 			action: 'page',
 			key: body.key,
 			tg: body.tg,

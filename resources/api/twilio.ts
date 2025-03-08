@@ -1,6 +1,8 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
+import { TwilioBody, TwilioErrorBody } from '../types/queue';
+import { UserDepartment } from '../../common/userConstants';
 
 const metricSource = 'Twilio';
 
@@ -166,13 +168,13 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			type: 'handleText',
 			event: 'car'
 		});
-	} else {
+	} else if (event.body !== null) {
+		const queueMessage: TwilioBody = {
+			action: 'twilio',
+			body: event.body,
+		};
 		await sqs.sendMessage({
-			MessageBody: JSON.stringify({
-				action: 'twilio',
-				sig: event.headers['X-Twilio-Signature'],
-				body: event.body
-			}),
+			MessageBody: JSON.stringify(queueMessage),
 			QueueUrl: sqsQueue
 		}).promise();
 	}
@@ -281,14 +283,15 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) > 0 &&
 						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) % 5 === 0
 					) {
+						const queueMessage: TwilioErrorBody = {
+							action: 'twilio_error',
+							count: parseInt(result.Attributes?.lastStatusCount?.N || '0', 10),
+							name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S} (${result.Attributes?.callSign?.N})`,
+							number: parsePhone(result.Attributes?.phone?.N || '', true),
+							department: result.Attributes?.department?.S as UserDepartment,
+						};
 						return sqs.sendMessage({
-							MessageBody: JSON.stringify({
-								action: 'twilio_error',
-								count: parseInt(result.Attributes?.lastStatusCount?.N || '0', 10),
-								name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S} (${result.Attributes?.callSign?.N})`,
-								number: parsePhone(result.Attributes?.phone?.N || '', true),
-								department: result.Attributes?.department?.S
-							}),
+							MessageBody: JSON.stringify(queueMessage),
 							QueueUrl: sqsQueue
 						}).promise();
 					}

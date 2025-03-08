@@ -1,10 +1,11 @@
 import { ApiUserListResponse, ApiUserUpdateResponse, UserObject, UserObjectBooleans, UserObjectStrings } from "../../common/userApi";
+import { UserDepartment, pagingConfig, pagingTalkgroupOrder, validDepartments } from "../../common/userConstants";
 import { showAlert } from "./utils/alerts";
 import { user } from "./utils/auth";
 import { changeButtonColor } from "./utils/button";
 import { doneLoading } from "./utils/loading";
 import { RowConfig, createTableRow } from "./utils/table";
-import { formatPhone, pageNames, talkgroupOrder, validDepartments } from "./utils/userConstants";
+import { formatPhone } from "./utils/userConstants";
 
 interface CheckboxConfig {
 	name: UserObjectBooleans;
@@ -320,8 +321,8 @@ function buildDepartmentSelect(u: UserObject | null, newUser: UserObject) {
 			option.selected = true;
 	});
 
-	newUser.department = select.value;
-	select.addEventListener('change', () => newUser.department = select.value);
+	newUser.department = select.value as UserDepartment;
+	select.addEventListener('change', () => newUser.department = select.value as UserDepartment);
 
 	return select;
 }
@@ -332,7 +333,7 @@ function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
 	const container = document.createElement('div');
 	container.classList.add('input');
 
-	talkgroupOrder.forEach(key => {
+	pagingTalkgroupOrder.forEach(key => {
 		const div = document.createElement('div');
 		container.appendChild(div);
 		div.classList.add('form-check', 'form-switch', 'text-start');
@@ -361,7 +362,7 @@ function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
 		const label = document.createElement('label');
 		div.appendChild(label);
 		label.classList.add('form-check-label');
-		label.innerHTML = pageNames[key];
+		label.innerHTML = pagingConfig[key].partyBeingPaged;
 		label.setAttribute('for', input.id);
 	});
 

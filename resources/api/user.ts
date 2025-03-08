@@ -6,6 +6,8 @@ import { allUserCookies, authTokenCookie, authUserCookie, getCookies, getLoggedI
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
 import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, UserObject } from '../../common/userApi';
 import { unauthorizedApiResponse } from '../../common/common';
+import { pagingTalkgroupOrder, validDepartments } from '../../common/userConstants';
+import { ActivateBody, LoginBody } from '../types/queue';
 
 const metricSource = 'User';
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
@@ -15,25 +17,6 @@ const sqs = new aws.SQS();
 
 const queueUrl = process.env.QUEUE_URL as string;
 const userTable = process.env.TABLE_USER as string;
-
-const validDepartments: string[] = [
-	'Crestone',
-	'Moffat',
-	'Saguache',
-	'Villa Grove',
-	'Baca',
-	'NSCAD',
-	'Center',
-];
-const validTalkgroups: number[] = [
-	8198,
-	8332,
-	8334,
-	8281,
-	18331,
-	18332,
-	8181,
-];
 
 interface ApiResponse {
 	success: boolean;
@@ -129,11 +112,12 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		};
 	}
 
+	const queueMessage: LoginBody = {
+		action: 'login',
+		phone: body.phone,
+	};
 	await sqs.sendMessage({
-		MessageBody: JSON.stringify({
-			action: 'login',
-			phone: body.phone
-		}),
+		MessageBody: JSON.stringify(queueMessage),
 		QueueUrl: queueUrl
 	}).promise();
 
@@ -482,7 +466,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	if (
 		typeof body.talkgroups === 'undefined' ||
 		!Array.isArray(body.talkgroups) ||
-		body.talkgroups.filter(v => validTalkgroups.indexOf(v) !== -1).length === 0
+		body.talkgroups.filter(v => pagingTalkgroupOrder.indexOf(v) !== -1).length === 0
 	) {
 		response.errors.push('talkgroups');
 	}
@@ -633,11 +617,12 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			!newPhone.Item?.isActive?.BOOL
 		)
 	) {
+		const queueMessage: ActivateBody = {
+			action: 'activate',
+			phone: body.phone,
+		};
 		await sqs.sendMessage({
-			MessageBody: JSON.stringify({
-				action: 'activate',
-				phone: body.phone
-			}),
+			MessageBody: JSON.stringify(queueMessage),
 			QueueUrl: queueUrl
 		}).promise();
 	}

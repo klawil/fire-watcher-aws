@@ -1,4 +1,5 @@
 import * as aws from 'aws-sdk';
+import { UserDepartment, defaultDepartment, departmentConfig } from '../../common/userConstants';
 const twilio = require('twilio');
 
 const messagesTable = process.env.TABLE_MESSAGES as string;
@@ -60,7 +61,7 @@ export function parsePhone(num: string, toHuman: boolean = false): string {
 
 export async function getRecipients(
 	department: string,
-	pageTg: string | null,
+	pageTg: number | null,
 	isTest: boolean = false
 ) {
 	let scanInput: AWS.DynamoDB.QueryInput = {
@@ -88,7 +89,7 @@ export async function getRecipients(
 
 		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
 		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
-		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg };
+		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg.toString() };
 	}
 	if (department !== 'all') {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
@@ -122,17 +123,18 @@ export async function getRecipients(
 		.then((data) => data.Items || []);
 }
 
+type AccountSidKey = `accountSid${string}`;
+type AuthTokenKey = `authToken${string}`;
+
 interface TwilioConfig {
+	[key: AccountSidKey]: string;
+	[key: AuthTokenKey]: string;
 	accountSid: string;
 	authToken: string;
-	fromNumber: string;
-	pageNumber: string;
-	alertNumber: string;
 	apiCode: string;
 	voiceOutgoingSid: string;
 	voiceApiSid: string;
 	voiceApiSecret: string;
-	[key: string]: string;
 }
 
 const twilioSecretId = process.env.TWILIO_SECRET as string;
@@ -161,7 +163,7 @@ export async function saveMessageData(
 	body: string,
 	mediaUrls: string[] = [],
 	pageId: string | null = null,
-	pageTg: string | null = null,
+	pageTg: number | null = null,
 	isTest: boolean = false
 ) {
 	let promises: Promise<any>[] = [];
@@ -199,7 +201,7 @@ export async function saveMessageData(
 				S: pageId !== null ? pageId : 'n'
 			},
 			':tg': {
-				S: pageTg !== null ? pageTg : ''
+				S: pageTg !== null ? pageTg.toString() : ''
 			},
 			':t': {
 				BOOL: isTest
@@ -243,15 +245,18 @@ export async function sendMessage(
 	metricSource: string,
 	messageId: string | null,
 	phone: string | undefined,
-	department: string | undefined,
+	department: UserDepartment,
 	body: string,
 	mediaUrl: string[] = [],
 	isPage: boolean = false,
 	isAlert: boolean = false
 ) {
+	const depConf = departmentConfig[department || defaultDepartment] || departmentConfig[defaultDepartment];
+
 	if (
 		typeof phone === 'undefined' ||
-		typeof department === 'undefined'
+		typeof department === 'undefined' ||
+		typeof depConf === 'undefined'
 	) {
 		console.error(`Trying to send message to invalid destination\nphone: ${phone}\ndepartment: ${department}\nMessage: ${body}`);
 		await incrementMetric('Error', {
@@ -276,31 +281,25 @@ export async function sendMessage(
 	}
 
 	const twilioConf = await getTwilioSecret();
-	if (twilioConf === null) {
+	if (twilioConf === null)
 		throw new Error('Cannot get twilio secret');
-	}
 
-	let fromNumberType = isPage
-		? 'page'
+	let fromNumberType: 'paging' | 'textGroup' | 'alerts' = isPage
+		? 'paging'
 		: isAlert
-			? 'alert'
-			: 'from';
-	let fromNumber = twilioConf[`${fromNumberType}Number`];
-	let accountSid: string = twilioConf.accountSid;
-	let authToken: string = twilioConf.authToken;
+			? 'alerts'
+			: 'textGroup';
+	let fromNumber = depConf[`${fromNumberType}Phone`];
+	let accountSid: string = twilioConf[`accountSid${depConf.twilioAccount}`];
+	let authToken: string = twilioConf[`authToken${depConf.twilioAccount}`];
 	if (
-		typeof twilioConf[`accountSid${department}`] !== 'undefined' &&
-		typeof twilioConf[`authToken${department}`] !== 'undefined' &&
-		typeof twilioConf[`${fromNumberType}Number${department}`] !== 'undefined'
+		typeof fromNumber === 'undefined' ||
+		typeof accountSid === 'undefined' ||
+		typeof authToken === 'undefined'
 	) {
-		accountSid = twilioConf[`accountSid${department}`];
-		authToken = twilioConf[`authToken${department}`];
-		fromNumber = twilioConf[`${fromNumberType}Number${department}`];
-	} else if (
-		typeof twilioConf[`accountSid${department}`] !== 'undefined' ||
-		typeof twilioConf[`authToken${department}`] !== 'undefined' ||
-		typeof twilioConf[`${fromNumberType}Number${department}`] !== 'undefined'
-	) {
+		accountSid = twilioConf.accountSid;
+		authToken = twilioConf.authToken;
+		fromNumber = departmentConfig[defaultDepartment][`${fromNumberType}Phone`] as string;
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: `Invalid combination of department and type: ${department} and ${fromNumberType}`
@@ -337,7 +336,7 @@ export async function sendAlertMessage(metricSource: string, alertType: AlertTyp
 			metricSource,
 			messageId,
 			user.phone.N,
-			'',
+			defaultDepartment,
 			body,
 			[],
 			false,

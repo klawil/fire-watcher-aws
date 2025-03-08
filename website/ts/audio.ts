@@ -6,6 +6,7 @@ import { ColumnConfig, createTableRow } from './utils/table';
 import { changeUrlParams, deleteUrlParams, getUrlParams } from './utils/url';
 import { AudioFilter, TalkgroupFilter, ToggleFilter } from './utils/filter';
 import { authInit } from './utils/auth';
+import { fNameToDate } from '../../common/file';
 
 authInit();
 
@@ -93,22 +94,6 @@ const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => [
 let tgPromise: Promise<void>;
 let isLive: boolean = true; // Is the user at the top of the page
 let updateLive: boolean = true; // Should we be periodically polling to see if there are new files
-
-const dtrFileNameRegex = /\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/;
-const vhfFileNameRegex = /((SAG|BG)_FIRE_VHF|FIRE)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
-
-function fileToTime(name: string) {
-	if (!name) return false;
-	if (!dtrFileNameRegex.test(name) && !vhfFileNameRegex.test(name)) return false;
-
-	if (dtrFileNameRegex.test(name)) {
-		const parts = name.match(dtrFileNameRegex) as string[];
-		return parseInt(parts[1], 10);
-	} else {
-		const parts = name.match(vhfFileNameRegex) as string[];
-		return new Date(`${parts[3]}-${parts[4]}-${parts[5]}T${parts[6]}:${parts[7]}:${parts[8]}Z`).getTime() / 1000;
-	}
-}
 
 function displayRows(newFiles: AudioFileObject[], direction: 'after' | 'before', restart: boolean) {
 	if (restart) fileTable.innerHTML = '';
@@ -343,9 +328,7 @@ async function init() {
 		typeof urlParams.f !== 'undefined' &&
 		urlParams.f !== null
 	) {
-		const fileDate = fileToTime(urlParams.f);
-		if (fileDate !== false)
-			startDate = new Date((fileDate - 1) * 1000);
+		startDate = fNameToDate(urlParams.f);
 	}
 
 	Object.keys(urlFilters).sort().reverse().forEach(key => {
@@ -435,11 +418,11 @@ filterApplyJumpButton.addEventListener('click', () => {
 	if (
 		typeof currentFile === 'undefined' ||
 		currentFile === null ||
-		fileToTime(currentFile) === false
+		fNameToDate(currentFile).getTime() === 0
 	)
 		updateData('after', true);
 	else
-		updateData('after', true, new Date(<number>fileToTime(currentFile) * 1000));
+		updateData('after', true, fNameToDate(currentFile));
 });
 
 const timeButtons: HTMLButtonElement[] = [

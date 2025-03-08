@@ -2,6 +2,9 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage } from './utils/general';
+import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../common/userConstants';
+import { fNameToDate } from '../common/file';
+import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 
 const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
@@ -19,156 +22,17 @@ const welcomeMessageParts: {
 	pageGroup: string;
 	howToLeave: string;
 } = {
-	welcome: `Welcome to the {{department}} {{type}}!`,
+	welcome: `Welcome to the {{name}} {{type}}!`,
 	textGroup: `This number will be used to send and receive messages from other members of the Fire Department.\n\nIn a moment, you will receive a text from another number with a link to a sample page you would have received. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
 	pageGroup: `This number will be used to send pages and only pages.\n\nIn a moment, you will receive a text with a link to a sample page you would have received.`,
 	howToLeave: `You can leave this group at any time by texting "STOP" to this number.`
 };
 
-type WelcomeMessageConfigKeys = 'department' | 'type' | 'departmentShort';
-const welcomeMessageConfig: { [key: string]: {
-	department: string;
-	type: string;
-	departmentShort: string;
-	isPageOnly: boolean;
-} } = {
-	Crestone: {
-		department: 'Crestone Volunteer Fire Department',
-		type: 'text group',
-		departmentShort: 'NSCFPD',
-		isPageOnly: false
-	},
-	Moffat: {
-		department: 'Moffat Volunteer Fire Department',
-		type: 'text group',
-		departmentShort: 'NSCFPD',
-		isPageOnly: false
-	},
-	Saguache: {
-		department: 'Saguache Volunteer Fire Department',
-		type: 'text group',
-		departmentShort: 'NSCFPD',
-		isPageOnly: false
-	},
-	'Villa Grove': {
-		department: 'Villa Grove Volunteer Fire Department',
-		type: 'text group',
-		departmentShort: 'NSCFPD',
-		isPageOnly: false
-	},
-	Baca: {
-		department: 'Baca Emergency Services',
-		type: 'backup paging system',
-		departmentShort: 'Baca',
-		isPageOnly: true
-	},
-	NSCAD: {
-		department: 'Northern Saguache County Ambulance District',
-		type: 'backup paging system',
-		departmentShort: 'NSCAD',
-		isPageOnly: true
-	},
-};
-
-const tgToPageDept: { [key: string]: string } = {
-	'8332': 'NSCFPD',
-	'18331': 'Baca ES',
-	'18332': 'NSCFPD',
-	'8198': 'NSCAD',
-	'8334': 'Center ES',
-	'8281': 'Mineral ES',
-	'8181': 'Alamosa EMS',
-};
-
-const pageConfigs: {
-	[key: string]: {
-		linkPreset: string;
-		pagingParty: string;
-		partyBeingPaged: string;
-		pageService: string;
-		fToTime: (fName: string) => Date;
-	}
-} = {
-	'8198': {
-		linkPreset: 'pNSCAD',
-		pagingParty: 'Saguache SO',
-		partyBeingPaged: 'NSCAD',
-		pageService: 'AMBO',
-		fToTime: dtrFnameToDate
-	},
-	'8332': {
-		linkPreset: 'pNSCFPD',
-		pagingParty: 'Saguache SO',
-		partyBeingPaged: 'NSCFPD',
-		pageService: 'FIRE',
-		fToTime: dtrFnameToDate
-	},
-	'18331': {
-		linkPreset: 'pBGFD%252FBGEMS',
-		pagingParty: 'Alamosa',
-		partyBeingPaged: 'BGEMS/BGFD',
-		pageService: 'BACA',
-		fToTime: vhfFnameToDate
-	},
-	'18332': {
-		linkPreset: 'pNSCFPD',
-		pagingParty: 'Saguache SO',
-		partyBeingPaged: 'NSCFPD',
-		pageService: 'FIRE',
-		fToTime: vhfFnameToDate
-	},
-	'8334': {
-		linkPreset: 'tg8334',
-		pagingParty: 'Center Dispatch',
-		partyBeingPaged: 'Center EMS/Fire',
-		pageService: 'CENTER',
-		fToTime: dtrFnameToDate
-	},
-	'8281': {
-		linkPreset: 'tg8281',
-		pagingParty: 'Alamosa',
-		partyBeingPaged: 'Mineral EMS/Fire',
-		pageService: 'MINERAL',
-		fToTime: dtrFnameToDate
-	},
-	'8181': {
-		linkPreset: 'pACFE',
-		pagingParty: 'Alamosa',
-		partyBeingPaged: 'Alamosa EMS',
-		pageService: 'ALAMOSA EMS',
-		fToTime: dtrFnameToDate
-	},
-};
+type WelcomeMessageConfigKeys = 'name' | 'type';
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
 const timeZone = 'America/Denver';
-
-function dtrFnameToDate(fileName: string): Date {
-	let d = new Date(0);
-	try {
-		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/);
-
-		if (parts !== null) {
-			d = new Date(parseInt(parts[1], 10) * 1000);
-		}
-	} catch (e) {}
-
-	return d;
-}
-
-function vhfFnameToDate(fileName: string): Date {
-	let d = new Date(0);
-	try {
-		const parts = fileName.match(/(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/);
-
-		if (parts !== null) {
-			d = new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`);
-		}
-	} catch (e) {}
-	
-	return d;
-}
 
 function dateToTimeString(d: Date): string {
 	const dateString = d.toLocaleDateString('en-US', {
@@ -205,18 +69,18 @@ function randomString(len: number, numeric = false): string {
 
 function createPageMessage(
 	fileKey: string,
-	pageTg: string,
+	pageTg: PagingTalkgroup,
 	callSign: string | null = null,
 	transcript: string | null = null
 ): string {
-	const pageConfig = pageConfigs[pageTg];
+	const pageConfig = pagingConfig[pageTg];
 
 	if (typeof pageConfig === 'undefined')
 		return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
 
 	let pageStr = `${pageConfig.pageService} PAGE\n`;
-	pageStr += `${pageConfig.pagingParty} paged ${pageConfig.partyBeingPaged} `
-	pageStr += `${dateToTimeString(pageConfig.fToTime(fileKey))}\n`;
+	pageStr += `${pageConfig.partyBeingPaged} paged `
+	pageStr += `${dateToTimeString(fNameToDate(fileKey))}\n`;
 	if (transcript !== null) {
 		pageStr += `\n${transcript}\n\n`;
 	}
@@ -227,12 +91,7 @@ function createPageMessage(
 	return pageStr;
 }
 
-interface ActivateOrLoginBody {
-	action: 'activate' | 'login';
-	phone: string;
-}
-
-async function handleActivation(body: ActivateOrLoginBody) {
+async function handleActivation(body: ActivateBody) {
 	const promises: Promise<any>[] = [];
 
 	// Update the user to active in the table
@@ -259,10 +118,13 @@ async function handleActivation(body: ActivateOrLoginBody) {
 
 	// Send the welcome message
 	const pageTgs = (updateResult.Attributes?.talkgroups?.NS || [])
-		.map(key => tgToPageDept[key] || `Talkgroup ${key}`)
+		.map(key => Number(key))
+		.map(key => pagingConfig[key as PagingTalkgroup]?.partyBeingPaged || `Talkgroup ${key}`)
 		.join(', ')
-	const config = welcomeMessageConfig[updateResult.Attributes?.department?.S || 'Crestone'];
-	const groupType = config.isPageOnly || updateResult.Attributes?.pageOnly?.BOOL
+	const config = departmentConfig[updateResult.Attributes?.department?.S as UserDepartment] || departmentConfig[defaultDepartment];
+	if (typeof config === 'undefined')
+		return;
+	const groupType = config.type === 'page' || updateResult.Attributes?.pageOnly?.BOOL
 		? 'page'
 		: 'text';
 	const customWelcomeMessage = (
@@ -276,7 +138,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		metricSource,
 		null,
 		body.phone,
-		updateResult.Attributes?.department?.S,
+		updateResult.Attributes?.department?.S as UserDepartment,
 		customWelcomeMessage,
 		[],
 		groupType === 'page'
@@ -303,7 +165,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 					metricSource,
 					null,
 					item.phone.N,
-					item.department.S,
+					item.department.S as UserDepartment,
 					`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
 				);
 			}))));
@@ -332,13 +194,13 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		.then((data) => {
 			if (!data.Items || data.Items.length === 0) return;
 			const pageKey = data.Items[0].Key?.S?.split('/').pop() || 'none';
-			const pageTg = data.Items[0].Talkgroup.N || '8332';
+			const pageTg = Number(data.Items[0].Talkgroup.N || '8332') as PagingTalkgroup;
 
 			return sendMessage(
 				metricSource,
 				null,
 				body.phone,
-				updateResult.Attributes?.department?.S,
+				updateResult.Attributes?.department?.S as UserDepartment,
 				createPageMessage(pageKey, pageTg),
 				[],
 				true
@@ -346,12 +208,6 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		}));
 
 	return Promise.all(promises);
-}
-
-interface TwilioBody {
-	action: 'twilio';
-	sig: string;
-	body: string;
 }
 
 interface TwilioParams {
@@ -395,12 +251,14 @@ async function handleTwilio(body: TwilioBody) {
 	}
 
 	// Get the number that was messaged
+	const depConf = departmentConfig[sender.Item?.department?.S as UserDepartment] || departmentConfig[defaultDepartment];
+	if (typeof depConf === 'undefined')
+		throw new Error('Invalid department');
 	const messageTo = eventData.To;
 	const adminSender = !!sender.Item?.isAdmin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await getTwilioSecret();
-	const pageNumber = twilioConf[`pageNumber${sender.Item?.department?.S}`]
-		|| twilioConf.pageNumber;
+	const pageNumber = depConf.pagingPhone;
 	const isFromPageNumber = adminSender && messageTo === pageNumber;
 
 	const recipients = await getRecipients(sender.Item?.department.S || '', null, isTest)
@@ -433,7 +291,7 @@ async function handleTwilio(body: TwilioBody) {
 			metricSource,
 			messageId,
 			number.phone.N,
-			number.department.S,
+			number.department.S as UserDepartment,
 			messageBody,
 			mediaUrls
 				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`)),
@@ -441,14 +299,6 @@ async function handleTwilio(body: TwilioBody) {
 		)) || []);
 
 	await insertMessage;
-}
-
-interface TwilioErrorBody {
-	action: 'twilio_error';
-	count: number;
-	name: string;
-	number: string;
-	department: string;
 }
 
 async function handleTwilioError(body: TwilioErrorBody) {
@@ -474,20 +324,12 @@ async function handleTwilioError(body: TwilioErrorBody) {
 		metricSource,
 		messageId,
 		user.phone.N,
-		user.department.S,
+		user.department.S as UserDepartment,
 		message,
 		[],
 		true
 	)));
 	await insertMessage;
-}
-
-interface PageBody {
-	action: 'page';
-	key: string;
-	tg: string;
-	len?: number;
-	isTest?: boolean;
 }
 
 async function handlePage(body: PageBody) {
@@ -499,8 +341,7 @@ async function handlePage(body: PageBody) {
 	body.len = body.len || 0;
 
 	let metricPromise: Promise<any> = new Promise(res => res(null));
-	const pageConfig = pageConfigs[body.tg];
-	const pageTime = pageConfig.fToTime(body.key);
+	const pageTime = fNameToDate(body.key);
 	const lenMs = body.len * 1000;
 	if (body.isTest) {
 		console.log([
@@ -517,8 +358,7 @@ async function handlePage(body: PageBody) {
 				Value: pageInitTime.getTime() - pageTime.getTime() - lenMs
 			}
 		]);
-	}
-	if (!body.isTest) {
+	} else {
 		metricPromise = cloudWatch.putMetricData({
 			Namespace: 'Twilio Health',
 			MetricData: [
@@ -553,24 +393,13 @@ async function handlePage(body: PageBody) {
 		!!body.isTest
 	);
 
-	// if (recipients.map(r => r.phone.N).indexOf('***REMOVED***') === -1) {
-	// 	recipients.push({
-	// 		phone: {
-	// 			N: '***REMOVED***'
-	// 		},
-	// 		callSign: {
-	// 			N: '120'
-	// 		}
-	// 	});
-	// }
-
 	// Send the messages
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
 			metricSource,
 			messageId,
 			phone.phone.N,
-			phone.department.S,
+			phone.department.S as UserDepartment,
 			createPageMessage(body.key, body.tg, phone.callSign.N),
 			[],
 			true
@@ -580,7 +409,7 @@ async function handlePage(body: PageBody) {
 	await metricPromise;
 }
 
-async function handleLogin(body: ActivateOrLoginBody) {
+async function handleLogin(body: LoginBody) {
 	const code = randomString(6, true);
 	const codeTimeout = Date.now() + codeTtl;
 
@@ -611,19 +440,11 @@ async function handleLogin(body: ActivateOrLoginBody) {
 		metricSource,
 		null,
 		body.phone,
-		updateResult.Attributes?.department?.S,
+		updateResult.Attributes?.department?.S as UserDepartment,
 		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`,
 		[],
 		true
 	);
-}
-
-interface TranscribeBody {
-	'detail-type': string;
-	detail: {
-		TranscriptionJobName: string;
-		TranscriptionJobStatus: string;
-	}
 }
 
 interface TranscribeResult {
@@ -714,13 +535,13 @@ async function handleTranscribe(body: TranscribeBody) {
 	// Build the message
 	let messageBody: string;
 	let promise: Promise<any> = new Promise(res => res(null));
-	let tg: string;
+	let tg: PagingTalkgroup;
 	const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || []).reduce((agg: { [key: string]: string; }, value) => {
 		agg[value.Key] = value.Value;
 		return agg;
 	}, {});
 	if (jobInfo.Talkgroup) {
-		tg = jobInfo.Talkgroup as string;
+		tg = Number(jobInfo.Talkgroup) as PagingTalkgroup;
 		messageBody = createPageMessage(
 			jobInfo.File as string,
 			tg,
@@ -748,8 +569,8 @@ async function handleTranscribe(body: TranscribeBody) {
 				}).promise();
 			});
 	} else {
-		tg = body.detail.TranscriptionJobName.split('-')[0];
-		messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pageConfigs[tg].linkPreset}`;
+		tg = Number(body.detail.TranscriptionJobName.split('-')[0]) as PagingTalkgroup;
+		messageBody = `Transcript for ${pagingConfig[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pagingConfig[tg].linkPreset}`;
 	}
 
 	// Get recipients and send
@@ -767,7 +588,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			metricSource,
 			messageId,
 			phone.phone.N,
-			phone.department.S,
+			phone.department.S as UserDepartment,
 			createPageMessage(
 				jobInfo.File as string,
 				tg,
@@ -782,7 +603,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			metricSource,
 			messageId,
 			number.phone.N,
-			number.department?.S,
+			number.department?.S as UserDepartment,
 			messageBody,
 			[],
 			true
@@ -797,6 +618,7 @@ async function parseRecord(event: lambda.SQSRecord) {
 	if (typeof body.action === 'undefined' && typeof body['detail-type'] !== 'undefined') {
 		body.action = 'transcribe';
 	}
+	console.log(JSON.stringify(body));
 	try {
 		let response;
 		switch (body.action) {

@@ -4,6 +4,7 @@ import { getLoggedInUser } from '../utils/auth';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
 import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../common/conferenceApi';
 import { unauthorizedApiResponse } from '../../common/common';
+import { defaultDepartment, departmentConfig } from '../../common/userConstants';
 
 const metricSource = 'Conference';
 
@@ -274,7 +275,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			</Dial>
 		</Response>`,
 		to: `+1${invited.phone}`,
-		from: twilioConf.pageNumber,
+		from: departmentConfig[defaultDepartment].pagingPhone,
 	});
 
 	await dynamodb.updateItem({

@@ -1,6 +1,7 @@
 import { ApiUserFidoChallengeResponse, ApiUserFidoRegisterBody, ApiUserFidoRegisterResponse, ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
 import { afterAuthUpdate, base64ToBuffer, bufferToBase64, useFidoKey, user } from './utils/auth';
-import { formatPhone, pageNames, talkgroupOrder } from './utils/userConstants';
+import { PagingTalkgroup, pagingConfig, pagingTalkgroupOrder } from '../../common/userConstants';
+import { formatPhone } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
 import { createTableRow } from './utils/table';
@@ -33,7 +34,7 @@ function formatValue(value: string | boolean | number): string {
 	return value;
 }
 
-function makePageCheckbox(container: HTMLElement, key: number) {
+function makePageCheckbox(container: HTMLElement, key: PagingTalkgroup) {
 	const div = document.createElement('div');
 	div.classList.add('form-check', 'form-switch');
 	container.appendChild(div);
@@ -50,7 +51,7 @@ function makePageCheckbox(container: HTMLElement, key: number) {
 
 	const label = document.createElement('label');
 	label.classList.add('form-check-label');
-	label.innerHTML = `${pageNames[key]}`;
+	label.innerHTML = `${pagingConfig[key].partyBeingPaged}`;
 	label.setAttribute('for', input.id);
 	div.appendChild(label);
 }
@@ -203,7 +204,7 @@ function init() {
 
 	const pageGroupContainer = document.getElementById('talkgroups');
 	if (pageGroupContainer !== null)
-		talkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
+		pagingTalkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
 
 	const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
 	Object.keys(user.fidoKeys || {}).forEach(key => {

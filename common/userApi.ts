@@ -1,12 +1,13 @@
 import { ApiResponseBase } from "./common";
+import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
 export type UserObjectBooleans = 'isActive' | 'isAdmin' | 'isDistrictAdmin'
 	| 'pageOnly' | 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
 export type UserObjectStrings = 'phone' | 'fName' | 'lName' | 'callSign';
 
 interface UserObjectBase1 {
-	talkgroups: number[];
-	department?: string;
+	talkgroups: PagingTalkgroup[];
+	department?: UserDepartment;
 
 	isMe?: boolean;
 }
