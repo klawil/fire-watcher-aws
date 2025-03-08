@@ -23,17 +23,7 @@ interface GenericApiResponse {
 	data?: any[];
 }
 
-async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	// Validate the body
-	validateBodyIsJson(event.body);
-
-	// Parse the body
-	const body: EventBody = JSON.parse(event.body as string);
-	const response: GenericApiResponse = {
-		success: true,
-		errors: []
-	};
-
+function validateEventBody(body: EventBody, response: GenericApiResponse): void {
 	body.timestamp = Date.now();
 
 	// Validate the body
@@ -66,8 +56,22 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		response.success = false;
 		response.errors.push('talkgroup');
 	}
+}
 
-	if (body.radioId !== '-1')
+async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body: EventBody = JSON.parse(event.body as string);
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	validateEventBody(body, response);
+
+	if (body.radioId !== '-1' && response.success)
 		await firehose.putRecord({
 			DeliveryStreamName: FIREHOSE_NAME,
 			Record: {
@@ -78,6 +82,39 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	return {
 		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response)
+	};
+}
+
+async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body: EventBody[] = JSON.parse(event.body as string);
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	body.forEach(event => validateEventBody(event, response));
+
+	if (
+		response.success &&
+		body.filter(event => event.radioId !== '-1').length > 0
+	) {
+		await firehose.putRecordBatch({
+			DeliveryStreamName: FIREHOSE_NAME,
+			Records: body
+				.filter(event => event.radioId !== '-1')
+				.map(event => ({
+					Data: JSON.stringify(event)
+				}))
+		}).promise();
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response),
 	};
 }
 
@@ -92,6 +129,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		switch (action) {
 			case 'event':
 				return await handleEvent(event);
+			case 'events':
+				return await handleEvents(event);
 		}
 
 		await incrementMetric('Error', {
