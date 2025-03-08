@@ -262,6 +262,8 @@ function display(dataToDisplay, location, restart) {
 		} else {
 			defaultFunc();
 		}
+	} else if (restart) {
+		defaultFunc();
 	}
 }
 
