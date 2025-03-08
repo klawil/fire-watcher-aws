@@ -1133,6 +1133,13 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		};
 	}
 
+	// Get the timezone
+	const nowDate = new Date();
+	const timeZoneOffset = ((new Date(nowDate.toLocaleString('en-US', { timeZone: 'America/Denver' })).getTime()) -
+	(new Date(nowDate.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()));
+	const timeZoneHourOffset = timeZoneOffset / 6e4;
+	const timeZoneStr = `${timeZoneHourOffset > 0 ? '+' : '-'}${Math.abs(timeZoneHourOffset / 60).toString().padStart(2, '0')}00`;
+
 	// Build the defaults
 	const dir = event.queryStringParameters.live === 'y'
 		? 'ceil'
@@ -1149,7 +1156,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		typeof event.queryStringParameters.endTime === 'undefined' &&
 		typeof event.queryStringParameters.period === 'undefined'
 	) {
-		const nowHour = Math[dir](Date.now() / (1000 * 60 * 60)) * 1000 * 60 * 60;
+		const nowHour = Math[dir]((Date.now() + timeZoneOffset) / (1000 * 60 * 60)) * 1000 * 60 * 60 - timeZoneOffset;
 		event.queryStringParameters.startTime = `${nowHour - (1000 * 60 * 60 * 24)}`;
 		event.queryStringParameters.endTime = `${nowHour}`;
 		event.queryStringParameters.period = `3600`;
@@ -1176,7 +1183,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		} else if (typeof event.queryStringParameters.endTime !== 'undefined') {
 			event.queryStringParameters.startTime = `${Number(event.queryStringParameters.endTime) - timerange}`;
 		} else {
-			const nowTime = Math[dir](Date.now() / (period * 1000)) * period * 1000;
+			const nowTime = Math[dir]((Date.now() + timeZoneOffset) / (period * 1000)) * period * 1000 - timeZoneOffset;
 			event.queryStringParameters.endTime = `${nowTime}`;
 			event.queryStringParameters.startTime = `${nowTime - timerange}`;
 		}
@@ -1222,6 +1229,9 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		EndTime: new Date(Number(event.queryStringParameters.endTime)),
 		StartTime: new Date(Number(event.queryStringParameters.startTime)),
 		ScanBy: 'TimestampDescending',
+		LabelOptions: {
+			Timezone: timeZoneStr
+		},
 		MetricDataQueries: metricsToInclude
 			.map(key => {
 				const metricToPush = {

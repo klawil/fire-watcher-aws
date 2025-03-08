@@ -67,7 +67,7 @@ const color2 = {
 const charts = [
 	{
 		id: 'api-calls',
-		query: 'metrics=api-frontend,api-infra,api-user,api-twilio,s3-created,queue&live=y'
+		query: 'metrics=api-frontend,api-infra,api-user,api-twilio,s3-created,queue'
 	},
 	{
 		id: 'api-errors',
@@ -94,8 +94,8 @@ const charts = [
 	},
 	{
 		id: 'texts-time',
-		val: val => Math.ceil(val / 1000),
-		yMax: 120, // 2 minutes
+		val: val => val > 1500000 ? 0 : Math.ceil(val / 1000),
+		// yMax: 240, // 4 minutes
 		stacked: true,
 		query: 'metrics=twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y'
 	},
@@ -158,13 +158,9 @@ charts.forEach(chart => {
 				};
 			}
 			if (chart.stacked) {
-				chartConfig.options.scales = {
-					...chartConfig.options.scales,
-					y: {
-						...chartConfig.options.scales.y,
-						stacked: true
-					}
-				}
+				chartConfig.options.scales = chartConfig.options.scales || {};
+				chartConfig.options.scales.y = chartConfig.options.scales.y || {};
+				chartConfig.options.scales.y.stacked = true;
 			}
 			if (chart.fill && datasets.length === 2) {
 				chartConfig.options.scales = {
