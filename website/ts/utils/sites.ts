@@ -222,8 +222,11 @@ export async function updateSitesTable() {
 		logger.error('updateSitesTable', e);
 		showAlert('danger', 'Failed to update site table');
 	}
+}
 
-	setTimeout(updateSitesTable, 30000);
+const updateButton = document.getElementById('site-update-button');
+if (updateButton !== null) {
+	updateButton.addEventListener('click', updateSitesTable);
 }
 
 function updateUpdateTime() {

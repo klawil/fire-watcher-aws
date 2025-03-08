@@ -6,6 +6,7 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { getLogger } from '../../stack/resources/utils/logger';
 import { showAlert } from './utils/alerts';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
+import { secondsToTime } from './utils/format';
 
 const logger = getLogger('status');
 
@@ -24,7 +25,7 @@ interface ColorConfig {
 	borderColor: string;
 }
 
-type ChartTypes = 'Tower' | 'Metric' | 'Timing';
+type ChartTypes = 'Tower' | 'Metric' | 'Timing' | 'UploadTime';
 
 interface ChartConfig {
 	id: string;
@@ -82,37 +83,34 @@ const color2: ColorConfig = {
 	borderColor: 'rgb(255, 99, 132)'
 };
 
+const defaultColorList: ColorConfig[] = [
+	{
+		backgroundColor: 'rgba(54, 162, 235, 0.1)',
+		borderColor: 'rgb(54, 162, 235)',
+	},
+	{
+		backgroundColor: 'rgba(255, 99, 132, 0.1)',
+		borderColor: 'rgb(255, 99, 132)',
+	},
+	{
+		backgroundColor: 'rgba(255, 159, 64, 0.25)',
+		borderColor: 'rgb(255, 159, 64)',
+	},
+	{
+		backgroundColor: 'rgba(255, 205, 86, 0.25)',
+		borderColor: 'rgb(255, 205, 86)',
+	},
+	{
+		backgroundColor: 'rgba(75, 192, 192, 0.25)',
+		borderColor: 'rgb(75, 192, 192)',
+	},
+	{
+		backgroundColor: 'rgba(153, 102, 255, 0.25)',
+		borderColor: 'rgb(153, 102, 255)',
+	},
+];
+
 const baseCharts: ChartConfig[] = [
-	{
-		id: 'api-calls',
-		type: 'Metric',
-		query: 'metrics=s3-call,queue-call,alarmqueue-call,status-call,weather-call,infraapi-call,userapi-call,twilioapi-call,eventsapi-call,conferenceapi-call,frontendapi-call,audioapi-call',
-	},
-	{
-		id: 'api-errors',
-		type: 'Metric',
-		query: 'metrics=s3-err-all,queue-err-all,alarmqueue-err,status-err,weather-err,infraapi-err-all,userapi-err-all,twilioapi-err-all,eventsapi-err-all,conferenceapi-err-all,frontendapi-err-all,audioapi-err-all&live=y',
-	},
-	{
-		id: 'api-duration',
-		type: 'Metric',
-		query: 'metrics=s3-dur,queue-dur,alarmqueue-dur,status-dur,weather-dur,infraapi-dur,userapi-dur,twilioapi-dur,eventsapi-dur,conferenceapi-dur,frontendapi-dur,audioapi-dur',
-	},
-	{
-		id: 'api-duration-max',
-		type: 'Metric',
-		query: 'metrics=s3-dur-max,queue-dur-max,alarmqueue-dur-max,status-dur-max,weather-dur-max,infraapi-dur-max,userapi-dur-max,twilioapi-dur-max,eventsapi-dur-max,conferenceapi-dur-max,frontendapi-dur-max,audioapi-dur-max&live=y',
-	},
-	{
-		id: 's3-uploads',
-		type: 'Metric',
-		query: 'metrics=tower-sag-upload,tower-ala-upload,tower-pt-upload,tower-sa-upload,tower-mv-upload&live=y',
-	},
-	{
-		id: 's3-uploads-time',
-		type: 'Metric',
-		query: 'metrics=upload-time-cvfd-p80,upload-time-nscad-p80',
-	},
 	{
 		id: 'sag-tower',
 		type: 'Tower',
@@ -149,20 +147,59 @@ const baseCharts: ChartConfig[] = [
 		query: 'metrics=twilio-page-duration,twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y',
 		val: val => val > 300000 ? 300 : Math.ceil(val / 1000),
 	},
+	{
+		id: 's3-uploads',
+		type: 'Metric',
+		query: 'metrics=tower-sag-upload,tower-ala-upload,tower-pt-upload,tower-sa-upload,tower-mv-upload&live=y',
+	},
+	{
+		id: 's3-uploads-time',
+		type: 'UploadTime',
+		query: 'metrics=upload-time-cvfd-min,upload-time-cvfd-med,upload-time-cvfd-max,upload-time-nscad-min,upload-time-nscad-med,upload-time-nscad-max',
+	},
+	{
+		id: 'api-calls',
+		type: 'Metric',
+		query: 'metrics=s3-call,queue-call,alarmqueue-call,status-call,weather-call,infraapi-call,userapi-call,twilioapi-call,eventsapi-call,conferenceapi-call,frontendapi-call,audioapi-call',
+	},
+	{
+		id: 'api-duration',
+		type: 'Metric',
+		query: 'metrics=s3-dur,queue-dur,alarmqueue-dur,status-dur,weather-dur,infraapi-dur,userapi-dur,twilioapi-dur,eventsapi-dur,conferenceapi-dur,frontendapi-dur,audioapi-dur',
+	},
+	{
+		id: 'api-duration-max',
+		type: 'Metric',
+		query: 'metrics=s3-dur-max,queue-dur-max,alarmqueue-dur-max,status-dur-max,weather-dur-max,infraapi-dur-max,userapi-dur-max,twilioapi-dur-max,eventsapi-dur-max,conferenceapi-dur-max,frontendapi-dur-max,audioapi-dur-max&live=y',
+	},
+	{
+		id: 'api-errors',
+		type: 'Metric',
+		query: 'metrics=s3-err-all,queue-err-all,alarmqueue-err,status-err,weather-err,infraapi-err-all,userapi-err-all,twilioapi-err-all,eventsapi-err-all,conferenceapi-err-all,frontendapi-err-all,audioapi-err-all&live=y',
+	},
 ];
 
-async function buildChart(conf: ChartConfig): Promise<Error | null> {
+async function buildChart(conf: ChartConfig) {
 	logger.trace('buildChart', ...arguments);
-	const data: ApiFrontendStatsResponse = await fetch(`/api/frontend?action=stats&${conf.query}`)
-		.then(r => r.json());
-	
-	if (
-		!data.success ||
-		typeof data.data === 'undefined' ||
-		typeof data.startTime === 'undefined'
-	) return new Error(`Failed to build chart ${conf.id}`);
-	
 	try {
+		const chartElem = <HTMLCanvasElement>document.getElementById(conf.id);
+		const spinner = document.createElement('div');
+		spinner.classList.add('spinner-border', 'spinner-center-absolute');
+		if (chartElem.parentElement !== null) {
+			chartElem.parentElement.appendChild(spinner);
+		}
+
+		const data: ApiFrontendStatsResponse = await fetch(`/api/frontend?action=stats&${conf.query}`)
+			.then(r => r.json());
+		
+		if (
+			!data.success ||
+			typeof data.data === 'undefined' ||
+			typeof data.startTime === 'undefined'
+		) {
+			throw new Error(JSON.stringify(data));
+		}
+	
 		conf.val = conf.val || (val => val);
 
 		const names = data.data.names;
@@ -339,16 +376,65 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 					c.map(v => v.dataset.label).indexOf(a.dataset.label) === b,
 			};
 		}
+		if (conf.type === 'UploadTime') {
+			chartConfig.options.plugins = chartConfig.options.plugins || {};
+			chartConfig.options.plugins.tooltip = chartConfig.options.plugins.tooltip || {};
+			chartConfig.options.plugins.tooltip.callbacks = chartConfig.options.plugins.tooltip.callbacks || {};
+			chartConfig.options.plugins.tooltip.callbacks.label = (context) => {
+				return `${context.dataset.label || 'Unknown'}: ${secondsToTime(Math.round(context.raw as number))}`;
+			};
+			chartConfig.options.plugins.legend = chartConfig.options.plugins.legend || {};
+			chartConfig.options.plugins.legend.labels = chartConfig.options.plugins.legend.labels || {};
+			chartConfig.options.plugins.legend.labels.generateLabels = (chart) => {
+				const data = chart.data;
+				if (data.datasets.length) {
+					return data.datasets
+						.filter((v, i) => i % 3 === 0)
+						.map((dataset, i) => {
+							return {
+								text: (dataset.label || '').replace('(min)', ''),
+								fillStyle: dataset.backgroundColor as string,
+								strokeStyle: dataset.borderColor as string,
+								lineWidth: 3,
+								hidden: false,
+
+								// Extra data used for toggling the correct item
+								index: i
+							};
+						});
+				}
+				return [];
+			};
+
+			for (let i = 0; i < datasets.length; i++) {
+				const colorI = Math.floor(i / 3);
+				datasets[i].borderColor = defaultColorList[colorI].borderColor;
+				if (i % 3 === 1) {
+					datasets[i].borderColor = defaultColorList[colorI].backgroundColor.replace(/[0-9\.]+\)/, '0.5)');
+				}
+				datasets[i].backgroundColor = defaultColorList[colorI].backgroundColor;
+				if (i % 3 !== 0) {
+					datasets[i].fill = {
+						target: i - 1,
+						below: 'rgba(0,0,0,0)',
+						above: defaultColorList[colorI].backgroundColor,
+					};
+				}
+			}
+		}
+
+		if (spinner.parentElement !== null) {
+			spinner.parentElement.removeChild(spinner);
+		}
 
 		new Chart(
-			<HTMLCanvasElement>document.getElementById(conf.id),
+			chartElem,
 			chartConfig
 		);
 	} catch (e) {
-		return <Error>e;
+		showAlert('danger', `Failed to build chart ${conf.id}`);
+		logger.error(`Failed to build chart ${conf.id}`, e);
 	}
-
-	return null;
 }
 
 interface CostItem {
@@ -379,215 +465,238 @@ const unitFormatter = new Intl.NumberFormat('en-US', {
 	maximumFractionDigits: 2,
 	minimumFractionDigits: 0,
 });
-async function buildCostChart(account?: PhoneNumberAccount, lastMonth: boolean = true): Promise<Error | null> {
+async function buildCostChart(account?: PhoneNumberAccount, lastMonth: boolean = true) {
 	logger.trace('buildCostChart', ...arguments);
-	const rawData = await fetch(`/api/twilio?action=billing${typeof account !== 'undefined' ? `&account=${account}`: ''}${!lastMonth ? '&month=this' : ''}`)
-		.then(r => r.json());
-	if (!rawData.success) {
-		showAlert('danger', `Failed to load chart -  ${rawData.message || 'Unkown error'}`);
-		logger.error(rawData);
-		return new Error(JSON.stringify(rawData));
-	} else if (rawData.data.length === 0) {
-		logger.warn(`Skipping ${account || 'Total'}, no data`, rawData);
-		return null;
-	}
-
-	const elem = document.getElementById(`cost-${account ? account : 'total'}-${lastMonth ? 'last' : 'this'}`) as HTMLCanvasElement;
-	if (elem === null) {
-		const errMsg = `Unable to render cost chart for ${account}: No element found`;
-		logger.error(errMsg);
-		return new Error(errMsg);
-	}
-	const chartLabels: string[] = [];
-	const chartData: {
-		data: number[];
-	}[] = [
-		{ // Level 1
-			data: [],
-		},
-	];
-	const keysToData: {
-		[key: string]: {
-			type: 'aws' | 'twilio',
-			cost: number;
-			count: number;
-			unit: string;
-		};
-	} = {};
-	const breakDown = [
-		'carrierfees',
-		'mms',
-		'sms',
-		'phonenumbers',
-	];
-	let awsTotal: number = 0;
-	rawData.data.forEach((item: CostItem) => {
-		keysToData[item.cat] = {
-			type: item.type,
-			cost: item.price,
-			count: item.count,
-			unit: item.countUnit,
-		};
-
-		if (item.type === 'aws' && item.price > 0) {
-			breakDown.push(item.cat);
-			awsTotal += item.price;
+	try {
+		const elem = document.getElementById(`cost-${account ? account : 'total'}-${lastMonth ? 'last' : 'this'}`) as HTMLCanvasElement;
+		if (elem === null) {
+			throw new Error(`Unable to render cost chart for ${account}: No element found`);
 		}
-	});
-	delete keysToData.channels;
-	if (typeof keysToData['sms-messages-carrierfees'] !== 'undefined') {
-		keysToData['carrierfees'] = keysToData['carrierfees'] || {
-			type: 'twilio',
-			cost: 0,
-			count: 0,
-			unit: '',
-		};
-		keysToData['carrierfees'].cost += keysToData['sms-messages-carrierfees'].cost;
-		keysToData['carrierfees'].count += keysToData['sms-messages-carrierfees'].count;
-		keysToData['carrierfees'].unit = keysToData['sms-messages-carrierfees'].unit;
-		keysToData['carrierfees-sms'] = keysToData['sms-messages-carrierfees'];
-		delete keysToData['sms-messages-carrierfees'];
-	}
-	if (typeof keysToData['mms-messages-carrierfees'] !== 'undefined') {
-		keysToData['carrierfees'] = keysToData['carrierfees'] || {
-			type: 'twilio',
-			cost: 0,
-			count: 0,
-			unit: '',
-		};
-		keysToData['carrierfees'].cost += keysToData['mms-messages-carrierfees'].cost;
-		keysToData['carrierfees'].count += keysToData['mms-messages-carrierfees'].count;
-		keysToData['carrierfees'].unit = keysToData['mms-messages-carrierfees'].unit;
-		keysToData['carrierfees-mms'] = keysToData['mms-messages-carrierfees'];
-		delete keysToData['mms-messages-carrierfees'];
-	}
-	const totalPrice = keysToData.totalprice.cost + awsTotal;
-	delete keysToData.totalprice;
+		const spinner = document.createElement('div');
+		spinner.classList.add('spinner-border', 'spinner-center-absolute');
+		if (elem.parentElement !== null) {
+			elem.parentElement.appendChild(spinner);
+		}
 
-	// First layer
-	let layerTotal = 0;
-	const chartDataLookup: {
-		[key: string]: {
-			type: 'aws' | 'twilio' | 'other',
-			cost: number;
-			count: number;
-			unit: string;
-		};
-	} = {};
-	const actualTotal = breakDown.reduce((agg, key) => {
-		if (typeof keysToData[key] !== 'undefined')
-			agg += keysToData[key].cost;
-		return agg;
-	}, 0);
-	Object.keys(keysToData)
-		.filter(key => breakDown.includes(key))
-		.sort((a, b) => keysToData[a].cost > keysToData[b].cost ? -1 : 1)
-		.forEach((key, idx) => {
-			if (
-				idx >= 9 ||
-				(
-					idx >= 6 &&
-					keysToData[key].cost / actualTotal < 0.1
-				)
-			) return;
+		const rawData = await fetch(`/api/twilio?action=billing${typeof account !== 'undefined' ? `&account=${account}`: ''}${!lastMonth ? '&month=this' : ''}`)
+			.then(r => r.json());
+		if (!rawData.success) {
+			throw new Error(JSON.stringify(rawData));
+		} else if (rawData.data.length === 0) {
+			logger.warn(`Skipping ${account || 'Total'}, no data`, rawData);
+			return;
+		}
+		const chartLabels: string[] = [];
+		const chartData: {
+			data: number[];
+		}[] = [
+			{ // Level 1
+				data: [],
+			},
+		];
+		const keysToData: {
+			[key: string]: {
+				type: 'aws' | 'twilio',
+				cost: number;
+				count: number;
+				unit: string;
+			};
+		} = {};
+		const breakDown = [
+			'carrierfees',
+			'mms',
+			'sms',
+			'phonenumbers',
+		];
+		let awsTotal: number = 0;
+		rawData.data.forEach((item: CostItem) => {
+			keysToData[item.cat] = {
+				type: item.type,
+				cost: item.price,
+				count: item.count,
+				unit: item.countUnit,
+			};
 
-			const data = keysToData[key];
-			let label = `${labels[data.type] || data.type} - `;
-
-			layerTotal += keysToData[key].cost;
-			if (typeof labels[key] !== 'undefined') {
-				label += labels[key];
-			} else {
-				label += key;
+			if (item.type === 'aws' && item.price > 0) {
+				breakDown.push(item.cat);
+				awsTotal += item.price;
 			}
-			chartLabels.push(label);
-			chartDataLookup[label] = data;
-			chartData[0].data.push(keysToData[key].cost);
 		});
-	if (
-		layerTotal < totalPrice &&
-		totalPrice - layerTotal >= 0.005
-	) {
-		chartLabels.push('Other');
-		chartData[0].data.push(totalPrice - layerTotal);
-		chartDataLookup.Other = {
-			type: 'other',
-			cost: totalPrice - layerTotal,
-			count: 0,
-			unit: 'N/A',
-		};
-		logger.warn(`Inaccurate total price for ${account || 'Total'}, wanted ${totalPrice} got ${layerTotal}`);
-	}
+		delete keysToData.channels;
+		if (typeof keysToData['sms-messages-carrierfees'] !== 'undefined') {
+			keysToData['carrierfees'] = keysToData['carrierfees'] || {
+				type: 'twilio',
+				cost: 0,
+				count: 0,
+				unit: '',
+			};
+			keysToData['carrierfees'].cost += keysToData['sms-messages-carrierfees'].cost;
+			keysToData['carrierfees'].count += keysToData['sms-messages-carrierfees'].count;
+			keysToData['carrierfees'].unit = keysToData['sms-messages-carrierfees'].unit;
+			keysToData['carrierfees-sms'] = keysToData['sms-messages-carrierfees'];
+			delete keysToData['sms-messages-carrierfees'];
+		}
+		if (typeof keysToData['mms-messages-carrierfees'] !== 'undefined') {
+			keysToData['carrierfees'] = keysToData['carrierfees'] || {
+				type: 'twilio',
+				cost: 0,
+				count: 0,
+				unit: '',
+			};
+			keysToData['carrierfees'].cost += keysToData['mms-messages-carrierfees'].cost;
+			keysToData['carrierfees'].count += keysToData['mms-messages-carrierfees'].count;
+			keysToData['carrierfees'].unit = keysToData['mms-messages-carrierfees'].unit;
+			keysToData['carrierfees-mms'] = keysToData['mms-messages-carrierfees'];
+			delete keysToData['mms-messages-carrierfees'];
+		}
+		const totalPrice = keysToData.totalprice.cost + awsTotal;
+		delete keysToData.totalprice;
 
-	const chartConfig: ChartConfiguration<'pie'> = {
-		type: 'pie',
-		data: {
-			labels: chartLabels,
-			datasets: chartData,
-		},
-		options: {
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: {
-				legend: {
-					position: 'right',
-					labels: {
-						filter: item => {
-							const data = chartDataLookup[item.text];
-							if (typeof data === 'undefined') return true;
+		// First layer
+		let layerTotal = 0;
+		const chartDataLookup: {
+			[key: string]: {
+				type: 'aws' | 'twilio' | 'other',
+				cost: number;
+				count: number;
+				unit: string;
+			};
+		} = {};
+		const actualTotal = breakDown.reduce((agg, key) => {
+			if (typeof keysToData[key] !== 'undefined')
+				agg += keysToData[key].cost;
+			return agg;
+		}, 0);
+		Object.keys(keysToData)
+			.filter(key => breakDown.includes(key))
+			.sort((a, b) => keysToData[a].cost > keysToData[b].cost ? -1 : 1)
+			.forEach((key, idx) => {
+				if (
+					idx >= 9 ||
+					(
+						idx >= 6 &&
+						keysToData[key].cost / actualTotal < 0.1
+					)
+				) return;
 
-							item.text += ` - ${moneyFormatter.format(data.cost)}`;
-							return true;
+				const data = keysToData[key];
+				let label = `${labels[data.type] || data.type} - `;
+
+				layerTotal += keysToData[key].cost;
+				if (typeof labels[key] !== 'undefined') {
+					label += labels[key];
+				} else {
+					label += key;
+				}
+				chartLabels.push(label);
+				chartDataLookup[label] = data;
+				chartData[0].data.push(keysToData[key].cost);
+			});
+		if (
+			layerTotal < totalPrice &&
+			totalPrice - layerTotal >= 0.005
+		) {
+			chartLabels.push('Other');
+			chartData[0].data.push(totalPrice - layerTotal);
+			chartDataLookup.Other = {
+				type: 'other',
+				cost: totalPrice - layerTotal,
+				count: 0,
+				unit: 'N/A',
+			};
+			logger.warn(`Inaccurate total price for ${account || 'Total'}, wanted ${totalPrice} got ${layerTotal}`);
+		}
+
+		const chartConfig: ChartConfiguration<'pie'> = {
+			type: 'pie',
+			data: {
+				labels: chartLabels,
+				datasets: chartData,
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						position: 'right',
+						labels: {
+							filter: item => {
+								const data = chartDataLookup[item.text];
+								if (typeof data === 'undefined') return true;
+
+								item.text += ` - ${moneyFormatter.format(data.cost)}`;
+								return true;
+							},
 						},
 					},
-				},
-				tooltip: {
-					callbacks: {
-						title: () => `${account || 'Total'} Costs`,
-						label: context => {
-							const labelKey: string | null = (
-								context.chart?.data?.labels &&
-								context.chart?.data?.labels[context.dataIndex]
-							) ? context.chart.data.labels[context.dataIndex] as string
-								: null;
+					tooltip: {
+						callbacks: {
+							title: () => `${account || 'Total'} Costs`,
+							label: context => {
+								const labelKey: string | null = (
+									context.chart?.data?.labels &&
+									context.chart?.data?.labels[context.dataIndex]
+								) ? context.chart.data.labels[context.dataIndex] as string
+									: null;
 
-							if (
-								labelKey === null ||
-								typeof chartDataLookup[labelKey] === 'undefined'
-							) {
-								return `${labelKey || 'Unknown'}: ${moneyFormatter.format(Number(context.raw))}`;
-							}
+								if (
+									labelKey === null ||
+									typeof chartDataLookup[labelKey] === 'undefined'
+								) {
+									return `${labelKey || 'Unknown'}: ${moneyFormatter.format(Number(context.raw))}`;
+								}
 
-							const data = chartDataLookup[labelKey];
-							let baseLabel = `${labelKey}: ${moneyFormatter.format(Number(context.raw))}`;
-							if (data.unit !== 'N/A') {
-								baseLabel += ` for ${unitFormatter.format(data.count)} ${data.unit}`;
-							}
-							return baseLabel;
-						},
-						afterBody: () => `${moneyFormatter.format(totalPrice)} Total Cost`,
-					}
-				},
+								const data = chartDataLookup[labelKey];
+								let baseLabel = `${labelKey}: ${moneyFormatter.format(Number(context.raw))}`;
+								if (data.unit !== 'N/A') {
+									baseLabel += ` for ${unitFormatter.format(data.count)} ${data.unit}`;
+								}
+								return baseLabel;
+							},
+							afterBody: () => `${moneyFormatter.format(totalPrice)} Total Cost`,
+						}
+					},
+				}
 			}
+		};
+
+		if (spinner.parentElement !== null) {
+			spinner.parentElement.removeChild(spinner);
 		}
-	};
 
-	new Chart(elem, chartConfig);
-
-	return null;
+		new Chart(elem, chartConfig);
+	} catch (e) {
+		showAlert('danger', `Failed to render cost chart for ${account || 'all accounts'}`);
+		logger.error(`Failed to render cost chart for ${account || 'all accounts'}`, e);
+	}
 }
 
 async function refreshCharts() {
 	logger.trace('refreshCharts', ...arguments);
-	const promises = baseCharts.map(buildChart);
+	let functionIndex = 0;
+	const functionsToCall = baseCharts.map(chart => buildChart.bind(null, chart));
 	if (user.isDistrictAdmin) {
-		promises.push(
-			buildCostChart(),
-			...validPhoneNumberAccounts.map(a => buildCostChart(a)),
-			buildCostChart(undefined, false),
-			...validPhoneNumberAccounts.map(a => buildCostChart(a, false)),
-		);
+		functionsToCall.push(
+			buildCostChart,
+			buildCostChart.bind(null, undefined, false),
+			...validPhoneNumberAccounts
+				.map(a => [
+					buildCostChart.bind(null, a),
+					buildCostChart.bind(null, a, false),
+				])
+				.flat(),
+		)
 	}
+	const promises: Promise<void>[] = [];
+	for (let i = 0; i < 5; i++) {
+		promises.push((async () => {
+			while (functionIndex < functionsToCall.length) {
+				functionIndex++;
+				await functionsToCall[functionIndex - 1]();
+			}
+		})());
+	}
+	
 	await Promise.all(promises);
 }
 afterAuthUpdate.push(refreshCharts);

@@ -7,6 +7,7 @@ import { pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, UserDepartment, va
 import { showAlert } from './utils/alerts';
 import { changeButtonColor, modifyButton } from './utils/button';
 import { ApiUserLoginResult } from '../../common/userApi';
+import { secondsToTime } from './utils/format';
 
 const logger = getLogger('texts');
 
@@ -75,24 +76,6 @@ function parseMediaUrls(mediaUrls: string) {
 		.filter(s => s !== '')
 		.map((v, i) => `<a href="${v}">${i + 1}</a>`)
 		.join(',');
-}
-
-function secondsToTime(valueSeconds: number) {
-	logger.trace('secondsToTime', ...arguments);
-
-	const maxValue = valueSeconds;
-	let timeStr = '';
-	if (maxValue >= 60 * 60) {
-		const hours = Math.floor(valueSeconds / (60 * 60));
-		timeStr += `${hours}:`;
-		valueSeconds -= (hours * 60 * 60);
-	}
-	const minutes = Math.floor(valueSeconds / 60);
-	timeStr += `${minutes.toString().padStart(2, '0')}:`;
-	valueSeconds -= (minutes * 60);
-	timeStr += `${valueSeconds.toString().padStart(2, '0')}`;
-
-	return timeStr;
 }
 
 function getPercentile(values: number[], percentile: number) {

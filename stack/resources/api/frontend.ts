@@ -1017,8 +1017,8 @@ const statsMap: {
 			Stat: 'Sum',
 		},
 	},
-	'upload-time-cvfd-p80': {
-		Label: 'CVFD Upload Time (p80)',
+	'upload-time-cvfd-min': {
+		Label: 'CVFD Upload Time (min)',
 		MetricStat: {
 			Metric: {
 				Namespace: 'DTR Metrics',
@@ -1031,7 +1031,24 @@ const statsMap: {
 				],
 			},
 			Period: 60,
-			Stat: 'p80',
+			Stat: 'Minimum',
+		},
+	},
+	'upload-time-cvfd-med': {
+		Label: 'CVFD Upload Time (med)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'CVFD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'p50',
 		},
 	},
 	'upload-time-cvfd-avg': {
@@ -1065,7 +1082,41 @@ const statsMap: {
 				],
 			},
 			Period: 60,
-			Stat: 'max',
+			Stat: 'Maximum',
+		},
+	},
+	'upload-time-nscad-min': {
+		Label: 'NSCAD Upload Time (min)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'NSCAD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'Minimum',
+		},
+	},
+	'upload-time-nscad-med': {
+		Label: 'NSCAD Upload Time (med)',
+		MetricStat: {
+			Metric: {
+				Namespace: 'DTR Metrics',
+				MetricName: 'UploadTime',
+				Dimensions: [
+					{
+						Name: 'Tower',
+						Value: 'NSCAD',
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'p50',
 		},
 	},
 	'upload-time-nscad-p80': {
@@ -1085,23 +1136,6 @@ const statsMap: {
 			Stat: 'p80',
 		},
 	},
-	'upload-time-nscad-avg': {
-		Label: 'NSCAD Upload Time (avg)',
-		MetricStat: {
-			Metric: {
-				Namespace: 'DTR Metrics',
-				MetricName: 'UploadTime',
-				Dimensions: [
-					{
-						Name: 'Tower',
-						Value: 'NSCAD',
-					},
-				],
-			},
-			Period: 60,
-			Stat: 'avg',
-		},
-	},
 	'upload-time-nscad-max': {
 		Label: 'NSCAD Upload Time (max)',
 		MetricStat: {
@@ -1116,7 +1150,7 @@ const statsMap: {
 				],
 			},
 			Period: 60,
-			Stat: 'max',
+			Stat: 'Maximum',
 		},
 	},
 };

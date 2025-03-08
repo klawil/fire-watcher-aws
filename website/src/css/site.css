@@ -64,3 +64,9 @@ body {
 .no-bottom-border {
 	border-bottom: none !important;
 }
+
+.spinner-center-absolute {
+	position: absolute;
+	left: calc(50% - 1rem);
+	top: calc(50% - 1rem);
+}
