@@ -141,6 +141,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING
       }
     });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'ToneIndex',
+      partitionKey: {
+        name: 'ToneIndex',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'StartTime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     talkgroupTable.addGlobalSecondaryIndex({
       indexName: 'InUseIndex',
