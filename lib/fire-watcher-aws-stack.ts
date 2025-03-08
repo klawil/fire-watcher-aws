@@ -213,7 +213,7 @@ export class FireWatcherAwsStack extends Stack {
         updateBehavior: 'LOG'
       },
       schedule: {
-        scheduleExpression: 'cron(5,10,30 * * * ? *)'
+        scheduleExpression: 'cron(10 * * * ? *)'
       }
     });
     eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
