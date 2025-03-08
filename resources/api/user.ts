@@ -43,6 +43,7 @@ interface CurrentUser {
 	fName: string | null;
 	lName: string | null;
 	department: string | null;
+	talkgroups: string[];
 }
 
 interface UserObject {
@@ -213,7 +214,8 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		isDistrictAdmin: false,
 		fName: null,
 		lName: null,
-		department: null
+		department: null,
+		talkgroups: []
 	};
 
 	if (user !== null) {
@@ -223,6 +225,7 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		response.fName = user.fName?.S || null;
 		response.lName = user.lName?.S || null;
 		response.department = user.department?.S || null;
+		response.talkgroups = user.talkgroups?.NS || [];
 	}
 
 	return {
@@ -372,10 +375,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			message: 'You are not permitted to access this area'
 		})
 	};
-	if (
-		user === null ||
-		!user.isAdmin?.BOOL
-	) {
+	if (user === null) {
 		return unauthorizedResponse;
 	}
 
@@ -386,6 +386,14 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		success: true,
 		errors: []
 	};
+
+	// Validate the person has the right permissions
+	if (
+		!user.isAdmin?.BOOL &&
+		user.phone.N !== body.phone
+	) {
+		return unauthorizedResponse;
+	}
 
 	// Validate the request
 	if (
@@ -409,48 +417,42 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		response.errors.push('lName');
 	}
 	if (
-		typeof body.callSign !== 'string' ||
-		!/^[0-9]+$/.test(body.callSign)
-	) {
-		response.errors.push('callSign');
-	}
-	if (typeof body.isActive !== 'boolean') {
-		response.errors.push('isActive');
-	}
-	if (typeof body.isAdmin !== 'boolean') {
-		response.errors.push('isAdmin');
-	}
-	if (
 		typeof body.talkgroups === 'undefined' ||
 		!Array.isArray(body.talkgroups) ||
 		body.talkgroups.filter(v => validTalkgroups.indexOf(v) !== -1).length === 0
 	) {
 		response.errors.push('talkgroups');
 	}
-	if (
-		user.isDistrictAdmin?.BOOL &&
-		typeof body.pageOnly !== 'boolean'
-	) {
-		response.errors.push('pageOnly');
+	if (user.isAdmin?.BOOL) {
+		if (
+			typeof body.callSign !== 'string' ||
+			!/^[0-9]+$/.test(body.callSign)
+		) {
+			response.errors.push('callSign');
+		}
+		if (typeof body.isActive !== 'boolean') {
+			response.errors.push('isActive');
+		}
+		if (typeof body.isAdmin !== 'boolean') {
+			response.errors.push('isAdmin');
+		}
 	}
-	if (
-		user.isDistrictAdmin?.BOOL &&
-		typeof body.getTranscript !== 'boolean'
-	) {
-		response.errors.push('getTranscript');
-	}
-	if (
-		user.isDistrictAdmin?.BOOL &&
-		typeof body.getSystemAlerts !== 'boolean'
-	) {
-		response.errors.push('getSystemAlerts');
-	}
-	if (
-		user.isDistrictAdmin?.BOOL &&
-		typeof body.department !== 'undefined' &&
-		validDepartments.indexOf(body.department) === -1
-	) {
-		response.errors.push('department');
+	if (user.isDistrictAdmin?.BOOL) {
+		if (typeof body.pageOnly !== 'boolean') {
+			response.errors.push('pageOnly');
+		}
+		if (typeof body.getTranscript !== 'boolean') {
+			response.errors.push('getTranscript');
+		}
+		if (typeof body.getSystemAlerts !== 'boolean') {
+			response.errors.push('getSystemAlerts');
+		}
+		if (
+			typeof body.department !== 'undefined' &&
+			validDepartments.indexOf(body.department) === -1
+		) {
+			response.errors.push('department');
+		}
 	}
 
 	// Check to see if the phone number already exists
@@ -498,22 +500,30 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		ExpressionAttributeNames: {
 			'#fn': 'fName',
 			'#ln': 'lName',
-			'#cs': 'callSign',
-			'#act': 'isActive',
-			'#adm': 'isAdmin',
 			'#tg': 'talkgroups'
 		},
 		ExpressionAttributeValues: {
 			':fn': { S: body.fName },
 			':ln': { S: body.lName },
-			':cs': { N: body.callSign },
-			':act': { BOOL: body.isActive },
-			':adm': { BOOL: body.isAdmin },
 			':tg': { NS: body.talkgroups }
 		},
-		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #tg = :tg',
+		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #tg = :tg',
 		ReturnValues: 'UPDATED_NEW'
 	};
+	if (user.isAdmin?.BOOL) {
+		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
+		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+
+		updateConfig.ExpressionAttributeNames['#cs'] = 'callSign';
+		updateConfig.ExpressionAttributeNames['#act'] = 'isActive';
+		updateConfig.ExpressionAttributeNames['#adm'] = 'isAdmin';
+
+		updateConfig.ExpressionAttributeValues[':cs'] = { N: body.callSign };
+		updateConfig.ExpressionAttributeValues[':act'] = { BOOL: body.isActive };
+		updateConfig.ExpressionAttributeValues[':adm'] = { BOOL: body.isAdmin };
+
+		updateConfig.UpdateExpression += `, #cs = :cs, #act = :act, #adm = :adm`;
+	}
 	if (user.isDistrictAdmin?.BOOL) {
 		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
 		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
