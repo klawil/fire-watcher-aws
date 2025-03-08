@@ -538,6 +538,25 @@ export class FireWatcherAwsStack extends Stack {
         }
       },
       {
+        codeName: 'pooltable-tower',
+        alarm: {
+          ...baseTowerAlarmConfig,
+          evaluationPeriods: 20,
+          datapointsToAlarm: 20,
+          metric: new cloudwatch.Metric({
+            metricName: 'Decode Rate',
+            namespace: 'DTR Metrics',
+            period: Duration.minutes(5),
+            statistic: cloudwatch.Stats.MINIMUM,
+            dimensionsMap: {
+              Tower: 'PoolTable'
+            }
+          }),
+          alarmDescription: 'Pool Table Decode Rate below 35/min',
+          alarmName: 'Pool Table Tower'
+        }
+      },
+      {
         codeName: 'saguache-tower-upload',
         alarm: {
           ...baseUploadAlarmConfig
