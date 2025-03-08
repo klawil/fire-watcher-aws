@@ -20,7 +20,6 @@ interface CheckboxConfig {
 interface InputConfig {
 	name: keyof ApiUserUpdateBody;
 	placeholder: string;
-	editable: boolean;
 	val: (u: ApiUserUpdateBody) => string;
 	iVal?: (u: ApiUserUpdateBody) => string;
 	format?: (a: string) => string;
@@ -28,6 +27,9 @@ interface InputConfig {
 }
 
 const tbody = <HTMLTableSectionElement>document.getElementById('tbody');
+
+const userAdminDepartments: UserDepartment[] = validDepartments
+	.filter(dep => user.isDistrictAdmin || (user[dep]?.active && user[dep]?.admin));
 
 function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment): RowConfig {
 	logger.trace('getUserDepartmentRowConfig', ...arguments);
@@ -147,8 +149,10 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment): 
 			{ // save button
 				classList: [ 'text-center', ],
 				create: (td) => {
+					if (!canEditThisDepartment) return;
+
 					td.appendChild(saveButton);
-					saveButton.classList.add('btn', 'btn-success', 'my-1');
+					saveButton.classList.add('btn', 'btn-success', 'm-1');
 					saveButton.innerHTML = 'Save';
 					saveButton.disabled = true;
 					saveButton.addEventListener('click', async () => {
@@ -189,6 +193,37 @@ function getUserDepartmentRowConfig(u: UserObject, department: UserDepartment): 
 							inputs
 								.filter(input => apiResult.errors.includes(input.name))
 								.forEach(input => input.classList.add('is-invalid'));
+						}
+					});
+
+					if (u === null || typeof u[department] === 'undefined') return;
+
+					const deleteButton = document.createElement('button');
+					td.appendChild(deleteButton);
+					deleteButton.classList.add('m-1');
+					modifyButton(deleteButton, 'danger', 'Delete');
+					deleteButton.addEventListener('click', async () => {
+						modifyButton(deleteButton, 'secondary', 'Deleting', true, false);
+						const apiResult: ApiUserUpdateResponse = await fetch('/api/user?action=delete', {
+							method: 'POST',
+							body: JSON.stringify({
+								phone: u.phone.toString(),
+								department,
+							}),
+						}).then(r => r.json());
+						if (apiResult.success) {
+							deleteButton.parentElement?.removeChild(deleteButton);
+							Array.from(td.parentElement?.querySelectorAll('input') || [])
+								.forEach(input => {
+									if (input.type === 'checkbox') {
+										input.checked = false;
+									} else if (input.type === 'text') {
+										input.value = '';
+									}
+								})
+						} else {
+							modifyButton(deleteButton, 'danger', 'Delete', false, true);
+							showAlert('danger', `Failed to remove department ${department}`);
 						}
 					});
 				},
@@ -330,29 +365,37 @@ function buildCheckboxes(
 	return container;
 }
 
-function buildUserEdit(u: UserObject, parent: HTMLElement) {
+function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 	const saveButton = document.createElement('button');
 
 	// Set up the proxy to make the API call easier
 	const defaultUserValues: ApiUserUpdateBody = {
-		phone: u.phone,
-		talkgroups: u.talkgroups || [],
-		fName: u.fName,
-		lName: u.lName,
-		getTranscript: !!u.getTranscript,
-		getApiAlerts: !!u.getApiAlerts,
-		getVhfAlerts: !!u.getVhfAlerts,
-		getDtrAlerts: !!u.getDtrAlerts,
-		isDistrictAdmin: !!u.isDistrictAdmin,
+		phone: u !== null ? u.phone : '',
+		talkgroups: u !== null ? (u.talkgroups || []) : [],
+		fName: u !== null ? u.fName : '',
+		lName: u !== null ? u.lName : '',
+		getTranscript: u !== null ? !!u.getTranscript : false,
+		getApiAlerts: u !== null ? !!u.getApiAlerts : false,
+		getVhfAlerts: u !== null ? !!u.getVhfAlerts : false,
+		getDtrAlerts: u !== null ? !!u.getDtrAlerts : false,
+		isDistrictAdmin: u !== null ? !!u.isDistrictAdmin : false,
 	};
-	const changedValues: Partial<ApiUserUpdateBody> = {};
+	if (u === null) {
+		defaultUserValues.department = userAdminDepartments[0];
+	}
+	const changedValues: Partial<ApiUserUpdateBody> = {
+		...(u !== null ? {} : defaultUserValues),
+	};
 	const proxyBase: ApiUserUpdateBody = {
 		...defaultUserValues,
 		talkgroups: [ ...defaultUserValues.talkgroups || [] ],
 	};
 	const userValues = new Proxy(proxyBase, {
 		set: (target, prop: keyof ApiUserUpdateBody, value) => {
-			if (JSON.stringify(value) === JSON.stringify(defaultUserValues[prop])) {
+			if (
+				u !== null &&
+				JSON.stringify(value) === JSON.stringify(defaultUserValues[prop])
+			) {
 				delete changedValues[prop];
 			} else {
 				(changedValues as any)[prop] = value;
@@ -368,23 +411,64 @@ function buildUserEdit(u: UserObject, parent: HTMLElement) {
 	const mainContainer = document.createElement('div');
 	parent.appendChild(mainContainer);
 	mainContainer.classList.add('col-xl-6', 'row', 'px-4');
+	if (u === null) {
+		mainContainer.classList.add('offset-xl-3');
+	}
 
-	// Name
+	// Name and phone number (if new)
 	const mainSubContainer1 = document.createElement('div');
 	mainContainer.appendChild(mainSubContainer1);
 	mainSubContainer1.classList.add('col-lg-6', 'offset-lg-3', 'col-md-8', 'offset-md-2', 'col-xl-8', 'offset-xl-2');
+	if (u === null) {
+		makeTextInput({
+			name: 'phone',
+			placeholder: 'Phone Number',
+			val: u => u.phone || '',
+		}, mainSubContainer1, userValues);
+	}
 	makeTextInput({
-		editable: true,
 		name: 'fName',
 		placeholder: 'First Name',
 		val: u => u.fName || '',
 	}, mainSubContainer1, userValues);
 	makeTextInput({
-		editable: true,
 		name: 'lName',
 		placeholder: 'Last Name',
 		val: u => u.lName || '',
 	}, mainSubContainer1, userValues);
+
+	// Department and callsign (if new user)
+	if (u === null) {
+		const departmentContainer = document.createElement('div');
+		mainSubContainer1.appendChild(departmentContainer);
+		departmentContainer.classList.add('input-group', 'p-2');
+		const departmentLabel = document.createElement('label');
+		departmentContainer.appendChild(departmentLabel);
+		departmentLabel.classList.add('input-group-text');
+		departmentLabel.innerHTML = 'Department';
+		const departmentSelect = document.createElement('select');
+		departmentContainer.appendChild(departmentSelect);
+		departmentSelect.classList.add('form-select');
+		userAdminDepartments
+			.forEach(dep => {
+				const option = document.createElement('option');
+				departmentSelect.appendChild(option);
+				option.value = dep;
+				option.innerHTML = dep;
+				if (dep === defaultUserValues.department) {
+					option.selected = true;
+				}
+			});
+		departmentSelect.addEventListener('change', () => {
+			userValues.department = departmentSelect.value as UserDepartment;
+		});
+
+		makeTextInput({
+			name: 'callSign',
+			placeholder: 'Call Sign',
+			val: u => u.callSign || '',
+		}, mainSubContainer1, userValues);
+	}
 
 	// Pages
 	const pagesContainer = document.createElement('div');
@@ -424,15 +508,18 @@ function buildUserEdit(u: UserObject, parent: HTMLElement) {
 			inputs.forEach(input => input.classList.remove('is-invalid'));
 		
 			const apiBody: ApiUserUpdateBody = {
-				phone: u.phone.toString(),
+				phone: u !== null ? u.phone.toString() : userValues.phone,
 				...changedValues,
 			};
-			const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
+			const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=${u === null ? 'create' : 'update'}`, {
 				method: 'POST',
 				body: JSON.stringify(apiBody),
 			}).then(r => r.json());
 			if (apiResult.success) {
 				modifyButton(saveButton, 'success', 'Save', false, false);
+				if (u === null) {
+					window.location.reload();
+				}
 			} else {
 				modifyButton(saveButton, 'danger', 'Save', false, true);
 				showAlert('danger', 'Failed to save user');
@@ -442,27 +529,29 @@ function buildUserEdit(u: UserObject, parent: HTMLElement) {
 					.forEach(input => input.classList.add('is-invalid'));
 			}
 		} catch (e) {
-			logger.error(`Save user ${u.phone} error`, e);
+			logger.error(`Save user ${u !== null ? u.phone : 'new user'} error`, e);
 			modifyButton(saveButton, 'danger', 'Save', false, true);
 			showAlert('danger', 'Failed to save user');
 		}
 	});
 
 	// Department information
-	const depContainer = document.createElement('div');
-	parent.appendChild(depContainer);
-	depContainer.classList.add('table-responsive', 'col-xl-6', 'col-lg-10', 'offset-lg-1', 'offset-xl-0');
-	const departmentTable = document.createElement('table');
-	depContainer.appendChild(departmentTable);
-	departmentTable.classList.add('table', 'mb-0', 'text-center', 'no-bg');
-	departmentTable.innerHTML = `<thead><tr><th colspan="4">Departments</th></tr></thead><tbody></tbody>`;
-	const departmentTbody = departmentTable.querySelector('tbody');
-	validDepartments
-		.filter(dep => user.isDistrictAdmin || (
-			user[dep]?.admin &&
-			user[dep]?.active
-		) || u[dep])
-		.forEach(dep => createTableRow(departmentTbody, getUserDepartmentRowConfig(u, dep)));
+	if (u !== null) {
+		const depContainer = document.createElement('div');
+		parent.appendChild(depContainer);
+		depContainer.classList.add('table-responsive', 'col-xl-6', 'col-lg-10', 'offset-lg-1', 'offset-xl-0');
+		const departmentTable = document.createElement('table');
+		depContainer.appendChild(departmentTable);
+		departmentTable.classList.add('table', 'mb-0', 'text-center', 'no-bg');
+		departmentTable.innerHTML = `<thead><tr><th colspan="4">Departments</th></tr></thead><tbody></tbody>`;
+		const departmentTbody = departmentTable.querySelector('tbody');
+		validDepartments
+			.filter(dep => userAdminDepartments.includes(dep) || (
+				u !== null &&
+				u[dep]
+			))
+			.forEach(dep => createTableRow(departmentTbody, getUserDepartmentRowConfig(u, dep)));
+	}
 }
 
 const modalItems = {
@@ -514,6 +603,7 @@ async function init() {
 						classList: [ 'text-center' ],
 						html: validDepartments
 							.filter(dep => u[dep]?.active)
+							.map(dep => `${dep} (${u[dep]?.callSign || '??'})`)
 							.join(', '),
 					},
 					{
@@ -610,7 +700,63 @@ async function init() {
 			editRow.hidden = true;
 		});
 
-	// createTableRow(tbody, getUserRowConfig(null, apiResult.users.length % 2 === 0, 0));
+	// Make the new user row
+	createTableRow(tbody, {
+		id: `user-new`,
+		classList: [
+			...(apiResult.users.length % 2 === 0 ? [ 'alternate' ] : []),
+		],
+		columns: [
+			{
+				classList: [ 'text-center' ],
+				create: td => {
+					td.setAttribute('colspan', '3');
+					td.innerHTML = 'Create a New User';
+				},
+			},
+			{
+				classList: [ 'text-center' ],
+				create: td => {
+					const editButton = document.createElement('button');
+					td.appendChild(editButton);
+					editButton.classList.add('mx-1');
+					modifyButton(editButton, 'primary', 'Open');
+
+					let editRowOpen = false;
+					editButton.addEventListener('click', () => {
+						newUserRow.hidden = editRowOpen;
+						if (!editRowOpen) {
+							modifyButton(editButton, 'secondary', 'Close');
+						} else {
+							modifyButton(editButton, 'primary', 'Open');
+						}
+						editRowOpen = !editRowOpen;
+					});
+				},
+			},
+		],
+	});
+	const newUserRow = createTableRow(tbody, {
+		id: `user-new-edit`,
+		classList: [
+			...(apiResult.users.length % 2 === 0 ? [ 'alternate' ] : []),
+		],
+		columns: [
+			{
+				create: td => {
+					td.setAttribute('colspan', '4');
+					const container = document.createElement('div');
+					td.appendChild(container);
+					container.classList.add('container');
+					const row = document.createElement('div');
+					container.appendChild(row);
+					row.classList.add('row');
+					buildUserEdit(null, row);
+				}
+			}
+		]
+	});
+	newUserRow.hidden = true;
 
 	doneLoading();
 }

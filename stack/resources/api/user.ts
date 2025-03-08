@@ -598,7 +598,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		}
 
 		if (!isInvalid && item.regex) {
-			isInvalid = item.regex.test(value as string);
+			isInvalid = !item.regex.test(value as string);
 		}
 
 		if (isInvalid) {
@@ -623,8 +623,19 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 				phone: { N: body.phone }
 			}
 		}).promise();
+		// Trying to edit a non-existant user
 		if (!newPhone.Item && !create) {
 			response.errors.push('phone');
+		}
+
+		// Trying to add a department to a user who is already on that department
+		if (
+			newPhone.Item &&
+			create &&
+			typeof newPhone.Item[body.department as UserDepartment] !== 'undefined'
+		) {
+			response.errors.push('phone');
+			response.message = 'That phone number is already in use on your department';
 		}
 	}
 
@@ -666,6 +677,11 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 				}
 			};
 			setExpressions.push(`#${item.name} = :${item.name}`);
+			return;
+		}
+
+		// Exit early if we're "creating" a new user by just adding a department
+		if (create && newPhone?.Item) {
 			return;
 		}
 
@@ -923,7 +939,7 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 	if (
 		user === null ||
-		!user.isDistrictAdmin ||
+		!user.isAdmin ||
 		!user.isActive
 	) {
 		return unauthorizedResponse;
@@ -931,7 +947,7 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Validate and parse the body
 	validateBodyIsJson(event.body);
-	const body = JSON.parse(event.body as string) as UserObject;
+	const body = JSON.parse(event.body as string) as ApiUserUpdateBody;
 	const response: ApiResponse = {
 		success: true,
 		errors: []
@@ -946,6 +962,12 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	} else {
 		body.phone = body.phone.replace(/[^0-9]/g, '');
 	}
+	if (
+		typeof body.department !== 'undefined' &&
+		!validDepartments.includes(body.department)
+	) {
+		response.errors.push('department');
+	}
 	if (response.errors.length > 0) {
 		response.success = false;
 		return {
@@ -954,15 +976,39 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		};
 	}
 
-	// Delete the user
-	const result = await dynamodb.deleteItem({
-		TableName: userTable,
-		Key: {
-			phone: { N: body.phone }
-		}
-	}).promise();
+	// Check for the correct permissions
+	if (
+		!user.isDistrictAdmin &&
+		(
+			typeof body.department === 'undefined' ||
+			!user[body.department]?.admin ||
+			!user[body.department]?.active
+		)
+	) {
+		return unauthorizedApiResponse;
+	}
 
-	response.data = [ result ];
+	// Delete the user
+	if (typeof body.department === 'undefined') {
+		await dynamodb.deleteItem({
+			TableName: userTable,
+			Key: {
+				phone: { N: body.phone }
+			}
+		}).promise();
+	} else {
+		await dynamodb.updateItem({
+			TableName: userTable,
+			Key: {
+				phone: { N: body.phone }
+			},
+			ExpressionAttributeNames: {
+				'#dep': body.department,
+			},
+			UpdateExpression: 'REMOVE #dep',
+		}).promise();
+	}
+
 	return {
 		statusCode: 200,
 		body: JSON.stringify(response)
