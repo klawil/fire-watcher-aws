@@ -228,7 +228,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					});
 
 					if (matchingItems.length > 1) {
-						// doTranscriptOnly = true; // So we don't accidentally double page
+						doTranscriptOnly = true; // So we don't accidentally double page
 						const metric = incrementMetric('Event', {
 							source: metricSource,
 							type: 'dtr',
@@ -311,11 +311,13 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							keptItem.Key.S !== Key || // We're not saving this file
 							!shouldDoTranscript // This file doesn't need a transcript
 						) {
-							logger.debug('Deuplicate, no transcript or page');
+							logger.debug('Duplicate, no transcript or page');
 							await Promise.all(promises);
 							return;
 						}
 					}
+				} else if (shouldDoTranscript) {
+					logger.debug('body', body.Item);
 				}
 			}
 

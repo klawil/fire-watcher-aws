@@ -502,18 +502,18 @@ export class FireWatcherAwsStack extends Stack {
     const alarmAction = new cw_actions.LambdaAction(alarmQueueHandler);
 
     const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 5,
+      evaluationPeriods: 6,
       datapointsToAlarm: 5,
       metric: new cloudwatch.Metric({
         metricName: 'Decode Rate',
         namespace: 'DTR Metrics',
-        period: Duration.minutes(2),
+        period: Duration.minutes(5),
         statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
           Tower: 'Saguache'
         }
       }),
-      threshold: 35,
+      threshold: 30,
       alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
       alarmName: 'Saguache Tower Decode Rate',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
