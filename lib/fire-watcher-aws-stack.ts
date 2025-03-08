@@ -399,6 +399,32 @@ export class FireWatcherAwsStack extends Stack {
     infraApiResource.addMethod('GET', infraApiIntegration);
     infraApiResource.addMethod('POST', infraApiIntegration);
 
+    // Create the user API
+    const userApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-user-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/api/user.ts',
+      handler: 'main',
+      environment: {
+        TABLE_USER: phoneNumberTable.tableName
+      },
+      timeout: Duration.seconds(10)
+    });
+    phoneNumberTable.grantReadWriteData(userApiHandler);
+    const userApiIntegration = new apigateway.LambdaIntegration(userApiHandler, {
+      requestTemplates: {
+        'application/json': '{"statusCode":"200"}'
+      }
+    });
+    const userApiResource = apiResource.addResource('user');
+    userApiResource.addMethod('GET', userApiIntegration);
+
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
 
