@@ -36,9 +36,11 @@ const maxFireTypeLabelLen = (<FireTypes[]>Object.keys(fireTypeLabels))
 	.map(key => fireTypeLabels[key] || key)
 	.reduce((len, label) => len < label.length ? label.length : len, 0);
 
-function padEndWithSpaces(value: string | number, len: number) {
+function padEndWithSpaces(value: string | number | undefined, len: number) {
 	logger.trace('padEndWithSpaces', ...arguments);
-	if (typeof value !== 'string') {
+	if (typeof value === 'undefined') {
+		value = '';
+	} else if (typeof value !== 'string') {
 		value = value.toString();
 	}
 
@@ -46,9 +48,11 @@ function padEndWithSpaces(value: string | number, len: number) {
 		.replace(/\+/g, '&nbsp;');
 }
 
-function padStartWithSpaces(value: string | number, len: number) {
+function padStartWithSpaces(value: string | number | undefined, len: number) {
 	logger.trace('padStartWithSpaces', ...arguments);
-	if (typeof value !== 'string') {
+	if (typeof value === 'undefined') {
+		value = '';
+	} else if (typeof value !== 'string') {
 		value = value.toString();
 	}
 
