@@ -6,7 +6,6 @@ const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 
-const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const deviceTable = process.env.TABLE_DEVICE as string;
@@ -16,6 +15,22 @@ const metricSource = 'S3';
 
 const selectDuplicateBuffer = 60; // Select calls 60s each way for analysis for duplicates
 const actualDuplicateBuffer = 1; // Check for calls 1s each way for DTR duplicates
+
+const vhfConfig: {
+	[key: string]: {
+		tg: string;
+		freq: string;
+	}
+} = {
+	'BG_FIRE_VHF': {
+		tg: '18331',
+		freq: '154445000'
+	},
+	'SAG_FIRE_VHF': {
+		tg: '18332',
+		freq: '154190000'
+	}
+};
 
 interface SourceListItem {
 	pos: number;
@@ -39,28 +54,19 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			await metric;
 
 			const body: AWS.DynamoDB.PutItemInput = {
-				TableName: trafficTable,
+				TableName: dtrTable,
 				Item: {
 					Key: {
 						S: Key
 					},
-					Datetime: {
-						N: headInfo.Metadata?.datetime
-					},
-					Len: {
-						N: headInfo.Metadata?.len
-					},
-					Tone: {
-						BOOL: headInfo.Metadata?.tone === 'y'
-					},
-					ToneIndex: {
-						S: headInfo.Metadata?.tone || 'n'
+					Added: {
+						N: Date.now().toString()
 					}
 				}
 			};
 
+			const sourceList: string[] = [];
 			if (Key.indexOf('/dtr') !== -1) {
-				const sourceList: string[] = [];
 				try {
 					if (typeof headInfo.Metadata?.source_list !== 'undefined') {
 						JSON.parse(headInfo.Metadata?.source_list)
@@ -70,19 +76,13 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}
 				} catch (e) {}
 
-				body.TableName = dtrTable;
 				body.Item = {
-					Key: {
-						S: Key
-					},
+					...body.Item,
 					StartTime: {
 						N: headInfo.Metadata?.start_time
 					},
 					EndTime: {
 						N: headInfo.Metadata?.stop_time
-					},
-					Added: {
-						N: Date.now().toString()
 					},
 					Len: {
 						N: headInfo.Metadata?.call_length
@@ -95,6 +95,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					Tone: {
 						BOOL: headInfo.Metadata?.tone === 'true'
+					},
+					ToneIndex: {
+						S: headInfo.Metadata?.tone === 'true' ? 'y' : 'n'
 					},
 					Tower: {
 						S: headInfo.Metadata?.source
@@ -109,8 +112,54 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				if (sourceList.length === 0) {
 					delete body.Item.Sources;
 				}
-				await dynamodb.putItem(body).promise();
+			} else {
+				let config: {
+					tg: string;
+					freq: string;
+				} = {
+					tg: '999999',
+					freq: '0'
+				};
+				for (let vhfKey in vhfConfig) {
+					if (Key.indexOf(vhfKey) !== -1) {
+						config = vhfConfig[vhfKey];
+					}
+				}
 
+				body.Item = {
+					...body.Item,
+					StartTime: {
+						N: headInfo.Metadata?.datetime
+					},
+					EndTime: {
+						N: (parseInt(headInfo.Metadata?.datetime || '0', 10) + (parseInt(headInfo.Metadata?.len || '0', 10) * 1000)).toString()
+					},
+					Len: {
+						N: headInfo.Metadata?.len
+					},
+					Freq: {
+						N: config.freq
+					},
+					Emergency: {
+						N: '0'
+					},
+					Tone: {
+						BOOL: headInfo.Metadata?.tone === 'y'
+					},
+					ToneIndex: {
+						S: headInfo.Metadata?.tone || 'n'
+					},
+					Tower: {
+						S: 'vhf'
+					},
+					Talkgroup: {
+						N: config.tg
+					}
+				};
+			}
+			await dynamodb.putItem(body).promise();
+
+			if (Key.indexOf('/dtr') !== -1) {
 				const startTime: number = Number(headInfo.Metadata?.start_time);
 				const endTime: number = Number(headInfo.Metadata?.stop_time);
 				const existingItems: AWS.DynamoDB.QueryOutput = await dynamodb.query({
@@ -156,7 +205,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							type: 'dtr',
 							event: 'duplicate call'
 						}, false);
-						console.log(`Matching - `, matchingItems);
 						const itemsToDelete = matchingItems
 							.sort((a, b) => {
 								const aAdded = Number(a.Added.N);
@@ -170,10 +218,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								return aLen > bLen ? 1 : -1;
 							})
 							.slice(0, -1);
-						console.log(`Deleting - `, itemsToDelete);
-						if (itemsToDelete.length > 1) {
-							console.log('KLAWIL-DELETE');
-						}
 						await dynamodb.batchWriteItem({
 							RequestItems: {
 								[dtrTable]: itemsToDelete.map(itemToDelete => ({
@@ -194,49 +238,97 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						return;
 					}
 				}
+			}
 
-				let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
-				if (headInfo.Metadata?.tone === 'true') {
-					queuePromise = sqs.sendMessage({
-						MessageBody: JSON.stringify({
-							action: 'page',
-							key: Key.split('/')[2]
-						}),
-						QueueUrl: sqsQueue
-					}).promise();
+			let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
+			if (body.Item.Tone?.BOOL) {
+				queuePromise = sqs.sendMessage({
+					MessageBody: JSON.stringify({
+						action: 'page',
+						key: Key.split('/')[2]
+					}),
+					QueueUrl: sqsQueue
+				}).promise();
+			}
+
+			const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
+				TableName: talkgroupTable,
+				ExpressionAttributeNames: {
+					'#count': 'Count',
+					'#dev': 'Devices',
+					'#iu': 'InUse'
+				},
+				ExpressionAttributeValues: {
+					':dev': {
+						M: {}
+					},
+					':num': {
+						N: '1'
+					},
+					':iu': {
+						S: 'Y'
+					}
+				},
+				Key: {
+					'ID': {
+						N: headInfo.Metadata?.talkgroup_num
+					}
+				},
+				UpdateExpression: 'SET #iu = :iu, #dev = if_not_exists(#dev, :dev) ADD #count :num'
+			};
+			let doDeviceUpdate = sourceList.length > 0;
+			let updateExpression: string[] = [];
+			const talkgroupDevices: AWS.DynamoDB.UpdateItemInput = {
+				TableName: talkgroupTable,
+				ExpressionAttributeNames: {
+					'#dev': 'Devices'
+				},
+				ExpressionAttributeValues: {
+					':num': {
+						N: '1'
+					}
+				},
+				Key: {
+					'ID': {
+						N: headInfo.Metadata?.talkgroup_num
+					}
 				}
+			};
 
-				const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
-					TableName: talkgroupTable,
+			const deviceCreate: AWS.DynamoDB.UpdateItemInput[] = [];
+			const deviceUpdate: AWS.DynamoDB.UpdateItemInput[] = [];
+
+			sourceList.forEach((device, index) => {
+				if (!talkgroupDevices.ExpressionAttributeNames) talkgroupDevices.ExpressionAttributeNames = {};
+				talkgroupDevices.ExpressionAttributeNames[`#dev${index}`] = device;
+				updateExpression.push(`#dev.#dev${index} :num`);
+
+				deviceCreate.push({
+					TableName: deviceTable,
 					ExpressionAttributeNames: {
-						'#count': 'Count',
-						'#dev': 'Devices',
-						'#iu': 'InUse'
+						'#tg': 'Talkgroups',
+						'#count': 'Count'
 					},
 					ExpressionAttributeValues: {
-						':dev': {
+						':num': {
+							N: '1'
+						},
+						':tg': {
 							M: {}
-						},
-						':num': {
-							N: '1'
-						},
-						':iu': {
-							S: 'Y'
 						}
 					},
 					Key: {
 						'ID': {
-							N: headInfo.Metadata?.talkgroup_num
+							N: device
 						}
 					},
-					UpdateExpression: 'SET #iu = :iu, #dev = if_not_exists(#dev, :dev) ADD #count :num'
-				};
-				let doDeviceUpdate = sourceList.length > 0;
-				let updateExpression: string[] = [];
-				const talkgroupDevices: AWS.DynamoDB.UpdateItemInput = {
-					TableName: talkgroupTable,
+					UpdateExpression: 'SET #tg = if_not_exists(#tg, :tg) ADD #count :num'
+				});
+				deviceUpdate.push({
+					TableName: deviceTable,
 					ExpressionAttributeNames: {
-						'#dev': 'Devices'
+						'#tg': 'Talkgroups',
+						'#tgId': headInfo.Metadata?.talkgroup_num as string
 					},
 					ExpressionAttributeValues: {
 						':num': {
@@ -245,80 +337,30 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					Key: {
 						'ID': {
-							N: headInfo.Metadata?.talkgroup_num
+							N: device
 						}
-					}
-				};
-
-				const deviceCreate: AWS.DynamoDB.UpdateItemInput[] = [];
-				const deviceUpdate: AWS.DynamoDB.UpdateItemInput[] = [];
-
-				sourceList.forEach((device, index) => {
-					if (!talkgroupDevices.ExpressionAttributeNames) talkgroupDevices.ExpressionAttributeNames = {};
-					talkgroupDevices.ExpressionAttributeNames[`#dev${index}`] = device;
-					updateExpression.push(`#dev.#dev${index} :num`);
-
-					deviceCreate.push({
-						TableName: deviceTable,
-						ExpressionAttributeNames: {
-							'#tg': 'Talkgroups',
-							'#count': 'Count'
-						},
-						ExpressionAttributeValues: {
-							':num': {
-								N: '1'
-							},
-							':tg': {
-								M: {}
-							}
-						},
-						Key: {
-							'ID': {
-								N: device
-							}
-						},
-						UpdateExpression: 'SET #tg = if_not_exists(#tg, :tg) ADD #count :num'
-					});
-					deviceUpdate.push({
-						TableName: deviceTable,
-						ExpressionAttributeNames: {
-							'#tg': 'Talkgroups',
-							'#tgId': headInfo.Metadata?.talkgroup_num as string
-						},
-						ExpressionAttributeValues: {
-							':num': {
-								N: '1'
-							}
-						},
-						Key: {
-							'ID': {
-								N: device
-							}
-						},
-						UpdateExpression: 'ADD #tg.#tgId :num'
-					});
+					},
+					UpdateExpression: 'ADD #tg.#tgId :num'
 				});
-				talkgroupDevices.UpdateExpression = `ADD ${updateExpression.join(', ')}`;
+			});
+			talkgroupDevices.UpdateExpression = `ADD ${updateExpression.join(', ')}`;
 
-				try {
-					const promises: Promise<any>[] = [
-						dynamodb.updateItem(talkgroupCreate).promise()
-							.then(() => doDeviceUpdate ? dynamodb.updateItem(talkgroupDevices).promise() : null),
-							queuePromise
-					];
-					if (doDeviceUpdate) {
-						promises.push(Promise.all(deviceCreate.map(conf => dynamodb.updateItem(conf).promise()))
-							.then(() => Promise.all(deviceUpdate.map(conf => dynamodb.updateItem(conf).promise()))));
-					}
-					await Promise.all(promises);
-				} catch (e) {
-					await incrementMetric('Error', {
-						source: metricSource
-					});
-					console.error(`ERROR TG AND DEVICES - `, e);
+			try {
+				const promises: Promise<any>[] = [
+					dynamodb.updateItem(talkgroupCreate).promise()
+						.then(() => doDeviceUpdate ? dynamodb.updateItem(talkgroupDevices).promise() : null),
+						queuePromise
+				];
+				if (doDeviceUpdate) {
+					promises.push(Promise.all(deviceCreate.map(conf => dynamodb.updateItem(conf).promise()))
+						.then(() => Promise.all(deviceUpdate.map(conf => dynamodb.updateItem(conf).promise()))));
 				}
-			} else {
-				await dynamodb.putItem(body).promise();
+				await Promise.all(promises);
+			} catch (e) {
+				await incrementMetric('Error', {
+					source: metricSource
+				});
+				console.error(`ERROR TG AND DEVICES - `, e);
 			}
 		} else {
 			await incrementMetric('Event', {
@@ -327,7 +369,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				event: 'delete'
 			});
 			const dynamoQuery = await dynamodb.query({
-				TableName: trafficTable,
+				TableName: dtrTable,
 				ExpressionAttributeNames: {
 					'#key': 'Key'
 				},
@@ -348,7 +390,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: dynamoQuery.Items && dynamoQuery.Items[0].Datetime.N
 					}
 				},
-				TableName: trafficTable
+				TableName: dtrTable
 			};
 			console.log(`Delete: ${JSON.stringify(body)}`);
 			await dynamodb.deleteItem(body).promise();

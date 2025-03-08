@@ -157,6 +157,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'IsToneIndex',
+      partitionKey: {
+        name: 'ToneIndex',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'Added',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     talkgroupTable.addGlobalSecondaryIndex({
       indexName: 'InUseIndex',
@@ -217,7 +228,6 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/s3.ts',
       handler: 'main',
       environment: {
-        TABLE_TRAFFIC: vhfTable.tableName,
         TABLE_DTR: dtrTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
         TABLE_DEVICE: deviceTable.tableName,
@@ -227,7 +237,6 @@ export class FireWatcherAwsStack extends Stack {
     
     // Grant access for the S3 handler
     bucket.grantRead(s3Handler);
-    vhfTable.grantReadWriteData(s3Handler);
     dtrTable.grantReadWriteData(s3Handler);
     talkgroupTable.grantReadWriteData(s3Handler);
     deviceTable.grantReadWriteData(s3Handler);
