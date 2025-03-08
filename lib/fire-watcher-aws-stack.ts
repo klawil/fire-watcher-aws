@@ -353,10 +353,12 @@ export class FireWatcherAwsStack extends Stack {
         codeName: 'saguache-tower',
         alarm: {
           ...baseTowerAlarmConfig,
+          evaluationPeriods: 10,
+          datapointsToAlarm: 10,
           metric: new cloudwatch.Metric({
             metricName: 'Decode Rate',
             namespace: 'DTR Metrics',
-            period: Duration.seconds(30),
+            period: Duration.minutes(1),
             statistic: cloudwatch.Stats.MINIMUM,
             dimensionsMap: {
               Tower: 'Saguache Tower'

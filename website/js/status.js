@@ -75,29 +75,29 @@ const baseCharts = [
 	},
 	{
 		id: 'sag-tower',
-		query: 'metrics=tower-sag-max,tower-sag-min&period=300&timerange=86400000&live=y',
+		query: 'metrics=tower-sag-max,tower-sag-min,tower-sag-upload&period=300&timerange=86400000&live=y',
 		fill: true
 	},
 	{
 		id: 'pool-table-tower',
-		query: 'metrics=tower-pt-max,tower-pt-min&period=300&timerange=86400000&live=y',
+		query: 'metrics=tower-pt-max,tower-pt-min,tower-pt-upload&period=300&timerange=86400000&live=y',
 		fill: true
 	},
 	{
 		id: 'ala-tower',
-		query: 'metrics=tower-ala-max,tower-ala-min&period=300&timerange=86400000&live=y',
+		query: 'metrics=tower-ala-max,tower-ala-min,tower-ala-upload&period=300&timerange=86400000&live=y',
 		fill: true
 	},
 	{
 		id: 'sa-tower',
-		query: 'metrics=tower-sa-max,tower-sa-min&period=300&timerange=86400000&live=y',
+		query: 'metrics=tower-sa-max,tower-sa-min,tower-sa-upload&period=300&timerange=86400000&live=y',
 		fill: true
 	},
-	{
-		id: 'mv-tower',
-		query: 'metrics=tower-mv-max,tower-mv-min&period=300&timerange=86400000&live=y',
-		fill: true
-	},
+	// {
+	// 	id: 'mv-tower',
+	// 	query: 'metrics=tower-mv-max,tower-mv-min,tower-mv-upload&period=300&timerange=86400000&live=y',
+	// 	fill: true
+	// },
 	{
 		id: 'texts-count',
 		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=86400&timerange=2419200000&live=y'
@@ -195,11 +195,19 @@ function refreshCharts(refreshFrom = null) {
 					chartConfig.options.scales.y = chartConfig.options.scales.y || {};
 					chartConfig.options.scales.y.stacked = true;
 				}
-				if (chart.fill && datasets.length === 2) {
+				if (chart.fill) {
 					chartConfig.options.scales = {
 						y: {
 							min: 0,
 							max: 45
+						},
+						y2: {
+							type: 'linear',
+							display: true,
+							position: 'right',
+							grid: {
+								drawOnChartArea: false
+							}
 						}
 					};
 					datasets.forEach(dataset => dataset.label = dataset.label.split(' - ').pop());
@@ -207,7 +215,7 @@ function refreshCharts(refreshFrom = null) {
 					datasets[0].backgroundColor = color1.backgroundColor;
 					datasets[0].showLine = false;
 					datasets[0].fill = {
-						target: 2,
+						target: 3,
 						above: color1.backgroundColor,
 						below: 'rgba(0,0,0,0)'
 					};
@@ -215,10 +223,11 @@ function refreshCharts(refreshFrom = null) {
 					datasets[1].backgroundColor = color2.backgroundColor;
 					datasets[1].showLine = false;
 					datasets[1].fill = {
-						target: 2,
+						target: 3,
 						below: color2.backgroundColor,
 						above: 'rgba(0,0,0,0)'
 					};
+					datasets[2].yAxisID = 'y2';
 					datasets.push(({
 						backgroundColor: 'rgba(0,0,0,0)',
 						fillColor: 'rgba(0,0,0,0)',

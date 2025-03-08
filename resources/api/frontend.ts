@@ -1216,6 +1216,10 @@ const periodToTime: {
 		timerange: 6 * 60 * 60 * 1000, // 6 hours
 		period: 5 * 60 // 5 minutes
 	},
+	{
+		timerange: 60 * 60 * 1000, // 1 hour
+		period: 60 // 1 minute
+	},
 ];
 
 async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
