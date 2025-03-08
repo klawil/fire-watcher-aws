@@ -563,8 +563,8 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 		body: JSON.stringify(response),
 		multiValueHeaders: {
 			'Set-Cookie': [
-				`cvfd-user=${cookies['cvfd-user']}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`,
-				`cvfd-token=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`
+				`cvfd-user=${cookies['cvfd-user']}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
+				`cvfd-token=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`
 			]
 		}
 	};
