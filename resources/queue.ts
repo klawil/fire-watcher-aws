@@ -707,51 +707,9 @@ async function handleTranscribe(body: TranscribeBody) {
 	}).on('error', e => rej(e)));
 	const result: TranscribeResult = JSON.parse(fileData);
 
-	let transcript: string = 'No voices detected';
-	if (result.results.transcripts[0].transcript !== '') {
-		const words = result.results.items.map(item => {
-			const word: {
-				content: string;
-				startTime?: number;
-				speaker?: string;
-				type: string;
-			} = {
-				content: item.alternatives[0].content,
-				type: item.type,
-			};
-			if (item.type === 'punctuation') return word;
-
-			word.startTime = parseFloat(item.start_time);
-			return word;
-		});
-
-		transcript = result.results.speaker_labels.segments.map(seg => {
-			const startTime = parseFloat(seg.start_time);
-			const endTime = parseFloat(seg.end_time);
-			let text = '';
-			let isSegment = false;
-			for (
-				let i = 0;
-				i < words.length &&
-				(typeof words[i].startTime === 'undefined' || words[i].startTime as number < endTime);
-				i++
-			) {
-				if (
-					typeof words[i].startTime !== 'undefined' &&
-					words[i].startTime as number >= startTime
-				) isSegment = true;
-		
-				if (isSegment) {
-					if (text !== '')
-						text += words[i].type === 'pronunciation' ? ' ': '';
-					text += words[i].content;
-				}
-			}
-		
-			return `${seg.speaker_label}: ${text}`;
-		})
-			.join('\n\n');
-	}
+	const transcript: string = result.results.transcripts[0].transcript === ''
+		? 'No voices detected'
+		: result.results.transcripts[0].transcript;
 
 	// Build the message
 	let messageBody: string;
