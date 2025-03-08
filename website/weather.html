@@ -62,4 +62,5 @@ layout: base
 	</div>
 </div>
 
-<script src="/js/weather.js"></script>
+{% assign randomNumber = "now" | date: "%N" %}
+<script src="/js/weather.js?v={{ randomNumber }}"></script>

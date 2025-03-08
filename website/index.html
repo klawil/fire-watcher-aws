@@ -22,4 +22,5 @@ latestLabel: Last Tone
 	</table>
 </div>
 
-<script async src="/js/index.js"></script>
+{% assign randomNumber = "now" | date: "%N" %}
+<script async src="/js/index.js?v={{ randomNumber }}"></script>

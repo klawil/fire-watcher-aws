@@ -7,10 +7,11 @@
 
 		<title>{% if page.title %}{{ page.title }}{% else %}{{ page.titleBarTitle }}{% endif %} - CVFD</title>
 
+		{% assign randomNumber = "now" | date: "%N" %}
 		<link rel="icon" type="image/png" href="/favicon.png" />
-		<link href="/libs/bootstrap.min.css" rel="stylesheet">
-		<link href="/libs/bootstrap-icons.css" rel="stylesheet">
-		<link href="/css/site.css" rel="stylesheet">
+		<link href="/libs/bootstrap.min.css?v={{ randomNumber }}" rel="stylesheet">
+		<link href="/libs/bootstrap-icons.css?v={{ randomNumber }}" rel="stylesheet">
+		<link href="/css/site.css?v={{ randomNumber }}" rel="stylesheet">
 
 		<script>
 			window.authConfig = {
@@ -106,7 +107,7 @@
 		</nav>
 		{% endif %}
 	
-		<script async src="/js/auth.js"></script>
-		<script async src="/libs/bootstrap.min.js"></script>
+		<script async src="/js/auth.js?v={{ randomNumber }}"></script>
+		<script async src="/libs/bootstrap.min.js?v={{ randomNumber }}"></script>
 	</body>
 </html>

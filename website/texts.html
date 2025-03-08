@@ -58,4 +58,5 @@ requireAdmin: true
 	</table>
 </div>
 
-<script async src="/js/texts.js"></script>
+{% assign randomNumber = "now" | date: "%N" %}
+<script async src="/js/texts.js?v={{ randomNumber }}"></script>
