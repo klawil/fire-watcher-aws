@@ -40,7 +40,7 @@ const columns = [
 		classList: [ 'text-center' ],
 		class: [ 'form-control' ],
 		default: 'Phone Number',
-		maxwidth: '100px',
+		maxWidth: '100px',
 		noEdit: true
 	},
 	{
@@ -72,37 +72,8 @@ const columns = [
 		maxWidth: '75px'
 	},
 	{
-		name: 'isActive',
-		type: 'checkbox',
-		val: user => user.isActive || false,
-		class: [ 'form-check-input' ]
-	},
-	{
-		name: 'isAdmin',
-		type: 'checkbox',
-		val: user => user.isAdmin || false,
-		class: [ 'form-check-input' ]
-	},
-	{
-		name: 'pageOnly',
-		type: 'checkbox',
-		val: user => user.pageOnly || false,
-		class: [ 'form-check-input' ],
-		districtAdmin: true
-	},
-	{
-		name: 'getTranscript',
-		type: 'checkbox',
-		val: user => user.getTranscript || false,
-		class: [ 'form-check-input' ],
-		districtAdmin: true
-	},
-	{
-		name: 'getSystemAlerts',
-		type: 'checkbox',
-		val: user => user.getSystemAlerts || false,
-		class: [ 'form-check-input' ],
-		districtAdmin: true
+		name: 'checkboxes',
+		type: 'checkboxes'
 	},
 	{
 		name: 'talkgroups',
@@ -113,6 +84,37 @@ const columns = [
 		type: 'button',
 		class: [ 'btn', 'btn-success' ],
 		value: 'Create'
+	}
+];
+
+const checkboxes = [
+	{
+		name: 'isActive',
+		label: 'Active',
+		val: user => user.isActive || false
+	},
+	{
+		name: 'isAdmin',
+		label: 'Admin',
+		val: user => user.isAdmin || false
+	},
+	{
+		name: 'pageOnly',
+		label: 'Pages Only',
+		val: user => user.pageOnly || false,
+		districtAdmin: true
+	},
+	{
+		name: 'getTranscript',
+		label: 'Get Transcripts',
+		val: user => user.getTranscript || false,
+		districtAdmin: true
+	},
+	{
+		name: 'getSystemAlerts',
+		label: 'Get System Alerts',
+		val: user => user.getSystemAlerts || false,
+		districtAdmin: true
 	}
 ];
 
@@ -152,7 +154,7 @@ function getTalkgroupSelect(defaultValues) {
 	const randomness = Math.round(Math.random() * 100000).toString();
 	for (let key in pageNames) {
 		const div = document.createElement('div');
-		div.classList.add('form-check', 'form-switch');
+		div.classList.add('form-check', 'form-switch', 'text-start');
 		container.appendChild(div);
 
 		const input = document.createElement('input');
@@ -178,9 +180,40 @@ function getTalkgroupSelect(defaultValues) {
 		const label = document.createElement('label');
 		label.classList.add('form-check-label');
 		label.innerHTML = `${pageNames[key]}`;
-		label.setAttribute('for', `talkgroups-${key}-${randomness}`);
+		label.setAttribute('for', input.id);
 		div.appendChild(label);
 	}
+
+	return container;
+}
+
+function getCheckboxes(user) {
+	const container = document.createElement('div');
+	const randomness = Math.round(Math.random() * 100000).toString();
+	checkboxes
+		.filter(checkbox => !checkbox.districtAdmin || window.user.isDistrictAdmin)
+		.forEach(checkbox => {
+			const div = document.createElement('div');
+			div.classList.add('form-check', 'form-switch', 'text-start');
+			container.appendChild(div);
+
+			const input = document.createElement('input');
+			input.type = 'checkbox';
+			input.role = 'switch';
+			input.id = `checkboxes-${checkbox.name}-${randomness}`;
+			input.name = checkbox.name;
+			input.checked = checkbox.val(user);
+			input.classList.add('form-check-input');
+			input.reset = () => {};
+			input.addEventListener('change', () => container.changeFunc());
+			div.appendChild(input);
+
+			const label = document.createElement('label');
+			label.classList.add('form-check-label');
+			label.innerHTML = checkbox.label;
+			label.setAttribute('for', input.id);
+			div.appendChild(label);
+		});
 
 	return container;
 }
@@ -209,21 +242,7 @@ function addRow(user) {
 		}
 		if (value.tdClass)
 			td.classList.add.apply(td.classList, value.tdClass);
-		if (value.type === 'checkbox') {
-			td.classList.add('text-center');
-			const div = document.createElement('div');
-			div.classList.add('form-switch');
-			td.appendChild(div);
-			const input = document.createElement('input');
-			input.type = 'checkbox';
-			input.name = value.name;
-			input.classList.add('form-check-input');
-			input.role = 'switch';
-			input.addEventListener('change', () => button.disabled = false);
-			if (value.val(user)) input.checked = true;
-			div.appendChild(input);
-			input.reset = () => {};
-		} else if (value.type === 'button') {
+		if (value.type === 'button') {
 			td.classList.add('text-center');
 			button = document.createElement('button');
 			button.classList.add('btn', 'btn-success');
@@ -315,6 +334,11 @@ function addRow(user) {
 			input.reset = () => {};
 			input.changeFunc = () => button.disabled = false;
 			td.appendChild(input);
+		} else if (value.type === 'checkboxes') {
+			const input = getCheckboxes(user);
+			input.reset = () => {};
+			input.changeFunc = () => button.disabled = false;
+			td.appendChild(input);
 		} else {
 			const span = document.createElement('span');
 			span.innerHTML = value.val(user);
@@ -390,6 +414,11 @@ function init() {
 						input.reset = () => {};
 						input.changeFunc = () => {};
 						td.appendChild(input);
+					} else if (item.type === 'checkboxes') {
+						const input = getCheckboxes({});
+						input.reset = () => {};
+						input.changeFunc = () => {};
+						td.appendChild(input);
 					} else {
 						const input = document.createElement('input');
 						input.classList.add.apply(input.classList, item.class);
@@ -399,8 +428,8 @@ function init() {
 							input.value = item.value;
 						if (item.default)
 							input.placeholder = item.default;
-						if (item.maxwidth)
-							td.style.maxWidth = item.maxwidth;
+						if (item.maxWidth)
+							td.style.maxWidth = item.maxWidth;
 						if (item.type === 'checkbox') {
 							const div = document.createElement('div');
 							div.classList.add('form-switch');
