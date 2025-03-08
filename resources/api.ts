@@ -123,16 +123,26 @@ async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.
 				}
 			}
 		}).promise();
-		if (
-			!user.Item ||
-			Date.now() > parseInt(user.Item.tokenExpiry?.N || '0') ||
-			user.Item.token?.S !== cookies['cvfd-token']
-		) {
-			console.log('AUTH - FAILED - INVALID COOKIES');
+		if (!user.Item) {
+			console.log('AUTH - FAILED - INVALID USER');
 			return null;
 		}
 
-		return user.Item || null;
+		const matchingTokens = user.Item.loginTokens?.L
+			?.filter(t => t.M?.token?.S === cookies['cvfd-token'])
+			.map(t => parseInt(t.M?.tokenExpiry?.N || '0', 10));
+
+		if (!matchingTokens || matchingTokens.length === 0) {
+			console.log('AUTH - FAILED - INVALID TOKEN');
+			return null;
+		}
+
+		if (Date.now() > matchingTokens[0]) {
+			console.log('AUTH - FAILED - EXPIRED TOKEN');
+			return null;
+		}
+
+		return user.Item;
 	} catch (e) {
 		console.log('AUTH - FAILED - ERROR');
 		console.log('API - ERROR - getLoggedInUser');
@@ -525,18 +535,28 @@ async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatew
 		ExpressionAttributeNames: {
 			'#c': 'code',
 			'#ce': 'codeExpiry',
-			'#t': 'token',
-			'#te': 'tokenExpiry'
+			'#t': 'loginTokens'
 		},
 		ExpressionAttributeValues: {
 			':t': {
-				S: token
+				L: [
+					{
+						M: {
+							token: {
+								S: token
+							},
+							tokenExpiry: {
+								N: tokenExpiry.toString()
+							}
+						}
+					}
+				]
 			},
-			':te': {
-				N: `${tokenExpiry}`
+			':el': {
+				L: []
 			}
 		},
-		UpdateExpression: 'SET #t = :t, #te = :te REMOVE #c, #ce'
+		UpdateExpression: 'SET #t = list_append(if_not_exists(#t, :el), :t) REMOVE #c, #ce'
 	}).promise();
 
 	return {
