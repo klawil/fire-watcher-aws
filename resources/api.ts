@@ -202,11 +202,12 @@ async function runDynamoQueries(
 				let maxSortKey: null | number = null;
 				data.Items?.forEach((item) => {
 					const afterKeyValue = Number(item[afterKey].N);
+					const sortKeyValue = Number(item[sortKey].N);
 
 					if (
 						minSortKey === null ||
-						afterKeyValue < minSortKey
-					) minSortKey = afterKeyValue;
+						sortKeyValue < minSortKey
+					) minSortKey = sortKeyValue;
 
 					if (
 						maxSortKey === null ||
@@ -378,7 +379,12 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 }
 
-const dtrAddedIndex = 'AddedIndex';
+const dtrAddedIndex: {
+	[key: string]: undefined | string;
+} = {
+	StartTimeEmergIndex: 'AddedIndex',
+	StartTimeTgIndex: undefined
+};
 
 async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const filters: string[] = [];
@@ -488,10 +494,17 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	) {
 		const after = event.queryStringParameters.after;
 		queryConfigs.forEach((queryConfig) => {
+			const newIndexName: string | undefined = dtrAddedIndex[queryConfig.IndexName as string];
+			if (newIndexName === undefined) {
+				delete queryConfig.IndexName;
+			} else {
+				queryConfig.IndexName = newIndexName;
+			}
+
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+			queryConfig.ExpressionAttributeNames['#st'] = 'Added';
 			queryConfig.ExpressionAttributeValues[':st'] = {
 				N: after
 			};
