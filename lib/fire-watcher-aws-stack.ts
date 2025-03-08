@@ -365,12 +365,15 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         SERVER_CODE: apiCode,
+        S3_BUCKET: bucket.bucketName,
         SQS_QUEUE: queue.queueUrl,
         TABLE_USER: phoneNumberTable.tableName,
         TABLE_TEXT: textsTable.tableName,
         TABLE_STATUS: statusTable.tableName
-      }
+      },
+      timeout: Duration.seconds(10)
     });
+    bucket.grantRead(infraApiHandler);
     queue.grantSendMessages(infraApiHandler);
     phoneNumberTable.grantReadWriteData(infraApiHandler);
     textsTable.grantReadWriteData(infraApiHandler);

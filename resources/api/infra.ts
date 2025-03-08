@@ -8,6 +8,7 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 
 const apiCode = process.env.SERVER_CODE as string;
+const s3Bucket = process.env.S3_BUCKET as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_TEXT as string;
@@ -379,6 +380,26 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	};
 }
 
+async function handleDtrExists(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	validateBodyIsJson(event.body);
+
+	const s3 = new aws.S3();
+
+	const files: string[] = JSON.parse(event.body as string).files;
+	const badFiles: string[] = await Promise.all(files
+		.map(f => s3.headObject({
+			Bucket: s3Bucket,
+			Key: `audio/dtr/${f}`
+		}).promise().catch(() => f)))
+		.then(data => data.filter(f => typeof f === 'string') as string[]);
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body: JSON.stringify(badFiles)
+	};
+}
+
 const testingUser = '***REMOVED***';
 async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Promise<APIGatewayProxyResult> {
 	const response: GenericApiResponse = {
@@ -481,6 +502,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handlePage(event);
 			case 'heartbeat':
 				return await handleHeartbeat(event);
+			case 'dtrExists':
+				return await handleDtrExists(event);
 			case 'startTest':
 				return await handleTestState(event, true);
 			case 'endTest':
