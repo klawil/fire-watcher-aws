@@ -206,72 +206,108 @@ type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
   [Property in Key]-?: Type[Property];
 };
 
+const dtrStartTimeIndex = 'StartTimeIndex';
+
 async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const filters: string[] = [];
 
 	// Set the default query parameters
 	event.queryStringParameters = event.queryStringParameters || {};
 	event.queryStringParameters = {
-		after: (Math.round(Date.now() / 1000) - (60 * 60 * 24 * 2)).toString(),
+		after: (Math.round(Date.now() / 1000) - (60 * 60 * 6)).toString(),
 		...event.queryStringParameters
 	};
 
-	// Add the "after" parameter
-	const queryConfig: AWS.DynamoDB.ScanInput &
-		WithRequiredProperty<AWS.DynamoDB.ScanInput, 'ExpressionAttributeValues'> &
-		WithRequiredProperty<AWS.DynamoDB.ScanInput, 'ExpressionAttributeNames'> = {
-		TableName: dtrTable,
-		ExpressionAttributeValues: {
-			':after': {
-				N: event.queryStringParameters.after
-			}
-		},
-		ExpressionAttributeNames: {
-			'#dt': 'StartTime'
-		}
-	};
-	filters.push('#dt > :after');
+	const queryConfigs: AWS.DynamoDB.QueryInput[] = [];
+
+	// Determine which index to use
+	if (typeof event.queryStringParameters.tg !== 'undefined') {
+		const talkgroups = event.queryStringParameters.tg.split('|');
+		talkgroups.forEach((tg) => {
+			queryConfigs.push({
+				TableName: dtrTable,
+				ExpressionAttributeNames: {
+					'#tg': 'Talkgroup',
+					'#st': 'StartTime'
+				},
+				ExpressionAttributeValues: {
+					':tg': {
+						N: tg
+					},
+					':after': {
+						N: event.queryStringParameters?.after
+					}
+				},
+				KeyConditionExpression: '#tg = :tg AND #st > :after'
+			});
+		});
+	} else {
+		[ '0', '1' ].forEach((emerg) => {
+			queryConfigs.push({
+				TableName: dtrTable,
+				IndexName: dtrStartTimeIndex,
+				ExpressionAttributeNames: {
+					'#emerg': 'Emergency',
+					'#st': 'StartTime'
+				},
+				ExpressionAttributeValues: {
+					':emerg': {
+						N: emerg.toString()
+					},
+					':after': {
+						N: event.queryStringParameters?.after
+					}
+				},
+				KeyConditionExpression: '#emerg = :emerg AND #st > :after'
+			});
+		});
+	}
 
 	// Check for a source filter
 	if (typeof event.queryStringParameters.source !== 'undefined') {
 		const sources = event.queryStringParameters.source.split('|');
 		const localFilters: string[] = [];
-		queryConfig.ExpressionAttributeNames['#src'] = 'Sources';
 		sources.forEach((source, index) => {
 			localFilters.push(`contains(#src, :src${index})`);
-			queryConfig.ExpressionAttributeValues[`:src${index}`] = {
-				N: source
-			};
-		});
-		filters.push(`(${localFilters.join(' OR ')})`);
-	}
 
-	// Check for a talkgroup filter
-	if (typeof event.queryStringParameters.tg !== 'undefined') {
-		const talkgroups = event.queryStringParameters.tg.split('|');
-		const localFilters: string[] = [];
-		queryConfig.ExpressionAttributeNames['#tg'] = 'Talkgroup';
-		talkgroups.forEach((tg, index) => {
-			localFilters.push(`#tg = :tg${index}`);
-			queryConfig.ExpressionAttributeValues[`:tg${index}`] = {
-				N: tg
-			};
+			queryConfigs.forEach((queryConfig) => {
+				queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+				queryConfig.ExpressionAttributeNames['#src'] = 'Sources';
+				queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+				queryConfig.ExpressionAttributeValues[`:src${index}`] = {
+					N: source
+				};
+			});
 		});
 		filters.push(`(${localFilters.join(' OR ')})`);
 	}
 
 	if (filters.length > 0) {
-		queryConfig.FilterExpression = filters.join(' AND ');
+		queryConfigs.forEach((queryConfig) => {
+			queryConfig.FilterExpression = filters.join(' AND ');
+		});
 	}
 
-	const data = await dynamodb.scan(queryConfig).promise();
+	const data: AWS.DynamoDB.ItemList = await Promise.all(queryConfigs
+		.map((queryConfig) => dynamodb.query(queryConfig).promise()))
+		.then((data) => data.reduce((agg: AWS.DynamoDB.ItemList, dataL) => {
+			if (typeof dataL.Items !== 'undefined') {
+				return [
+					...agg,
+					...dataL.Items
+				];
+			}
+
+			return agg;
+		}, []))
+
 	const body = JSON.stringify({
 		success: true,
-		data: data.Items
-			?.map((item) => parseDynamoDbAttributeMap(item))
+		data: data
+			.map((item) => parseDynamoDbAttributeMap(item))
 			.sort((a, b) => (a.datetime as number) > (b.datetime as number) ? -1 : 1),
-		query: queryConfig.FilterExpression,
-		values: queryConfig.ExpressionAttributeValues
+		query: queryConfigs.map((queryConfig) => queryConfig.FilterExpression),
+		values: queryConfigs.map((queryConfig) => queryConfig.ExpressionAttributeValues)
 	});
 
 	return {
