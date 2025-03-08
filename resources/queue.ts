@@ -258,7 +258,7 @@ function createPageMessage(
 	let pageStr = `${pageConfig.pageService} PAGE\n`;
 	pageStr += `${pageConfig.pagingParty} paged ${pageConfig.partyBeingPaged} `
 	pageStr += `${pageConfig.fToTime(fileKey)}\n`;
-	pageStr += `https://fire.klawil.net/dtr.html?f=${fileKey}&tg=${pageConfig.linkPreset}`;
+	pageStr += `https://fire.klawil.net/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
 	if (callSign !== null) {
 		pageStr += `&cs=${callSign}`;
 	}
