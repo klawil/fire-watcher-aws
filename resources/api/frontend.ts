@@ -1,9 +1,9 @@
-import * as AWS from 'aws-sdk';
+import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseDynamoDbAttributeMap } from '../utils';
 import { getLoggedInUser } from '../utils/auth';
 
-const dynamodb = new AWS.DynamoDB();
+const dynamodb = new aws.DynamoDB();
 
 const defaultListLimit = 100;
 
@@ -20,22 +20,22 @@ const dtrTableIndexes: {
 	StartTimeTgIndex: undefined
 };
 
-interface QueryInputWithAttributes extends AWS.DynamoDB.QueryInput {
-	ExpressionAttributeValues: AWS.DynamoDB.ExpressionAttributeValueMap;
-	ExpressionAttributeNames: AWS.DynamoDB.ExpressionAttributeNameMap;
+interface QueryInputWithAttributes extends aws.DynamoDB.QueryInput {
+	ExpressionAttributeValues: aws.DynamoDB.ExpressionAttributeValueMap;
+	ExpressionAttributeNames: aws.DynamoDB.ExpressionAttributeNameMap;
 }
 
-interface DynamoListOutput extends AWS.DynamoDB.QueryOutput {
-	Items: AWS.DynamoDB.ItemList;
+interface DynamoListOutput extends aws.DynamoDB.QueryOutput {
+	Items: aws.DynamoDB.ItemList;
 	Count: number;
 	ScannedCount: number;
-	LastEvaluatedKeys: (AWS.DynamoDB.Key | null)[];
+	LastEvaluatedKeys: (aws.DynamoDB.Key | null)[];
 	MinSortKey: number | null;
 	MaxSortKey: number | null;
 }
 
 async function mergeDynamoQueries(
-	queryConfigs: AWS.DynamoDB.QueryInput[],
+	queryConfigs: aws.DynamoDB.QueryInput[],
 	sortKey: string,
 	afterKey: string = ''
 ): Promise<DynamoListOutput> {
@@ -168,7 +168,7 @@ async function getVhfList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Check for a start scanning key
 	if (typeof event.queryStringParameters.next !== 'undefined') {
-		const scanningKeys: (AWS.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
+		const scanningKeys: (aws.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
 			.split('|')
 			.map(str => {
 				if (str === '') return;
@@ -313,7 +313,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Check for a key to start scanning at
 	if (typeof event.queryStringParameters.next !== 'undefined') {
-		const scanningKeys: (AWS.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
+		const scanningKeys: (aws.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
 			.split('|')
 			.map(str => {
 				if (str === '') return;
@@ -486,18 +486,20 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		return unauthorizedResponse;
 	}
 
-	const firstTextDate = Date.now() - (1000 * 60 * 60 * 24 * 60); // Only get texts from the last 60 days
-	const result = await dynamodb.scan({
+	const result = await dynamodb.query({
 		TableName: textsTable,
-		FilterExpression: '#dt >= :dt',
+		IndexName: 'isTestIndex',
+		Limit: defaultListLimit,
+		ScanIndexForward: false,
+		ExpressionAttributeNames: {
+			'#its': 'isTestString'
+		},
 		ExpressionAttributeValues: {
-			':dt': {
-				N: firstTextDate.toString()
+			':its': {
+				S: 'n'
 			}
 		},
-		ExpressionAttributeNames: {
-			'#dt': 'datetime'
-		}
+		KeyConditionExpression: '#its = :its'
 	}).promise();
 
 	return {

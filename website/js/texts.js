@@ -100,7 +100,6 @@ function getTexts() {
 			text.sent = text.sent || [];
 			text.undelivered = text.undelivered || [];
 
-
 			if (text.isPage) {
 				text.pageTime = parseForPageTime(text.body);
 			}
