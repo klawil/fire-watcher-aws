@@ -1,5 +1,4 @@
 import { ApiFrontendListTextsResponse, TextObject } from '../../common/frontendApi';
-import { showAlert } from './utils/alerts';
 import { doneLoading } from './utils/loading';
 import { createTableRow } from './utils/table';
 import { authInit } from './utils/auth';
@@ -119,7 +118,7 @@ function buildTable(
 				},
 				{
 					filter: !isPage,
-					html: parseMediaUrls(text.mediaUrls),
+					html: parseMediaUrls(text.mediaUrls || ''),
 				},
 				{
 					classList: [ 'text-center' ],
@@ -140,7 +139,7 @@ function buildTable(
 				{
 					filter: isPage,
 					classList: [ 'text-center' ],
-					html: makePercentString(text.csLooked.length, text.recipients),
+					html: text.isPage ? makePercentString(text.csLooked.length, text.recipients) : '',
 				},
 				{
 					filter: isPage,
@@ -166,54 +165,36 @@ function buildTable(
 
 async function init() {
 	logger.trace('init', ...arguments);
-	const apiResults: ApiFrontendListTextsResponse = await fetch(`/api/frontend?action=listTexts`)
-		.then(r => r.json());
 
-	if (!apiResults.success || typeof apiResults.data === 'undefined') {
-		showAlert('danger', 'Failed to get texts');
-		logger.error('init', apiResults);
-		return;
-	}
+	Promise.all([
+		true,
+		false,
+	].map(async page => {
+		const apiResults: ApiFrontendListTextsResponse = await fetch(`/api/frontend?action=listTexts${page ? '&page=y' : ''}`)
+			.then(r => r.json());
 
-	const texts = apiResults.data
-		.filter(v => !v.isTest)
-		.sort((a, b) => a.datetime > b.datetime ? -1 : 1);
+		const texts = (apiResults.data || [])
+			.sort((a, b) => a.datetime > b.datetime ? -1 : 1)
+			.map(text => {
+				text.delivered = text.delivered || [];
+				text.sent = text.sent || [];
+				text.undelivered = text.undelivered || [];
 
-	const textsByType: {
-		page: TextObject[];
-		other: TextObject[];
-	} = texts.reduce((agg: {
-		page: TextObject[];
-		other: TextObject[];
-	}, text) => {
-		text.delivered = text.delivered || [];
-		text.sent = text.sent || [];
-		text.undelivered = text.undelivered || [];
+				if (text.isPage || text.body.indexOf('https://fire.klawil.net') !== -1)
+					text.pageTime = parseForPageTime(text.body);
+				
+				const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;
 
-		if (text.isPage === 'y')
-			text.pageTime = parseForPageTime(text.body);
-		
-		const baselineTime = text.isPage === 'y' ? text.pageTime || text.datetime : text.datetime;
+				text.delivered = text.delivered.map(t => t - baselineTime);
 
-		text.delivered = text.delivered.map(t => t - baselineTime);
-
-		if (text.isPage === 'y')
-			agg.page.push(text);
-		else
-			agg.other.push(text);
-		return agg;
-	}, { page: [], other: [] });
-
-	buildTable(
-		<HTMLTableSectionElement>document.getElementById('texts'),
-		textsByType.other,
-		false
-	);
-	buildTable(
-		<HTMLTableSectionElement>document.getElementById('pages'),
-		textsByType.page,
-		true
-	);
+				return text;
+			});
+		buildTable(
+			<HTMLTableSectionElement>document.getElementById(page ? 'pages' : 'texts'),
+			texts,
+			page
+		)
+	}));
 
 	doneLoading();
 }

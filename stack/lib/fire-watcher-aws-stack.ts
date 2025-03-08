@@ -176,26 +176,15 @@ export class FireWatcherAwsStack extends Stack {
     });
 
     textsTable.addGlobalSecondaryIndex({
-      indexName: 'isTestIndex',
+      indexName: 'testPageIndex',
       partitionKey: {
-        name: 'isTestString',
-        type: dynamodb.AttributeType.STRING
+        name: 'testPageIndex',
+        type: dynamodb.AttributeType.STRING,
       },
       sortKey: {
         name: 'datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-    textsTable.addGlobalSecondaryIndex({
-      indexName: 'pageIndex',
-      partitionKey: {
-        name: 'isPage',
-        type: dynamodb.AttributeType.STRING
+        type: dynamodb.AttributeType.NUMBER,
       },
-      sortKey: {
-        name: 'datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
     });
 
     siteTable.addGlobalSecondaryIndex({
@@ -716,7 +705,7 @@ export class FireWatcherAwsStack extends Stack {
       datapointsToAlarm: 1,
       threshold: 0,
       metric: alarmQueueHandler.metric('Errors', {
-        period: Duration.hours(24),
+        period: Duration.hours(6),
         statistic: cloudwatch.Stats.SUM,
       }),
       alarmDescription: 'The alarm queue is failing to process alarms',

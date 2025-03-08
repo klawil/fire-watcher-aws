@@ -1,6 +1,7 @@
 import * as aws from 'aws-sdk';
 import { UserDepartment, validDepartments } from '../../../common/userConstants';
 import { getLogger } from './logger';
+import { MessageType } from '../../../common/frontendApi';
 
 const logger = getLogger('u-gen');
 const twilio = require('twilio');
@@ -160,33 +161,45 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
 	return twilioSecret;
 }
 
+// group and groupAnnounce need a department associated with them
+// page announce should have a pageTg associated
+const departmentRequired: MessageType[] = [
+	'department',
+	'departmentAnnounce',
+	'departmentAlert',
+];
+
 export async function saveMessageData(
+	messageType: MessageType,
 	messageId: string,
 	recipients: number,
 	body: string,
 	mediaUrls: string[] = [],
 	pageId: string | null = null,
 	pageTg: number | null = null,
+	department: UserDepartment | null = null,
 	isTest: boolean = false
 ) {
 	logger.trace('saveMessageData', ...arguments);
 	let promises: Promise<any>[] = [];
-	promises.push(dynamodb.updateItem({
+	if (departmentRequired.includes(messageType) && department === null) {
+		department = 'PageOnly';
+	}
+	const updateItemParams: aws.DynamoDB.UpdateItemInput & Required<Pick<aws.DynamoDB.UpdateItemInput, 'ExpressionAttributeNames' | 'ExpressionAttributeValues' | 'UpdateExpression'>> = {
 		TableName: messagesTable,
 		Key: {
 			datetime: {
-				N: messageId
-			}
+				N: messageId,
+			},
 		},
 		ExpressionAttributeNames: {
 			'#r': 'recipients',
 			'#b': 'body',
-			'#m': 'mediaUrls',
+			'#tpi': 'testPageIndex',
 			'#p': 'isPage',
-			'#pid': 'pageId',
-			'#tg': 'talkgroup',
 			'#t': 'isTest',
-			'#ts': 'isTestString'
+			'#ts': 'isTestString',
+			'#mt': 'type',
 		},
 		ExpressionAttributeValues: {
 			':r': {
@@ -195,27 +208,45 @@ export async function saveMessageData(
 			':b': {
 				S: body
 			},
-			':m': {
-				S: mediaUrls.join(',')
-			},
 			':p': {
-				S: pageId !== null ? 'y' : 'n'
-			},
-			':pid': {
-				S: pageId !== null ? pageId : 'n'
-			},
-			':tg': {
-				S: pageTg !== null ? pageTg.toString() : ''
+				BOOL: pageId !== null
 			},
 			':t': {
 				BOOL: isTest
 			},
 			':ts': {
 				S: isTest ? 'y' : 'n'
-			}
+			},
+			':tpi': {
+				S: `${isTest ? 'y' : 'n'}${pageId !== null ? 'y' : 'n'}`,
+			},
+			':mt': {
+				S: messageType,
+			},
 		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #pid = :pid, #tg = :tg, #t = :t, #ts = :ts'
-	}).promise());
+		UpdateExpression: 'SET #r = :r, #b = :b, #p = :p, #t = :t, #ts = :ts, #mt = :mt, #tpi = :tpi',
+	};
+	if (department !== null) {
+		updateItemParams.ExpressionAttributeNames['#dep'] = 'department';
+		updateItemParams.ExpressionAttributeValues[':dep'] = { S: department };
+		updateItemParams.UpdateExpression += ', #dep = :dep';
+	}
+	if (pageTg !== null) {
+		updateItemParams.ExpressionAttributeNames['#tg'] = 'talkgroup';
+		updateItemParams.ExpressionAttributeValues[':tg'] = { S: pageTg.toString() };
+		updateItemParams.UpdateExpression += ', #tg = :tg';
+	}
+	if (pageId !== null) {
+		updateItemParams.ExpressionAttributeNames['#pid'] = 'pageId';
+		updateItemParams.ExpressionAttributeValues[':pid'] = { S: pageId };
+		updateItemParams.UpdateExpression += ', #pid = :pid';
+	}
+	if (mediaUrls.length > 0) {
+		updateItemParams.ExpressionAttributeNames['#mu'] = 'mediaUrls';
+		updateItemParams.ExpressionAttributeValues[':mu'] = { S: mediaUrls.join(', ') };
+		updateItemParams.UpdateExpression += ', #mu = :mu';
+	}
+	promises.push(dynamodb.updateItem(updateItemParams).promise());
 
 	const dataDate = new Date(Number(messageId));
 	promises.push(cloudWatch.putMetricData({
@@ -265,6 +296,7 @@ interface TwilioMessageConfig {
 
 export async function sendMessage(
 	metricSource: string,
+	messageType: MessageType,
 	messageId: string | null,
 	phone: string,
 	sendNumberCategory: string,
@@ -287,10 +319,12 @@ export async function sendMessage(
 	if (messageId === null) {
 		messageId = Date.now().toString();
 		saveMessageDataPromise = saveMessageData(
+			messageType,
 			messageId,
 			1,
 			body,
 			mediaUrl,
+			null,
 			null,
 			null,
 			true
@@ -342,11 +376,12 @@ export async function sendAlertMessage(metricSource: string, alertType: AlertTyp
 	const recipients = (await getRecipients('all', null))
 		.filter(user => user[`get${alertType}Alerts`]?.BOOL);
 	await Promise.all([
-		saveMessageData(messageId, recipients.length, body),
+		saveMessageData('alert', messageId, recipients.length, body),
 		...recipients
 			.filter(user => typeof user.phone.N !== 'undefined')
 			.map(user => sendMessage(
 				metricSource,
+				'alert',
 				messageId,
 				user.phone.N as string,
 				'alerts',

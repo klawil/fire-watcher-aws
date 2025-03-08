@@ -1,30 +1,34 @@
 import { ApiResponseBase } from "./common";
+import { UserDepartment } from "./userConstants";
+
+export type MessageType = 'page' | 'transcript' | 'department' | 'departmentAnnounce' | 'pageAnnounce' | 'account' | 'alert' | 'departmentAlert';
 
 export interface TextObject {
+	datetime: number;
+
+	type: MessageType;
+	isPage: boolean;
+	isTest: boolean;
+
+	recipients: number;
+	department?: UserDepartment;
+
+	pageId?: string;
+	talkgroup?: number;
+	pageTime?: number;
+
+	body: string;
+	mediaUrls?: string;
+	fromNumber?: string;
+
 	sent?: number[];
 	sentPhone?: string[];
 	delivered?: number[];
 	deliveredPhone?: string[];
 	undelivered?: number[];
 	undeliveredPhone?: string[];
-
-	isPage: 'y' | 'n';
-	isTest: boolean;
-	isTestString: 'y' | 'n';
-
-	pageId?: string;
-	talkgroup: string;
-	pageTime?: number;
-
 	csLooked?: number[];
 	csLookedTime?: number[];
-
-	recipients: number;
-	datetime: number;
-
-	body: string;
-	mediaUrls: string;
-	fromNumber: string;
 }
 interface SeenByRecorder {
 	[key: string]: boolean;

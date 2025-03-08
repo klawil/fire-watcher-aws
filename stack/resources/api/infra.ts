@@ -5,6 +5,7 @@ import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { PageBody } from '../types/queue';
 import { PagingTalkgroup } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';
+import { mergeDynamoQueries } from '../utils/dynamo';
 
 const logger = getLogger('infra');
 
@@ -603,19 +604,37 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	}
 
 	// Retrieve the texts
-	const result = await dynamodb.query({
-		TableName: textTable,
-		IndexName: 'isTestIndex',
-		Limit: 10,
-		ScanIndexForward: false,
-		ExpressionAttributeNames: {
-			'#its': 'isTestString'
-		},
-		ExpressionAttributeValues: {
-			':its': { S: 'y' }
-		},
-		KeyConditionExpression: '#its = :its'
-	}).promise();
+	const result = await mergeDynamoQueries(
+		[
+			{
+				TableName: textTable,
+				IndexName: 'testPageIndex',
+				Limit: 50,
+				ScanIndexForward: false,
+				ExpressionAttributeNames: {
+					'#tpi': 'testPageIndex'
+				},
+				ExpressionAttributeValues: {
+					':tpi': { S: 'yn' }
+				},
+				KeyConditionExpression: '#tpi = :tpi'
+			},
+			{
+				TableName: textTable,
+				IndexName: 'testPageIndex',
+				Limit: 50,
+				ScanIndexForward: false,
+				ExpressionAttributeNames: {
+					'#tpi': 'testPageIndex'
+				},
+				ExpressionAttributeValues: {
+					':tpi': { S: 'yy' }
+				},
+				KeyConditionExpression: '#tpi = :tpi'
+			}
+		],
+		'datetime',
+	);
 	response.data = result.Items?.map(parseDynamoDbAttributeMap);
 
 	return {

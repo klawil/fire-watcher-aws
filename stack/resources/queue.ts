@@ -143,6 +143,7 @@ async function handleActivation(body: ActivateBody) {
 		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => config[b]);
 	promises.push(sendMessage(
 		metricSource,
+		'account',
 		null,
 		body.phone,
 		config[`${groupType}Phone`] || config.pagePhone,
@@ -163,15 +164,34 @@ async function handleActivation(body: ActivateBody) {
 		},
 		FilterExpression: '#dep.#admin = :a OR #da = :a'
 	}).promise()
-		.then((admins) => Promise.all((admins.Items || [])
-			.filter(item => typeof item.phone.N !== 'undefined')
-			.map((item) => sendMessage(
-				metricSource,
-				null,
-				item.phone.N as string,
-				groupType === 'page' ? getPageNumber(item) : (config.textPhone || config.pagePhone),
-				`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)}) has been added to the ${body.department} group`
-			)))));
+		.then((admins) => {
+			const adminsToSendTo = (admins.Items || [])
+				.filter(item => typeof item.phone.N !== 'undefined');
+			if (adminsToSendTo.length === 0) return;
+
+			const adminMessageId = Date.now().toString();
+			const adminMessageBody = `New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)}) has been added to the ${body.department} group`;
+			return Promise.all([
+				saveMessageData(
+					'departmentAlert',
+					adminMessageId,
+					adminsToSendTo.length,
+					adminMessageBody,
+					[],
+					null,
+					null,
+					body.department
+				),
+				...adminsToSendTo.map((item) => sendMessage(
+					metricSource,
+					'departmentAlert',
+					adminMessageId,
+					item.phone.N as string,
+					groupType === 'page' ? getPageNumber(item) : (config.textPhone || config.pagePhone),
+					adminMessageBody
+				)),
+			]);
+		}));
 
 	// Send the sample page
 	promises.push(dynamodb.query({
@@ -200,6 +220,7 @@ async function handleActivation(body: ActivateBody) {
 
 			return sendMessage(
 				metricSource,
+				'account',
 				null,
 				body.phone,
 				config.pagePhone,
@@ -292,12 +313,14 @@ async function handleTwilio(body: TwilioBody) {
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
+		isFromPageNumber ? 'departmentAnnounce' : 'department',
 		messageId,
 		recipients.length,
 		messageBody,
 		mediaUrls,
 		null,
 		null,
+		phoneNumberConfig.department,
 		isTest
 	);
 
@@ -305,6 +328,7 @@ async function handleTwilio(body: TwilioBody) {
 		.filter(number => typeof number.phone.N !== 'undefined')
 		.map((number) =>  sendMessage(
 			metricSource,
+			isFromPageNumber ? 'departmentAnnounce' : 'department',
 			messageId,
 			number.phone.N as string,
 			depConf[`${isFromPageNumber ? 'page' : 'text'}Phone`] || depConf.pagePhone,
@@ -333,16 +357,17 @@ async function handleTwilioError(body: TwilioErrorBody) {
 
 	let messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
+		'departmentAlert',
 		messageId,
 		recipients.length,
 		message,
 		[],
 		null,
 		null,
-		false
 	);
 	await Promise.all(recipients.map(user => sendMessage(
 		metricSource,
+		'departmentAlert',
 		messageId,
 		user.phone.N as string,
 		getPageNumber(user),
@@ -404,12 +429,14 @@ async function handlePage(body: PageBody) {
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
+		'page',
 		messageId,
 		recipients.length,
 		messageBody,
 		[],
 		body.key,
 		body.tg,
+		null,
 		!!body.isTest
 	);
 
@@ -418,6 +445,7 @@ async function handlePage(body: PageBody) {
 		.filter(phone => typeof phone.phone.N !== 'undefined')
 		.map(phone => sendMessage(
 			metricSource,
+			'page',
 			messageId,
 			phone.phone.N as string,
 			getPageNumber(phone),
@@ -463,6 +491,7 @@ async function handleLogin(body: LoginBody) {
 
 	await sendMessage(
 		metricSource,
+		'account',
 		null,
 		body.phone,
 		getPageNumber(updateResult.Attributes),
@@ -610,9 +639,13 @@ async function handleTranscribe(body: TranscribeBody) {
 		.filter(r => r.getTranscript?.BOOL);
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
+		'transcript',
 		messageId,
 		recipients.length,
-		messageBody
+		messageBody,
+		[],
+		jobInfo.File || null,
+		tg
 	);
 
 	if (jobInfo.File) {
@@ -620,6 +653,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			.filter(phone => typeof phone.phone.N !== 'undefined')
 			.map(phone => sendMessage(
 				metricSource,
+				'transcript',
 				messageId,
 				phone.phone.N as string,
 				getPageNumber(phone),
@@ -636,6 +670,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			.filter(number => typeof number.phone.N !== 'undefined')
 			.map(number => sendMessage(
 				metricSource,
+				'transcript',
 				messageId,
 				number.phone.N as string,
 				getPageNumber(number),

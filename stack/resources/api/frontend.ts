@@ -3,8 +3,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, validateBodyIsJson } from '../utils/general';
 import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { getLoggedInUser } from '../utils/auth';
-import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, TextObject } from '../../../common/frontendApi';
+import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, TextObject } from '../../../common/frontendApi';
 import { getLogger } from '../utils/logger';
+import { UserDepartment, validDepartments } from '../../../common/userConstants';
 
 const logger = getLogger('frontend');
 
@@ -82,6 +83,8 @@ const lambdaFunctionNames: { [key: string]: {
 	},
 };
 
+const anyAdminTextTypes: MessageType[] = [ 'page', 'transcript', 'alert', 'pageAnnounce', ];
+
 async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.trace('getTexts', ...arguments);
 	const unauthorizedResponse = {
@@ -100,28 +103,68 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		return unauthorizedResponse;
 	}
 
-	const result = await dynamodb.query({
+	const getPages = event.queryStringParameters?.page === 'y';
+	if (
+		typeof event.queryStringParameters?.before !== 'undefined' &&
+		!/^[0-9]+$/.test(event.queryStringParameters.before)
+	) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				errors: [ 'before' ],
+			})
+		};
+	}
+
+	const queryInput: aws.DynamoDB.QueryInput & Required<Pick<aws.DynamoDB.QueryInput, 'ExpressionAttributeNames' | 'ExpressionAttributeValues' | 'KeyConditionExpression'>> = {
 		TableName: textsTable,
-		IndexName: 'isTestIndex',
+		IndexName: 'testPageIndex',
 		Limit: defaultListLimit,
 		ScanIndexForward: false,
 		ExpressionAttributeNames: {
-			'#its': 'isTestString'
+			'#tpi': 'testPageIndex',
 		},
 		ExpressionAttributeValues: {
-			':its': {
-				S: 'n'
-			}
+			':tpi': {
+				S: `n${getPages ? 'y' : 'n'}`,
+			},
 		},
-		KeyConditionExpression: '#its = :its'
-	}).promise();
+		KeyConditionExpression: '#tpi = :tpi'
+	};
+	if (typeof event.queryStringParameters?.before !== 'undefined') {
+		queryInput.ExpressionAttributeNames['#datetime'] = 'datetime';
+		queryInput.ExpressionAttributeValues[':datetime'] = { N: event.queryStringParameters.before };
+		queryInput.KeyConditionExpression += ' AND #datetime < :datetime';
+	}
+	const result = await dynamodb.query(queryInput).promise();
+
+	const userAdminDeparments: UserDepartment[] = validDepartments
+		.filter(dep => user[dep]?.active && user[dep]?.admin);
+
+	// Filter out the texts the person does not have access to
+	const data = ((result.Items?.map(parseDynamoDbAttributeMap) || []) as any[] as TextObject[])
+		.filter(text => {
+			if (text.type === 'account') return false;
+
+			if (user.isDistrictAdmin) return true;
+
+			if (text.recipients === 0) return false;
+
+			if (anyAdminTextTypes.includes(text.type)) return true;
+
+			if (typeof text.department === 'undefined') return false;
+
+			if (userAdminDeparments.includes(text.department)) return true;
+
+			return false;
+		});
 
 	const responseBody: ApiFrontendListTextsResponse = {
 		success: true,
 		count: result.Count,
 		scanned: result.ScannedCount,
-		data: result.Items?.map(parseDynamoDbAttributeMap)
-			.map(v => v as unknown as TextObject),
+		data,
 	}
 	return {
 		statusCode: 200,
@@ -172,21 +215,25 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
 	const result = await dynamodb.query({
 		TableName: textsTable,
-		IndexName: 'pageIndex',
+		IndexName: 'testPageIndex',
 		ExpressionAttributeNames: {
+			'#tpi': 'testPageIndex',
 			'#pid': 'pageId',
-			'#ip': 'isPage'
+			'#type': 'type',
 		},
 		ExpressionAttributeValues: {
 			':pid': {
 				S: body.f
 			},
-			':ip': {
-				S: 'y'
-			}
+			':tpi': {
+				S: 'ny'
+			},
+			':type': {
+				S: 'page',
+			},
 		},
 		KeyConditionExpression: '#ip = :ip',
-		FilterExpression: '#pid = :pid',
+		FilterExpression: '#pid = :pid AND #type = :type',
 		ScanIndexForward: false
 	}).promise();
 	if (!result.Items || result.Items.length === 0) {
