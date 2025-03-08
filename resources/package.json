@@ -12,7 +12,11 @@
     "@types/aws-lambda": "^8.10.89"
   },
   "dependencies": {
+    "@types/jsdom": "^16.2.14",
+    "@types/node-fetch": "^2.6.1",
     "aws-sdk": "^2.1049.0",
+    "node-fetch": "^2.6.7",
+    "node-html-parser": "^5.3.3",
     "twilio": "^3.72.0"
   }
 }

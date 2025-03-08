@@ -174,6 +174,26 @@ export class FireWatcherAwsStack extends Stack {
     });
     statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
 
+    // Create the weather updater
+    const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/weather.ts',
+      handler: 'main',
+      environment: {
+        S3_BUCKET: bucket.bucketName
+      },
+      timeout: Duration.minutes(1)
+    });
+
+    // Grant access for the status handler
+    bucket.grantReadWrite(weatherUpdater);
+
+    // Schedule the function for every 15 minutes
+    const weatherEventRule = new events.Rule(this, '-rule', {
+      schedule: events.Schedule.cron({})
+    });
+    weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));
+
     // Create an API handler
     const apiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-lambda', {
       runtime: lambda.Runtime.NODEJS_14_X,
