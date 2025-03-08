@@ -62,6 +62,11 @@ const columns = [
 		type: 'checkboxes'
 	},
 	{
+		name: 'alerts',
+		type: 'alerts',
+		districtAdmin: true
+	},
+	{
 		name: 'talkgroups',
 		type: 'talkgroups',
 		val: user => user.talkgroups || []
@@ -95,13 +100,25 @@ const checkboxes = [
 		label: 'Get Transcripts',
 		val: user => user.getTranscript || false,
 		districtAdmin: true
+	}
+];
+
+const alerts = [
+	{
+		name: 'getApiAlerts',
+		label: 'API',
+		val: user => user.getApiAlerts || false
 	},
 	{
-		name: 'getSystemAlerts',
-		label: 'Get System Alerts',
-		val: user => user.getSystemAlerts || false,
-		districtAdmin: true
-	}
+		name: 'getVhfAlerts',
+		label: 'VHF',
+		val: user => user.getVhfAlerts || false
+	},
+	{
+		name: 'getDtrAlerts',
+		label: 'DTR',
+		val: user => user.getDtrAlerts || false
+	},
 ];
 
 function getDepartmentSelect(defaultValue) {
@@ -200,6 +217,35 @@ function getCheckboxes(user) {
 			label.setAttribute('for', input.id);
 			div.appendChild(label);
 		});
+
+	return container;
+}
+
+function getAlerts(user) {
+	const container = document.createElement('div');
+	const randomness = Math.round(Math.random() * 100000).toString();
+	alerts.forEach(alert => {
+		const div = document.createElement('div');
+		div.classList.add('form-check', 'form-switch', 'text-start');
+		container.appendChild(div);
+
+		const input = document.createElement('input');
+		input.type = 'checkbox';
+		input.role = 'switch';
+		input.id = `alerts-${alert.nam}-${randomness}`;
+		input.name = alert.name;
+		input.checked = alert.val(user);
+		input.classList.add('form-check-input');
+		input.reset = () => {};
+		input.addEventListener('change', () => container.changeFunc());
+		div.appendChild(input);
+
+		const label = document.createElement('label');
+		label.classList.add('form-check-label');
+		label.innerHTML = alert.label;
+		label.setAttribute('for', input.id);
+		div.appendChild(label);
+	});
 
 	return container;
 }
@@ -317,6 +363,11 @@ function addRow(user) {
 			input.reset = () => {};
 			input.changeFunc = () => button.disabled = false;
 			td.appendChild(input);
+		} else if (value.type === 'alerts') {
+			const input = getAlerts(user);
+			input.reset = () => {};
+			input.changeFunc = () => button.disabled = false;
+			td.appendChild(input);
 		} else {
 			const span = document.createElement('span');
 			span.innerHTML = value.val(user);
@@ -394,6 +445,11 @@ function init() {
 						td.appendChild(input);
 					} else if (item.type === 'checkboxes') {
 						const input = getCheckboxes({});
+						input.reset = () => {};
+						input.changeFunc = () => {};
+						td.appendChild(input);
+					} else if (item.type === 'alerts') {
+						const input = getAlerts({});
 						input.reset = () => {};
 						input.changeFunc = () => {};
 						td.appendChild(input);

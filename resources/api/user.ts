@@ -61,7 +61,9 @@ interface UserObject {
 	department?: string;
 	pageOnly?: boolean;
 	getTranscript?: boolean;
-	getSystemAlerts?: boolean;
+	getApiAlerts?: boolean;
+	getVhfAlerts?: boolean;
+	getDtrAlerts?: boolean;
 
 	isMe?: boolean;
 }
@@ -326,9 +328,11 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#tg': 'talkgroups',
 				'#po': 'pageOnly',
 				'#gt': 'getTranscript',
-				'#gsa': 'getSystemAlerts'
+				'#gaa': 'getApiAlerts',
+				'#gva': 'getVhfAlerts',
+				'#gda': 'getDtrAlerts',
 			},
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt,#gsa'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#tg,#po,#gt,#gaa,#gva,#gda'
 		}).promise();
 	} else {
 		usersItems = await dynamodb.query({
@@ -455,8 +459,14 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		if (typeof body.getTranscript !== 'boolean') {
 			response.errors.push('getTranscript');
 		}
-		if (typeof body.getSystemAlerts !== 'boolean') {
-			response.errors.push('getSystemAlerts');
+		if (typeof body.getApiAlerts !== 'boolean') {
+			response.errors.push('getApiAlerts');
+		}
+		if (typeof body.getVhfAlerts !== 'boolean') {
+			response.errors.push('getVhfAlerts');
+		}
+		if (typeof body.getDtrAlerts !== 'boolean') {
+			response.errors.push('getDtrAlerts');
 		}
 		if (
 			typeof body.department !== 'undefined' &&
@@ -543,29 +553,27 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
 		updateConfig.ExpressionAttributeNames['#po'] = 'pageOnly';
 		updateConfig.ExpressionAttributeNames['#gt'] = 'getTranscript';
-		updateConfig.ExpressionAttributeNames['#gsa'] = 'getSystemAlerts';
+		updateConfig.ExpressionAttributeNames['#gaa'] = 'getApiAlerts';
+		updateConfig.ExpressionAttributeNames['#gva'] = 'getVhfAlerts';
+		updateConfig.ExpressionAttributeNames['#gda'] = 'getDtrAlerts';
 
 		updateConfig.ExpressionAttributeValues[':dep'] = { S: body.department };
 		updateConfig.ExpressionAttributeValues[':po'] = { BOOL: body.pageOnly };
 		updateConfig.ExpressionAttributeValues[':gt'] = { BOOL: body.getTranscript };
-		updateConfig.ExpressionAttributeValues[':gsa'] = { BOOL: body.getSystemAlerts };
+		updateConfig.ExpressionAttributeValues[':gaa'] = { BOOL: body.getApiAlerts };
+		updateConfig.ExpressionAttributeValues[':gva'] = { BOOL: body.getVhfAlerts };
+		updateConfig.ExpressionAttributeValues[':gda'] = { BOOL: body.getDtrAlerts };
 
-		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gsa = :gsa`;
+		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gaa = :gaa, #gva = :gva, #gda = :gda`;
 	} else {
 		updateConfig.ExpressionAttributeNames = updateConfig.ExpressionAttributeNames || {};
 		updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
 
 		updateConfig.ExpressionAttributeNames['#dep'] = 'department';
-		updateConfig.ExpressionAttributeNames['#po'] = 'pageOnly';
-		updateConfig.ExpressionAttributeNames['#gt'] = 'getTranscript';
-		updateConfig.ExpressionAttributeNames['#gsa'] = 'getSystemAlerts';
 
 		updateConfig.ExpressionAttributeValues[':dep'] = { S: user.department?.S };
-		updateConfig.ExpressionAttributeValues[':po'] = { BOOL: false };
-		updateConfig.ExpressionAttributeValues[':gt'] = { BOOL: false };
-		updateConfig.ExpressionAttributeValues[':gsa'] = { BOOL: false };
 
-		updateConfig.UpdateExpression += `, #dep = :dep, #po = :po, #gt = :gt, #gsa = :gsa`;
+		updateConfig.UpdateExpression += `, #dep = :dep`;
 	}
 	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {

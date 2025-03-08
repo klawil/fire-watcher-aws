@@ -13,5 +13,8 @@ function parseRecord(event: lambda.SQSRecord): string {
 export async function main(event: lambda.SQSEvent): Promise<void> {
 	const alarmString = event.Records.map(parseRecord)
 		.join('\n');
-	await sendAlertMessage(metricSource, alarmString);
+	const alarmType = alarmString.indexOf('API') !== -1
+		? 'Api'
+		: 'Dtr';
+	await sendAlertMessage(metricSource, alarmType, alarmString);
 }

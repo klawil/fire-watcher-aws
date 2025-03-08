@@ -350,7 +350,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	}));
 
 	if (updateItemsStrings.length > 0) {
-		await sendAlertMessage(metricSource, updateItemsStrings.join('\n'));
+		await sendAlertMessage(metricSource, 'Dtr', updateItemsStrings.join('\n'));
 	}
 
 	return {

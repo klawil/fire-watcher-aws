@@ -322,10 +322,12 @@ export async function sendMessage(
 		});
 }
 
-export async function sendAlertMessage(metricSource: string, body: string) {
+type AlertType = 'Api' | 'Dtr' | 'Vhf';
+
+export async function sendAlertMessage(metricSource: string, alertType: AlertType, body: string) {
 	const messageId = Date.now().toString();
 	const recipients = (await getRecipients('all', null))
-		.filter(user => user.getSystemAlerts?.BOOL);
+		.filter(user => user[`get${alertType}Alerts`]?.BOOL);
 	await Promise.all([
 		saveMessageData(messageId, recipients.length, body),
 		...recipients.map(user => sendMessage(

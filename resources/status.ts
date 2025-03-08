@@ -126,7 +126,7 @@ export async function main() {
 
 	if (messages.length > 0) {
 		console.log(messages.join('\n'));
-		await sendAlertMessage(metricSource, messages.join('\n'));
+		await sendAlertMessage(metricSource, 'Vhf', messages.join('\n'));
 	}
 
 	await updateDynamoPromies;
