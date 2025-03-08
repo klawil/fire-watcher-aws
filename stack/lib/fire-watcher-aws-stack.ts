@@ -19,6 +19,9 @@ import * as eventbridge from 'aws-cdk-lib/aws-events';
 import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
@@ -707,6 +710,24 @@ export class FireWatcherAwsStack extends Stack {
       
       Tags.of(alarm).add('cvfd-alarm-type', alarmConfig.tag);
     });
+
+    const alarmQueueAlarm = new cloudwatch.Alarm(this, `cvfd-alarm-queue-alarm`, {
+      evaluationPeriods: 1,
+      datapointsToAlarm: 1,
+      threshold: 0,
+      metric: alarmQueueHandler.metric('Errors', {
+        period: Duration.hours(24),
+        statistic: cloudwatch.Stats.SUM,
+      }),
+      alarmDescription: 'The alarm queue is failing to process alarms',
+      alarmName: 'Alarm Queue Errors',
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+    const alarmQueueAlarmTopic = new sns.Topic(this, `cvfd-alarm-queue-sns`);
+    alarmQueueAlarmTopic.addSubscription(new snsSubscriptions.EmailSubscription('willyk95@gmail.com'));
+    alarmQueueAlarmTopic.addSubscription(new snsSubscriptions.SmsSubscription('+1***REMOVED***'));
+    alarmQueueAlarm.addAlarmAction(new cloudwatchActions.SnsAction(alarmQueueAlarmTopic));
 
     // Create the event trigger
     const s3Destination = new s3Notifications.LambdaDestination(s3Handler);
