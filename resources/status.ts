@@ -1,5 +1,5 @@
 import * as AWS from 'aws-sdk';
-import { parseDynamoDbAttributeMap, sendMessage } from './utils/general';
+import { parseDynamoDbAttributeMap, sendAlertMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 
@@ -124,14 +124,7 @@ export async function main() {
 
 	if (messages.length > 0) {
 		console.log(messages.join('\n'));
-		await sendMessage(
-			null,
-			'***REMOVED***',
-			messages.join('\n'),
-			[],
-			false,
-			true
-		);
+		await sendAlertMessage(messages.join('\n'));
 	}
 
 	await updateDynamoPromies;

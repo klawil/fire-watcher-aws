@@ -291,6 +291,23 @@ export async function sendMessage(
 		});
 }
 
+export async function sendAlertMessage(body: string) {
+	const messageId = Date.now().toString();
+	const recipients = (await getRecipients('all', null))
+		.filter(user => user.getSystemAlerts?.BOOL);
+	await Promise.all([
+		saveMessageData(messageId, recipients.length, body),
+		...recipients.map(user => sendMessage(
+			messageId,
+			user.phone.N,
+			body,
+			[],
+			false,
+			true
+		))
+	]);
+}
+
 interface ErrorMetric {
 	source: string;
 }

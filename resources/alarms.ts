@@ -1,5 +1,5 @@
 import * as lambda from 'aws-lambda';
-import { sendMessage } from './utils/general';
+import { sendAlertMessage } from './utils/general';
 
 function parseRecord(event: lambda.SQSRecord): string {
 	const body = JSON.parse(JSON.parse(event.body).Message);
@@ -11,12 +11,5 @@ function parseRecord(event: lambda.SQSRecord): string {
 export async function main(event: lambda.SQSEvent): Promise<void> {
 	const alarmString = event.Records.map(parseRecord)
 		.join('\n');
-	await sendMessage(
-		null,
-		'***REMOVED***',
-		alarmString,
-		[],
-		false,
-		true
-	);
+	await sendAlertMessage(alarmString);
 }
