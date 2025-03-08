@@ -352,7 +352,8 @@ async function handleTwilio(body: TwilioBody) {
 			messageId,
 			number.phone.N,
 			messageBody,
-			mediaUrls,
+			mediaUrls
+				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`)),
 			isFromPageNumber
 		)) || []);
 
