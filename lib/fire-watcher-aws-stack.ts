@@ -213,7 +213,7 @@ export class FireWatcherAwsStack extends Stack {
         updateBehavior: 'LOG'
       },
       schedule: {
-        scheduleExpression: 'cron(10 * * * ? *)'
+        scheduleExpression: 'cron(15 * * * ? *)'
       }
     });
     eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
@@ -226,7 +226,7 @@ export class FireWatcherAwsStack extends Stack {
         bucketArn: eventsS3Bucket.bucketArn,
         roleArn: eventsFirehoseRole.roleArn,
         bufferingHints: {
-          intervalInSeconds: 60,
+          intervalInSeconds: 300,
         },
         prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:hh}/event=!{partitionKeyFromQuery:event}/',
         errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
@@ -467,7 +467,7 @@ export class FireWatcherAwsStack extends Stack {
       metric: new cloudwatch.Metric({
         metricName: 'Decode Rate',
         namespace: 'DTR Metrics',
-        period: Duration.seconds(30),
+        period: Duration.minutes(5),
         statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
           Tower: 'Saguache Tower'
@@ -485,7 +485,7 @@ export class FireWatcherAwsStack extends Stack {
       metric: new cloudwatch.Metric({
         metricName: 'Error',
         namespace: 'CVFD API',
-        period: Duration.seconds(30),
+        period: Duration.hours(1),
         statistic: cloudwatch.Stats.SUM,
         dimensionsMap: {
           source: 'User'
@@ -519,39 +519,7 @@ export class FireWatcherAwsStack extends Stack {
       {
         codeName: 'saguache-tower',
         alarm: {
-          ...baseTowerAlarmConfig,
-          evaluationPeriods: 10,
-          datapointsToAlarm: 10,
-          metric: new cloudwatch.Metric({
-            metricName: 'Decode Rate',
-            namespace: 'DTR Metrics',
-            period: Duration.minutes(1),
-            statistic: cloudwatch.Stats.MINIMUM,
-            dimensionsMap: {
-              Tower: 'Saguache Tower'
-            }
-          }),
-          alarmDescription: 'Saguache Tower Decode Rate below 40/min',
-          alarmName: 'Saguache Tower'
-        }
-      },
-      {
-        codeName: 'pool-table-tower',
-        alarm: {
-          ...baseTowerAlarmConfig,
-          evaluationPeriods: 60,
-          datapointsToAlarm: 60,
-          metric: new cloudwatch.Metric({
-            metricName: 'Decode Rate',
-            namespace: 'DTR Metrics',
-            period: Duration.minutes(1),
-            statistic: cloudwatch.Stats.MINIMUM,
-            dimensionsMap: {
-              Tower: 'Pool Table Mountain'
-            }
-          }),
-          alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
-          alarmName: 'Pool Table Tower'
+          ...baseTowerAlarmConfig
         }
       },
       {
@@ -598,18 +566,7 @@ export class FireWatcherAwsStack extends Stack {
         codeName: 'user-api',
         okayAction: false,
         alarm: {
-          ...baseApiAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Error',
-            namespace: 'CVFD API',
-            period: Duration.seconds(30),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              source: 'User'
-            }
-          }),
-          alarmDescription: 'User API error occured',
-          alarmName: 'User API Error'
+          ...baseApiAlarmConfig
         }
       },
       {
@@ -620,7 +577,7 @@ export class FireWatcherAwsStack extends Stack {
           metric: new cloudwatch.Metric({
             metricName: 'Error',
             namespace: 'CVFD API',
-            period: Duration.seconds(30),
+            period: Duration.minutes(1),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Twilio'
@@ -638,7 +595,7 @@ export class FireWatcherAwsStack extends Stack {
           metric: new cloudwatch.Metric({
             metricName: 'Error',
             namespace: 'CVFD API',
-            period: Duration.seconds(30),
+            period: Duration.minutes(30),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Infra'
@@ -656,7 +613,7 @@ export class FireWatcherAwsStack extends Stack {
           metric: new cloudwatch.Metric({
             metricName: 'Error',
             namespace: 'CVFD API',
-            period: Duration.seconds(30),
+            period: Duration.minutes(30),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Frontend'
@@ -674,7 +631,7 @@ export class FireWatcherAwsStack extends Stack {
           metric: new cloudwatch.Metric({
             metricName: 'Error',
             namespace: 'CVFD API',
-            period: Duration.seconds(30),
+            period: Duration.minutes(1),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'S3'
@@ -692,7 +649,7 @@ export class FireWatcherAwsStack extends Stack {
           metric: new cloudwatch.Metric({
             metricName: 'Error',
             namespace: 'CVFD API',
-            period: Duration.seconds(30),
+            period: Duration.minutes(1),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
               source: 'Queue'
