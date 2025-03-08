@@ -1,3 +1,5 @@
+window.afterAuth = window.afterAuth || [];
+
 function getPercentile(values, percentile) {
 	values = values.sort((a, b) => a > b ? 1 : -1);
 	const index = Math.ceil(values.length * percentile / 100) - 1;
@@ -73,34 +75,38 @@ function buildTable(items, isPage = false) {
 let textTimes = [];
 let pageTimes = [];
 
-fetch(`https://fire.klawil.net/api?action=getTexts`, {
-	credentials: 'include'
-})
-	.then(r => r.json())
-	.then(r => r.data)
-	.then(r => r.filter(t => !t.isTest))
-	.then(texts => texts.sort((a, b) => a.datetime > b.datetime ? -1 : 1))
-	.then(texts => texts.map(text => {
-		text.isPage = text.body.indexOf('Saguache Sheriff:') === 0;
-
-		if (text.isPage) {
-			text.pageTime = parseForPageTime(text.body);
-		}
-		const subTime = text.isPage ? text.pageTime : text.datetime;
-
-		text.delivered = text.delivered.map(t => t - subTime);
-		
-		if (text.isPage) {
-			pageTimes = pageTimes.concat(text.delivered);
-		} else {
-			textTimes = textTimes.concat(text.delivered);
-		}
-
-		return text;
-	}))
-	.then(texts => {
-		document.getElementById('texts').innerHTML = buildTable(texts.filter(text => !text.isPage));
-
-		document.getElementById('pages').innerHTML = buildTable(texts.filter(text => text.isPage), true);
+function getTexts() {
+	fetch(`https://fire.klawil.net/api?action=getTexts`, {
+		credentials: 'include'
 	})
-	.catch(console.error);
+		.then(r => r.json())
+		.then(r => r.data)
+		.then(r => r.filter(t => !t.isTest))
+		.then(texts => texts.sort((a, b) => a.datetime > b.datetime ? -1 : 1))
+		.then(texts => texts.map(text => {
+			text.isPage = text.body.indexOf('Saguache Sheriff:') === 0;
+
+			if (text.isPage) {
+				text.pageTime = parseForPageTime(text.body);
+			}
+			const subTime = text.isPage ? text.pageTime : text.datetime;
+
+			text.delivered = text.delivered.map(t => t - subTime);
+			
+			if (text.isPage) {
+				pageTimes = pageTimes.concat(text.delivered);
+			} else {
+				textTimes = textTimes.concat(text.delivered);
+			}
+
+			return text;
+		}))
+		.then(texts => {
+			document.getElementById('texts').innerHTML = buildTable(texts.filter(text => !text.isPage));
+
+			document.getElementById('pages').innerHTML = buildTable(texts.filter(text => text.isPage), true);
+		})
+		.catch(console.error);
+}
+
+window.afterAuth.push(getTexts);
