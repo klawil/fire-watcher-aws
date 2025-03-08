@@ -14,6 +14,7 @@ const metricSource = 'Twilio';
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
+const costExplorer = new aws.CostExplorer();
 
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
@@ -517,6 +518,10 @@ interface TwilioUsageItem {
 	endDate: Date;
 }
 
+function dateToString(date: Date): string {
+	return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+}
+
 async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
 
@@ -562,6 +567,48 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		};
 	}
 
+	// Get the timeframe
+	const month = event.queryStringParameters?.month || 'last';
+	let endDateTwilio = new Date()
+	endDateTwilio.setDate(1);
+	let endDateAws = new Date(endDateTwilio.getTime() - (24 * 60 * 60 * 1000));
+	let startDate = new Date(endDateAws.getTime());
+	startDate.setDate(1);
+	if (month === 'this') {
+		startDate = new Date();
+		startDate.setDate(1);
+		endDateTwilio.setDate(28);
+		endDateTwilio = new Date(endDateTwilio.getTime() + (7 * 24 * 60 * 60 *  1000));
+		endDateTwilio.setDate(1);
+		endDateAws = new Date(endDateTwilio.getTime() - (24 * 60 * 60 * 1000));
+	}
+
+	const awsDataPromise = costExplorer.getCostAndUsage({
+		Granularity: 'MONTHLY',
+		Metrics: [ 'UnblendedCost', 'UsageQuantity' ],
+		TimePeriod: {
+			Start: dateToString(startDate),
+			End: dateToString(endDateAws),
+		},
+		GroupBy: [
+			{
+				Type: 'DIMENSION',
+				Key: 'SERVICE',
+			},
+		],
+		...(typeof account !== 'undefined'
+			? {
+				Filter: {
+					CostCategories: {
+						Key: 'Department',
+						Values: [ account ],
+					},
+				},
+			}
+			: {}
+		),
+	}).promise();
+
 	const twilioSecret = await getTwilioSecret();
 	const accountSid = twilioSecret[`accountSid${account || ''}`];
 	const authToken = twilioSecret[`authToken${account || ''}`];
@@ -582,23 +629,47 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			.list({
 				limit: 1000,
 				includeSubaccounts: true,
-				startDate: '-30days',
-			}, (err: any, items: TwilioUsageItem[]) => err ? rej(err) : res(items));
+				startDate: dateToString(startDate),
+				endDate: dateToString(endDateTwilio),
+			}, (err: any, items: TwilioUsageItem[]) => err ? res([]) : res(items));
 	});
+	const awsData = await awsDataPromise;
 
 	return {
 		statusCode: 200,
 		body: JSON.stringify({
 			success: true,
-			data: twilioData
-				.filter(item => Number(item.price) > 0)
-				.map(item => ({
-					cat: item.category,
-					price: Number(item.price),
-					priceUnit: item.priceUnit,
-					count: Number(item.count),
-					countUnit: item.countUnit,
-				}))
+			start: startDate,
+			end: endDateAws,
+			data: [
+				...twilioData
+					.filter(item => Number(item.price) > 0)
+					.map(item => ({
+						type: 'twilio',
+						cat: item.category,
+						price: Number(item.price),
+						priceUnit: item.priceUnit,
+						count: Number(item.count),
+						countUnit: item.countUnit,
+					})),
+				...(
+					(
+						awsData.ResultsByTime &&
+						awsData.ResultsByTime.length > 0 &&
+						awsData.ResultsByTime[0].Groups
+					)
+					? awsData.ResultsByTime[0].Groups
+						.map(group => ({
+							type: 'aws',
+							cat: group.Keys?.join('|') || 'Unknown',
+							price: Number(group.Metrics?.UnblendedCost?.Amount || '0'),
+							priceUnit: group.Metrics?.UnblendedCost?.Unit || 'Unkown',
+							count: Number(group.Metrics?.UsageQuantity?.Amount || '0'),
+							countUnit: group.Metrics?.UsageQuantity?.Unit || 'Unkown',
+						}))
+					: []
+				)
+			],
 		})
 	}
 }

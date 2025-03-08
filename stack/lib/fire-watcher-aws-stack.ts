@@ -841,6 +841,7 @@ export class FireWatcherAwsStack extends Stack {
       readWrite?: dynamodb.Table[];
       bucket?: s3.IBucket;
       queue?: sqs.Queue;
+      cost?: boolean;
       firehose?: kinesisfirehose.CfnDeliveryStream,
       secret?: secretsManager.ISecret;
       metrics?: boolean;
@@ -898,6 +899,7 @@ export class FireWatcherAwsStack extends Stack {
       {
         name: 'twilio',
         byAccount: true,
+        cost: true,
         env: {
           SQS_QUEUE: queue.queueUrl,
           TWILIO_SECRET: secretArn,
@@ -1002,6 +1004,14 @@ export class FireWatcherAwsStack extends Stack {
             'firehose:PutRecord',
             'firehose:PutRecordBatch',
           ]
+        }));
+      if (config.cost)
+        apiHandler.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          resources: [ '*' ],
+          actions: [
+            'ce:GetCostAndUsage',
+          ],
         }));
       if (config.secret)
         config.secret.grantRead(apiHandler);

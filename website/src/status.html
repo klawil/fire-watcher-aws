@@ -82,15 +82,30 @@ noLoading: true
 <div class="row"><div class="col-12"><canvas id="api-errors"></canvas></div></div>
 <div class="d-none requireDistrictAdmin">
 	<h3 class="text-center">Twilio Cost - Total</h3>
-	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-total"></canvas></div></div>
+	<div class="row">
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-total-last"></canvas></div>
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-total-this"></canvas></div>
+	</div>
 	<h3 class="text-center">Twilio Cost - NSCAD</h3>
-	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-NSCAD"></canvas></div></div>
+	<div class="row">
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-NSCAD-last"></canvas></div>
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-NSCAD-this"></canvas></div>
+	</div>
 	<h3 class="text-center">Twilio Cost - Baca</h3>
-	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-Baca"></canvas></div></div>
+	<div class="row">
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-Baca-last"></canvas></div>
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-Baca-this"></canvas></div>
+	</div>
 	<h3 class="text-center">Twilio Cost - Crestone</h3>
-	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-Crestone"></canvas></div></div>
+	<div class="row">
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-Crestone-last"></canvas></div>
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-Crestone-this"></canvas></div>
+	</div>
 	<h3 class="text-center">Twilio Cost - Saguache</h3>
-	<div class="row"><div class="col-12" style="max-height: 400px;"><canvas id="cost-Saguache"></canvas></div></div>
+	<div class="row">
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-Saguache-last"></canvas></div>
+		<div class="col-lg-6" style="max-height: 400px;"><canvas id="cost-Saguache-this"></canvas></div>
+	</div>
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}
