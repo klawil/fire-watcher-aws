@@ -168,34 +168,38 @@ class TalkgroupFilter {
 					elem.hidden = !show;
 				});
 		});
-
+		
 		Object.keys(talkgroupMap)
-			.forEach(key => {
-				const elemParent = document.createElement('tr');
-				elemParent.id = `tg-${key}`;
-				elemParent.classList.add('tg-row');
-				elemParent.setAttribute('data-selected', '0');
-				elemParent.addEventListener('click', () => {
-					let newHome;
-					if (elemParent.getAttribute('data-selected') === '0') {
-						newHome = this.talkgroupSelected;
-						elemParent.setAttribute('data-selected', '1');
-					} else {
-						newHome = this.talkgroupSelect;
-						elemParent.setAttribute('data-selected', '0');
-					}
-
-					newHome.appendChild(elemParent);
-				});
-
-				const elem = document.createElement('td');
-				elem.innerHTML = talkgroupMap[key];
-				elemParent.appendChild(elem);
-
-				this.talkgroupSelect.appendChild(elemParent);
-			});
+			.forEach(key => this.createTalkgroupElem(key, talkgroupMap[key]));
 
 		this.defaultUrl = this.getUrl();
+	}
+
+	createTalkgroupElem(id, name) {
+		const elemParent = document.createElement('tr');
+		elemParent.id = `tg-${id}`;
+		elemParent.classList.add('tg-row');
+		elemParent.setAttribute('data-selected', '0');
+		elemParent.addEventListener('click', () => {
+			let newHome;
+			if (elemParent.getAttribute('data-selected') === '0') {
+				newHome = this.talkgroupSelected;
+				elemParent.setAttribute('data-selected', '1');
+			} else {
+				newHome = this.talkgroupSelect;
+				elemParent.setAttribute('data-selected', '0');
+			}
+
+			newHome.appendChild(elemParent);
+		});
+
+		const elem = document.createElement('td');
+		elem.innerHTML = name;
+		elemParent.appendChild(elem);
+
+		this.talkgroupSelect.appendChild(elemParent);
+
+		return elemParent;
 	}
 
 	get() {
@@ -234,10 +238,13 @@ class TalkgroupFilter {
 			this.chosenTalkgroups = urlValue.slice(2).split('|');
 
 			this.chosenTalkgroups.forEach(tg => {
-				const elem = document.getElementById(`tg-${tg}`);
-				if (elem === null) return;
+				let elem = document.getElementById(`tg-${tg}`);
+				if (elem === null) {
+					elem = this.createTalkgroupElem(tg, tg);
+				};
 
 				this.talkgroupSelected.appendChild(elem);
+				elem.setAttribute('data-selected', '1');
 			});
 		} else {
 			this.activeTab = 'all';
