@@ -45,7 +45,27 @@ autoPlayButtons.forEach(btn => btn.addEventListener('click', () => {
 	})
 }));
 
-player.addEventListener('durationchange', () => playerDuration.innerHTML = Math.round(player.duration).toString() + ' sec');
+let currentPlayerShowMinutes: boolean = false;
+function timestampToString(ts: number): string {
+	let durationString: string = '';
+	ts = Math.floor(ts / 0.1) * 0.1;
+	
+	// Add the minutes (if needed)
+	if (currentPlayerShowMinutes) {
+		let minutes = Math.floor(ts / 60);
+		ts = ts % 60;
+		durationString += `${minutes.toString().padStart(2, '0')}:`;
+	}
+
+	// Add the seconds
+	durationString += ts.toFixed(1).toString().padStart(4, '0');
+
+	return durationString;
+}
+
+player.addEventListener('durationchange', () => {
+	playerDuration.innerHTML = `${timestampToString(player.currentTime)} / ${timestampToString(player.duration)}`;
+});
 
 player.addEventListener('play', () => {
 	playButtonAction = 'pause';
@@ -70,6 +90,7 @@ player.addEventListener('pause', () => {
 player.addEventListener('timeupdate', () => {
 	const newPercent = Math.round(player.currentTime * 100 / player.duration);
 	playerBar.style.width = `${newPercent}%`;
+	playerDuration.innerHTML = `${timestampToString(player.currentTime)} / ${timestampToString(player.duration)}`;
 });
 
 player.addEventListener('ended', () => {
