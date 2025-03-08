@@ -425,7 +425,7 @@ async function handleAllActivate(event: APIGatewayProxyEventV2): Promise<APIGate
 				phone: num
 			}),
 			QueueUrl: queueUrl
-		})));
+		}).promise()));
 	}
 
 	return {
