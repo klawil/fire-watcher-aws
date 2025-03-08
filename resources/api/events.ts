@@ -100,7 +100,9 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 		errors: []
 	};
 
-	body.forEach((event, i) => validateEventBody(event, i, response));
+	body
+		.filter(e => e.radioId !== '-1')
+		.forEach((event, i) => validateEventBody(event, i, response));
 
 	if (
 		response.success &&
@@ -117,6 +119,7 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	}
 
 	if (!response.success) {
+		console.error(event.body);
 		console.error(`400 Error - ${response.errors.join(', ')}`);
 	}
 
