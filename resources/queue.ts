@@ -64,7 +64,12 @@ async function getRecipients() {
 		.then((data) => data.Items || []);
 }
 
-async function sendMessage(phone: string | undefined, body: string, mediaUrl: string[] = []) {
+async function sendMessage(
+	phone: string | undefined,
+	body: string,
+	mediaUrl: string[] = [],
+	isPage: boolean = false
+) {
 	if (typeof phone === 'undefined') {
 		return;
 	}
@@ -74,13 +79,15 @@ async function sendMessage(phone: string | undefined, body: string, mediaUrl: st
 		throw new Error('Cannot get twilio secret');
 	}
 
+	const messageConfig = {
+		body,
+		mediaUrl,
+		from: isPage ? twilioConf.pageNumber : twilioConf.fromNumber,
+		to: `+1${parsePhone(phone)}`
+	};
+
 	return twilio(twilioConf.accountSid, twilioConf.authToken)
-		.messages.create({
-			body,
-			mediaUrl,
-			from: twilioConf.fromNumber as string,
-			to: `+1${parsePhone(phone)}`
-		});
+		.messages.create(messageConfig);
 }
 
 function createPageMessage(fileKey: string): string {
@@ -228,7 +235,9 @@ async function handlePage(body: PageBody) {
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
 			phone.phone.N,
-			messageBody
+			messageBody,
+			[],
+			true
 		)));
 }
 
