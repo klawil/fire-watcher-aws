@@ -40,20 +40,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		};
 		console.log(`Create: ${JSON.stringify(body)}`)
 
-		const promises = [];
-		if (headInfo.Metadata?.tone === 'y') {
-			promises.push(sqs.sendMessage({
-				MessageBody: JSON.stringify({
-					action: 'page',
-					key: Key
-				}),
-				QueueUrl: queueUrl
-			}).promise());
-		}
-
-		promises.push(dynamodb.putItem(body).promise());
-
-		await Promise.all(promises);
+		await dynamodb.putItem(body).promise();
 	} else {
 		const dynamoQuery = await dynamodb.query({
 			TableName: trafficTable,

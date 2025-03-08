@@ -16,6 +16,7 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
 const secretArn = '***REMOVED***';
+const apiCode = '***REMOVED***';
 
 export class FireWatcherAwsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -153,7 +154,8 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_CAPTCHA: captchaTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
         TABLE_MESSAGES: messagesTable.tableName,
-        SQS_QUEUE: queue.queueUrl
+        SQS_QUEUE: queue.queueUrl,
+        SERVER_CODE: apiCode
       }
     });
 

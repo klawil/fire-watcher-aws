@@ -9,6 +9,7 @@ const trafficTable = process.env.TABLE_TRAFFIC as string;
 const captchaTable = process.env.TABLE_CAPTCHA as string;
 const phoneTable = process.env.TABLE_PHONE as string;
 const queueUrl = process.env.SQS_QUEUE as string;
+const apiCode = process.env.SERVER_CODE as string;
 
 const captchaTtl = 1000 * 60 * 5;
 const phoneRegex = /^[0-9]{3}-[0-9]{3}-[0-9]{4}$/;
@@ -338,6 +339,49 @@ async function handleMessage(event: APIGatewayProxyEventV2): Promise<APIGatewayP
 	};
 }
 
+async function handlePage(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+	// Validate the body
+	const bodyValidResponse = validateBodyIsJson(event.body);
+	if (bodyValidResponse !== true) {
+		return bodyValidResponse;
+	}
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: RegisterApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body
+	if (!body.code || body.code !== apiCode) {
+		response.success = false;
+		response.errors.push('code');
+		response.errors.push('key');
+	}
+	if (!body.key) {
+		response.success = false;
+		response.errors.push('key');
+	}
+
+	if (response.success) {
+		const event = {
+			action: 'page',
+			key: body.key
+		};
+
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify(event),
+			QueueUrl: queueUrl
+		}).promise();
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	try {
 		const action = event.queryStringParameters?.action || 'list';
@@ -352,6 +396,8 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 				return registerPhase2(event);
 			case 'message':
 				return handleMessage(event);
+			case 'page':
+				return handlePage(event);
 		}
 
 		return {
@@ -359,7 +405,7 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 			headers: {},
 			body: JSON.stringify({
 				error: true,
-				message: `Invalid action ${action}`
+				message: `Invalid action '${action}'`
 			})
 		};
 	} catch (e) {
