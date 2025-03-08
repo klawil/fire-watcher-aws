@@ -19,8 +19,8 @@ In a moment, you will receive a copy of the last page sent out over VHF.
 You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
-async function getRecipients() {
-	return dynamodb.scan({
+async function getRecipients(isTest: boolean = false) {
+	const scanInput: AWS.DynamoDB.ScanInput = {
 		TableName: phoneTable,
 		FilterExpression: '#a = :a',
 		ExpressionAttributeNames: {
@@ -31,7 +31,20 @@ async function getRecipients() {
 				BOOL: true
 			}
 		}
-	}).promise()
+	};
+
+	if (isTest) {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.ExpressionAttributeNames['#t'] = 'isTest';
+		scanInput.ExpressionAttributeValues[':t'] = {
+			BOOL: true
+		};
+		scanInput.FilterExpression += ' AND #t = :t';
+	}
+
+	return dynamodb.scan(scanInput).promise()
 		.then((data) => data.Items || []);
 }
 
@@ -291,12 +304,13 @@ async function handleTwilio(body: TwilioBody) {
 interface PageBody {
 	action: 'page';
 	key: string;
+	isTest?: boolean;
 }
 
 async function handlePage(body: PageBody) {
 	// Build the message body
 	const messageBody = createPageMessage(body.key);
-	const recipients = await getRecipients();
+	const recipients = await getRecipients(!!body.isTest);
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
@@ -304,7 +318,7 @@ async function handlePage(body: PageBody) {
 		recipients.length,
 		messageBody,
 		[],
-		false
+		!!body.isTest
 	);
 
 	// Send the messages

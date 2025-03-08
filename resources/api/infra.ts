@@ -270,8 +270,10 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	if (response.success && body.key.indexOf('BG_FIRE') === -1) {
 		const event = {
 			action: 'page',
-			key: body.key
+			key: body.key,
+			isTest: !!body.isTest
 		};
+		response.data = [ event ];
 
 		await sqs.sendMessage({
 			MessageBody: JSON.stringify(event),
