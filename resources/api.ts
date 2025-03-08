@@ -466,6 +466,23 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			queryConfig.KeyConditionExpression += ' AND #st < :st';
 		});
 	}
+	// Check for an after
+	else if (
+		typeof event.queryStringParameters.after !== 'undefined' &&
+		!isNaN(Number(event.queryStringParameters.after))
+	) {
+		const after = event.queryStringParameters.after;
+		queryConfigs.forEach((queryConfig) => {
+			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+
+			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+			queryConfig.ExpressionAttributeValues[':st'] = {
+				N: after
+			};
+			queryConfig.KeyConditionExpression += ' AND #st > :st';
+		});
+	}
 
 	// Check for a source filter
 	if (typeof event.queryStringParameters.source !== 'undefined') {
@@ -492,7 +509,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		});
 	}
 
-	const data = await runDynamoQueries(queryConfigs);
+	const data = await runDynamoQueries(queryConfigs, 'StartTime');
 
 	const body = JSON.stringify({
 		success: true,

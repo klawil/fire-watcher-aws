@@ -1,16 +1,13 @@
 const dataUpdateFrequency = 10000;
-const sourceMap = {
-	SAG_FIRE_VHF: 'Saguache Fire VHF',
-	BG_FIRE_VHF: 'Baca Fire/EMS VHF'
-};
+const talkgroupMap = {};
 
 const nextDataFields = {};
 
 let isUpdatingBefore = false;
 function updateData(direction = 'after') {
-	let apiUrl = '/api';
+	let apiUrl = 'http://localhost:8001/api?action=dtr';
 	if (typeof nextDataFields.after !== 'undefined') {
-		apiUrl += '?'
+		apiUrl += '&'
 		if (direction === 'after') {
 			apiUrl += `after=${nextDataFields.after}`;
 		} else {
@@ -44,7 +41,7 @@ function updateData(direction = 'after') {
 
 			r.data = r.data.map((f) => ({
 				...f,
-				Local: dateToStr(new Date(f.Datetime)),
+				Local: dateToStr(new Date(f.StartTime * 1000)),
 				File: f.Key.split('/').pop()
 			}));
 			if (direction === 'before') {
@@ -71,13 +68,9 @@ function updateData(direction = 'after') {
 		});
 }
 
-function playLastTone() {
-	let lastTone = files.filter((file) => file.Tone)[0];
-
-	if (lastTone) {
-		play(lastTone.File);
-		scrollRowIntoView(lastTone.File);
-	}
+function playLive() {
+	play(files[0].File);
+	scrollRowIntoView(files[0].File);
 }
 
 window.addEventListener('scroll', () => {
@@ -94,14 +87,13 @@ window.addEventListener('scroll', () => {
 
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
-	filters.Source = [ 'SAG_FIRE_VHF' ];
 	rowConfig = [
 		f => secondsToString(f.Len),
-		f => sourceMap[f.Source] || f.Source,
+		f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
 		f => f.Local,
-		f => f.Tone ? '<i class="bi bi-star-fill"></i>' : ''
+		f => f.Emergency === 1 ? '<i class="bi bi-star-fill"></i>' : ''
 	];
-	defaultFunc = playLastTone;
+	defaultFunc = playLive;
 	
 	updateData();
 });

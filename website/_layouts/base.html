@@ -81,13 +81,13 @@
 		<nav class="navbar fixed-bottom navbar-expand-lg navbar-dark bg-dark">
 			<div class="container-fluid">
 				<!-- Mobile -->
-				<button class="navbar-toggler navbar-player ms-1 interactive-button" id="autoplay-button-m"><i class="navbar-toggler-icon bi bi-arrow-bar-up text-light"></i></button>
+				<button class="navbar-toggler navbar-player ms-1 interactive-button player-active" id="autoplay-button-m"><i class="navbar-toggler-icon bi bi-arrow-bar-up text-light"></i></button>
 				<button class="navbar-toggler navbar-player ms-1 interactive-button" id="play-button-m"><i class="navbar-toggler-icon bi bi-play-fill text-light"></i></button>
 
 				<!-- Desktop -->
 				<ul class="navbar-nav mb-2 mb-lg-0 hide-small">
 					<li class="nav-item" id="autoplay-button-d">
-						<a class="nav-link interactive-button">
+						<a class="nav-link active interactive-button">
 							<i class="bi bi-arrow-bar-up"></i>
 							Autoplay
 						</a>
@@ -105,6 +105,7 @@
 				<div class="navbar-text me-auto ms-2" id="player-duration">- sec</div>
 			</div>
 		</nav>
+		<script async src="/js/audio.js?v={{ randomNumber }}"></script>
 		{% endif %}
 	
 		<script async src="/js/auth.js?v={{ randomNumber }}"></script>

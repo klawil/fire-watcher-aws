@@ -1,0 +1,26 @@
+---
+titleBarTitle: DTR
+layout: base
+centerAll: true
+isAudio: true
+latestLabel: Live
+---
+
+<div class="row row-cols-auto text-start g-1" id="select-inputs-container"></div>
+
+<div class="table-responsive">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Len</th>
+				<th>Group</th>
+				<th>Date</th>
+				<th><i class="bi bi-star-fill"></i></th>
+			</tr>
+		</thead>
+		<tbody id="files" class="align-middle"></tbody>
+	</table>
+</div>
+
+{% assign randomNumber = "now" | date: "%N" %}
+<script async src="/js/dtr.js?v={{ randomNumber }}"></script>

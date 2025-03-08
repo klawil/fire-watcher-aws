@@ -8,6 +8,10 @@
 	cursor: pointer;
 }
 
+.player-active {
+	box-shadow: 0 0 0 0.25rem;
+}
+
 .table>:not(caption)>*>* {
 	padding: 0.5rem 0.25rem;
 }
