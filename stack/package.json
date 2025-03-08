@@ -5,8 +5,7 @@
     "fire-watcher-aws": "bin/fire-watcher-aws.js"
   },
   "scripts": {
-    "build": "tsc",
-    "build-lambda": "tsc resources/auth_middleware.ts",
+    "build": "tsc resources/auth_middleware.ts",
     "cdk": "cdk"
   },
   "devDependencies": {

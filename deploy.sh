@@ -4,7 +4,7 @@ source ~/.zshrc
 nvm use 18
 
 cd stack
-npm run build-lambda
+npm run build
 cdk deploy --all
 cd ..
 
