@@ -47,7 +47,7 @@ function sortAdjacentTable() {
 	}
 }
 function updateSitesTable(hasMap) {
-	fetch(`${baseHost}/api/frontend?action=sites`)
+	fetch(`/api/frontend?action=sites`)
 		.then(r => r.json())
 		.then(data => data.data)
 		.then(sites => sites.forEach(site => {

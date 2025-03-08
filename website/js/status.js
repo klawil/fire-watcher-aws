@@ -134,7 +134,7 @@ function refreshCharts(refreshFrom = null) {
 
 	const thisInitId = Date.now()
 	lastInitId = thisInitId;
-	Promise.all(charts.map(chart => fetch(`${baseHost}/api/frontend?action=stats&${chart.query}`)
+	Promise.all(charts.map(chart => fetch(`/api/frontend?action=stats&${chart.query}`)
 		.then(r => r.json())
 		.then(data => {
 			if (lastInitId !== thisInitId) return;

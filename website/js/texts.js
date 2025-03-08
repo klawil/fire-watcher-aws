@@ -125,7 +125,7 @@ let textTimes = [];
 let pageTimes = [];
 
 function getTexts() {
-	fetch(`${baseHost}/api/frontend?action=listTexts`, {
+	fetch(`/api/frontend?action=listTexts`, {
 		credentials: 'include'
 	})
 		.then(r => r.json())

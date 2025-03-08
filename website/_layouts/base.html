@@ -42,9 +42,6 @@
 				requireAdmin: {% if page.requireAdmin %}true{% else %}false{% endif %},
 				requireUser: {% if page.requireAdmin or page.requireUser %}true{% else %}false{% endif %}
 			};
-			window.baseHost = window.location.origin.indexOf('localhost') !== -1
-				? 'http://localhost:8001'
-				: '';
 		</script>
 	</head>
 	<body>

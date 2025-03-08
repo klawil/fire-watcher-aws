@@ -24,7 +24,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 	if (lastUpdateId[direction] !== null) return;
 	lastUpdateId[direction] = updateId;
 
-	let apiUrl = `${baseHost}/api/frontend?action=dtr`;
+	let apiUrl = `/api/frontend?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
 		if (direction === 'after') {
@@ -366,7 +366,7 @@ window.audioQ.push(() => {
 const numberFormatter = new Intl.NumberFormat('en-us', {
 	maximumFractionDigits: 0
 });
-fetch(`${baseHost}/api/frontend?action=talkgroups`)
+fetch(`/api/frontend?action=talkgroups`)
 	.then(r => r.json())
 	.then(data => {
 		if (!data.success) return;

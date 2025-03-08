@@ -94,7 +94,7 @@ function init() {
 			.filter(v => v.checked)
 			.map(v => v.value);
 
-		fetch(`${baseHost}/api/user?action=update`, {
+		fetch(`/api/user?action=update`, {
 			method: 'POST',
 			body: JSON.stringify(user)
 		})
@@ -176,13 +176,11 @@ function init() {
 						type: credential.type
 					},
 				};
-				console.log(data);
 
 				const result = await fetch(`/api/user?action=fido-auth`, {
 					method: 'POST',
 					body: JSON.stringify(data),
 				}).then(r => r.json());
-				console.log(result);
 				btn2.enabled = true;
 			});
 
@@ -197,7 +195,7 @@ function init() {
 			const newName = fidoKeyName.value;
 
 			// Get the attestation
-			const data = await fetch(`${baseHost}/api/user?action=fido-challenge`, {
+			const data = await fetch(`/api/user?action=fido-challenge`, {
 				method: 'POST',
 				body: JSON.stringify({ name: newName }),
 			}).then(r => r.json());
@@ -211,7 +209,7 @@ function init() {
 			});
 			const credentialId = bufferToBase64(credential.rawId);
 
-			await fetch(`${baseHost}/api/user?action=fido-register`, {
+			await fetch(`/api/user?action=fido-register`, {
 				method: 'POST',
 				body: JSON.stringify({
 					challenge: bufferToBase64(data.options.challenge),

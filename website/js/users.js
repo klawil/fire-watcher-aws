@@ -287,7 +287,7 @@ function addRow(user) {
 					? input.checked
 					: input.value);
 				
-				fetch(`${baseHost}/api/user?action=update`, {
+				fetch(`/api/user?action=update`, {
 					method: 'POST',
 					body: JSON.stringify(user)
 				})
@@ -329,7 +329,7 @@ function addRow(user) {
 					deleteButton.classList.add('btn-secondary');
 					deleteButton.blur();
 
-					fetch(`${baseHost}/api/user?action=delete`, {
+					fetch(`/api/user?action=delete`, {
 						method: 'POST',
 						body: JSON.stringify({
 							phone: user.phone.toString()
@@ -415,7 +415,7 @@ function init() {
 	if (user.isDistrictAdmin)
 		document.getElementById('customStyles').innerHTML = '';
 
-	fetch(`${baseHost}/api/user?action=list`)
+	fetch(`/api/user?action=list`)
 		.then(r => r.json())
 		.then(data => {
 			if (data.success) {
@@ -490,7 +490,7 @@ function init() {
 										: input.value);
 								delete user.undefined;
 
-								fetch(`${baseHost}/api/user?action=create`, {
+								fetch(`/api/user?action=create`, {
 									method: 'POST',
 									body: JSON.stringify(user)
 								})

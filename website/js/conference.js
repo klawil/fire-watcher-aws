@@ -78,7 +78,7 @@ function updateButton(btn, state) {
 }
 
 async function updateAccessToken() {
-	await fetch(`${baseHost}/api/conference?action=token`)
+	await fetch(`/api/conference?action=token`)
 		.then(r => r.json())
 		.then(data => {
 			if (!data.success) throw new Error(`Invalid token response: ${data.message}`);
@@ -119,7 +119,7 @@ const kickUser = (btn, callSid) => async () => {
 	modifyButton(btn, 'Removing...', 'btn-secondary', true, false);
 
 	try {
-		await fetch(`${baseHost}/api/conference?action=kickUser&callSid=${encodeURIComponent(callSid)}`)
+		await fetch(`/api/conference?action=kickUser&callSid=${encodeURIComponent(callSid)}`)
 			.then(r => r.json())
 			.then(console.log);
 	} catch (e) {
@@ -218,7 +218,7 @@ async function loadParticipants() {
 	const localLastStartTime = Date.now();
 	lastStartTime = localLastStartTime;
 
-	return fetch(`${baseHost}/api/conference?action=get`)
+	return fetch(`/api/conference?action=get`)
 		.then(r => r.json())
 		.then(data => {
 			if (participantsLoading.parentElement !== null)
@@ -339,7 +339,7 @@ const endButton = document.getElementById('endButton');
 const endButtonContainer = document.getElementById('endButtonContainer');
 endButton.addEventListener('click', async () => {
 	updateButton(endButton, 'ending');
-	await fetch(`${baseHost}/api/conference?action=end`)
+	await fetch(`/api/conference?action=end`)
 		.then(r => r.json());
 	updateButton(endButton, 'end');
 });
@@ -357,7 +357,7 @@ async function inviteButtonClick(btn) {
 
 	let wasSuccess = false;
 	try {
-		const apiResponse = await fetch(`${baseHost}/api/conference?action=invite&phone=${btn.getAttribute('data-phone')}`)
+		const apiResponse = await fetch(`/api/conference?action=invite&phone=${btn.getAttribute('data-phone')}`)
 			.then(r => r.json());
 		
 		wasSuccess = apiResponse.success;
@@ -432,7 +432,7 @@ window.afterAuth.push(() => {
 	doneLoading();
 	loadParticipants();
 	if (user.isAdmin) {
-		fetch(`${baseHost}/api/user?action=list`)
+		fetch(`/api/user?action=list`)
 			.then(r => r.json())
 			.then(data => data.users)
 			.then(users => users.filter(u => u.department === user.department))
