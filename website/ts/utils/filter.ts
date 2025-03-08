@@ -51,6 +51,8 @@ interface Talkgroups {
 		selectName: string;
 	};
 }
+
+const onlyNumbersRegex = /^[0-9]+$/;
 export class TalkgroupFilter implements AudioFilter {
 	/**
 	 * 8090 - ARCC 5
@@ -145,6 +147,29 @@ export class TalkgroupFilter implements AudioFilter {
 	setTalkgroups(talkgroups: Talkgroups) {
 		logger.trace('TalkgroupFilter.setTalkgroups', ...arguments);
 		Object.keys(talkgroups)
+			.sort((a, b) => {
+				if (typeof talkgroups[a] === 'undefined') {
+					return -1;
+				}
+				if (typeof talkgroups[b] === 'undefined') {
+					return 1;
+				}
+
+				const tgAName = talkgroups[a].name;
+				const tgBName = talkgroups[b].name;
+
+				if (
+					onlyNumbersRegex.test(tgAName) &&
+					onlyNumbersRegex.test(tgBName)
+				) {
+					console.log(tgAName, tgBName);
+					return Number(tgAName) > Number(tgBName)
+						? 1
+						: -1;
+				}
+
+				return tgAName.localeCompare(tgBName);
+			})
 			.forEach(key => {
 				const tr = createTableRow(this.talkgroupSelect, {
 					id: `tg-${key}`,

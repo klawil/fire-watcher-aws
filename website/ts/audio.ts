@@ -426,7 +426,7 @@ async function init() {
 
 			agg[item.ID.toString()] = {
 				name: item.Name || item.ID.toString(),
-				selectName: `${item.Name || item.ID}${countStr}`,
+				selectName: `${item.Name || `Talkgroup ID ${item.ID}`}${countStr}`,
 			};
 
 			return agg;
