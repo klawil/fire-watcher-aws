@@ -74,7 +74,7 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 			td.style.maxWidth = conf.maxWidth;
 
 		let span: HTMLSpanElement;
-		if (u !== null) {
+		if (u !== null && !conf.editable) {
 			span = document.createElement('span');
 			td.appendChild(span);
 			span.innerHTML = conf.val(u);
@@ -92,7 +92,7 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 				: conf.val(newUser);
 			input.addEventListener('change', () => newUser[conf.name] = input.value);
 
-			if (u !== null) {
+			if (u !== null && false) {
 				input.classList.add('d-none');
 				let listenerRun = false;
 				td.addEventListener('click', () => {
@@ -163,7 +163,7 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 					placeholder: 'Callsign',
 					editable: true,
 					val: u => u.callSignS,
-					maxWidth: '75px',
+					maxWidth: '85px',
 				}),
 			},
 			{ // roles
