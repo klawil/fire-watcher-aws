@@ -4,7 +4,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, parseDynamoDbAttributeValue, randomString, validateBodyIsJson } from '../utils/general';
 import { allUserCookies, authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
-import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserLoginResult } from '../../common/userApi';
+import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, UserObject } from '../../common/userApi';
 import { unauthorizedApiResponse } from '../../common/common';
 
 const metricSource = 'User';
@@ -51,24 +51,6 @@ interface FidoKey {
 interface FidoKeys {
 	[key: string]: FidoKey;
 };
-
-interface UserObject {
-	phone: string;
-	fName: string;
-	lName: string;
-	callSign: string;
-	isActive: boolean;
-	isAdmin: boolean;
-	talkgroups: string[];
-	department?: string;
-	pageOnly?: boolean;
-	getTranscript?: boolean;
-	getApiAlerts?: boolean;
-	getVhfAlerts?: boolean;
-	getDtrAlerts?: boolean;
-
-	isMe?: boolean;
-}
 
 async function loginUser(user: AWS.DynamoDB.AttributeMap) {
 	// Find the previous tokens that should be deleted
@@ -244,16 +226,17 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	};
 
 	if (user !== null) {
+		const parsedUser = parseDynamoDbAttributeMap(user) as unknown as UserObject;
 		response.isUser = true;
-		response.isActive = !!user.isActive?.BOOL;
-		response.isAdmin = !!user.isAdmin?.BOOL && !!user.isActive?.BOOL;
-		response.isDistrictAdmin = !!user.isDistrictAdmin?.BOOL;
-		response.phone = user.phone?.N;
-		response.callSign = user.callSign?.N;
-		response.fName = user.fName?.S;
-		response.lName = user.lName?.S;
-		response.department = user.department?.S;
-		response.talkgroups = user.talkgroups?.NS;
+		response.isActive = !!parsedUser.isActive;
+		response.isAdmin = !!parsedUser.isAdmin && !!parsedUser.isActive;
+		response.isDistrictAdmin = !!parsedUser.isDistrictAdmin;
+		response.phone = parsedUser.phone;
+		response.callSign = parsedUser.callSign;
+		response.fName = parsedUser.fName;
+		response.lName = parsedUser.lName;
+		response.department = parsedUser.department;
+		response.talkgroups = parsedUser.talkgroups;
 		if (typeof user.fidoKeys !== 'undefined') {
 			const fidoKeys = parseDynamoDbAttributeValue(user.fidoKeys) as FidoKeys;
 			response.fidoKeys = Object.keys(fidoKeys).reduce((agg: {[key: string]: string }, key) => {
@@ -426,15 +409,16 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			: -1);
 
 	// Parse the users into a readable format
-	const users = (usersItems.Items || [])
-		.map(parseDynamoDbAttributeMap);
+	const result: ApiUserListResponse = {
+		success: true,
+		users: (usersItems.Items || [])
+			.map(parseDynamoDbAttributeMap)
+			.map(v => v as unknown as UserObject),
+	};
 
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			users
-		})
+		body: JSON.stringify(result)
 	};
 }
 

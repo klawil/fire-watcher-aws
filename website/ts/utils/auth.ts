@@ -95,3 +95,5 @@ if (document.cookie.indexOf('cvfd-token') !== -1) {
 			afterAuthUpdate.push = fn => fn();
 		});
 }
+
+export function authInit() {}

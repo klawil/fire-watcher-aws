@@ -3,6 +3,7 @@ const path = require('path');
 const config = {
 	mode: 'production',
   entry: {
+		conference: './website/ts/conference.ts',
 		profile: './website/ts/profile.ts',
 		login: './website/ts/login.ts',
 		texts: './website/ts/texts.ts',

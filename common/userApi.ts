@@ -1,5 +1,24 @@
 import { ApiResponseBase } from "./common";
 
+export interface UserObject {
+	phone: string;
+	fName: string;
+	lName: string;
+	callSign: string;
+	isActive: boolean;
+	isAdmin: boolean;
+	isDistrictAdmin?: boolean;
+	talkgroups: string[];
+	department?: string;
+	pageOnly?: boolean;
+	getTranscript?: boolean;
+	getApiAlerts?: boolean;
+	getVhfAlerts?: boolean;
+	getDtrAlerts?: boolean;
+
+	isMe?: boolean;
+}
+
 export interface ApiUserLoginBody {
 	phone: string;
 }
@@ -47,17 +66,9 @@ export interface ApiUserLoginResult extends ApiResponseBase {
 export interface ApiUserAuthResponse extends ApiResponseBase {
 	errors: string[];
 }
-export interface ApiUserGetUserResponse extends ApiResponseBase {
-	isUser: boolean;
-	isActive: boolean;
-	isAdmin: boolean;
+export interface ApiUserGetUserResponse extends ApiResponseBase, Partial<UserObject> {
 	isDistrictAdmin: boolean;
-	phone?: string;
-	callSign?: string;
-	fName?: string;
-	lName?: string;
-	department?: string;
-	talkgroups?: string[];
+	isUser: boolean;
 	fidoKeys?: {
 		[key: string]: string;
 	};
@@ -90,3 +101,6 @@ export interface ApiUserFidoChallengeResponse extends ApiResponseBase {
 	};
 };
 export type ApiUserFidoRegisterResponse = ApiResponseBase;
+export interface ApiUserListResponse extends ApiResponseBase {
+	users: UserObject[];
+}

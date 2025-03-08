@@ -1,7 +1,7 @@
 ---
 title: Conference Call
 layout: base
-requireUser: true
+noLoading: true
 ---
 
 <style>
@@ -57,5 +57,4 @@ requireUser: true
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}
-<script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.2.0/dist/twilio.min.js"></script>
 <script async src="/js/conference.js?v={{ randomNumber }}"></script>

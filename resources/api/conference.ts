@@ -2,6 +2,8 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getLoggedInUser } from '../utils/auth';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
+import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../common/conferenceApi';
+import { unauthorizedApiResponse } from '../../common/common';
 
 const metricSource = 'Conference';
 
@@ -12,19 +14,11 @@ const conferenceTable = process.env.TABLE_CONFERENCE as string;
 
 async function getToken(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
 	if (
 		user === null ||
 		!user.isActive?.BOOL
 	) {
-		return unauthorizedResponse;
+		return unauthorizedApiResponse;
 	}
 
 	const twilioConf = await getTwilioSecret();
@@ -42,12 +36,13 @@ async function getToken(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	);
 	token.addGrant(voiceGrant);
 
+	const responseBody: ApiConferenceTokenResponse = {
+		success: true,
+		token: token.toJwt(),
+	};
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			token: token.toJwt(),
-		}),
+		body: JSON.stringify(responseBody),
 	};
 }
 
@@ -159,37 +154,31 @@ async function handleJoin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
 	if (
 		user === null ||
 		!user.isAdmin?.BOOL
 	) {
-		return unauthorizedResponse;
+		return unauthorizedApiResponse;
 	}
 
 	// Validate the call SID
 	if (typeof event.queryStringParameters?.callSid !== 'string') {
+		const responseBody: ApiConferenceKickUserResponse = {
+			success: false,
+			message: 'Provide a `callSid`',
+		};
 		return {
 			statusCode: 400,
-			body: JSON.stringify({
-				success: false,
-				message: 'Provide a `callSid`',
-			}),
+			body: JSON.stringify(responseBody),
 		};
 	}
 
+	const responseBody: ApiConferenceKickUserResponse = {
+		success: true,
+	};
 	const response: APIGatewayProxyResult = {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-		}),
+		body: JSON.stringify(responseBody),
 	};
 
 	// Get the API config
@@ -208,12 +197,13 @@ async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 	}).promise();
 
 	if (!conferenceCall.Items || conferenceCall.Items.length !== 1) {
+		const errorResponseBody: ApiConferenceKickUserResponse = {
+			success: false,
+			message: 'Invalid `callSid`',
+		};
 		return {
 			statusCode: 400,
-			body: JSON.stringify({
-				success: false,
-				message: 'Invalid `callSid`',
-			}),
+			body: JSON.stringify(errorResponseBody),
 		};
 	}
 	const twilioConf = await twilioConfPromise;
@@ -232,27 +222,20 @@ async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
 async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
 	if (
 		user === null ||
 		!user.isAdmin?.BOOL
 	) {
-		return unauthorizedResponse;
+		return unauthorizedApiResponse;
 	}
 
+	const invalidPhoneResponseBody: ApiConferenceInviteResponse = {
+		success: false,
+		message: 'Provide a valid `phone`',
+	};
 	const invalidPhoneResponse = {
 		statusCode: 400,
-		body: JSON.stringify({
-			success: false,
-			message: 'Provide a valid `phone`',
-		}),
+		body: JSON.stringify(invalidPhoneResponseBody),
 	};
 	if (
 		typeof event.queryStringParameters?.phone !== 'string' ||
@@ -318,27 +301,22 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 		UpdateExpression: 'SET #cs = :cs, #fn = :fn, #ln = :ln, #p = :p, #t = :t, #r = :r',
 	}).promise();
 
+	const responseBody: ApiConferenceInviteResponse = {
+		success: true,
+	};
 	return {
 		statusCode: 200,
-		body: JSON.stringify({ success: true }),
+		body: JSON.stringify(responseBody),
 	};
 }
 
 async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
 	if (
 		user === null ||
 		!user.isActive?.BOOL
 	) {
-		return unauthorizedResponse;
+		return unauthorizedApiResponse;
 	}
 
 	const activeUsers = await dynamodb.scan({
@@ -352,31 +330,25 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		FilterExpression: '#r = :r',
 	}).promise();
 
+	const responseBody: ApiConferenceGetResponse = {
+		success: true,
+		data: activeUsers.Items?.map(parseDynamoDbAttributeMap)
+			.map(item => item as unknown as ConferenceAttendeeObject)
+			.filter(v => typeof v.ConferenceSid !== 'undefined'),
+	}
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			data: activeUsers.Items?.map(parseDynamoDbAttributeMap)
-				.filter(v => typeof v.ConferenceSid !== 'undefined'),
-		}),
+		body: JSON.stringify(responseBody),
 	};
 }
 
 async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
 	if (
 		user === null ||
 		!user.isActive?.BOOL
 	) {
-		return unauthorizedResponse;
+		return unauthorizedApiResponse;
 	}
 
 	const activeUsers = await dynamodb.scan({
@@ -398,11 +370,12 @@ async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 			.update({ status: 'completed' });
 	}
 
+	const responseBody: ApiConferenceEndResponse = {
+		success: true,
+	};
 	return {
 		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-		}),
+		body: JSON.stringify(responseBody),
 	};
 }
 

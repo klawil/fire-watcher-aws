@@ -1,5 +1,8 @@
 import { FireTypes, WeatherResultJson } from '../../common/weather';
+import { authInit } from './utils/auth';
 import { doneLoading } from './utils/loading';
+
+authInit();
 
 const newWidth = Array.from(document.getElementsByClassName('img-container'))[0].clientWidth;
 const ratio = 555 / 815;
