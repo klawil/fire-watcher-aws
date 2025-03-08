@@ -116,6 +116,10 @@ if (user.isAdmin) {
 	Array.from(document.getElementsByClassName('requireAdmin'))
 		.forEach(elem => elem.classList.remove('d-none'));
 }
+if (user.isDistrictAdmin) {
+	Array.from(document.getElementsByClassName('requireDistrictAdmin'))
+		.forEach(elem => elem.classList.remove('d-none'));
+}
 
 if (document.cookie.indexOf('cvfd-token') !== -1) {
 	logger.debug('Fetching updated user data');

@@ -1,9 +1,10 @@
 import { ApiFrontendStatsResponse } from '../../common/frontendApi';
-import { authInit } from './utils/auth';
+import { afterAuthUpdate, authInit, user } from './utils/auth';
 import { buildMap, updateSitesTable } from './utils/sites';
 import { Chart, ChartConfiguration, ChartDataset, Point, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { getLogger } from '../../stack/resources/utils/logger';
+import { showAlert } from './utils/alerts';
 
 const logger = getLogger('status');
 
@@ -344,8 +345,115 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 	return null;
 }
 
+async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone'): Promise<Error | null> {
+	logger.trace('buildCostChart', ...arguments);
+	const rawData = await fetch(`/api/twilio?action=billing${typeof account !== 'undefined' ? `&account=${account}`: ''}`)
+		.then(r => r.json());
+	if (!rawData.success) {
+		showAlert('danger', `Failed to load chart -  ${rawData.message || 'Unkown error'}`);
+		logger.error(rawData);
+		return new Error(JSON.stringify(rawData));
+	}
+
+	const elem = document.getElementById(`cost-${account ? account : 'total'}`) as HTMLCanvasElement;
+	const chartLabels: string[] = [ 'Total' ];
+	const chartData: {
+		data: number[];
+	}[] = [
+		{ // Level 1
+			data: [],
+		},
+		{ // Total
+			data: [],
+		},
+	];
+	const keysToData: {
+		[key: string]: number;
+	} = {};
+	rawData.data.forEach((item: {
+		cat: string;
+		price: number;
+	}) => {
+		keysToData[item.cat] = item.price;
+	});
+	delete keysToData.channels;
+	if (typeof keysToData['sms-messages-carrierfees'] !== 'undefined') {
+		keysToData['carrierfees'] = keysToData['carrierfees'] || 0;
+		keysToData['carrierfees'] += keysToData['sms-messages-carrierfees'];
+		keysToData['carrierfees-sms'] = keysToData['sms-messages-carrierfees'];
+		delete keysToData['sms-messages-carrierfees'];
+	}
+	if (typeof keysToData['mms-messages-carrierfees'] !== 'undefined') {
+		keysToData['carrierfees'] = keysToData['carrierfees'] || 0;
+		keysToData['carrierfees'] += keysToData['mms-messages-carrierfees'];
+		keysToData['carrierfees-mms'] = keysToData['mms-messages-carrierfees'];
+		delete keysToData['mms-messages-carrierfees'];
+	}
+	const breakDown = [
+		'carrierfees',
+		'mms',
+		'sms',
+		'phonenumbers',
+	];
+	chartData[1].data.push(keysToData.totalprice || 0);
+	const totalPrice = keysToData.totalPrice;
+	delete keysToData.totalprice;
+
+	// First layer
+	let layerTotal = 0;
+	Object.keys(keysToData)
+		.filter(key => breakDown.includes(key) ||
+			breakDown.filter(cat => key.indexOf(cat) === -1).length === breakDown.length)
+		.forEach(key => {
+			layerTotal += keysToData[key];
+			chartLabels.push(key);
+			chartData[0].data.push(keysToData[key]);
+		});
+	if (layerTotal < totalPrice) {
+		chartLabels.push('Other');
+		chartData[0].data.push(totalPrice - layerTotal);
+	}
+
+	const chartConfig: ChartConfiguration<'pie'> = {
+		type: 'pie',
+		data: {
+			labels: chartLabels,
+			datasets: chartData,
+		},
+		options: {
+			plugins: {
+				tooltip: {
+					callbacks: {
+						title: () => 'Total',
+						label: context => (
+							(
+								context.chart?.data?.labels &&
+								context.chart?.data?.labels[(1 - context.datasetIndex) + context.dataIndex]
+							) ? context.chart?.data?.labels[(1 - context.datasetIndex) + context.dataIndex]
+							: ''
+						) + ': ' + context.formattedValue
+					}
+				},
+			}
+		}
+	};
+
+	new Chart(elem, chartConfig);
+
+	return null;
+}
+
 async function refreshCharts() {
 	logger.trace('refreshCharts', ...arguments);
-	await Promise.all(baseCharts.map(buildChart));
+	const promises = baseCharts.map(buildChart);
+	if (user.isDistrictAdmin) {
+		promises.push(
+			buildCostChart(),
+			buildCostChart('Baca'),
+			buildCostChart('NSCAD'),
+			buildCostChart('Crestone'),
+		);
+	}
+	await Promise.all(promises);
 }
-refreshCharts();
+afterAuthUpdate.push(refreshCharts);
