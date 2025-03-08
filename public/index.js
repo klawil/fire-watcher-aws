@@ -2,7 +2,11 @@ let files = [];
 const dataUpdateFrequency = 10000;
 const sourceMap = {
 	BG_FIRE_VHF: 'Baca Fire VHF',
-	SAG_FIRE_VHF: 'Saguache Fire VHF'
+	SAG_FIRE_VHF: 'Saguache Fire VHF',
+	SaguacheCo_FD_Ds: 'Saguache Fire DTR',
+	Baca_Grande_FD_T: 'Baca Fire DTR',
+	SagucheCo_MAC: 'Saguache MAC DTR',
+	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR'
 };
 const allowedSources = [
 	'SAG_FIRE_VHF'
@@ -31,7 +35,8 @@ function updateData() {
 		})))
 		.then((r) => r.sort((a, b) => a.Datetime > b.Datetime ? -1 : 1))
 		.then((data) => {
-			files = data;
+			files = data
+				.filter((file) => allowedSources.indexOf(file.Source) !== -1);
 			display();
 		})
 		.catch(console.error)
@@ -90,7 +95,6 @@ function markRowAsPlaying(file) {
 let isInit = true;
 function display() {
 	const rows = files
-		.filter((file) => allowedSources.indexOf(file.Source) !== -1)
 		.map((file) => [
 			`<tr id="${file.File}">`,
 			[
@@ -145,6 +149,7 @@ player.addEventListener('ended', async () => {
 		return;
 	}
 
+	playNewFiles = false;
 	play(files[index - 1].File);
 });
 
