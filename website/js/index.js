@@ -32,8 +32,8 @@ function updateData(direction = 'after', restart = false) {
 	}
 
 	const queryParams = Object.keys(urlFilters)
-		.filter((filterKey) => urlFilters[filterKey])
-		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey])}`);
+		.filter((filterKey) => urlFilters[filterKey].get())
+		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl())}`);
 	if (queryParams.length > 0) {
 		apiUrl += `${isAppended ? '&' : '?'}${queryParams.join('&')}`;
 	}
