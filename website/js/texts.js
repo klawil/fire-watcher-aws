@@ -11,15 +11,22 @@ function padLeft(num, len = 2) {
 	return `${num}`.padStart(len, '0');
 }
 
-function parseForPageTime(body) {
-	const match = body.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
-	const d = new Date();
-	d.setUTCFullYear(parseInt(match[1], 10));
-	d.setUTCMonth(parseInt(match[2], 10) - 1);
-	d.setUTCDate(parseInt(match[3], 10));
-	d.setUTCHours(parseInt(match[4], 10));
-	d.setUTCMinutes(parseInt(match[5], 10));
-	d.setUTCSeconds(parseInt(match[6], 10));
+const vhfPageRegex = /(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/;
+const dtrPageRegex = /\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/;
+function parseForPageTime(text) {
+	let d = new Date();
+	if (dtrPageRegex.test(text)) {
+		const match = text.match(dtrPageRegex);
+		d = new Date(parseInt(match[1], 10) * 1000);
+	} else {
+		const match = text.match(vhfPageRegex);
+		d.setUTCFullYear(parseInt(match[1], 10));
+		d.setUTCMonth(parseInt(match[2], 10) - 1);
+		d.setUTCDate(parseInt(match[3], 10));
+		d.setUTCHours(parseInt(match[4], 10));
+		d.setUTCMinutes(parseInt(match[5], 10));
+		d.setUTCSeconds(parseInt(match[6], 10));
+	}
 
 	return d.getTime();
 }
@@ -95,7 +102,8 @@ function getTexts() {
 		.then(r => r.filter(t => !t.isTest))
 		.then(texts => texts.sort((a, b) => a.datetime > b.datetime ? -1 : 1))
 		.then(texts => texts.map(text => {
-			text.isPage = text.body.indexOf('Saguache Sheriff:') === 0;
+			text.isPage = text.body.indexOf('Saguache Sheriff:') === 0 ||
+				text.isPage === 'y';
 			text.delivered = text.delivered || [];
 			text.sent = text.sent || [];
 			text.undelivered = text.undelivered || [];
