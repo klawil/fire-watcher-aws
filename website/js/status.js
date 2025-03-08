@@ -149,6 +149,19 @@ charts.forEach(chart => {
 					}
 				}
 			};
+			if (window.innerWidth >= 992) {
+				chartConfig.options.plugins = {
+					legend: {
+						position: 'right'
+					}
+				};
+			} else {
+				chartConfig.options.plugins = {
+					legend: {
+						position: 'bottom'
+					}
+				};
+			}
 			if (chart.yMax) {
 				chartConfig.options.scales = {
 					y: {
@@ -164,7 +177,8 @@ charts.forEach(chart => {
 			if (chart.fill && datasets.length === 2) {
 				chartConfig.options.scales = {
 					y: {
-						min: 0
+						min: 0,
+						max: 45
 					}
 				};
 				datasets.forEach(dataset => dataset.label = dataset.label.split(' - ').pop());
@@ -174,7 +188,7 @@ charts.forEach(chart => {
 				datasets[0].fill = {
 					target: 2,
 					above: color1.backgroundColor,
-					below: 'rgba(0, 0, 0, 0)'
+					below: 'rgba(0,0,0,0)'
 				};
 				datasets[1].borderColor = color2.borderColor;
 				datasets[1].backgroundColor = color2.backgroundColor;
@@ -182,7 +196,7 @@ charts.forEach(chart => {
 				datasets[1].fill = {
 					target: 2,
 					below: color2.backgroundColor,
-					above: 'rgba(0, 0, 0, 0)'
+					above: 'rgba(0,0,0,0)'
 				};
 				datasets.push(({
 					backgroundColor: 'rgba(0,0,0,0)',
@@ -219,6 +233,20 @@ charts.forEach(chart => {
 								yMin: 30,
 								yMax: 30,
 								borderColor: 'rgb(255, 99, 132)',
+          			borderWidth: 2
+							},
+							line2: {
+								type: 'line',
+								label: {
+									content: 'Optimal Service',
+									display: true,
+									color: '#000',
+									backgroundColor: 'transparent',
+									yAdjust: -10
+								},
+								yMin: 40,
+								yMax: 40,
+								borderColor: color1.borderColor,
           			borderWidth: 2
 							}
 						}
