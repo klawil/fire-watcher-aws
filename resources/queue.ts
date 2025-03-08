@@ -8,6 +8,7 @@ const transcribe = new AWS.TranscribeService();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
+const dtrTable = process.env.TABLE_DTR as string;
 
 const metricSource = 'Queue';
 
@@ -18,8 +19,8 @@ const welcomeMessageParts: {
 	howToLeave: string;
 } = {
 	welcome: `Welcome to the {{department}} {{type}}!`,
-	textGroup: `This number will be used to send and receive messages from other members of the Fire Department.\n\nIn a moment, you will receive a text from another number with a link to the most recent page for {{departmentShort}}. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
-	pageGroup: `This number will be used to send pages and only pages.\n\nIn a moment, you will receive a text with a link to the most recent page for {{departmentShort}}.`,
+	textGroup: `This number will be used to send and receive messages from other members of the Fire Department.\n\nIn a moment, you will receive a text from another number with a link to a sample page you would have received. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
+	pageGroup: `This number will be used to send pages and only pages.\n\nIn a moment, you will receive a text with a link to a sample page you would have received.`,
 	howToLeave: `You can leave this group at any time by texting "STOP" to this number.`
 };
 
@@ -390,56 +391,54 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	));
 
 	// Send the message to the admins
-	promises.push(dynamodb.query({
-		TableName: phoneTable,
-		IndexName: 'StationIndex',
-		ExpressionAttributeNames: {
-			'#admin': 'isAdmin',
-			'#dep': 'department'
-		},
-		ExpressionAttributeValues: {
-			':a': { BOOL: true },
-			':dep': { S: updateResult.Attributes?.department?.S }
-		},
-		KeyConditionExpression: '#dep = :dep',
-		FilterExpression: '#admin = :a'
-	}).promise()
-		.then((admins) => Promise.all((admins.Items || []).map((item) => {
-			return sendMessage(
-				null,
-				item.phone.N,
-				`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
-			);
-		}))));
+	if (updateResult.Attributes?.department?.S !== 'Baca') {
+		promises.push(dynamodb.query({
+			TableName: phoneTable,
+			IndexName: 'StationIndex',
+			ExpressionAttributeNames: {
+				'#admin': 'isAdmin',
+				'#dep': 'department'
+			},
+			ExpressionAttributeValues: {
+				':a': { BOOL: true },
+				':dep': { S: updateResult.Attributes?.department?.S }
+			},
+			KeyConditionExpression: '#dep = :dep',
+			FilterExpression: '#admin = :a'
+		}).promise()
+			.then((admins) => Promise.all((admins.Items || []).map((item) => {
+				return sendMessage(
+					null,
+					item.phone.N,
+					`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
+				);
+			}))));
+	}
 
 	// Send the sample page
 	promises.push(dynamodb.query({
-		TableName: messagesTable,
+		TableName: dtrTable,
+		IndexName: 'ToneIndex',
 		ExpressionAttributeValues: {
-			':ip': {
+			':ti': {
 				S: 'y'
 			},
-			':it': {
-				S: 'n'
-			},
 			':tg': {
-				S: (updateResult.Attributes?.talkgroups?.NS || [ '8332' ])[0]
+				N: (updateResult.Attributes?.talkgroups?.NS || [ '8332' ])[0]
 			}
 		},
 		ExpressionAttributeNames: {
-			'#ip': 'isPage',
-			'#it': 'isTestString',
-			'#tg': 'talkgroup'
+			'#ti': 'ToneIndex',
+			'#tg': 'Talkgroup'
 		},
-		KeyConditionExpression: '#ip = :ip',
-		FilterExpression: '#it = :it AND #tg = :tg',
-		IndexName: 'pageIndex',
+		KeyConditionExpression: '#ti = :ti',
+		FilterExpression: '#tg = :tg',
 		ScanIndexForward: false
 	}).promise()
 		.then((data) => {
 			if (!data.Items || data.Items.length === 0) return;
-			const pageKey = data.Items[0].pageId.S || 'none';
-			const pageTg = data.Items[0].talkgroup.N || '8332';
+			const pageKey = data.Items[0].Key?.S?.split('/').pop() || 'none';
+			const pageTg = data.Items[0].Talkgroup.N || '8332';
 
 			return sendMessage(
 				null,

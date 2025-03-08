@@ -253,6 +253,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_MESSAGES: textsTable.tableName,
+        TABLE_DTR: dtrTable.tableName,
         TWILIO_SECRET: secretArn,
         SERVER_CODE: apiCode
       },
@@ -263,6 +264,7 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
     textsTable.grantReadWriteData(queueHandler);
+    dtrTable.grantReadData(queueHandler);
     twilioSecret.grantRead(queueHandler);
 
     // Create a queue for cloudwatch alarms
