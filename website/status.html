@@ -1,0 +1,25 @@
+---
+title: System Stats
+layout: base
+requireAdmin: true
+---
+
+<h3 class="text-center">Api Calls</h3>
+<div class="row"><div class="col-12"><canvas id="api-calls"></canvas></div></div>
+<h3 class="text-center">Api Errors</h3>
+<div class="row"><div class="col-12"><canvas id="api-errors"></canvas></div></div>
+<h3 class="text-center">Saguache Tower Decode Rate</h3>
+<div class="row"><div class="col-12"><canvas id="sag-tower"></canvas></div></div>
+<h3 class="text-center">Pool Table Decode Rate</h3>
+<div class="row"><div class="col-12"><canvas id="pool-table-tower"></canvas></div></div>
+<h3 class="text-center">Alamosa Tower Decode Rate</h3>
+<div class="row"><div class="col-12"><canvas id="ala-tower"></canvas></div></div>
+<h3 class="text-center">Texts Sent</h3>
+<div class="row"><div class="col-12"><canvas id="texts-count"></canvas></div></div>
+<h3 class="text-center">Text Times</h3>
+<div class="row"><div class="col-12"><canvas id="texts-time"></canvas></div></div>
+
+{% assign randomNumber = "now" | date: "%N" %}
+<script src="/libs/chart.umd.min.js?v={{ randomNumber }}"></script>
+<script src="/libs/chartjs-plugin-annotation.min.js"></script>
+<script async src="/js/status.js?v={{ randomNumber }}"></script>

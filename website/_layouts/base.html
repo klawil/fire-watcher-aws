@@ -55,7 +55,8 @@
 								<li><a class="dropdown-item" id="logoutHref">Logout</a></li>
 								<li class="d-none requireUser"><a class="dropdown-item" href="/profile.html">Edit Profile</a></li>
 								<li class="d-none requireAdmin"><a class="dropdown-item" href="/users.html">Manage Users</a></li>
-								<li class="d-none requireAdmin" id="link-texts"><a class="dropdown-item" href="/texts.html">View Texts</a></li>
+								<li class="d-none requireAdmin"><a class="dropdown-item" href="/texts.html">View Texts</a></li>
+								<li class="d-none requireAdmin"><a class="dropdown-item" href="/status.html">System Status</a></li>
 								<script>
 									document.getElementById('loginHref').setAttribute('href', `/login.html?redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
 									document.getElementById('logoutHref').setAttribute('href', `/api/user?action=logout&redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
