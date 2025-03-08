@@ -147,12 +147,10 @@ window.audioQ.push(() => {
 	) {
 		console.log(currentParams.cs);
 		fetch(`/api/infra?action=metricFE`, {
+			method: 'POST',
 			body: JSON.stringify({
-				type: 'View',
-				data: {
-					cs: currentParams.cs,
-					f: currentParams.f
-				}
+				cs: currentParams.cs,
+				f: currentParams.f
 			})
 		})
 			.then(r => r.json())

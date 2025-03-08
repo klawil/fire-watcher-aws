@@ -12,6 +12,7 @@ const apiCode = process.env.SERVER_CODE as string;
 const s3Bucket = process.env.S3_BUCKET as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
 const dtrTable = process.env.TABLE_DTR as string;
+const vhfTable = process.env.TABLE_VHF as string;
 const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_TEXT as string;
 const statusTable = process.env.TABLE_STATUS as string;
@@ -398,6 +399,106 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	};
 }
 
+async function handleMetricsFE(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const date = new Date();
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as {
+		cs: number;
+		f: string;
+	};
+
+	// Validate the body
+	if (!body.cs || typeof body.cs !== 'number') {
+		response.errors.push('cs');
+	}
+	if (!body.f || typeof body.f !== 'string') {
+		response.errors.push('f');
+	}
+
+	if (response.errors.length > 0) {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	const result = await dynamodb.query({
+		TableName: vhfTable,
+		ExpressionAttributeNames: {
+			'#k': 'Key'
+		},
+		ExpressionAttributeValues: {
+			':k': {
+				S: `audio/${body.f}`
+			}
+		},
+		KeyConditionExpression: '#k = :k'
+	}).promise();
+	if (!result.Items || result.Items.length === 0) {
+		response.errors.push(`"f" is not a valid key`);
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	if (
+		result.Items[0].csLooked &&
+		result.Items[0].csLooked.NS &&
+		result.Items[0].csLooked.NS.indexOf(`${body.cs}`) !== -1
+	) {
+		response.data = [ 'Done already' ];
+		return {
+			statusCode: 200,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Update the item
+	let updateExpression = 'ADD #csLooked :csLooked, #csLookedTime :csLookedTime';
+	if (!result.Items[0].csLooked) {
+		updateExpression = 'SET #csLooked = :csLooked, #csLookedTime = :csLookedTime';
+	}
+	await dynamodb.updateItem({
+		TableName: vhfTable,
+		Key: {
+			Key: result.Items[0].Key,
+			Datetime: result.Items[0].Datetime
+		},
+		ExpressionAttributeNames: {
+			'#csLooked': 'csLooked',
+			'#csLookedTime': 'csLookedTime'
+		},
+		ExpressionAttributeValues: {
+			':csLooked': {
+				NS: [
+					`${body.cs}`
+				]
+			},
+			':csLookedTime': {
+				NS: [
+					`${date.getTime()}`
+				]
+			}
+		},
+		UpdateExpression: updateExpression
+	}).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 
@@ -425,6 +526,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getTestTexts(event);
 			case 'metric':
 				return await handleMetrics(event);
+			case 'metricFE':
+				return await handleMetricsFE(event);
 		}
 
 		await incrementMetric('Error', {

@@ -545,6 +545,7 @@ export class FireWatcherAwsStack extends Stack {
           S3_BUCKET: bucket.bucketName,
           SQS_QUEUE: queue.queueUrl,
           TABLE_DTR: dtrTable.tableName,
+          TABLE_VHF: vhfTable.tableName,
           TABLE_USER: phoneNumberTable.tableName,
           TABLE_TEXT: textsTable.tableName,
           TABLE_STATUS: statusTable.tableName
@@ -555,6 +556,7 @@ export class FireWatcherAwsStack extends Stack {
         ],
         readWrite: [
           phoneNumberTable,
+          vhfTable,
           statusTable
         ],
         bucket,
