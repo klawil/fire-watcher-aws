@@ -369,9 +369,9 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 		getDtrAlerts: u !== null ? !!u.getDtrAlerts : false,
 		isDistrictAdmin: u !== null ? !!u.isDistrictAdmin : false,
 	};
-	if (u === null) {
-		defaultUserValues.department = userAdminDepartments[0];
-	}
+	const localDefaultDepartment: UserDepartment = userAdminDepartments.includes(defaultDepartment)
+		? defaultDepartment
+		: userAdminDepartments[0] || defaultDepartment;
 	const changedValues: Partial<ApiUserUpdateBody> = {
 		...(u !== null ? {} : defaultUserValues),
 	};
@@ -397,6 +397,8 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 						const elem = document.getElementById(`talkgroups-${tg}-new`) as (HTMLInputElement | null);
 						if (elem !== null) {
 							elem.checked = true;
+							if (!changedValues.talkgroups?.includes(tg))
+								changedValues.talkgroups?.push(tg);
 						}
 					});
 			}
@@ -455,16 +457,15 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 					departmentSelect.appendChild(option);
 					option.value = dep;
 					option.innerHTML = dep;
-					if (dep === defaultUserValues.department) {
+					if (dep === localDefaultDepartment) {
 						option.selected = true;
 					}
 				});
 			departmentSelect.addEventListener('change', () => {
 				userValues.department = departmentSelect.value as UserDepartment;
 			});
-		} else {
-			setTimeout(() => userValues.department = userAdminDepartments[0] || defaultDepartment, 100);
 		}
+		setTimeout(() => userValues.department = localDefaultDepartment, 100);
 
 		makeTextInput({
 			name: 'callSign',
