@@ -31,7 +31,7 @@ function highlightRow(row) {
 function modifyButton(btn, text, className, spinner, enabled) {
 	btn.classList.remove('btn-danger', 'btn-secondary');
 	btn.classList.add(className);
-	btn.enabled = enabled;
+	btn.disabled = !enabled;
 	btn.innerHTML = '';
 
 	if (spinner) {
@@ -59,71 +59,92 @@ const kickUser = (btn, callSid) => async () => {
 	modifyButton(btn, 'Removed', 'btn-secondary', false, false);
 };
 
-function showParticipants({ participants, new: newId, you }) {
+let myCallSid = '';
+let lastStartTime;
+
+function showParticipants(participants) {
+	const lastParticipantsIds = lastParticipants.map(u => u.CallSid);
 	lastParticipants = participants;
+	let validParticipants = [];
+	let inMeetingCallsign = [];
 
 	if (participants.length === 0) {
 		participantsTable.hidden = true;
 		participantsNone.hidden = false;
-		return;
-	}
+	} else {
+		participantsTable.hidden = false;
+		participantsNone.hidden = true;
 
-	participantsTable.hidden = false;
-	participantsNone.hidden = true;
-	let validParticipants = [];
+		participants.forEach(user => {
+			validParticipants.push(user.CallSid);
+			inMeetingCallsign.push(user.CallSign);
+			const existingRow = document.getElementById(user.CallSid);
+			if (
+				existingRow !== null &&
+				lastParticipantsIds.includes(user.CallSid)
+			) return;
 
-	participants.forEach(user => {
-		validParticipants.push(user.CallSid);
-		const existingRow = document.getElementById(user.CallSid);
-		if (
-			existingRow !== null &&
-			user.CallSid !== newId
-		) return;
+			if (existingRow !== null) return highlightRow(existingRow);
 
-		if (existingRow !== null) return highlightRow(existingRow);
+			const tr = document.createElement('tr');
+			tr.id = user.CallSid;
+			if (!lastParticipantsIds.includes(user.CallSid))
+				highlightRow(tr);
 
-		const tr = document.createElement('tr');
-		tr.id = user.CallSid;
-		if (user.CallSid === newId) highlightRow(tr);
+			const tdMe = document.createElement('td');
+			if (user.CallSid === myCallSid)
+				tdMe.innerHTML = 'Me';
+			tr.appendChild(tdMe);
 
-		const tdMe = document.createElement('td');
-		tdMe.classList.add('text-center');
-		if (user.CallSid === you)
-			tdMe.innerHTML = 'Me';
-		tr.appendChild(tdMe);
+			const tdName = document.createElement('td');
+			tdName.innerHTML = `${user.FirstName} ${user.LastName} (${user.CallSign})`;
+			tr.appendChild(tdName);
 
-		const tdName = document.createElement('td');
-		tdName.innerHTML = `${user.FirstName} ${user.LastName} (${user.CallSign})`;
-		tr.appendChild(tdName);
+			const tdDevice = document.createElement('td');
+			tdDevice.innerHTML = `${user.Type.slice(0, 1).toUpperCase()}${user.Type.slice(1)}`;
+			tr.appendChild(tdDevice);
 
-		const tdDevice = document.createElement('td');
-		tdDevice.innerHTML = `${user.Type.slice(0, 1).toUpperCase()}${user.Type.slice(1)}`;
-		tr.appendChild(tdDevice);
+			if (window.user.isAdmin) {
+				const kickBtn = document.createElement('button');
+				kickBtn.classList.add('btn', 'btn-danger');
+				kickBtn.innerHTML = 'Remove';
+				kickBtn.addEventListener('click', kickUser(kickBtn, user.CallSid));
 
-		if (window.user.isAdmin) {
-			const kickBtn = document.createElement('button');
-			kickBtn.classList.add('btn', 'btn-danger');
-			kickBtn.innerHTML = 'Remove';
-			kickBtn.addEventListener('click', kickUser(kickBtn, user.CallSid));
-
-			const tdKick = document.createElement('td');
-			tdKick.classList.add('text-center');
-			// if (user.CallSid !== you)
+				const tdKick = document.createElement('td');
 				tdKick.appendChild(kickBtn);
-			tr.appendChild(tdKick);
-		}
+				tr.appendChild(tdKick);
+			}
 
-		participantsBody.appendChild(tr);
-	});
+			participantsBody.appendChild(tr);
+		});
+	}
 
 	[ ...participantsBody.querySelectorAll('tr') ].forEach(row => {
 		if (validParticipants.includes(row.id)) return;
 
 		row.parentElement.removeChild(row);
 	});
+
+	[ ...invitableUsersTable.querySelectorAll('.invite-button') ].forEach(btn => {
+		const callSign = parseInt(btn.getAttribute('data-callsign', 10));
+		if (
+			!inMeetingCallsign.includes(callSign) &&
+			btn.getAttribute('data-state') === 'on_call'
+		) {
+			updateInviteButton(btn, 'can_invite');
+		} else if (
+			inMeetingCallsign.includes(callSign) &&
+			btn.getAttribute('data-state') !== 'on_call'
+		) {
+			updateInviteButton(btn, 'on_call');
+		}
+	});
 }
 
 async function loadParticipants() {
+	const localLastStartTime = Date.now();
+	lastStartTime = localLastStartTime;
+
 	return fetch(`${baseHost}/api/user?action=getConference`)
 		.then(r => r.json())
 		.then(data => {
@@ -131,18 +152,16 @@ async function loadParticipants() {
 				participantsLoading.parentElement.removeChild(participantsLoading);
 			if (!data.success) return;
 
-			showParticipants({
-				participants: data.data,
-				new: '',
-				you: '',
-			});
+			showParticipants(data.data);
+			if (
+				lastStartTime === localLastStartTime &&
+				myCallSid === '' &&
+				[ ...document.querySelectorAll('.invite-button:not([data-state="can_invite"])') ].length > 0
+			) {
+				setTimeout(loadParticipants, 5000);
+			}
 		});
 }
-
-window.afterAuth.push(() => {
-	doneLoading();
-	loadParticipants();
-});
 
 let buttonMode = 'join';
 let joinOrLeaveInProgress = false;
@@ -183,7 +202,7 @@ function formatButton(mode) {
 	startButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
 	startButton.classList.add(className);
 	startButton.innerHTML = '';
-	startButton.enabled = enabled;
+	startButton.disabled = !enabled;
 
 	if (spinner) {
 		const spinDiv = document.createElement('div');
@@ -224,7 +243,10 @@ async function joinCall() {
 			errPromise = rej;
 		});
 
-		call.on('messageReceived', message => showParticipants(message.content));
+		call.once('accept', () => myCallSid = call.parameters.CallSid);
+		call.on('messageReceived', message => showParticipants(
+			message.content.participants
+		));
 		call.once('messageReceived', donePromise);
 		call.once('disconnect', leaveCall);
 		setTimeout(() => !promiseResolved && errPromise(new Error('timeout')), 10000);
@@ -260,9 +282,8 @@ async function leaveCall() {
 			await promise;
 		}
 
-		showParticipants({
-			participants: lastParticipants.filter(p => p.CallSid !== call.parameters.CallSid),
-		});
+		showParticipants(lastParticipants.filter(p => p.CallSid !== myCallSid));
+		myCallSid = '';
 		wasSuccess = true;
 	} catch (e) {
 		console.error(e);
@@ -286,26 +307,137 @@ startButton.addEventListener('click', async () => {
 	console.error(`Invalid button mode: ${buttonMode}`);
 });
 
-window.afterAuth.push(async () => {
-	return;
-	
-	// console.log(Twilio.Device.isSupported);
-	device = new Twilio.Device('', {
-		appName: 'fire-watcher-website',
-		appVersion: '0.0.1',
-		logLevel: 3,
-	});
+let invitableUsers = [];
+const invitableUsersContainer = document.getElementById('addMembersContainer');
+const invitableUsersTable = document.getElementById('invitableUsers');
 
-	await updateAccessToken();
+const inviteBtnConfig = {
+	'on_call': {
+		text: 'Already In',
+	},
+	'inviting': {
+		text: 'Calling...',
+		spinner: true,
+	},
+	'can_invite': {
+		text: 'Invite',
+		enabled: true,
+		className: 'btn-success',
+	},
+};
+function updateInviteButton(btn, state) {
+	const {
+		text,
+		enabled = false,
+		className = 'btn-secondary',
+		spinner = false,
+	} = inviteBtnConfig[state];
 
-	device.on('tokenWillExpire', updateAccessToken);
-	device.on('messageReceived', logType('messageReceived - call'))
+	btn.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
+	btn.classList.add(className);
+	btn.innerHTML = '';
+	btn.disabled = !enabled;
+	btn.setAttribute('data-state', state);
 
-	call = await device.connect({
-		params: {
-			From: `+1${user.phone}`,
-			Type: 'browser',
-		},
-	});
-	call.on('messageReceived', message => console.log(message.content));
+	if (spinner) {
+		const spinDiv = document.createElement('div');
+		spinDiv.classList.add('spinner-border', 'spinner-border-sm');
+		btn.appendChild(spinDiv);
+	}
+
+	btn.innerHTML += (spinner ? ' ' : '') + text;
+}
+
+async function inviteButtonClick(btn) {
+	const mode = btn.getAttribute('data-state');
+	if (mode !== 'can_invite') return;
+
+	updateInviteButton(btn, 'inviting');
+
+	let wasSuccess = false;
+	try {
+		const apiResponse = await fetch(`${baseHost}/api/twilio?action=invite&phone=${btn.getAttribute('data-phone')}`)
+			.then(r => r.json());
+		
+		wasSuccess = apiResponse.success;
+	} catch (e) {
+		console.error(e);
+	}
+	updateInviteButton(btn, wasSuccess ? 'inviting' : 'can_invite');
+	const lastDateStart = Date.now().toString();
+	btn.setAttribute('data-starttime', lastDateStart);
+	setTimeout(loadParticipants, 3000);
+	setTimeout(() => {
+		const dateStartAttr = btn.getAttribute('data-starttime');
+		if (lastDateStart !== dateStartAttr) return;
+
+		const btnState = btn.getAttribute('data-state');
+		if (btnState === 'inviting') updateInviteButton(btn, 'can_invite');
+	}, 60000);
+}
+
+function showInvitableTable() {
+	invitableUsers
+		.sort((a, b) => {
+			if (a.lName > b.lName) {
+				return 1;
+			} else if (a.lName < b.lName) {
+				return -1;
+			} else if (a.fName > b.fName) {
+				return 1;
+			} else if (a.fName < b.fName) {
+				return -1;
+			} else if (a.callSign > b.callSign) {
+				return 1;
+			}
+			return -1;
+		})
+		.forEach(u => {
+			const existingRow = document.getElementById(`${u.callSign}-invite`);
+			if (existingRow !== null) return;
+
+			const tr = document.createElement('tr');
+			tr.id = `${u.callSign}-invite`;
+
+			const nameTd = document.createElement('td');
+			nameTd.innerHTML = `${u.fName} ${u.lName} (${u.callSign})`;
+			tr.appendChild(nameTd);
+
+			const phoneTd = document.createElement('td');
+			phoneTd.innerHTML = u.phone.toString().replace(/(\d{3})(\d{3})(\d{4})$/g, (a, b, c, d) => `${b}-${c}-${d}`);
+			tr.appendChild(phoneTd);
+
+			const inviteBtn = document.createElement('button');
+			inviteBtn.classList.add('btn', 'invite-button');
+			inviteBtn.id = `${u.callSign}-invite-btn`;
+			inviteBtn.setAttribute('data-callsign', u.callSign);
+			inviteBtn.setAttribute('data-phone', u.phone);
+			inviteBtn.addEventListener('click', () => inviteButtonClick(inviteBtn));
+			updateInviteButton(inviteBtn, 'can_invite');
+
+			const btnTd = document.createElement('td');
+			btnTd.appendChild(inviteBtn);
+			tr.appendChild(btnTd);
+
+			invitableUsersTable.appendChild(tr);
+		});
+
+	showParticipants(lastParticipants);
+
+	invitableUsersContainer.hidden = false;
+}
+
+window.afterAuth.push(() => {
+	doneLoading();
+	loadParticipants();
+	if (user.isAdmin) {
+		fetch(`${baseHost}/api/user?action=list`)
+			.then(r => r.json())
+			.then(data => data.users)
+			.then(users => users.filter(u => u.department === user.department))
+			.then(users => {
+				invitableUsers = users;
+				showInvitableTable();
+			});
+	}
 });

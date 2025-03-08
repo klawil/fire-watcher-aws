@@ -732,7 +732,8 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		statusCode: 200,
 		body: JSON.stringify({
 			success: true,
-			data: activeUsers.Items?.map(parseDynamoDbAttributeMap),
+			data: activeUsers.Items?.map(parseDynamoDbAttributeMap)
+				.filter(v => typeof v.ConferenceSid !== 'undefined'),
 		}),
 	};
 }

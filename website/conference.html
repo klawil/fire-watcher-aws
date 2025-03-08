@@ -16,21 +16,39 @@ requireUser: true
 
 <br>
 <h2 class="text-center">Current Participants</h2>
-<table id="participantsTable" hidden class="table table-striped align-middle">
-	<thead>
-		<tr>
-			<th></th>
-			<th>Name</th>
-			<th>Device</th>
-			<th class="requireAdmin d-none"></th>
-		</tr>
-	</thead>
-	<tbody id="participants"></tbody>
-</table>
-<div id="participantsNone" hidden class="text-center">No-one is on the call</div>
-<div id="participantsLoading" class="d-flex justify-content-center">
+<div id="participantsTable" hidden class="table-responsive mb-4">
+	<table class="table table-striped align-middle text-center">
+		<thead>
+			<tr>
+				<th></th>
+				<th>Name</th>
+				<th>Device</th>
+				<th class="requireAdmin d-none"></th>
+			</tr>
+		</thead>
+		<tbody id="participants"></tbody>
+	</table>
+</div>
+<div id="participantsNone" hidden class="text-center mb-4">No one is on the call</div>
+<div id="participantsLoading" class="d-flex justify-content-center align-middle">
 	<div class="spinner-border" role="status">
 		<span class="visually-hidden">Loading...</span>
+	</div>
+</div>
+
+<div hidden id="addMembersContainer" class="table-responsive">
+	<h2 class="text-center">Add Members</h2>
+	<div class="table-responsive">
+		<table class="table table-striped align-middle text-center">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Phone</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody id="invitableUsers"></tbody>
+		</table>
 	</div>
 </div>
 

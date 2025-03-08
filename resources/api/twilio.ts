@@ -413,7 +413,7 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			':ln': sender.Item.lName,
 			':p': sender.Item.phone,
 			':t': { S: eventData.Type || 'Phone' },
-			':r': { S: sender.Item.department.S },
+			':r': sender.Item.department,
 		},
 		UpdateExpression: 'SET #cs = :cs, #fn = :fn, #ln = :ln, #p = :p, #t = :t, #r = :r',
 	}).promise();
@@ -537,7 +537,6 @@ async function handleConference(event: APIGatewayProxyEvent): Promise<APIGateway
 						.userDefinedMessages
 						.create({ content: JSON.stringify({
 							participants: parsedItems,
-							new: eventData.CallSid,
 							you: call.CallSid,
 						}) })
 						.catch(console.error);
@@ -622,6 +621,100 @@ async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 	return response;
 }
 
+async function handleInviteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+	if (
+		user === null ||
+		!user.isAdmin?.BOOL
+	) {
+		return unauthorizedResponse;
+	}
+
+	const invalidPhoneResponse = {
+		statusCode: 400,
+		body: JSON.stringify({
+			success: false,
+			message: 'Provide a valid `phone`',
+		}),
+	};
+	if (
+		typeof event.queryStringParameters?.phone !== 'string' ||
+		!/^\d{10}$/.test(event.queryStringParameters.phone)
+	) {
+		return invalidPhoneResponse;
+	}
+
+	const userInfo = await dynamodb.query({
+		TableName: userTable,
+		ExpressionAttributeNames: {
+			'#phone': 'phone',
+		},
+		ExpressionAttributeValues: {
+			':phone': { N: event.queryStringParameters.phone },
+		},
+		KeyConditionExpression: '#phone = :phone',
+	}).promise();
+	if (!userInfo.Items || userInfo.Items.length !== 1) {
+		return invalidPhoneResponse;
+	}
+	const invited = parseDynamoDbAttributeMap(userInfo.Items[0]);
+
+	const twilioConf = await getTwilioSecret();
+	const twilioClient = require('twilio')(twilioConf.accountSid, twilioConf.authToken);
+	const callInfo = await twilioClient.calls.create({
+		twiml: `<?xml version="1.0" encoding="UTF-8"?>
+		<Response>
+			<Say>Hello ${invited.fName}. ${user.fName.S} has invited you to join the ${invited.department} call. Adding you now.</Say>
+			<Dial>
+				<Conference
+					participantLabel="${invited.fName} ${invited.lName} ${Math.round(Math.random() * 100)}"
+					statusCallback="https://fire.klawil.net/api/twilio?action=conference&amp;code=${encodeURIComponent(twilioConf.apiCode)}"
+					statusCallbackEvents="start end join leave mute">
+				${invited.department}</Conference>
+			</Dial>
+		</Response>`,
+		to: `+1${invited.phone}`,
+		from: twilioConf.pageNumber,
+	});
+
+	await dynamodb.updateItem({
+		TableName: conferenceTable,
+		Key: {
+			CallSid: { S: callInfo.sid },
+		},
+		ExpressionAttributeNames: {
+			'#cs': 'CallSign',
+			'#fn': 'FirstName',
+			'#ln': 'LastName',
+			'#p': 'Phone',
+			'#t': 'Type',
+			'#r': 'Room',
+		},
+		ExpressionAttributeValues: {
+			':cs': userInfo.Items[0].callSign,
+			':fn': userInfo.Items[0].fName,
+			':ln': userInfo.Items[0].lName,
+			':p': userInfo.Items[0].phone,
+			':t': { S: 'Phone' },
+			':r': userInfo.Items[0].department,
+		},
+		UpdateExpression: 'SET #cs = :cs, #fn = :fn, #ln = :ln, #p = :p, #t = :t, #r = :r',
+	}).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({ success: true }),
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 
@@ -641,6 +734,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleConference(event);
 			case 'kickUser':
 				return await handleKickUser(event);
+			case 'invite':
+				return await handleInviteUser(event);
 		}
 
 		console.error(`Invalid action - '${action}'`);
