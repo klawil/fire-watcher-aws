@@ -85,8 +85,7 @@ async function sendMessage(
 		body,
 		mediaUrl,
 		from: isPage ? twilioConf.pageNumber : twilioConf.fromNumber,
-		to: `+1${parsePhone(phone)}`,
-		statusCallback: `https://fire.klawil.net/api?action=messageStatus&code=${apiCode}`
+		to: `+1${parsePhone(phone)}`
 	};
 
 	return twilio(twilioConf.accountSid, twilioConf.authToken)
@@ -162,7 +161,9 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		.then((admins) => Promise.all((admins.Items || []).map((item) => {
 			return sendMessage(
 				item.phone.N,
-				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
+				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`,
+				[],
+				true
 			);
 		}))));
 
