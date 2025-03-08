@@ -12,7 +12,8 @@ const deviceTable = process.env.TABLE_DEVICE as string;
 
 const metricSource = 'S3';
 
-const startTimeBuffer = 3; // Check for calls 3s each way for DTR
+const selectDuplicateBuffer = 60; // Select calls 60s each way for analysis for duplicates
+const actualDuplicateBuffer = 1; // Check for calls 1s each way for DTR duplicates
 
 interface SourceListItem {
 	pos: number;
@@ -97,10 +98,13 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
+				if (sourceList.length === 0) {
+					delete body.Item.Sources;
+				}
 				await dynamodb.putItem(body).promise();
 
 				const startTime: number = Number(headInfo.Metadata?.start_time);
-				const len: number = Number(headInfo.Metadata?.call_length);
+				const endTime: number = Number(headInfo.Metadata?.stop_time);
 				const existingItems: AWS.DynamoDB.QueryOutput = await dynamodb.query({
 					TableName: dtrTable,
 					IndexName: 'StartTimeTgIndex',
@@ -114,10 +118,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							N: headInfo.Metadata?.talkgroup_num
 						},
 						':st1': {
-							N: (startTime - startTimeBuffer).toString()
+							N: (startTime - selectDuplicateBuffer).toString()
 						},
 						':st2': {
-							N: (startTime + len).toString()
+							N: (endTime + selectDuplicateBuffer).toString()
 						},
 						':e': {
 							N: headInfo.Metadata?.emergency
@@ -130,37 +134,57 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					!!existingItems.Items &&
 					existingItems.Items.length > 1
 				) {
-					const metric = incrementMetric('Event', {
-						source: metricSource,
-						type: 'dtr',
-						event: 'duplicate call'
-					}, false);
+					const matchingItems = existingItems.Items.filter(item => {
+						const itemStartTime = Number(item.StartTime.N);
+						const itemEndTime = Number(item.EndTime.N);
 
-					const itemToDelete = existingItems.Items
-						.sort((a, b) => {
-							const aAdded = Number(a.Added.N);
-							const bAdded = Number(b.Added.N);
-							const aLen = Number(a.Len.N);
-							const bLen = Number(b.Len.N);
+						return (itemStartTime >= startTime - actualDuplicateBuffer && itemStartTime <= endTime + actualDuplicateBuffer) ||
+							(itemStartTime - actualDuplicateBuffer <= startTime && itemEndTime + actualDuplicateBuffer >= startTime);
+					});
 
-							if (aLen === bLen)
-								return aAdded > bAdded ? -1 : 1;
+					if (matchingItems.length > 1) {
+						const metric = incrementMetric('Event', {
+							source: metricSource,
+							type: 'dtr',
+							event: 'duplicate call'
+						}, false);
+						console.log(`Matching - `, matchingItems);
+						const itemsToDelete = matchingItems
+							.sort((a, b) => {
+								const aAdded = Number(a.Added.N);
+								const bAdded = Number(b.Added.N);
+								const aLen = Number(a.Len.N);
+								const bLen = Number(b.Len.N);
 
-							return aLen > bLen ? 1 : -1;
-						})[0];
-					await dynamodb.deleteItem({
-						TableName: dtrTable,
-						Key: {
-							Talkgroup: {
-								N: itemToDelete.Talkgroup.N
-							},
-							Added: {
-								N: itemToDelete.Added.N
-							}
+								if (aLen === bLen)
+									return aAdded > bAdded ? -1 : 1;
+
+								return aLen > bLen ? 1 : -1;
+							})
+							.slice(0, -1);
+						console.log(`Deleting - `, itemsToDelete);
+						if (itemsToDelete.length > 1) {
+							console.log('KLAWIL-DELETE');
 						}
-					}).promise();
-					await metric;
-					return;
+						await dynamodb.batchWriteItem({
+							RequestItems: {
+								[dtrTable]: itemsToDelete.map(itemToDelete => ({
+									DeleteRequest: {
+										Key: {
+											Talkgroup: {
+												N: itemToDelete.Talkgroup.N
+											},
+											Added: {
+												N: itemToDelete.Added.N
+											}
+										}
+									}
+								}))
+							}
+						}).promise();
+						await metric;
+						return;
+					}
 				}
 
 				const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {
