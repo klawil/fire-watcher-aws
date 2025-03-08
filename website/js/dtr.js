@@ -342,7 +342,7 @@ fetch(`${baseHost}/api/frontend?action=talkgroups`)
 				f => f.Len,
 				f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
 				f => f.Local,
-				f => f.Emergency === 1 ? '<i class="bi bi-star-fill"></i>' : ''
+				f => f.Emergency === 1 || f.Tone ? '<i class="bi bi-star-fill"></i>' : ''
 			];
 			defaultFunc = playLive;
 			
