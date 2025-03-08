@@ -61,7 +61,10 @@ function postAuth() {
 	window.afterAuth.push = fn => fn();
 }
 
-if (document.cookie.indexOf('cvfd-token') !== -1) {
+if (
+	document.cookie.indexOf('cvfd-token') !== -1 ||
+	window.location.origin.indexOf('localhost') !== -1
+) {
 	fetch(`${baseHost}/api/user?action=getUser`)
 		.then(r => r.json())
 		.then(data => {
