@@ -312,10 +312,13 @@ function refreshCharts(refreshFrom = null) {
 let charts = baseCharts;
 refreshCharts();
 
-const realtimeData = document.getElementById('realtime-switch');
 const refreshData = document.getElementById('refresh-interval');
+const realtimeData = document.getElementById('realtime-switch');
+const dataRange = document.getElementById('data-range');
 
 realtimeData.addEventListener('change', () => {
+	dataRange.value = 'off';
+
 	if (!realtimeData.checked) {
 		charts = baseCharts;
 		refreshCharts();
@@ -327,6 +330,26 @@ realtimeData.addEventListener('change', () => {
 		newChart.query = `${chart.query.split('&')[0]}&period=60&timerange=7200000&live=y`;
 
 		return newChart
+	});
+	refreshCharts();
+});
+
+dataRange.addEventListener('change', () => {
+	if (dataRange.value === 'off') {
+		charts = baseCharts;
+		refreshCharts();
+		return;
+	};
+
+	realtimeData.checked = false;
+
+	const newTimerange = parseInt(dataRange.value, 10) * (1000 * 60 * 60);
+
+	charts = baseCharts.map(chart => {
+		const newChart = { ...chart };
+		newChart.query = `${chart.query.split('&')[0]}&timerange=${newTimerange}`;
+	
+		return newChart;
 	});
 	refreshCharts();
 });

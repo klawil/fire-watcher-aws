@@ -1313,6 +1313,21 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	const timeZoneHourOffset = timeZoneOffset / 6e4;
 	const timeZoneStr = `${timeZoneHourOffset > 0 ? '+' : '-'}${Math.abs(timeZoneHourOffset / 60).toString().padStart(2, '0')}00`;
 
+	// Check for only timerange and set the period if it is present
+	if (
+		typeof event.queryStringParameters.timerange !== 'undefined' &&
+		typeof event.queryStringParameters.period === 'undefined'
+	) {
+		const timerange = Number(event.queryStringParameters.timerange);
+		const period = periodToTime
+			.reduce((period, item) => {
+				if (timerange <= item.timerange) return item.period;
+
+				return period;
+			}, periodToTime[0].period);
+		event.queryStringParameters.period = `${period}`;
+	}
+
 	// Build the defaults
 	const dir = event.queryStringParameters.live === 'y'
 		? 'ceil'
