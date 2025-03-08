@@ -3,6 +3,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
 import { ApiFrontendDtrQueryString, ApiFrontendDtrResponse, ApiFrontendListTextsResponse, ApiFrontendStatsResponse, ApiFrontendTalkgroupsResponse, AudioFileObject, TalkgroupObject, TextObject } from '../../common/frontendApi';
+import { mergeDynamoQueries } from '../utils/dynamo';
 
 const metricSource = 'Frontend';
 
@@ -67,6 +68,11 @@ const lambdaFunctionNames: { [key: string]: {
 		name: 'Conference API',
 		fn: process.env.CONFERENCE_API_LAMBDA as string,
 		errName: 'conference',
+	},
+	audioApi: {
+		name: 'Audio API',
+		fn: process.env.AUDIO_API_LAMBDA as string,
+		errName: 'audio',
 	},
 	frontendApi: {
 		name: 'Frontend API',
@@ -743,6 +749,24 @@ const statsMap: {
 					{
 						Name: 'source',
 						Value: 'Conference'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count'
+		}
+	},
+	'err-audio': {
+		Label: 'Audio API Errors',
+		MetricStat: {
+			Metric: {
+				Namespace: 'CVFD API',
+				MetricName: 'Error',
+				Dimensions: [
+					{
+						Name: 'source',
+						Value: 'Audio'
 					}
 				]
 			},

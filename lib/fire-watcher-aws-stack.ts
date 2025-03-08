@@ -912,6 +912,17 @@ export class FireWatcherAwsStack extends Stack {
         secret: twilioSecret,
       },
       {
+        name: 'audio',
+        env: {
+          TABLE_DTR: dtrTable.tableName,
+          TABLE_TALKGROUP: talkgroupTable.tableName,
+        },
+        read: [
+          dtrTable,
+          talkgroupTable,
+        ],
+      },
+      {
         name: 'frontend',
         env: {
           TABLE_DTR: dtrTable.tableName,
