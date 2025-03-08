@@ -189,7 +189,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 			return sendMessage(
 				null,
 				item.phone.N,
-				`New subscriber: ${updateResult.Attributes?.name.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
+				`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)})`
 			);
 		}))));
 
@@ -275,7 +275,7 @@ async function handleTwilio(body: TwilioBody) {
 		}));
 
 	// Build the message
-	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.name.S} (${sender.Item.callSign.N})`}: ${eventData.Body}${isFromPageNumber ? ` - ${sender.Item.callSign.N}` : ''}`;
+	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item.callSign.N})`}: ${eventData.Body}${isFromPageNumber ? ` - ${sender.Item.callSign.N}` : ''}`;
 	const mediaUrls: string[] = Object.keys(eventData)
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);

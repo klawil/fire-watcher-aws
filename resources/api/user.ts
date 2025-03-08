@@ -23,7 +23,8 @@ interface CurrentUser {
 	isUser: boolean;
 	isAdmin: boolean;
 	isDistrictAdmin: boolean;
-	user: string | null;
+	fName: string | null;
+	lName: string | null;
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -178,14 +179,16 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		isUser: false,
 		isAdmin: false,
 		isDistrictAdmin: false,
-		user: null
+		fName: null,
+		lName: null
 	};
 
 	if (user !== null) {
 		response.isUser = true;
 		response.isAdmin = !!user.isAdmin?.BOOL;
 		response.isDistrictAdmin = !!user.isDistrictAdmin?.BOOL;
-		response.user = user.name?.S || null;
+		response.fName = user.fName?.S || null;
+		response.lName = user.lName?.S || null;
 	}
 
 	return {
@@ -235,7 +238,8 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			TableName: userTable,
 			IndexName: 'StationIndex',
 			ExpressionAttributeNames: {
-				'#n': 'name',
+				'#fn': 'fName',
+				'#ln': 'lName',
 				'#d': 'department',
 				'#p': 'phone',
 				'#cs': 'callSign',
@@ -247,13 +251,14 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				':d': { S: user.department?.S }
 			},
 			KeyConditionExpression: '#d = :d',
-			ProjectionExpression: '#n,#d,#p,#cs,#active,#admin,#dadmin'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
 		}).promise();
 	} else {
 		usersItems = await dynamodb.scan({
 			TableName: userTable,
 			ExpressionAttributeNames: {
-				'#n': 'name',
+				'#fn': 'fName',
+				'#ln': 'lName',
 				'#d': 'department',
 				'#p': 'phone',
 				'#cs': 'callSign',
@@ -261,7 +266,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#admin': 'isAdmin',
 				'#dadmin': 'isDistrictAdmin'
 			},
-			ProjectionExpression: '#n,#d,#p,#cs,#active,#admin,#dadmin'
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
 		}).promise();
 	}
 
