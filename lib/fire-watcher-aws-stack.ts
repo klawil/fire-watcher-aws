@@ -404,7 +404,7 @@ export class FireWatcherAwsStack extends Stack {
     queue.grantSendMessages(infraApiHandler);
     dtrTable.grantReadData(infraApiHandler);
     phoneNumberTable.grantReadWriteData(infraApiHandler);
-    textsTable.grantReadWriteData(infraApiHandler);
+    textsTable.grantReadData(infraApiHandler);
     statusTable.grantReadWriteData(infraApiHandler);
     const infraApiIntegration = new apigateway.LambdaIntegration(infraApiHandler, {
       requestTemplates: {
@@ -466,6 +466,7 @@ export class FireWatcherAwsStack extends Stack {
     });
     queue.grantSendMessages(twilioApiHandler);
     phoneNumberTable.grantReadWriteData(twilioApiHandler);
+    textsTable.grantReadWriteData(twilioApiHandler);
     const twilioApiIntegration = new apigateway.LambdaIntegration(twilioApiHandler, {
       requestTemplates: {
         'application/json': '{"statusCode":"200"}'
