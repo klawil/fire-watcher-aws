@@ -300,6 +300,30 @@ async function handleLogin(body: ActivateOrLoginBody) {
 	await sendMessage(body.phone, `Your login code is ${code}. This code expires in 5 minutes.`);
 }
 
+async function testSystem() {
+	const recipients = await getRecipients()
+		.then((r) => r.filter((i) => i.test?.BOOL));
+
+	console.log(`QUEUE - TEST - ${recipients.length} recipients`);
+	console.log(JSON.stringify(recipients));
+
+	// Test the paging system
+	await Promise.all(recipients
+		.map((phone) => sendMessage(
+			phone.phone.N,
+			createPageMessage('testPage'),
+			[],
+			true
+		)));
+
+	// Test the regular messaging system
+	await Promise.all(recipients
+		.map((phone) => sendMessage(
+			phone.phone.N,
+			'System: Test message 👍'
+		)));
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
 	try {
@@ -317,6 +341,9 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			case 'login':
 				response = await handleLogin(body);
+				break;
+			case 'test':
+				response = await testSystem();
 				break;
 			default:
 				console.log(`QUEUE - 404`);
