@@ -238,6 +238,7 @@ async function handleTwilio(body: TwilioBody) {
 	const adminSender = !!sender.Item?.isAdmin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await twilioSecretPromise;
+	const isFromPageNumber = adminSender && messageTo === twilioConf.pageNumber;
 
 	const recipients = await getRecipients()
 		.then((data) => data.filter((number) => {
@@ -250,7 +251,7 @@ async function handleTwilio(body: TwilioBody) {
 		}));
 
 	// Build the message
-	const messageBody = `${sender.Item.name.S}: ${eventData.Body}`;
+	const messageBody = `${isFromPageNumber ? 'Announcement' : sender.Item.name.S}: ${eventData.Body}`;
 	const mediaUrls: string[] = Object.keys(eventData)
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
@@ -260,7 +261,7 @@ async function handleTwilio(body: TwilioBody) {
 			number.phone.N,
 			messageBody,
 			mediaUrls,
-			adminSender && messageTo === twilioConf.pageNumber
+			isFromPageNumber
 		)) || []);
 }
 
