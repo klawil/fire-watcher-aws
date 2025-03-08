@@ -281,11 +281,13 @@ export class FireWatcherAwsStack extends Stack {
       timeout: Duration.seconds(30),
       environment: {
         TWILIO_SECRET: secretArn,
+        TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_MESSAGES: textsTable.tableName
       }
     });
     alarmQueueHandler.addEventSource(new lambdaEventSources.SqsEventSource(alarmQueue));
     textsTable.grantReadWriteData(alarmQueueHandler);
+    phoneNumberTable.grantReadData(alarmQueueHandler);
     twilioSecret.grantRead(alarmQueueHandler);
 
     const alarmTopic = new sns.Topic(this, 'cvfd-alarm-topic');
@@ -524,6 +526,7 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_STATUS: statusTable.tableName,
+        TABLE_PHONE: phoneNumberTable.tableName,
         TWILIO_SECRET: secretArn,
         TABLE_MESSAGES: textsTable.tableName
       },
@@ -532,6 +535,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Grant access for the status handler
     statusTable.grantReadWriteData(statusHandler);
+    phoneNumberTable.grantReadData(statusHandler);
     textsTable.grantReadWriteData(statusHandler);
     twilioSecret.grantRead(statusHandler);
 
@@ -605,7 +609,7 @@ export class FireWatcherAwsStack extends Stack {
           SQS_QUEUE: queue.queueUrl,
           TWILIO_SECRET: secretArn,
           TABLE_DTR: dtrTable.tableName,
-          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_PHONE: phoneNumberTable.tableName,
           TABLE_TEXT: textsTable.tableName,
           TABLE_STATUS: statusTable.tableName
         },
@@ -637,7 +641,7 @@ export class FireWatcherAwsStack extends Stack {
         env: {
           SQS_QUEUE: queue.queueUrl,
           TWILIO_SECRET: secretArn,
-          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_PHONE: phoneNumberTable.tableName,
           TABLE_MESSAGES: textsTable.tableName
         },
         readWrite: [

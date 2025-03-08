@@ -9,7 +9,7 @@ const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 
 const sqsQueue = process.env.SQS_QUEUE as string;
-const userTable = process.env.TABLE_USER as string;
+const userTable = process.env.TABLE_PHONE as string;
 const textTable = process.env.TABLE_MESSAGES as string;
 
 interface TwilioTextEvent {

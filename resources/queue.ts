@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
-import { getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage } from './utils/general';
+import { getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
@@ -170,70 +170,6 @@ function dateToTimeString(d: Date): string {
 	});
 
 	return `on ${dateString} at ${timeString}`;
-}
-
-async function getRecipients(
-	department: string,
-	pageTg: string | null,
-	isTest: boolean = false
-) {
-	let scanInput: AWS.DynamoDB.QueryInput = {
-		TableName: phoneTable,
-		FilterExpression: '#a = :a',
-		ExpressionAttributeNames: {
-			'#a': 'isActive'
-		},
-		ExpressionAttributeValues: {
-			':a': { BOOL: true }
-		}
-	};
-	if (pageTg === null) {
-		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.ExpressionAttributeNames['#po'] = 'pageOnly';
-		scanInput.ExpressionAttributeValues[':po'] = {
-			BOOL: false
-		};
-		scanInput.FilterExpression += ' AND (#po = :po OR attribute_not_exists(#po))';
-	} else {
-		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
-		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
-		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg };
-	}
-	if (department !== 'all') {
-		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.IndexName = 'StationIndex';
-		scanInput.KeyConditionExpression = '#dep = :dep';
-		scanInput.ExpressionAttributeNames['#dep'] = 'department';
-		scanInput.ExpressionAttributeValues[':dep'] = { S: department };
-	}
-
-	if (isTest) {
-		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.ExpressionAttributeNames['#t'] = 'isTest';
-		scanInput.ExpressionAttributeValues[':t'] = {
-			BOOL: true
-		};
-		scanInput.FilterExpression += ' AND #t = :t';
-	}
-
-	let promise;
-	if (department !== 'all') {
-		promise = dynamodb.query(scanInput).promise();
-	} else {
-		promise = dynamodb.scan(scanInput).promise();
-	}
-
-	return promise
-		.then((data) => data.Items || []);
 }
 
 function randomString(len: number, numeric = false): string {

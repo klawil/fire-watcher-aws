@@ -2,6 +2,7 @@ import * as aws from 'aws-sdk';
 const twilio = require('twilio');
 
 const messagesTable = process.env.TABLE_MESSAGES as string;
+const phoneTable = process.env.TABLE_PHONE as string;
 
 const secretManager = new aws.SecretsManager();
 const cloudWatch = new aws.CloudWatch();
@@ -55,6 +56,70 @@ export function parsePhone(num: string, toHuman: boolean = false): string {
 	return matches
 		.slice(1)
 		.join('-');
+}
+
+export async function getRecipients(
+	department: string,
+	pageTg: string | null,
+	isTest: boolean = false
+) {
+	let scanInput: AWS.DynamoDB.QueryInput = {
+		TableName: phoneTable,
+		FilterExpression: '#a = :a',
+		ExpressionAttributeNames: {
+			'#a': 'isActive'
+		},
+		ExpressionAttributeValues: {
+			':a': { BOOL: true }
+		}
+	};
+	if (pageTg === null) {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.ExpressionAttributeNames['#po'] = 'pageOnly';
+		scanInput.ExpressionAttributeValues[':po'] = {
+			BOOL: false
+		};
+		scanInput.FilterExpression += ' AND (#po = :po OR attribute_not_exists(#po))';
+	} else {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
+		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
+		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg };
+	}
+	if (department !== 'all') {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.IndexName = 'StationIndex';
+		scanInput.KeyConditionExpression = '#dep = :dep';
+		scanInput.ExpressionAttributeNames['#dep'] = 'department';
+		scanInput.ExpressionAttributeValues[':dep'] = { S: department };
+	}
+
+	if (isTest) {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.ExpressionAttributeNames['#t'] = 'isTest';
+		scanInput.ExpressionAttributeValues[':t'] = {
+			BOOL: true
+		};
+		scanInput.FilterExpression += ' AND #t = :t';
+	}
+
+	let promise;
+	if (department !== 'all') {
+		promise = dynamodb.query(scanInput).promise();
+	} else {
+		promise = dynamodb.scan(scanInput).promise();
+	}
+
+	return promise
+		.then((data) => data.Items || []);
 }
 
 interface TwilioConfig {
