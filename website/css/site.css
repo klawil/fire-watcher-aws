@@ -1,0 +1,24 @@
+.navbar-player i {
+	background-image: none !important;
+	vertical-align: middle;
+	line-height: 1.5em;
+}
+
+.interactive-button {
+	cursor: pointer;
+}
+
+.table>:not(caption)>*>* {
+	padding: 0.5rem 0.25rem;
+}
+
+body {
+	padding-top: 60px;
+	padding-bottom: 60px;
+}
+
+@media (max-width: 991px) {
+	.hide-small {
+		display: none;
+	}
+}

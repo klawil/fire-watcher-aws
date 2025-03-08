@@ -5,10 +5,13 @@
 		<meta name="theme-color" content="#000000" />
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
-		<title>{{ page.title }} - CVFD</title>
+		<title>{% if page.title %}{{ page.title }}{% else %}{{ page.titleBarTitle }}{% endif %} - CVFD</title>
 
 		<link rel="icon" type="image/png" href="/favicon.png" />
 		<link href="/libs/bootstrap.min.css" rel="stylesheet">
+		<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css" rel="stylesheet"> -->
+		<link href="/libs/bootstrap-icons.css" rel="stylesheet">
+		<link href="/css/site.css" rel="stylesheet">
 
 		<script>
 			window.authConfig = {
@@ -18,17 +21,17 @@
 		</script>
 	</head>
 	<body>
-		<nav class="navbar sticky-top navbar-expand-lg navbar-light bg-light">
+		<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
 			<div class="container-fluid">
-				<a class="navbar-brand" href="#">CVFD</a>
-				<button class="navbar-toggler"  class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar">
+				<a class="navbar-brand flex-grow-1" href="#">CVFD {{page.titleBarTitle}}</a>
+				<button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar">
 					<span class="navbar-toggler-icon"></span>
 				</button>
 
 				<div class="collapse navbar-collapse" id="navbar">
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 						<li class="nav-item">
-							<a class="nav-link{% if page.url == '/' %} active{% endif %}" href="/">Radio Chatter</a>
+							<a class="nav-link{% if page.url == '/' %} active{% endif %}" href="/">VHF Radio</a>
 						</li>
 						<li class="nav-item">
 							<a class="nav-link{% if page.url == '/weather.html' %} active{% endif %}" href="/weather.html">Weather</a>
@@ -43,16 +46,66 @@
 							<span id="username" class="navbar-text d-none">Test</span>
 							<a id="loginLink" class="nav-link{% if page.url == '/login.html' %} active{% endif %}" href="/login.html">Login</a>
 						</li>
+						{% if page.hasFilter %}
+						<li class="nav-item hide-small" id="filter-button-d">
+							<a class="nav-link interactive-button">
+								<i class="bi bi-funnel-fill"></i>
+								Filter
+							</a>
+						</li>
+						{% endif %}
+						{% if page.isAudio %}
+						<li class="nav-item hide-small" id="latest-button-d">
+							<a class="nav-link interactive-button">
+								<i class="bi bi-mic-fill"></i>
+								{% if page.latestLabel %}{{ page.latestLabel }}{% else %}Latest{% endif %}
+							</a>
+						</li>
+						{% endif %}
 					</ul>
 				</div>
+				{% if page.hasFilter %}<button class="navbar-toggler navbar-player ms-1 interactive-button" id="filter-button-m"><i class="navbar-toggler-icon bi bi-funnel-fill"></i></button>{% endif %}
+				{% if page.isAudio %}<button class="navbar-toggler navbar-player ms-1 interactive-button" id="latest-button-m"><i class="navbar-toggler-icon bi bi-mic-fill"></i></button>{% endif %}
 			</div>
 		</nav>
 
 		<div class="container{% if page.centerAll %} text-center{% endif %}">
-			<h1 class="text-center">{{ page.title }}</h1>
+			{% if page.title %}<h1 class="text-center">{{ page.title }}</h1>{% endif %}
 
 			{{ content }}
 		</div>
+
+		<audio class="d-none" id="player"></audio>
+
+		{% if page.isAudio %}
+		<nav class="navbar fixed-bottom navbar-expand-lg navbar-dark bg-dark">
+			<div class="container-fluid">
+				<!-- Mobile -->
+				<button class="navbar-toggler navbar-player ms-1 interactive-button" id="autoplay-button-m"><i class="navbar-toggler-icon bi bi-arrow-bar-up text-light"></i></button>
+				<button class="navbar-toggler navbar-player ms-1 interactive-button" id="play-button-m"><i class="navbar-toggler-icon bi bi-play-fill text-light"></i></button>
+
+				<!-- Desktop -->
+				<ul class="navbar-nav mb-2 mb-lg-0 hide-small">
+					<li class="nav-item" id="autoplay-button-d">
+						<a class="nav-link interactive-button">
+							<i class="bi bi-arrow-bar-up"></i>
+							Autoplay
+						</a>
+					</li>
+					<li class="nav-item" id="play-button-d">
+						<a class="nav-link interactive-button"><i class="bi bi-play-fill"></i></a>
+					</li>
+				</ul>
+
+				<div class="navbar-text">
+					<div class="progress ms-1 mt-1" style="width: 150px;">
+						<div id="player-progress" class="progress-bar" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+					</div>
+				</div>
+				<div class="navbar-text me-auto ms-2" id="player-duration">- sec</div>
+			</div>
+		</nav>
+		{% endif %}
 	
 		<script async src="/js/auth.js"></script>
 		<script async src="/libs/bootstrap.min.js"></script>
