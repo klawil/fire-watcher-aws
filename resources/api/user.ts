@@ -12,12 +12,14 @@ const sqs = new aws.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
 const userTable = process.env.TABLE_USER as string;
 
-const validDepartments: string[] = [
-	'Crestone',
-	'Moffat',
-	'Saguache',
-	'Villa Grove'
-];
+const departmentPageGroups: { [key: string]: string[] } = {
+	Crestone: [ '8332' ],
+	Moffat: [ '8332' ],
+	Saguache: [ '8332' ],
+	'Villa Grove': [ '8332' ],
+	Baca: [ '18331' ],
+	NSCAD: [ '8198' ]
+}
 
 interface ApiResponse {
 	success: boolean;
@@ -43,6 +45,7 @@ interface UserObject {
 	callSign: string;
 	isActive: boolean;
 	isAdmin: boolean;
+	pageOnly: boolean;
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -411,9 +414,12 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	if (typeof body.isAdmin !== 'boolean') {
 		response.errors.push('isAdmin');
 	}
+	if (typeof body.pageOnly !== 'boolean') {
+		response.errors.push('pageOnly');
+	}
 	if (
 		typeof body.department !== 'string' ||
-		validDepartments.indexOf(body.department) === -1
+		typeof departmentPageGroups[body.department] === 'undefined'
 	) {
 		response.errors.push('department');
 	}
@@ -455,7 +461,8 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			'#cs': 'callSign',
 			'#act': 'isActive',
 			'#adm': 'isAdmin',
-			'#dep': 'department'
+			'#dep': 'department',
+			'#po': 'pageOnly'
 		},
 		ExpressionAttributeValues: {
 			':fn': { S: body.fName },
@@ -463,9 +470,10 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			':cs': { N: body.callSign },
 			':act': { BOOL: body.isActive },
 			':adm': { BOOL: body.isAdmin },
-			':dep': { S: body.department }
+			':dep': { S: body.department },
+			':po': { BOOL: body.pageOnly }
 		},
-		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep',
+		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep, #po = :po',
 		ReturnValues: 'UPDATED_NEW'
 	};
 	if (
@@ -475,7 +483,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	) {
 		updateConfig.ExpressionAttributeNames['#tg'] = 'talkgroups';
 		updateConfig.ExpressionAttributeValues[':tg'] = {
-			NS: [ '8332' ]
+			NS: departmentPageGroups[body.department]
 		};
 		updateConfig.UpdateExpression += ', #tg = :tg';
 	}
