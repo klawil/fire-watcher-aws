@@ -1,19 +1,48 @@
 let files = [];
+let rawData = [];
 const dataUpdateFrequency = 10000;
 const sourceMap = {
-	BG_FIRE_VHF: 'Baca Fire VHF',
 	SAG_FIRE_VHF: 'Saguache Fire VHF',
 	SaguacheCo_FD_Ds: 'Saguache Fire DTR',
-	Baca_Grande_FD_T: 'Baca Fire DTR',
 	SagucheCo_MAC: 'Saguache MAC DTR',
-	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR'
+	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR',
+	BG_FIRE_VHF: 'Baca Fire VHF',
+	Baca_Grande_FD_T: 'Baca Fire DTR'
 };
-const allowedSources = [
+const defaultEnabled = [
 	'SAG_FIRE_VHF',
 	'SaguacheCo_FD_Ds',
 	'SagucheCo_MAC',
 	'SaguacheCo_FD_Tc'
 ];
+
+// Build the source selection
+const selectInputs = document.getElementById('select-inputs-container');
+Object.keys(sourceMap)
+	.forEach(source => {
+		const container = document.createElement('div');
+		container.classList.add('form-check', 'form-switch', 'col-lg-4', 'col-md-6', 'col-sm-6', 'col-xs-12');
+
+		const input = document.createElement('input');
+		input.classList.add('form-check-input', 'source-select');
+		input.setAttribute('type', 'checkbox');
+		input.setAttribute('id', source);
+		if (defaultEnabled.indexOf(source) !== -1) input.checked = true;
+		container.appendChild(input);
+		
+		input.addEventListener('change', () => {
+			filterData();
+			display();
+		});
+		
+		const label = document.createElement('div');
+		label.classList.add('form-check-label');
+		label.setAttribute('for', source);
+		label.innerHTML = sourceMap[source] || source;
+		container.appendChild(label);
+
+		selectInputs.appendChild(container);
+	});
 
 function dateToStr(d) {
 	let dateString = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -38,12 +67,21 @@ function updateData() {
 		})))
 		.then((r) => r.sort((a, b) => a.Datetime > b.Datetime ? -1 : 1))
 		.then((data) => {
-			files = data
-				.filter((file) => allowedSources.indexOf(file.Source) !== -1);
+			rawData = data;
+			filterData();
 			display();
 		})
 		.catch(console.error)
 		.then(() => setTimeout(updateData, dataUpdateFrequency));
+}
+
+function filterData() {
+	const allowedSources = [ ...document.getElementsByClassName('source-select') ]
+		.filter(elem => elem.checked)
+		.map(elem => elem.id);
+
+	files = rawData
+		.filter((file) => allowedSources.indexOf(file.Source) !== -1);
 }
 
 updateData();
@@ -92,7 +130,10 @@ function markRowAsPlaying(file) {
 	[ ...document.querySelectorAll('tr') ]
 		.forEach((row) => row.classList.remove('playing'));
 
-	document.getElementById(file).classList.add('playing');
+	const playingRow = document.getElementById(file);
+	if (playingRow !== null) {
+		playingRow.classList.add('playing');
+	}
 }
 
 let isInit = true;
@@ -137,8 +178,8 @@ function display() {
 	}
 }
 
-let player = document.getElementById('player');
-let timestamp = document.getElementById('timestamp');
+const player = document.getElementById('player');
+const timestamp = document.getElementById('timestamp');
 let playNewFiles = false;
 
 player.addEventListener('ended', async () => {
