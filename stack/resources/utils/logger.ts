@@ -10,6 +10,7 @@ export enum LogLevel {
 export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'error';
 
 let globalLogLevel: LogLevel = LogLevel.Error;
+let isNodeEnv: boolean = false;
 declare var window: any;
 if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
   if (window.location.search.indexOf('debug=') !== -1) {
@@ -23,11 +24,13 @@ if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
 }
 declare var process: any;
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
+  isNodeEnv = true;
   globalLogLevel = LogLevel.Debug;
   if (typeof process.env.DEBUG !== 'undefined') {
     globalLogLevel = LogLevel.Trace;
   }
 }
+const stylePlaceholder = isNodeEnv ? '' : '%c';
 
 const levelStrings: string[] = [
   'Trace',
@@ -84,27 +87,34 @@ class Logger {
     }
 
     // Build the logger name portion
-    const loggerName = `[ %c${this.name.padEnd(maxLoggerNameLen, ' ')}%c ]`;
+    const loggerName = `[ ${stylePlaceholder}${this.name.padEnd(maxLoggerNameLen, ' ')}${stylePlaceholder} ]`;
+    let styles: string[] = [
+      levelStyles[level],
+      resetStyleString,
+    ];
 
     // Build the first portion of the log
     let logPrefix = ''; 
     if (typeof process === 'undefined') {
-      logPrefix = `${level < LogLevel.Error ? '  ' : ''}[ %c${levelStrings[level].padEnd(maxLevelStringLen, ' ')}%c ]`;
+      logPrefix = `${level < LogLevel.Error ? '  ' : ''}[ ${stylePlaceholder}${levelStrings[level].padEnd(maxLevelStringLen, ' ')}${stylePlaceholder} ]`;
+      styles.push(
+        nameStyleString,
+        resetStyleString,
+      );
     }
     logPrefix += loggerName;
+
+    if (isNodeEnv) {
+      styles = [];
+    }
 
     // Build the argument array
     let consoleArgs: [
       string,
-      string,
-      string,
       ...any
     ] = [
       logPrefix,
-      levelStyles[level],
-      resetStyleString,
-      nameStyleString,
-      resetStyleString,
+      ...styles,
       ...args,
     ];
     // Remove the title for trace
