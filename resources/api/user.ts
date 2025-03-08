@@ -12,6 +12,13 @@ const sqs = new aws.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
 const userTable = process.env.TABLE_USER as string;
 
+const validDepartments: string[] = [
+	'Crestone',
+	'Moffat',
+	'Saguache',
+	'Villa Grove'
+];
+
 interface ApiResponse {
 	success: boolean;
 	errors: string[];
@@ -25,12 +32,14 @@ interface CurrentUser {
 	isDistrictAdmin: boolean;
 	fName: string | null;
 	lName: string | null;
+	department: string | null;
 }
 
 interface UserObject {
 	phone: string;
 	fName: string;
 	lName: string;
+	department: string;
 	callSign: string;
 	isActive: boolean;
 	isAdmin: boolean;
@@ -189,7 +198,8 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		isAdmin: false,
 		isDistrictAdmin: false,
 		fName: null,
-		lName: null
+		lName: null,
+		department: null
 	};
 
 	if (user !== null) {
@@ -198,6 +208,7 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		response.isDistrictAdmin = !!user.isDistrictAdmin?.BOOL;
 		response.fName = user.fName?.S || null;
 		response.lName = user.lName?.S || null;
+		response.department = user.department?.S || null;
 	}
 
 	return {
@@ -355,19 +366,28 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	if (typeof body.isAdmin !== 'boolean') {
 		response.errors.push('isAdmin');
 	}
+	if (
+		typeof body.department !== 'string' ||
+		validDepartments.indexOf(body.department) === -1
+	) {
+		response.errors.push('department');
+	}
 
 	// Check to see if the phone number already exists
-	const newPhone = await dynamodb.getItem({
-		TableName: userTable,
-		Key: {
-			phone: { N: body.phone }
+	let newPhone: aws.DynamoDB.GetItemOutput | undefined;
+	if (response.errors.length === 0) {
+		newPhone = await dynamodb.getItem({
+			TableName: userTable,
+			Key: {
+				phone: { N: body.phone }
+			}
+		}).promise();
+		if (
+			(newPhone.Item && create) ||
+			(!newPhone.Item && !create)
+		) {
+			response.errors.push('phone');
 		}
-	}).promise();
-	if (
-		(newPhone.Item && create) ||
-		(!newPhone.Item && !create)
-	) {
-		response.errors.push('phone');
 	}
 
 	if (response.errors.length > 0) {
@@ -398,9 +418,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			':cs': { N: body.callSign },
 			':act': { BOOL: body.isActive },
 			':adm': { BOOL: body.isAdmin },
-			':dep': { S: newPhone.Item
-				? newPhone.Item.department.S
-				: user.department.S }
+			':dep': { S: body.department }
 		},
 		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep',
 		ReturnValues: 'UPDATED_NEW'

@@ -1,10 +1,33 @@
 window.afterAuth = window.afterAuth || [];
 
+const possibleDepartments = [
+	'Crestone',
+	'Moffat',
+	'Saguache',
+	'Villa Grove'
+];
+
 const tbody = document.getElementById('tbody');
 const modalItems = {
 	name: document.getElementById('deleteUser'),
 	button: document.getElementById('deleteConfirm')
 };
+
+function getDepartmentSelect(defaultValue) {
+	const select = document.createElement('select');
+	select.classList.add('form-select');
+	select.name = 'department';
+	possibleDepartments.forEach(value => {
+		const option = document.createElement('option');
+		option.value = value;
+		option.innerHTML = value;
+		if (value === defaultValue)
+			option.selected = true;
+		select.appendChild(option);
+	});
+
+	return select;
+}
 
 function formatPhone(phone) {
 	const first = phone.toString().substring(0, 3);
@@ -40,6 +63,12 @@ function addRow(user) {
 			val: user.lName || '',
 			tdClass: [ 'ps-3' ],
 			name: 'lName'
+		},
+		{
+			val: user.department || '',
+			tdClass: [ 'districtAdmin' ],
+			type: 'department',
+			name: 'department'
 		},
 		{
 			val: user.callSign.toString(),
@@ -93,7 +122,10 @@ function addRow(user) {
 					button.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 					button.classList.add('btn-secondary');
 					const user = {};
-					const inputs = [ ...tr.querySelectorAll('input') ];
+					const inputs = [
+						...tr.querySelectorAll('input'),
+						...tr.querySelectorAll('select')
+					];
 					inputs.forEach(input => input.classList.remove('is-invalid'));
 					inputs.forEach(input => user[input.name] = input.type === 'checkbox'
 						? input.checked
@@ -160,6 +192,11 @@ function addRow(user) {
 					});
 				});
 				td.appendChild(deleteButton);
+			} else if (value.type === 'department') {
+				const input = getDepartmentSelect(value.val);
+				input.reset = () => {};
+				input.addEventListener('change', () => button.disabled = false);
+				td.appendChild(input);
 			} else {
 				const span = document.createElement('span');
 				span.innerHTML = value.val;
@@ -179,7 +216,6 @@ function addRow(user) {
 					span.classList.remove('d-none');
 					input.classList.add('d-none');
 				};
-				td.appendChild(input);
 
 				if (!value.noEdit) {
 					let listenerRun = false;
@@ -193,6 +229,7 @@ function addRow(user) {
 						input.focus();
 					});
 				}
+				td.appendChild(input);
 			}
 
 			tr.appendChild(td);
@@ -202,6 +239,9 @@ function addRow(user) {
 }
 
 function init() {
+	if (user.isDistrictAdmin)
+		document.getElementById('customStyles').innerHTML = '';
+
 	fetch(`${baseHost}/api/user?action=list`)
 		.then(r => r.json())
 		.then(data => {
@@ -237,6 +277,11 @@ function init() {
 						default: 'Last Name'
 					},
 					{
+						type: 'department',
+						name: 'department',
+						default: user.department
+					},
+					{
 						type: 'text',
 						class: [ 'form-control' ],
 						name: 'callSign',
@@ -262,67 +307,77 @@ function init() {
 					.forEach(item => {
 						const td = document.createElement('td');
 						td.classList.add('text-center', 'align-middle');
-						const input = document.createElement('input');
-						input.classList.add.apply(input.classList, item.class);
-						input.type = item.type;
-						input.name = item.name;
-						if (item.value)
-							input.value = item.value;
-						if (item.default)
-							input.placeholder = item.default;
-						if (item.maxwidth)
-							td.style.maxWidth = item.maxwidth;
-						if (item.type === 'checkbox') {
-							const div = document.createElement('div');
-							div.classList.add('form-switch');
-							div.appendChild(input);
-							td.appendChild(div);
-						} else {
+						
+						if (item.type === 'department') {
+							const input = getDepartmentSelect(user.department);
+							td.classList.add('districtAdmin');
 							td.appendChild(input);
+						} else {
+							const input = document.createElement('input');
+							input.classList.add.apply(input.classList, item.class);
+							input.type = item.type;
+							input.name = item.name;
+							if (item.value)
+								input.value = item.value;
+							if (item.default)
+								input.placeholder = item.default;
+							if (item.maxwidth)
+								td.style.maxWidth = item.maxwidth;
+							if (item.type === 'checkbox') {
+								const div = document.createElement('div');
+								div.classList.add('form-switch');
+								div.appendChild(input);
+								td.appendChild(div);
+							} else {
+								td.appendChild(input);
+							}
+
+							if (item.type === 'button') {
+								input.addEventListener('click', () => {
+									input.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+									input.classList.add('btn-secondary');
+									const user = {};
+									const inputs = [
+										...tr.querySelectorAll('input'),
+										...tr.querySelectorAll('select')
+									];
+									inputs.forEach(input => input.classList.remove('is-invalid'));
+									inputs
+										.forEach(input => user[input.name] = input.type === 'checkbox'
+											? input.checked
+											: input.value);
+									delete user.undefined;
+
+									fetch(`${baseHost}/api/user?action=create`, {
+										method: 'POST',
+										body: JSON.stringify(user)
+									})
+										.then(r => r.json())
+										.then(data => {
+											input.blur();
+											if (data.success) {
+												input.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+												input.classList.add('btn-success');
+												addRow(user);
+												tbody.appendChild(tr);
+												inputs.forEach(input => input.type === 'checkbox'
+													? input.checked = false
+													: input.type === 'text'
+														? input.value = ''
+														: '');
+											} else {
+												input.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
+												input.classList.add('btn-danger');
+												data.errors = data.errors || inputs.map(i => i.name);
+												inputs
+													.filter(input => data.errors.indexOf(input.name) !== -1)
+													.forEach(input => input.classList.add('is-invalid'))
+											}
+										});
+								});
+							}
 						}
 						tr.appendChild(td);
-
-						if (item.type === 'button') {
-							input.addEventListener('click', () => {
-								input.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
-								input.classList.add('btn-secondary');
-								const user = {};
-								const inputs = [ ...tr.querySelectorAll('input') ];
-								inputs.forEach(input => input.classList.remove('is-invalid'));
-								inputs
-									.forEach(input => user[input.name] = input.type === 'checkbox'
-										? input.checked
-										: input.value);
-								delete user.undefined;
-
-								fetch(`${baseHost}/api/user?action=create`, {
-									method: 'POST',
-									body: JSON.stringify(user)
-								})
-									.then(r => r.json())
-									.then(data => {
-										input.blur();
-										if (data.success) {
-											input.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
-											input.classList.add('btn-success');
-											addRow(user);
-											tbody.appendChild(tr);
-											inputs.forEach(input => input.type === 'checkbox'
-												? input.checked = false
-												: input.type === 'text'
-													? input.value = ''
-													: '');
-										} else {
-											input.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
-											input.classList.add('btn-danger');
-											data.errors = data.errors || inputs.map(i => i.name);
-											inputs
-												.filter(input => data.errors.indexOf(input.name) !== -1)
-												.forEach(input => input.classList.add('is-invalid'))
-										}
-									});
-							});
-						}
 					});
 				tbody.appendChild(tr);
 			}
