@@ -558,14 +558,19 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 		TableName: textsTable,
 		IndexName: 'pageIndex',
 		ExpressionAttributeNames: {
-			'#pid': 'pageId'
+			'#pid': 'pageId',
+			'#ip': 'isPage'
 		},
 		ExpressionAttributeValues: {
 			':pid': {
 				S: body.f
+			},
+			':ip': {
+				S: 'y'
 			}
 		},
-		KeyConditionExpression: '#pid = :pid',
+		KeyConditionExpression: '#ip = :ip',
+		FilterExpression: '#pid = :pid',
 		ScanIndexForward: false,
 		Limit: 1
 	}).promise();
