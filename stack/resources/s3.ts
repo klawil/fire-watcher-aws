@@ -2,7 +2,7 @@ import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
 import { incrementMetric } from './utils/general';
 import { PageBody } from './types/queue';
-import { PagingTalkgroup } from '../../../common/userConstants';
+import { PagingTalkgroup } from '../../common/userConstants';
 
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
@@ -177,6 +177,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			}
 			await dynamodb.putItem(body).promise();
 
+			let doTranscriptOnly: boolean = false;
+			let shouldDoTranscript: boolean = body.Item.Emergency?.N === '1'
+				|| !!body.Item.Tone?.BOOL;
 			if (Key.indexOf('/dtr') !== -1) {
 				const startTime: number = Number(body.Item.StartTime?.N);
 				const endTime: number = Number(body.Item.EndTime?.N);
@@ -222,6 +225,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					});
 
 					if (matchingItems.length > 1) {
+						doTranscriptOnly = true; // So we don't accidentally double page
 						const metric = incrementMetric('Event', {
 							source: metricSource,
 							type: 'dtr',
@@ -263,7 +267,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								}))
 							}
 						}).promise());
-						if (headInfo.Metadata?.tone === 'y') {
+						if (shouldDoTranscript) {
 							promises.push(dynamodb.batchWriteItem({
 								RequestItems: {
 									[dtrTranslationTable]: itemsToDelete.map(itemToDelete => ({
@@ -295,8 +299,12 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								UpdateExpression: 'SET #t = :t',
 							}).promise());
 						}
-						const isDeleteTone = itemsToDelete.reduce((isTone, item) => isTone || (!!item.Tone?.BOOL), false);
-						if (isDeleteTone || !body.Item.Tone?.BOOL) {
+
+						// Check to see if we should redo the transcription
+						if (
+							keptItem.Key.S !== Key || // We're not saving this file
+							!shouldDoTranscript // This file doesn't need a transcript
+						) {
 							await Promise.all(promises);
 							return;
 						}
@@ -304,7 +312,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			}
 
-			if (body.Item.Tone?.BOOL) {
+			if (shouldDoTranscript) {
 				const transcribeJobName = `${body.Item.Talkgroup.N}-${Date.now()}`;
 				const toneFile = Key.split('/')[2] || Key.split('/')[1];
 				promises.push(transcribe.startTranscriptionJob({
@@ -322,19 +330,26 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						{ Key: 'Talkgroup', Value: body.Item.Talkgroup?.N as string },
 						{ Key: 'File', Value: toneFile },
 						{ Key: 'FileKey', Value: Key },
+						{ Key: 'IsPage', Value: body.Item.Tone?.BOOL ? 'y' : 'n' },
 					]
 				}).promise());
 
-				const queueMessage: PageBody = {
-					action: 'page',
-					tg: Number(body.Item.Talkgroup?.N) as PagingTalkgroup,
-					key: toneFile,
-					len: Number(body.Item.Len.N)
-				};
-				promises.push(sqs.sendMessage({
-					MessageBody: JSON.stringify(queueMessage),
-					QueueUrl: sqsQueue
-				}).promise());
+				if (!doTranscriptOnly && body.Item.Tone?.BOOL) {
+					const queueMessage: PageBody = {
+						action: 'page',
+						tg: Number(body.Item.Talkgroup?.N) as PagingTalkgroup,
+						key: toneFile,
+						len: Number(body.Item.Len.N)
+					};
+					promises.push(sqs.sendMessage({
+						MessageBody: JSON.stringify(queueMessage),
+						QueueUrl: sqsQueue
+					}).promise());
+				} else {
+					// Exit early if we just wanted to kick off the transcript
+					await Promise.all(promises);
+					return;
+				}
 			}
 
 			const talkgroupCreate: AWS.DynamoDB.UpdateItemInput = {

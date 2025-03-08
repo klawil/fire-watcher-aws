@@ -573,6 +573,12 @@ async function handleTranscribe(body: TranscribeBody) {
 		messageBody = `Transcript for ${pagingConfig[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pagingConfig[tg].linkPreset}`;
 	}
 
+	// Exit early if this is transcribing an emergency transmission
+	if (jobInfo.IsPage === 'n') {
+		await promise;
+		return;
+	}
+
 	// Get recipients and send
 	const recipients = (await getRecipients('all', tg))
 		.filter(r => r.getTranscript?.BOOL);
