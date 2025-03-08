@@ -59,7 +59,7 @@ function filterData(data) {
 
 let isUpdatingBefore = false;
 function updateData(direction = 'after') {
-	let apiUrl = 'http://localhost:8001/api';
+	let apiUrl = '/api';
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '?'
 		if (direction === 'after') {
