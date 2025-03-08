@@ -173,11 +173,6 @@ const baseCharts = [
 		query: 'metrics=tower-sa-max,tower-sa-min,tower-sa-upload&period=300&timerange=86400000&live=y',
 		fill: true
 	},
-	// {
-	// 	id: 'mv-tower',
-	// 	query: 'metrics=tower-mv-max,tower-mv-min,tower-mv-upload&period=300&timerange=86400000&live=y',
-	// 	fill: true
-	// },
 	{
 		id: 'texts-count',
 		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=86400&timerange=2419200000&live=y'
