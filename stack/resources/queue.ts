@@ -156,11 +156,12 @@ async function handleActivation(body: ActivateBody) {
 		ExpressionAttributeNames: {
 			'#admin': 'admin',
 			'#dep': body.department,
+			'#da': 'isDistrictAdmin'
 		},
 		ExpressionAttributeValues: {
 			':a': { BOOL: true },
 		},
-		FilterExpression: '#dep.#admin = :a'
+		FilterExpression: '#dep.#admin = :a OR #da = :a'
 	}).promise()
 		.then((admins) => Promise.all((admins.Items || [])
 			.filter(item => typeof item.phone.N !== 'undefined')
@@ -168,7 +169,7 @@ async function handleActivation(body: ActivateBody) {
 				metricSource,
 				null,
 				item.phone.N as string,
-				getPageNumber(item),
+				groupType === 'page' ? getPageNumber(item) : (config.textPhone || config.pagePhone),
 				`New subscriber: ${updateResult.Attributes?.fName.S} ${updateResult.Attributes?.lName.S} (${parsePhone(updateResult.Attributes?.phone.N as string, true)}) has been added to the ${body.department} group`
 			)))));
 
