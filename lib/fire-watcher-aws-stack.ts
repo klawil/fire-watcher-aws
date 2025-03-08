@@ -6,8 +6,12 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as certmanager from 'aws-cdk-lib/aws-certificatemanager';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 
 const bucketName = '***REMOVED***';
+const certArn = '***REMOVED***';
 
 export class FireWatcherAwsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -104,6 +108,42 @@ export class FireWatcherAwsStack extends Stack {
         'application/json': '{"statusCode":"200"}'
       }
     });
-    api.root.addMethod('GET', apiIntegration);
+    api.root.addResource('api').addMethod('GET', apiIntegration);
+
+    // Create the cloudfront distribution
+    const cfDistro = new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
+      viewerCertificate: {
+        aliases: [ 'fire.klawil.net' ],
+        props: {
+          acmCertificateArn: certArn,
+          sslSupportMethod: 'sni-only'
+        }
+      },
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      originConfigs: [
+        {
+          s3OriginSource: {
+            s3BucketSource: bucket
+          },
+          behaviors: [{
+            isDefaultBehavior: true
+          }]
+        },
+        {
+          customOriginSource: {
+            domainName: `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
+            originPath: `/${api.deploymentStage.stageName}`
+          },
+          behaviors: [{
+            pathPattern: 'api',
+            defaultTtl: Duration.seconds(0),
+            maxTtl: Duration.seconds(0),
+            forwardedValues: {
+              queryString: true
+            }
+          }]
+        }
+      ]
+    });
   }
 }
