@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
+import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
 
 const metricSource = 'Frontend';
@@ -12,7 +12,6 @@ const defaultListLimit = 100;
 const vhfTable = process.env.TABLE_VHF as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
-// const deviceTable = process.env.TABLE_DEVICE as string;
 const textsTable = process.env.TABLE_TEXTS as string;
 
 const dtrTableIndexes: {
@@ -516,6 +515,114 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	};
 }
 
+interface GenericApiResponse {
+	success: boolean;
+	errors: string[];
+	message?: string;
+	data?: any[];
+}
+
+async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const date = new Date();
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as {
+		cs: number;
+		f: string;
+	};
+
+	// Validate the body
+	if (!body.cs || typeof body.cs !== 'number') {
+		response.errors.push('cs');
+	}
+	if (!body.f || typeof body.f !== 'string') {
+		response.errors.push('f');
+	}
+
+	if (response.errors.length > 0) {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	const result = await dynamodb.query({
+		TableName: textsTable,
+		ExpressionAttributeNames: {
+			'#pid': 'pageId'
+		},
+		ExpressionAttributeValues: {
+			':pid': {
+				S: body.f
+			}
+		},
+		KeyConditionExpression: '#pid = :pid',
+		ScanIndexForward: false,
+		Limit: 1
+	}).promise();
+	if (!result.Items || result.Items.length === 0) {
+		response.errors.push(`"f" is not a valid key`);
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	if (
+		result.Items[0].csLooked &&
+		result.Items[0].csLooked.NS &&
+		result.Items[0].csLooked.NS.indexOf(`${body.cs}`) !== -1
+	) {
+		response.data = [ 'Done already' ];
+		return {
+			statusCode: 200,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Update the item
+	let updateExpression = 'ADD #csLooked :csLooked, #csLookedTime :csLookedTime';
+	if (!result.Items[0].csLooked) {
+		updateExpression = 'SET #csLooked = :csLooked, #csLookedTime = :csLookedTime';
+	}
+	await dynamodb.updateItem({
+		TableName: textsTable,
+		Key: {
+			datetime: result.Items[0].datetime
+		},
+		ExpressionAttributeNames: {
+			'#csLooked': 'csLooked',
+			'#csLookedTime': 'csLookedTime'
+		},
+		ExpressionAttributeValues: {
+			':csLooked': {
+				NS: [
+					`${body.cs}`
+				]
+			},
+			':csLookedTime': {
+				NS: [
+					`${date.getTime()}`
+				]
+			}
+		},
+		UpdateExpression: updateExpression
+	}).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 	try {
@@ -532,6 +639,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getDtrTalkgroups(event);
 			case 'listTexts':
 				return await getTexts(event);
+			case 'pageView':
+				return await handlePageView(event);
 		}
 
 		await incrementMetric('Error', {

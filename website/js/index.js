@@ -145,28 +145,6 @@ window.addEventListener('scroll', () => {
 	}
 });
 
-// Check for a callsign and `f` parameter
-window.audioQ = window.audioQ || [];
-window.audioQ.push(() => {
-	const currentParams = getUrlParams();
-	if (
-		typeof currentParams.cs !== 'undefined' &&
-		currentParams.cs !== '' &&
-		typeof currentParams.f !== 'undefined' &&
-		currentParams.f !== ''
-	) {
-		fetch(`/api/infra?action=metricFE`, {
-			method: 'POST',
-			body: JSON.stringify({
-				cs: currentParams.cs,
-				f: currentParams.f
-			})
-		})
-			.then(r => r.json())
-			.then(console.log);
-	}
-});
-
 window.audioQ.push(() => {
 	afterFilters.Source = new CheckBoxFilter('input[name="vhf-source"]');
 	urlFilters.tone = new ToggleFilter('only-pages');

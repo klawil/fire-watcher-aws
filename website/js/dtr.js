@@ -319,6 +319,28 @@ class TalkgroupFilter {
 	}
 }
 
+// Check for a callsign and `f` parameter
+window.audioQ = window.audioQ || [];
+window.audioQ.push(() => {
+	const currentParams = getUrlParams();
+	if (
+		typeof currentParams.cs !== 'undefined' &&
+		currentParams.cs !== '' &&
+		typeof currentParams.f !== 'undefined' &&
+		currentParams.f !== ''
+	) {
+		fetch(`/api/frontend?action=pageView`, {
+			method: 'POST',
+			body: JSON.stringify({
+				cs: currentParams.cs,
+				f: currentParams.f
+			})
+		})
+			.then(r => r.json())
+			.then(console.log);
+	}
+});
+
 const numberFormatter = new Intl.NumberFormat('en-us', {
 	maximumFractionDigits: 0
 });
@@ -345,7 +367,6 @@ fetch(`${baseHost}/api/frontend?action=talkgroups`)
 			return agg;
 		}, {});
 
-		window.audioQ = window.audioQ || [];
 		window.audioQ.push(() => {	
 			urlFilters.tg = new TalkgroupFilter();
 			urlFilters.emerg = new ToggleFilter('only-emerg');
