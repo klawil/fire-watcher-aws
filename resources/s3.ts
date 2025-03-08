@@ -1,9 +1,12 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
+
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
+const sqs = new aws.SQS();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
+const queueUrl = process.env.SQS_QUEUE as string;
 
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	const Bucket = record.s3.bucket.name;
@@ -36,7 +39,21 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			}
 		};
 		console.log(`Create: ${JSON.stringify(body)}`)
-		await dynamodb.putItem(body).promise();
+
+		const promises = [];
+		if (headInfo.Metadata?.tone === 'y') {
+			promises.push(sqs.sendMessage({
+				MessageBody: JSON.stringify({
+					action: 'page',
+					key: Key
+				}),
+				QueueUrl: queueUrl
+			}).promise());
+		}
+
+		promises.push(dynamodb.putItem(body).promise());
+
+		await Promise.all(promises);
 	} else {
 		const dynamoQuery = await dynamodb.query({
 			TableName: trafficTable,

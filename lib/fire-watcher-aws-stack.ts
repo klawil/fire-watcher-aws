@@ -79,19 +79,32 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    // Create the dead letter queue
+    const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
+
+    // Create the SQS queue
+    const queue = new sqs.Queue(this, 'cvfd-queue', {
+      deadLetterQueue: {
+        queue: deadLetterQueue,
+        maxReceiveCount: 3
+      }
+    });
+
     // Create a handler that pushes file information into Dynamo DB
     const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/s3.ts',
       handler: 'main',
       environment: {
-        TABLE_TRAFFIC: trafficTable.tableName
+        TABLE_TRAFFIC: trafficTable.tableName,
+        SQS_QUEUE: queue.queueUrl
       }
     });
     
     // Grant access for the S3 handler
     bucket.grantRead(s3Handler);
     trafficTable.grantReadWriteData(s3Handler);
+    queue.grantSendMessages(s3Handler);
 
     // Create a handler for the SQS queue
     const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
@@ -105,24 +118,13 @@ export class FireWatcherAwsStack extends Stack {
       },
       timeout: Duration.minutes(1)
     });
+    queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
 
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
     trafficTable.grantReadData(queueHandler);
     secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn)
       .grantRead(queueHandler);
-
-    // Create the dead letter queue
-    const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
-
-    // Create the SQS queue
-    const queue = new sqs.Queue(this, 'cvfd-queue', {
-      deadLetterQueue: {
-        queue: deadLetterQueue,
-        maxReceiveCount: 3
-      }
-    });
-    queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
 
     // Create the event trigger
     const s3Destination = new s3Notifications.LambdaDestination(s3Handler);
