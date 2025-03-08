@@ -19,19 +19,23 @@ function addRow(user) {
 			format: formatPhone,
 			name: 'phone',
 			iVal: user.phone,
+			classList: [ 'text-center' ],
 			noEdit: true
 		},
 		{
 			val: user.fName || '',
+			tdClass: [ 'ps-3' ],
 			name: 'fName'
 		},
 		{
 			val: user.lName || '',
+			tdClass: [ 'ps-3' ],
 			name: 'lName'
 		},
 		{
 			val: user.callSign.toString(),
 			classList: [ 'text-center' ],
+			maxwidth: '75px',
 			name: 'callSign'
 		},
 		{
@@ -51,15 +55,22 @@ function addRow(user) {
 		.forEach(value => {
 			const td = document.createElement('td');
 			td.classList.add('align-middle');
+			if (value.maxwidth)
+				td.style.maxWidth = value.maxwidth;
+			if (value.tdClass)
+				td.classList.add.apply(td.classList, value.tdClass);
 			if (value.type === 'checkbox') {
 				td.classList.add('text-center');
+				const div = document.createElement('div');
+				div.classList.add('form-switch');
+				td.appendChild(div);
 				const input = document.createElement('input');
 				input.type = 'checkbox';
 				input.name = value.name;
 				input.classList.add('form-check-input');
 				input.role = 'switch';
 				if (value.val) input.checked = true;
-				td.appendChild(input);
+				div.appendChild(input);
 				input.reset = () => {};
 			} else if (value.type === 'button') {
 				td.classList.add('text-center');
@@ -178,7 +189,8 @@ function init() {
 						type: 'text',
 						class: [ 'form-control' ],
 						name: 'phone',
-						default: 'Phone Number'
+						default: 'Phone Number',
+						maxwidth: '100px'
 					},
 					{
 						type: 'text',
@@ -196,7 +208,8 @@ function init() {
 						type: 'text',
 						class: [ 'form-control' ],
 						name: 'callSign',
-						default: 'Callsign'
+						default: 'Callsign',
+						maxwidth: '75px'
 					},
 					{
 						type: 'checkbox',
@@ -223,7 +236,18 @@ function init() {
 						input.name = item.name;
 						if (item.value)
 							input.value = item.value;
-						td.appendChild(input);
+						if (item.default)
+							input.placeholder = item.default;
+						if (item.maxwidth)
+							td.style.maxWidth = item.maxwidth;
+						if (item.type === 'checkbox') {
+							const div = document.createElement('div');
+							div.classList.add('form-switch');
+							div.appendChild(input);
+							td.appendChild(div);
+						} else {
+							td.appendChild(input);
+						}
 						tr.appendChild(td);
 
 						if (item.type === 'button') {
