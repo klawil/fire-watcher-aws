@@ -430,6 +430,45 @@ async function handleTwilio(body: TwilioBody) {
 	await insertMessage;
 }
 
+interface TwilioErrorBody {
+	action: 'twilio_error';
+	count: number;
+	name: string;
+	number: string;
+	department: string;
+}
+
+async function handleTwilioError(body: TwilioErrorBody) {
+	const recipients = (await getRecipients('all', null))
+		.filter(user => user.getSystemAlerts?.BOOL ||
+			(
+				user.department?.S === body.department &&
+				user.isAdmin?.BOOL
+			));
+	const message = `Possible issue with ${body.name} phone (number is ${body.number})\n\nLast ${body.count} messages have not been delivered.`;
+
+	let messageId = Date.now().toString();
+	const insertMessage = saveMessageData(
+		messageId,
+		recipients.length,
+		message,
+		[],
+		null,
+		null,
+		false
+	);
+	await Promise.all(recipients.map(user => sendMessage(
+		metricSource,
+		messageId,
+		user.phone.N,
+		user.department.S,
+		message,
+		[],
+		true
+	)));
+	await insertMessage;
+}
+
 interface PageBody {
 	action: 'page';
 	key: string;
@@ -647,6 +686,9 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			case 'twilio':
 				response = await handleTwilio(body);
+				break;
+			case 'twilio_error':
+				response = await handleTwilioError(body);
 				break;
 			case 'page':
 				response = await handlePage(body);

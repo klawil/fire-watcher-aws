@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric } from '../utils/general';
+import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
 
 const metricSource = 'Twilio';
 
@@ -242,6 +242,59 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 			},
 			UpdateExpression: 'ADD #eventName :eventListItem, #eventPhoneList :eventPhoneListItem SET #from = :from'
 		}).promise());
+
+		if ([ 'undelivered', 'delivered' ].indexOf(eventData.MessageStatus) !== -1) {
+			promises.push(dynamodb.getItem({
+				TableName: userTable,
+				Key: {
+					phone: { N: eventData.To.slice(2) }
+				}
+			}).promise()
+				.then(result => {
+					if (!result || !result.Item) return null;
+
+					return dynamodb.updateItem({
+						TableName: userTable,
+						Key: {
+							phone: { N: eventData.To.slice(2) }
+						},
+						ExpressionAttributeNames: {
+							'#ls': 'lastStatus',
+							'#lsc': 'lastStatusCount'
+						},
+						ExpressionAttributeValues: {
+							':ls': { S: eventData.MessageStatus },
+							':lsc': { N: ((result.Item.lastStatus?.S === eventData.MessageStatus
+								? parseInt(result.Item.lastStatusCount?.N || '0', 10)
+								: 0) + 1).toString() }
+						},
+						UpdateExpression: 'SET #ls = :ls, #lsc = :lsc',
+						ReturnValues: 'ALL_NEW'
+					}).promise();
+				})
+				.then(result => {
+					if (result === null) return null;
+
+					if (
+						result.Attributes?.lastStatus?.S === 'undelivered' &&
+						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) > 0 &&
+						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) % 5 === 0
+					) {
+						return sqs.sendMessage({
+							MessageBody: JSON.stringify({
+								action: 'twilio_error',
+								count: parseInt(result.Attributes?.lastStatusCount?.N || '0', 10),
+								name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S} (${result.Attributes?.callSign?.N})`,
+								number: parsePhone(result.Attributes?.phone?.N || '', true),
+								department: result.Attributes?.department?.S
+							}),
+							QueueUrl: sqsQueue
+						}).promise();
+					}
+
+					return null;
+				}));
+		}
 
 		if (eventData.MessageStatus !== 'undelivered') {
 			const metricName = eventData.MessageStatus.slice(0, 1).toUpperCase() + eventData.MessageStatus.slice(1);
