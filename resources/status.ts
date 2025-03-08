@@ -3,6 +3,8 @@ import { parseDynamoDbAttributeMap, sendAlertMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 
+const metricSource = 'Status';
+
 const statusTable = process.env.TABLE_STATUS as string;
 
 const maxSpacing = 5 * 60 * 1000; // The amount of time to wait for a heartbeat before failing over (in ms)
@@ -124,7 +126,7 @@ export async function main() {
 
 	if (messages.length > 0) {
 		console.log(messages.join('\n'));
-		await sendAlertMessage(messages.join('\n'));
+		await sendAlertMessage(metricSource, messages.join('\n'));
 	}
 
 	await updateDynamoPromies;

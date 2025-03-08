@@ -237,6 +237,7 @@ interface TwilioMessageConfig {
 }
 
 export async function sendMessage(
+	metricSource: string,
 	messageId: string | null,
 	phone: string | undefined,
 	department: string | undefined,
@@ -250,6 +251,9 @@ export async function sendMessage(
 		typeof department === 'undefined'
 	) {
 		console.error(`Trying to send message to invalid destination\nphone: ${phone}\ndepartment: ${department}\nMessage: ${body}`);
+		await incrementMetric('Error', {
+			source: metricSource
+		});
 		return;
 	}
 
@@ -306,13 +310,14 @@ export async function sendMessage(
 		});
 }
 
-export async function sendAlertMessage(body: string) {
+export async function sendAlertMessage(metricSource: string, body: string) {
 	const messageId = Date.now().toString();
 	const recipients = (await getRecipients('all', null))
 		.filter(user => user.getSystemAlerts?.BOOL);
 	await Promise.all([
 		saveMessageData(messageId, recipients.length, body),
 		...recipients.map(user => sendMessage(
+			metricSource,
 			messageId,
 			user.phone.N,
 			'',

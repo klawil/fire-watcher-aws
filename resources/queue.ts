@@ -260,6 +260,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	)
 		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => config[b]);
 	promises.push(sendMessage(
+		metricSource,
 		null,
 		body.phone,
 		updateResult.Attributes?.department?.S,
@@ -286,6 +287,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		}).promise()
 			.then((admins) => Promise.all((admins.Items || []).map((item) => {
 				return sendMessage(
+					metricSource,
 					null,
 					item.phone.N,
 					item.department.S,
@@ -320,6 +322,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 			const pageTg = data.Items[0].Talkgroup.N || '8332';
 
 			return sendMessage(
+				metricSource,
 				null,
 				body.phone,
 				updateResult.Attributes?.department?.S,
@@ -412,6 +415,7 @@ async function handleTwilio(body: TwilioBody) {
 
 	await Promise.all(recipients
 		.map((number) =>  sendMessage(
+			metricSource,
 			messageId,
 			number.phone.N,
 			number.department.S,
@@ -483,6 +487,7 @@ async function handlePage(body: PageBody) {
 	// Send the messages
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
+			metricSource,
 			messageId,
 			phone.phone.N,
 			phone.department.S,
@@ -523,6 +528,7 @@ async function handleLogin(body: ActivateOrLoginBody) {
 	}).promise();
 
 	await sendMessage(
+		metricSource,
 		null,
 		body.phone,
 		updateResult.Attributes?.department?.S,
@@ -578,6 +584,7 @@ async function handleTranscribe(body: TranscribeBody) {
 	);
 
 	await Promise.all(recipients.map(number => sendMessage(
+		metricSource,
 		messageId,
 		number.phone.N,
 		number.department?.S,
