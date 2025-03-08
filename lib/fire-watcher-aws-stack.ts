@@ -100,6 +100,113 @@ export class FireWatcherAwsStack extends Stack {
       timeToLiveAttribute: 'TTL'
     });
 
+    phoneNumberTable.addGlobalSecondaryIndex({
+      indexName: 'StationIndex',
+      partitionKey: {
+        name: 'department',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'callSign',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'AddedIndex',
+      partitionKey: {
+        name: 'Emergency',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'Added',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'StartTimeTgIndex',
+      partitionKey: {
+        name: 'Talkgroup',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'StartTime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'StartTimeEmergIndex',
+      partitionKey: {
+        name: 'Emergency',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'StartTime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'KeyIndex',
+      partitionKey: {
+        name: 'Key',
+        type: dynamodb.AttributeType.STRING
+      }
+    });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'ToneIndex',
+      partitionKey: {
+        name: 'ToneIndex',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'StartTime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
+    talkgroupTable.addGlobalSecondaryIndex({
+      indexName: 'InUseIndex',
+      partitionKey: {
+        name: 'InUse',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'Count',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
+    textsTable.addGlobalSecondaryIndex({
+      indexName: 'isTestIndex',
+      partitionKey: {
+        name: 'isTestString',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'datetime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+    textsTable.addGlobalSecondaryIndex({
+      indexName: 'pageIndex',
+      partitionKey: {
+        name: 'isPage',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'datetime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
+    siteTable.addGlobalSecondaryIndex({
+      indexName: 'active',
+      partitionKey: {
+        name: 'IsActive',
+        type: dynamodb.AttributeType.STRING
+      }
+    });
+
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
     const eventsS3BucketQueue = new sqs.Queue(this, 'cvfd-events-queue');
@@ -271,113 +378,6 @@ export class FireWatcherAwsStack extends Stack {
           }]
         },
         dynamicPartitioningConfiguration: { enabled: true }
-      }
-    });
-
-    phoneNumberTable.addGlobalSecondaryIndex({
-      indexName: 'StationIndex',
-      partitionKey: {
-        name: 'department',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'callSign',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-
-    dtrTable.addGlobalSecondaryIndex({
-      indexName: 'AddedIndex',
-      partitionKey: {
-        name: 'Emergency',
-        type: dynamodb.AttributeType.NUMBER
-      },
-      sortKey: {
-        name: 'Added',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-    dtrTable.addGlobalSecondaryIndex({
-      indexName: 'StartTimeTgIndex',
-      partitionKey: {
-        name: 'Talkgroup',
-        type: dynamodb.AttributeType.NUMBER
-      },
-      sortKey: {
-        name: 'StartTime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-    dtrTable.addGlobalSecondaryIndex({
-      indexName: 'StartTimeEmergIndex',
-      partitionKey: {
-        name: 'Emergency',
-        type: dynamodb.AttributeType.NUMBER
-      },
-      sortKey: {
-        name: 'StartTime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-    dtrTable.addGlobalSecondaryIndex({
-      indexName: 'KeyIndex',
-      partitionKey: {
-        name: 'Key',
-        type: dynamodb.AttributeType.STRING
-      }
-    });
-    dtrTable.addGlobalSecondaryIndex({
-      indexName: 'ToneIndex',
-      partitionKey: {
-        name: 'ToneIndex',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'StartTime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-
-    talkgroupTable.addGlobalSecondaryIndex({
-      indexName: 'InUseIndex',
-      partitionKey: {
-        name: 'InUse',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'Count',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-
-    textsTable.addGlobalSecondaryIndex({
-      indexName: 'isTestIndex',
-      partitionKey: {
-        name: 'isTestString',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-    textsTable.addGlobalSecondaryIndex({
-      indexName: 'pageIndex',
-      partitionKey: {
-        name: 'isPage',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-
-    siteTable.addGlobalSecondaryIndex({
-      indexName: 'active',
-      partitionKey: {
-        name: 'IsActive',
-        type: dynamodb.AttributeType.STRING
       }
     });
 

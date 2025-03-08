@@ -222,6 +222,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							event: 'duplicate call'
 						}, false);
 						promises.push(metric);
+						const transcript: string | null = matchingItems.reduce((transcript: null | string, item) => {
+							if (transcript !== null) return transcript;
+							return item.Transcript?.S || null;
+						}, null);
 						const allItems = matchingItems
 							.sort((a, b) => {
 								const aAdded = Number(a.Added.N);
@@ -233,7 +237,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 									return aAdded > bAdded ? -1 : 1;
 
 								return aLen > bLen ? 1 : -1;
-							})
+							});
 						const itemsToDelete = allItems
 							.slice(0, -1);
 						const keptItem = allItems.slice(-1)[0];
@@ -267,6 +271,22 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							}
 						}).promise()
 							.catch(e => console.error(e)));
+						if (transcript !== null) {
+							promises.push(dynamodb.updateItem({
+								TableName: dtrTable,
+								Key: {
+									Talkgroup: { N: keptItem.Talkgroup.N },
+									Added: { N: keptItem.Added.N },
+								},
+								ExpressionAttributeNames: {
+									'#t': 'Transcript',
+								},
+								ExpressionAttributeValues: {
+									':t': { S: transcript },
+								},
+								UpdateExpression: 'SET #t = :t',
+							}).promise());
+						}
 						await Promise.all(promises);
 						return;
 					}
