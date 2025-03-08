@@ -107,10 +107,18 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 			return coll;
 		}, {}))
 			.sort((a, b) => a.Datetime > b.Datetime ? -1 : 1)
-			.map((item) => ({
-				...item,
-				Source: item.Key?.split('/')[1].replace(/_\d{8}_\d{6}.*$/, '')
-			}))
+			.map((item) => {
+				let Source = item.Key?.split('/')[1].replace(/_\d{8}_\d{6}.*$/, '');
+
+				if (Source === 'FIRE') {
+					Source = 'SAG_FIRE_VHF';
+				}
+
+				return {
+					...item,
+					Source
+				};
+			})
 	});
 
 	// Send for results
