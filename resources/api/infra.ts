@@ -408,10 +408,12 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	const action = event.queryStringParameters?.action || 'none';
 
 	try {
-		await incrementMetric('Call', {
-			source: metricSource,
-			action
-		});
+		if (action !== 'metric') {
+			await incrementMetric('Call', {
+				source: metricSource,
+				action
+			});
+		}
 		switch (action) {
 			case 'page':
 				return await handlePage(event);
