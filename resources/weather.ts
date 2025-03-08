@@ -36,6 +36,7 @@ interface GaccJson {
 interface NwsAlert {
 	onset: string;
 	ends: string;
+  expires: string;
 	description: string;
 	associated: NwsAlert[];
 	headline: string;
@@ -185,7 +186,7 @@ function getAreaAlerts(): Promise<ResultJson['weather']> {
     .then(features => features.map(feature => {
       let featureString = `<b>${feature.headline}</b>\n\n${feature.description.replace(/([^\n])\n([^\n])/g, (a, b, c) => `${b} ${c}`)}\n\n`;
       featureString += feature.associated
-        .map(f => `* <b>${f.event}</b>... ${buildTimeframe(f.onset, f.ends)}`)
+        .map(f => `* <b>${f.event}</b>... ${buildTimeframe(f.onset, f.ends || f.expires)}`)
         .join('\n\n');
 
       return featureString;
