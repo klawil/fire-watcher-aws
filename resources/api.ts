@@ -8,6 +8,7 @@ const sqs = new AWS.SQS();
 const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
+const dtrTable = process.env.TABLE_DTR as string;
 const phoneTable = process.env.TABLE_PHONE as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
 const statusTable = process.env.TABLE_STATUS as string;
@@ -194,6 +195,85 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	});
 
 	// Send for results
+	return {
+		statusCode: 200,
+		headers: {},
+		body
+	};
+}
+
+type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
+  [Property in Key]-?: Type[Property];
+};
+
+async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const filters: string[] = [];
+
+	// Set the default query parameters
+	event.queryStringParameters = event.queryStringParameters || {};
+	event.queryStringParameters = {
+		after: (Math.round(Date.now() / 1000) - (60 * 60 * 24 * 2)).toString(),
+		...event.queryStringParameters
+	};
+
+	// Add the "after" parameter
+	const queryConfig: AWS.DynamoDB.ScanInput &
+		WithRequiredProperty<AWS.DynamoDB.ScanInput, 'ExpressionAttributeValues'> &
+		WithRequiredProperty<AWS.DynamoDB.ScanInput, 'ExpressionAttributeNames'> = {
+		TableName: dtrTable,
+		ExpressionAttributeValues: {
+			':after': {
+				N: event.queryStringParameters.after
+			}
+		},
+		ExpressionAttributeNames: {
+			'#dt': 'StartTime'
+		}
+	};
+	filters.push('#dt > :after');
+
+	// Check for a source filter
+	if (typeof event.queryStringParameters.source !== 'undefined') {
+		const sources = event.queryStringParameters.source.split('|');
+		const localFilters: string[] = [];
+		queryConfig.ExpressionAttributeNames['#src'] = 'Sources';
+		sources.forEach((source, index) => {
+			localFilters.push(`contains(#src, :src${index})`);
+			queryConfig.ExpressionAttributeValues[`:src${index}`] = {
+				N: source
+			};
+		});
+		filters.push(`(${localFilters.join(' OR ')})`);
+	}
+
+	// Check for a talkgroup filter
+	if (typeof event.queryStringParameters.tg !== 'undefined') {
+		const talkgroups = event.queryStringParameters.tg.split('|');
+		const localFilters: string[] = [];
+		queryConfig.ExpressionAttributeNames['#tg'] = 'Talkgroup';
+		talkgroups.forEach((tg, index) => {
+			localFilters.push(`#tg = :tg${index}`);
+			queryConfig.ExpressionAttributeValues[`:tg${index}`] = {
+				N: tg
+			};
+		});
+		filters.push(`(${localFilters.join(' OR ')})`);
+	}
+
+	if (filters.length > 0) {
+		queryConfig.FilterExpression = filters.join(' AND ');
+	}
+
+	const data = await dynamodb.scan(queryConfig).promise();
+	const body = JSON.stringify({
+		success: true,
+		data: data.Items
+			?.map((item) => parseDynamoDbAttributeMap(item))
+			.sort((a, b) => (a.datetime as number) > (b.datetime as number) ? -1 : 1),
+		query: queryConfig.FilterExpression,
+		values: queryConfig.ExpressionAttributeValues
+	});
+
 	return {
 		statusCode: 200,
 		headers: {},
@@ -869,6 +949,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		switch (action) {
 			case 'list':
 				return await getList(event);
+			case 'dtr':
+				return await getDtrList(event);
 			case 'message':
 				return await handleMessage(event);
 			case 'messageStatus':
