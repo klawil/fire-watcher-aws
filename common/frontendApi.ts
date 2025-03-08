@@ -1,5 +1,5 @@
 import { ApiResponseBase } from "./common";
-import { UserDepartment } from "./userConstants";
+import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
 export type MessageType = 'page' | 'transcript' | 'department' | 'departmentAnnounce' | 'pageAnnounce' | 'account' | 'alert' | 'departmentAlert';
 
@@ -50,6 +50,13 @@ export interface SiteObject extends BaseSiteObject {
 	UpdateTime?: {
 		[key: string]: number;
 	};
+}
+
+export interface AnnouncementApiBody {
+	body: string;
+	test?: boolean;
+	department?: UserDepartment;
+	talkgroup?: PagingTalkgroup;
 }
 
 export interface ApiFrontendListTextsResponse extends ApiResponseBase {
