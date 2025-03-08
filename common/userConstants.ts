@@ -77,7 +77,7 @@ export const pagingConfig: {
 		pageService: 'FIRE',
 	},
 	18331: {
-		linkPreset: 'pBGFD%252FBGEMS',
+		linkPreset: 'pBGFD%2FBGEMS',
 		partyBeingPaged: 'BGEMS/BGFD',
 		pageService: 'BACA',
 	},

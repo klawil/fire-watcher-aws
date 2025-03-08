@@ -8,7 +8,7 @@ export function fNameToDate(fName: string): Date {
 	if (dtrMatch !== null) {
 		return new Date(parseInt(dtrMatch[1], 10) * 1000);
 	} else if (vhfMatch !== null) {
-		return new Date(`${vhfMatch[3]}-${vhfMatch[4]}-${vhfMatch[5]}T${vhfMatch[6]}:${vhfMatch[7]}:${vhfMatch[8]}Z`);
+		return new Date(`${vhfMatch[2]}-${vhfMatch[3]}-${vhfMatch[4]}T${vhfMatch[5]}:${vhfMatch[6]}:${vhfMatch[7]}Z`);
 	}
 
 	return new Date(0);

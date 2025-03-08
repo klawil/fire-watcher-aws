@@ -329,6 +329,8 @@ async function init() {
 		urlParams.f !== null
 	) {
 		startDate = fNameToDate(urlParams.f);
+		// Subtract a second to make sure the linked file is included
+		startDate = new Date(startDate.getTime() - 1000);
 	}
 
 	Object.keys(urlFilters).sort().reverse().forEach(key => {
