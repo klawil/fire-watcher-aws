@@ -65,6 +65,7 @@ function buildTable(items, isPage = false) {
 		
 		if (isPage) {
 			cells.splice(5, 0, `${Math.round((text.datetime - text.pageTime) / 1000)}s`);
+			cells.splice(2, 1);
 		}
 		
 		return cells;
