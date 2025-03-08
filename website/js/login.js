@@ -56,7 +56,7 @@ function submitHandler() {
 
 			stage = localStage + 1;
 			if (stage === 2) {
-				codeContainer.classList.remove('hidden');
+				codeContainer.classList.remove('d-none');
 			} else if (stage === 3) {
 				showAlert('success', 'You are now logged in');
 				redirectToPage();

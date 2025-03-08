@@ -1,8 +1,12 @@
 *.js
-!public/**/*.js
+!website/**/*.js
 *.d.ts
 node_modules
 
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# Jekyll directories
+website/_site
+website/.jekyll-cache

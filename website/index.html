@@ -1,0 +1,45 @@
+---
+title: Radio Chatter
+layout: base
+centerAll: true
+---
+
+<style>
+	.table-wrapper-scroll-y {
+		display: block;
+		height: 400px;
+		overflow: auto;
+		margin-top: 10px;
+	}
+
+	.playing {
+		background-color: aliceblue;
+	}
+</style>
+
+<div class="row row-cols-auto text-start g-1" id="select-inputs-container"></div>
+
+<h2 id="timestamp">Timestamp</h2>
+
+<audio controls id="player"></audio>
+
+<div class="table-wrapper-scroll-y" id="container">
+	<table class="container table table-striped">
+		<thead>
+			<tr>
+				<th>Time</th>
+				<th>Source</th>
+				<th>Duration</th>
+				<th>Page</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody id="files"></tbody>
+	</table>
+</div>
+
+<div class="container" id="buttons">
+	<div class="mt-4 btn btn-success" onclick="playLastTone()">Jump to Last Tone</div>
+</div>
+
+<script async src="/js/index.js"></script>

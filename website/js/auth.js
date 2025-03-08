@@ -47,6 +47,21 @@ fetch('/api?action=getUser')
 			return;
 		}
 
+		// Show the available links
+		if (window.user.isUser) {
+			[ ...document.getElementsByClassName('requireUser') ]
+				.forEach(elem => elem.classList.remove('d-none'));
+
+			document.getElementById('loginLink').classList.add('d-none');
+			const username = document.getElementById('username');
+			username.innerHTML = window.user.user;
+			username.classList.remove('d-none');
+		}
+		if (window.user.isAdmin) {
+			[ ...document.getElementsByClassName('requireAdmin') ]
+				.forEach(elem => elem.classList.remove('d-none'));
+		}
+
 		window.afterAuth.forEach(fn => fn());
 		window.afterAuth.push = fn => fn();
 	});

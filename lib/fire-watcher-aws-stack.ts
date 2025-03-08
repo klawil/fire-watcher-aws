@@ -30,7 +30,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Push the static files into the bucket
     new s3deployment.BucketDeployment(this, 'cvfd-deploy-s3', {
-      sources: [ s3deployment.Source.asset('./public') ],
+      sources: [ s3deployment.Source.asset('./website/_site') ],
       destinationBucket: bucket,
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       exclude: [ 'audio/*', 'weather.json' ]

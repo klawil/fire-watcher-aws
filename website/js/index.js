@@ -256,36 +256,3 @@ function playLastTone() {
 		document.getElementById(lastTone.File).scrollIntoView();
 	}
 }
-
-const buttonsContainer = document.getElementById('buttons');
-const adminButtons = [
-	{
-		href: '/texts.html',
-		label: 'Text Log'
-	}
-];
-const loginButtons = [
-	{
-		href: '/login.html',
-		label: 'Log In'
-	}
-];
-
-function addButtons(buttons) {
-	buttons.forEach(button => {
-		const elem = document.createElement('a');
-		elem.href = button.href;
-		elem.innerHTML = button.label;
-		elem.classList.add('mt-4', 'btn', 'btn-success');
-		buttonsContainer.appendChild(elem);
-	});
-}
-
-window.afterAuth = window.afterAuth || [];
-window.afterAuth.push(() => {
-	if (window.user.isAdmin) {
-		addButtons(adminButtons);
-	} else if (!window.user.isUser) {
-		addButtons(loginButtons);
-	}
-});
