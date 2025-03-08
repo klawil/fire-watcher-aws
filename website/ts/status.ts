@@ -345,7 +345,7 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 	return null;
 }
 
-async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone'): Promise<Error | null> {
+async function buildCostChart(account?: 'Baca' | 'NSCAD' | 'Crestone' | 'Saguache'): Promise<Error | null> {
 	logger.trace('buildCostChart', ...arguments);
 	const rawData = await fetch(`/api/twilio?action=billing${typeof account !== 'undefined' ? `&account=${account}`: ''}`)
 		.then(r => r.json());
@@ -452,6 +452,7 @@ async function refreshCharts() {
 			buildCostChart('Baca'),
 			buildCostChart('NSCAD'),
 			buildCostChart('Crestone'),
+			buildCostChart('Saguache'),
 		);
 	}
 	await Promise.all(promises);

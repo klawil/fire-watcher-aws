@@ -551,7 +551,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		(
 			typeof account !== 'string' ||
 			![
-				'Baca', 'NSCAD', 'Crestone',
+				'Baca', 'NSCAD', 'Crestone', 'Saguache',
 			].includes(account)
 		)
 	) {
