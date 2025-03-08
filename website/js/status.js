@@ -49,10 +49,6 @@ const periodFormatters = [
 		period: 6 * 60 * 60,
 		formatter: formatDayHour
 	},
-	{
-		period: 60 * 60,
-		formatter: formatHourMinute
-	},
 ];
 
 const color1 = {
