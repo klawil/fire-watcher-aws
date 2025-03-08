@@ -9,6 +9,7 @@ const cloudWatch = new AWS.CloudWatch();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const dtrTable = process.env.TABLE_DTR as string;
+const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
 
 const metricSource = 'Queue';
 
@@ -205,7 +206,8 @@ function randomString(len: number, numeric = false): string {
 function createPageMessage(
 	fileKey: string,
 	pageTg: string,
-	callSign: string | null = null
+	callSign: string | null = null,
+	transcript: string | null = null
 ): string {
 	const pageConfig = pageConfigs[pageTg];
 
@@ -215,6 +217,9 @@ function createPageMessage(
 	let pageStr = `${pageConfig.pageService} PAGE\n`;
 	pageStr += `${pageConfig.pagingParty} paged ${pageConfig.partyBeingPaged} `
 	pageStr += `${dateToTimeString(pageConfig.fToTime(fileKey))}\n`;
+	if (transcript !== null) {
+		pageStr += `\n${transcript}\n\n`;
+	}
 	pageStr += `https://fire.klawil.net/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
 	if (callSign !== null) {
 		pageStr += `&cs=${callSign}`;
@@ -630,6 +635,41 @@ interface TranscribeResult {
 	}
 }
 
+async function getItemToUpdate(key: string | null): Promise<AWS.DynamoDB.AttributeMap | null> {
+	if (key === null) return key;
+
+	let item: AWS.DynamoDB.AttributeMap | null = null;
+	let count = 0;
+	do {
+		const result = await dynamodb.query({
+			TableName: dtrTable,
+			IndexName: 'KeyIndex',
+			ExpressionAttributeNames: {
+				'#k': 'Key',
+			},
+			ExpressionAttributeValues: {
+				':k': { S: key },
+			},
+			KeyConditionExpression: '#k = :k',
+		}).promise();
+
+		if (!result.Items || result.Items.length === 0) {
+			const resultMap = await dynamodb.getItem({
+				TableName: dtrTranslationTable,
+				Key: {
+					Key: { S: key },
+				}
+			}).promise();
+
+			key = resultMap.Item?.NewKey?.S || null;
+		} else {
+			item = result.Items[0];
+		}
+	} while (item === null && key !== null && count++ < 10);
+
+	return item;
+}
+
 async function handleTranscribe(body: TranscribeBody) {
 	// Check for the correct transcription job fomat
 	if (!/^\d{4,5}\-\d+$/.test(body.detail.TranscriptionJobName)) {
@@ -649,11 +689,48 @@ async function handleTranscribe(body: TranscribeBody) {
 	const result: TranscribeResult = JSON.parse(fileData);
 
 	// Build the message
-	const tg = result.jobName.split('-')[0];
-	let transcript = result.results.transcripts[0].transcript === ''
+	let messageBody: string;
+	let promise: Promise<any> = new Promise(res => res(null));
+	let transcript: string = result.results.transcripts[0].transcript === ''
 		? 'No voices detected'
 		: result.results.transcripts[0].transcript;
-	const messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pageConfigs[tg].linkPreset}`;
+	let tg: string;
+	const jobInfo = await dynamodb.getItem({
+		TableName: dtrTranslationTable,
+		Key: { Key: { S: body.detail.TranscriptionJobName } },
+	}).promise();
+	if (jobInfo.Item) {
+		tg = jobInfo.Item.Talkgroup.N as string;
+		messageBody = createPageMessage(
+			jobInfo.Item.File.S as string,
+			tg,
+			null,
+			transcript
+		);
+
+		promise = getItemToUpdate(jobInfo.Item.FileKey.S as string)
+			.then(item => {
+				if (item === null) return;
+
+				return dynamodb.updateItem({
+					TableName: dtrTable,
+					Key: {
+						Talkgroup: { N: item.Talkgroup.N },
+						Added: { N: item.Added.N },
+					},
+					ExpressionAttributeNames: {
+						'#t': 'Transcript',
+					},
+					ExpressionAttributeValues: {
+						':t': { S: transcript },
+					},
+					UpdateExpression: 'SET #t = :t',
+				}).promise();
+			});
+	} else {
+		tg = body.detail.TranscriptionJobName.split('-')[0];
+		messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://fire.klawil.net/?tg=${pageConfigs[tg].linkPreset}`;
+	}
 
 	// Get recipients and send
 	const recipients = (await getRecipients('all', tg))
@@ -665,16 +742,40 @@ async function handleTranscribe(body: TranscribeBody) {
 		messageBody
 	);
 
-	await Promise.all(recipients.map(number => sendMessage(
-		metricSource,
-		messageId,
-		number.phone.N,
-		number.department?.S,
-		messageBody,
-		[],
-		true
-	)));
+	if (jobInfo.Item) {
+		await Promise.all(recipients.map(phone => sendMessage(
+			metricSource,
+			messageId,
+			phone.phone.N,
+			phone.department.S,
+			createPageMessage(
+				jobInfo.Item?.File.S as string,
+				tg,
+				phone.callSign.N,
+				transcript
+			),
+			[],
+			true
+		)));
+		await dynamodb.deleteItem({
+			TableName: dtrTranslationTable,
+			Key: {
+				Key: { S: jobInfo.Item.Key.S },
+			}
+		}).promise();
+	} else {
+		await Promise.all(recipients.map(number => sendMessage(
+			metricSource,
+			messageId,
+			number.phone.N,
+			number.department?.S,
+			messageBody,
+			[],
+			true
+		)));
+	}
 	await insertMessage;
+	await promise;
 }
 
 async function parseRecord(event: lambda.SQSRecord) {

@@ -294,8 +294,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			}
 
 			if (body.Item.Tone?.BOOL) {
+				const transcribeJobName = `${body.Item.Talkgroup.N}-${Date.now()}`;
+				const toneFile = Key.split('/')[2] || Key.split('/')[1];
 				promises.push(transcribe.startTranscriptionJob({
-					TranscriptionJobName: `${body.Item.Talkgroup.N}-${Date.now()}`,
+					TranscriptionJobName: transcribeJobName,
 					LanguageCode: 'en-US',
 					Media: {
 						MediaFileUri: `s3://${Bucket}/${Key}`
@@ -304,12 +306,22 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						VocabularyName: 'SagVocab'
 					}
 				}).promise());
+				promises.push(dynamodb.putItem({
+					TableName: dtrTranslationTable,
+					Item: {
+						Key: { S: transcribeJobName },
+						Talkgroup: { N: body.Item.Talkgroup?.N },
+						File: { S: toneFile },
+						FileKey: { S: Key },
+						TTL: { N: (Math.floor(Date.now() / 1000) + (10 * 60)).toString() },
+					}
+				}).promise());
 
 				promises.push(sqs.sendMessage({
 					MessageBody: JSON.stringify({
 						action: 'page',
 						tg: body.Item.Talkgroup?.N,
-						key: Key.split('/')[2] || Key.split('/')[1],
+						key: toneFile,
 						len: Number(body.Item.Len.N)
 					}),
 					QueueUrl: sqsQueue
