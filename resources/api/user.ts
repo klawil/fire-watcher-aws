@@ -18,7 +18,8 @@ const departmentPageGroups: { [key: string]: string[] } = {
 	Saguache: [ '8332' ],
 	'Villa Grove': [ '8332' ],
 	Baca: [ '18331' ],
-	NSCAD: [ '8198' ]
+	NSCAD: [ '8198' ],
+	Center: [ '8334' ]
 }
 
 interface ApiResponse {

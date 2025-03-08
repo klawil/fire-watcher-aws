@@ -69,7 +69,8 @@ const welcomeMessageConfig: { [key: string]: {
 const tgToPageDept: { [key: string]: string } = {
 	'8332': 'NSCFPD',
 	'18331': 'Baca ES',
-	'8198': 'NSCAD'
+	'8198': 'NSCAD',
+	'8334': 'Center ES'
 };
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
@@ -161,6 +162,13 @@ const pageConfigs: {
 		partyBeingPaged: 'BGEMS/BGFD',
 		pageService: 'BACA',
 		fToTime: vhfFnameToDate
+	},
+	'8334': {
+		linkPreset: 'tg8334',
+		pagingParty: 'Center',
+		partyBeingPaged: 'Center EMS',
+		pageService: 'CENTER',
+		fToTime: dtrFnameToDate
 	},
 };
 
