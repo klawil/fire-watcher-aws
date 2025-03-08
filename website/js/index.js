@@ -141,9 +141,22 @@ window.audioQ.push(() => {
 	console.log(currentParams);
 	if (
 		typeof currentParams.cs !== 'undefined' &&
-		currentParams.cs !== ''
+		currentParams.cs !== '' &&
+		typeof currentParams.f !== 'undefined' &&
+		currentParams.f !== ''
 	) {
 		console.log(currentParams.cs);
+		fetch(`/api/infra?action=metricFE`, {
+			body: JSON.stringify({
+				type: 'View',
+				data: {
+					cs: currentParams.cs,
+					f: currentParams.f
+				}
+			})
+		})
+			.then(r => r.json())
+			.then(console.log);
 	}
 });
 
