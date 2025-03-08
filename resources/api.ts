@@ -531,7 +531,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			.map((item) => {
 				if (item === null) return '';
 
-				return `${item.Emergency.N},${item.Talkgroup.N},${item.StartTime.N}`;
+				return `${item.Emergency?.N},${item.Talkgroup?.N},${item.StartTime?.N}`;
 			}).join('|'),
 		before: data.MinSortKey,
 		after: data.MaxSortKey,
