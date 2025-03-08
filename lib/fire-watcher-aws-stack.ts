@@ -95,10 +95,10 @@ export class FireWatcherAwsStack extends Stack {
     );
 
     // Create an API handler
-    const apiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-lambda', {
+    const apiHandler = new lambda.Function(this, 'cvfd-api-lambda', {
+      code: lambda.Code.fromAsset(__dirname + '/../resources'),
       runtime: lambda.Runtime.NODEJS_14_X,
-      entry: __dirname + '/../resources/api.ts',
-      handler: 'main',
+      handler: 'api.main',
       environment: {
         BUCKET: bucketName,
         TABLE_PHONE: phoneNumberTable.tableName,
@@ -180,7 +180,10 @@ export class FireWatcherAwsStack extends Stack {
             defaultTtl: Duration.seconds(0),
             maxTtl: Duration.seconds(0),
             forwardedValues: {
-              queryString: true
+              queryString: true,
+              cookies: {
+                forward: 'all'
+              }
             }
           }]
         }

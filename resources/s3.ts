@@ -17,7 +17,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			Key
 		}).promise();
 
-		const body = {
+		const body: AWS.DynamoDB.PutItemInput = {
 			TableName: trafficTable,
 			Item: {
 				Key: {
@@ -51,7 +51,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		}).promise();
 		console.log(dynamoQuery);
 
-		const body = {
+		const body: AWS.DynamoDB.DeleteItemInput = {
 			Key: {
 				Key: {
 					S: Key

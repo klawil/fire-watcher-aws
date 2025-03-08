@@ -32,7 +32,7 @@
 
 			<div id="captcha-row">
 				<div class="row mb-2">
-					<img id="captcha-img" src="/captcha">
+					<img id="captcha-img" src="/api?action=captcha">
 				</div>
 				<div class="row mb-3">
 					<label for="captcha" class="col-sm-8 col-form-label">Enter the Captcha</label>
@@ -66,7 +66,6 @@
 					...agg,
 					[elem.id]: elem
 				}), {});
-			console.log(inputs);
 
 			function resetCaptcha() {
 				document.getElementById('captcha-img').src = '/captcha';
