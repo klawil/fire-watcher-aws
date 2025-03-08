@@ -3,15 +3,15 @@ let rawData = [];
 const dataUpdateFrequency = 10000;
 const sourceMap = {
 	SAG_FIRE_VHF: 'Saguache Fire VHF',
-	SaguacheCo_FD_Ds: 'Saguache Fire DTR',
-	SagucheCo_MAC: 'Saguache MAC DTR',
-	SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR'
+	// SaguacheCo_FD_Ds: 'Saguache Fire DTR',
+	// SagucheCo_MAC: 'Saguache MAC DTR',
+	// SaguacheCo_FD_Tc: 'Saguache Fire TAC DTR'
 };
 const defaultEnabled = [
 	'SAG_FIRE_VHF',
-	'SaguacheCo_FD_Ds',
-	'SagucheCo_MAC',
-	'SaguacheCo_FD_Tc'
+	// 'SaguacheCo_FD_Ds',
+	// 'SagucheCo_MAC',
+	// 'SaguacheCo_FD_Tc'
 ];
 
 // Build the source selection
