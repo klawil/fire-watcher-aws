@@ -11,13 +11,6 @@ const config = {
 		texts: path.resolve(__dirname, 'ts', 'texts.ts'),
 		users: path.resolve(__dirname, 'ts', 'users.ts'),
 		weather: path.resolve(__dirname, 'ts', 'weather.ts'),
-		// conference: './website/ts/conference.ts',
-		// login: './website/ts/login.ts',
-		// profile: './website/ts/profile.ts',
-		// status: './website/ts/status.ts',
-		// texts: './website/ts/texts.ts',
-		// users: './website/ts/users.ts',
-		// weather: './website/ts/weather.ts',
 	},
   output: {
     path: path.resolve(__dirname, 'src', 'js'),
