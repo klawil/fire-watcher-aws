@@ -56,7 +56,9 @@ function buildTable(items, isPage = false) {
 			text.body,
 			parseMediaUrls(text.mediaUrls),
 			text.recipients,
+			`${Math.round(text.sent.length * 100 / text.recipients)}% (${text.sent.length})`,
 			`${Math.round(text.delivered.length * 100 / text.recipients)}% (${text.delivered.length})`,
+			`${Math.round(text.undelivered.length * 100 / text.recipients)}% (${text.undelivered.length})`,
 			`${Math.round(getPercentile(text.delivered, 1) / 1000)}s`,
 			`${Math.round(getPercentile(text.delivered, 50) / 1000)}s`,
 			`${Math.round(getPercentile(text.delivered, 75) / 1000)}s`,
@@ -64,7 +66,7 @@ function buildTable(items, isPage = false) {
 		];
 		
 		if (isPage) {
-			cells.splice(5, 0, `${Math.round((text.datetime - text.pageTime) / 1000)}s`);
+			cells.splice(7, 0, `${Math.round((text.datetime - text.pageTime) / 1000)}s`);
 			cells.splice(2, 1);
 		}
 		
@@ -94,6 +96,10 @@ function getTexts() {
 		.then(texts => texts.sort((a, b) => a.datetime > b.datetime ? -1 : 1))
 		.then(texts => texts.map(text => {
 			text.isPage = text.body.indexOf('Saguache Sheriff:') === 0;
+			text.delivered = text.delivered || [];
+			text.sent = text.sent || [];
+			text.undelivered = text.undelivered || [];
+
 
 			if (text.isPage) {
 				text.pageTime = parseForPageTime(text.body);
