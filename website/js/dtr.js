@@ -172,6 +172,7 @@ class TalkgroupFilter {
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {	
 	urlFilters.tg = new TalkgroupFilter();
+	urlFilters.emerg = new ToggleFilter('only-emerg');
 	
 	rowConfig = [
 		f => f.Len,

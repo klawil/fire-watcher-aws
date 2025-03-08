@@ -138,6 +138,29 @@ class CheckBoxFilter {
 	}
 }
 
+class ToggleFilter {
+	constructor(id) {
+		this.element = document.getElementById(id);
+		this.defaultUrl = this.getUrl();
+	}
+
+	get() {
+		return this.element.checked ? 'y' : undefined;
+	}
+
+	set(urlValue) {
+		this.element.checked = urlValue === 'y';
+	}
+
+	getUrl() {
+		return `${this.get()}`;
+	}
+
+	isDefault() {
+		return this.getUrl() === this.defaultUrl;
+	}
+}
+
 // Data fetch configuration
 const afterFilters = {};
 const urlFilters = {};
