@@ -257,6 +257,34 @@ interface TwilioParams {
 	MediaUrl0?: string;
 }
 
+interface TextCommand {
+	ExpressionAttributeNames: AWS.DynamoDB.ExpressionAttributeNameMap;
+	ExpressionAttributeValues?: AWS.DynamoDB.ExpressionAttributeValueMap;
+	UpdateExpression: string;
+}
+
+const textCommands: {
+	[key: string]: TextCommand;
+} = {
+	startTest: {
+		ExpressionAttributeNames: {
+			'#isTest': 'isTest'
+		},
+		ExpressionAttributeValues: {
+			':isTest': {
+				BOOL: true
+			}
+		},
+		UpdateExpression: 'SET #isTest = :isTest'
+	},
+	stopTest: {
+		ExpressionAttributeNames: {
+			'#isTest': 'isTest'
+		},
+		UpdateExpression: 'REMOVE #isTest'
+	},
+}
+
 async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const code = event.queryStringParameters?.code || '';
 	const response = {
@@ -295,10 +323,25 @@ async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		return response;
 	}
 
+	// Check for text commands and apple responses
+	const isTextCommand = typeof textCommands[eventData.Body] !== 'undefined';
 	const isAppleResponse = ignorePrefixes
 		.reduce((bool, prefix) => bool || eventData.Body.indexOf(prefix) === 0, false);
 
-	if (isAppleResponse) {
+	if (isTextCommand) {
+		console.log(`API - COMMAND - ${sender.Item.phone.N}`);
+		await dynamodb.updateItem({
+			TableName: phoneTable,
+			Key: {
+				phone: {
+					N: sender.Item.phone.N
+				}
+			},
+			...textCommands[eventData.Body]
+		}).promise();
+
+		response.body = `<Response><Message>Text command processed</Message></Response>`;
+	} else if (isAppleResponse) {
 		console.log(`API - APPLE - ${sender.Item.phone.N}`);
 	} else {
 		await sqs.sendMessage({
