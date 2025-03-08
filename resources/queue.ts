@@ -98,52 +98,6 @@ function createPageMessage(fileKey: string): string {
 	return `Saguache Sheriff: PAGE - https://fire.klawil.net/?f=${queryParam}`;
 }
 
-interface RegisterBody {
-	action: 'register';
-	phone: string;
-	name: string;
-	captcha: string;
-}
-
-async function handleRegister(body: RegisterBody) {
-	const promises: Promise<any>[] = [];
-
-	// Create the verification code
-	const verificationCode = randomString(6, true);
-
-	// Create the user in the table
-	promises.push(dynamodb.updateItem({
-		TableName: phoneTable,
-		Key: {
-			phone: {
-				N: parsePhone(body.phone)
-			}
-		},
-		ExpressionAttributeNames: {
-			'#n': 'name',
-			'#c': 'code',
-			'#ce': 'codeExpiry'
-		},
-		ExpressionAttributeValues: {
-			':n': {
-				S: body.name
-			},
-			':c': {
-				N: verificationCode
-			},
-			':ce': {
-				N: (Date.now() + codeTtl).toString()
-			}
-		},
-		UpdateExpression: 'SET #n = :n, #c = :c, #ce = :ce'
-	}).promise());
-
-	// Send the verification message
-	promises.push(sendMessage(body.phone, `Your validation code for Crestone Fire Notifications is ${verificationCode}`));
-
-	await Promise.all(promises);
-}
-
 interface ActivateBody {
 	action: 'activate';
 	phone: string;
@@ -303,8 +257,6 @@ async function handlePage(body: PageBody) {
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
 	switch (body.action) {
-		case 'register':
-			return handleRegister(body);
 		case 'activate':
 			return handleActivation(body);
 		case 'twilio':

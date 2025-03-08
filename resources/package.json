@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "aws-sdk": "^2.1049.0",
-    "svg-captcha": "^1.4.0",
     "twilio": "^3.72.0"
   }
 }

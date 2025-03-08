@@ -41,14 +41,6 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
-    const captchaTable = new dynamodb.Table(this, 'cvfd-captcha', {
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: {
-        name: 'CaptchaId',
-        type: dynamodb.AttributeType.STRING
-      },
-      timeToLiveAttribute: 'ExpTime'
-    });
     const trafficTable = new dynamodb.Table(this, 'cvfd-traffic', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -57,13 +49,6 @@ export class FireWatcherAwsStack extends Stack {
       },
       sortKey: {
         name: 'Datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-    const messagesTable = new dynamodb.Table(this, 'cvfd-messages', {
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: {
-        name: 'datetime',
         type: dynamodb.AttributeType.NUMBER
       }
     });
@@ -145,15 +130,13 @@ export class FireWatcherAwsStack extends Stack {
     );
 
     // Create an API handler
-    const apiHandler = new lambda.Function(this, 'cvfd-api-lambda', {
-      code: lambda.Code.fromAsset(__dirname + '/../resources'),
+    const apiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-lambda', {
       runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'api.main',
+      entry: __dirname + '/../resources/api.ts',
+      handler: 'main',
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
-        TABLE_CAPTCHA: captchaTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
-        TABLE_MESSAGES: messagesTable.tableName,
         SQS_QUEUE: queue.queueUrl,
         SERVER_CODE: apiCode
       }
@@ -161,9 +144,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Grant access for the API handler
     phoneNumberTable.grantReadData(apiHandler);
-    captchaTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
-    messagesTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
 
     // Create a rest API
