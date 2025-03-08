@@ -99,6 +99,13 @@ export class FireWatcherAwsStack extends Stack {
       },
       timeToLiveAttribute: 'TTL'
     });
+    const conferenceTable = new dynamodb.Table(this, 'cvfd-conferences', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'CallSid',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
     phoneNumberTable.addGlobalSecondaryIndex({
       indexName: 'StationIndex',
@@ -205,6 +212,14 @@ export class FireWatcherAwsStack extends Stack {
         name: 'IsActive',
         type: dynamodb.AttributeType.STRING
       }
+    });
+
+    conferenceTable.addGlobalSecondaryIndex({
+      indexName: 'Conference',
+      partitionKey: {
+        name: 'ConferenceSid',
+        type: dynamodb.AttributeType.STRING,
+      },
     });
 
     // Make the S3 bucket for the kinesis stuff
@@ -442,7 +457,7 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/queue.ts',
       handler: 'main',
       environment: {
-        TABLE_PHONE: phoneNumberTable.tableName,
+        TABLE_USER: phoneNumberTable.tableName,
         TABLE_MESSAGES: textsTable.tableName,
         TABLE_DTR: dtrTable.tableName,
         TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
@@ -475,7 +490,7 @@ export class FireWatcherAwsStack extends Stack {
       timeout: Duration.seconds(30),
       environment: {
         TWILIO_SECRET: secretArn,
-        TABLE_PHONE: phoneNumberTable.tableName,
+        TABLE_USER: phoneNumberTable.tableName,
         TABLE_MESSAGES: textsTable.tableName
       }
     });
@@ -756,7 +771,7 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_STATUS: statusTable.tableName,
-        TABLE_PHONE: phoneNumberTable.tableName,
+        TABLE_USER: phoneNumberTable.tableName,
         TWILIO_SECRET: secretArn,
         TABLE_MESSAGES: textsTable.tableName
       },
@@ -848,7 +863,7 @@ export class FireWatcherAwsStack extends Stack {
           SQS_QUEUE: queue.queueUrl,
           TWILIO_SECRET: secretArn,
           TABLE_DTR: dtrTable.tableName,
-          TABLE_PHONE: phoneNumberTable.tableName,
+          TABLE_USER: phoneNumberTable.tableName,
           TABLE_TEXT: textsTable.tableName,
           TABLE_STATUS: statusTable.tableName,
           TABLE_SITE: siteTable.tableName,
@@ -872,24 +887,32 @@ export class FireWatcherAwsStack extends Stack {
         name: 'user',
         env: {
           QUEUE_URL: queue.queueUrl,
-          TABLE_USER: phoneNumberTable.tableName
+          TWILIO_SECRET: secretArn,
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_CONFERENCE: conferenceTable.tableName,
         },
         readWrite: [
           phoneNumberTable
         ],
-        queue
+        read: [
+          conferenceTable,
+        ],
+        queue,
+        secret: twilioSecret,
       },
       {
         name: 'twilio',
         env: {
           SQS_QUEUE: queue.queueUrl,
           TWILIO_SECRET: secretArn,
-          TABLE_PHONE: phoneNumberTable.tableName,
-          TABLE_MESSAGES: textsTable.tableName
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_MESSAGES: textsTable.tableName,
+          TABLE_CONFERENCE: conferenceTable.tableName,
         },
         readWrite: [
           phoneNumberTable,
-          textsTable
+          textsTable,
+          conferenceTable,
         ],
         queue,
         secret: twilioSecret

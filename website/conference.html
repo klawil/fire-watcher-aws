@@ -1,0 +1,39 @@
+---
+title: Conference Call
+layout: base
+requireUser: true
+---
+
+<style>
+	tr {
+		transition: background-color 1s ease;
+	}
+</style>
+
+<div class="d-grid">
+	<button id="startButton" class="btn btn-block"></button>
+</div>
+
+<br>
+<h2 class="text-center">Current Participants</h2>
+<table id="participantsTable" hidden class="table table-striped align-middle">
+	<thead>
+		<tr>
+			<th></th>
+			<th>Name</th>
+			<th>Device</th>
+			<th class="requireAdmin d-none"></th>
+		</tr>
+	</thead>
+	<tbody id="participants"></tbody>
+</table>
+<div id="participantsNone" hidden class="text-center">No-one is on the call</div>
+<div id="participantsLoading" class="d-flex justify-content-center">
+	<div class="spinner-border" role="status">
+		<span class="visually-hidden">Loading...</span>
+	</div>
+</div>
+
+{% assign randomNumber = "now" | date: "%N" %}
+<script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.2.0/dist/twilio.min.js"></script>
+<script async src="/js/conference.js?v={{ randomNumber }}"></script>

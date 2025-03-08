@@ -1,6 +1,7 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
+import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, parsePhone } from '../utils/general';
+import { getLoggedInUser } from '../utils/auth';
 
 const metricSource = 'Twilio';
 
@@ -9,14 +10,19 @@ const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 
 const sqsQueue = process.env.SQS_QUEUE as string;
-const userTable = process.env.TABLE_PHONE as string;
+const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_MESSAGES as string;
+const conferenceTable = process.env.TABLE_CONFERENCE as string;
 
 interface TwilioTextEvent {
 	From: string;
 	To: string;
 	Body: string;
 	MediaUrl0?: string;
+	CallSid: string;
+	Type?: string;
+	ParentCallSid?: string;
+	Direction?: string;
 }
 
 interface TwilioStatusEvent {
@@ -72,7 +78,7 @@ const applePrefixes = [
 	'Loved',
 	'Disliked',
 	'Laughed+at',
-	'Questioned'
+	'Questioned',
 ]
 	.map(p => `${p}+`);
 
@@ -324,6 +330,298 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	return response;
 }
 
+async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const code = event.queryStringParameters?.code;
+	const response: APIGatewayProxyResult = {
+		statusCode: 200,
+		headers: {
+			'Content-Type': 'application/xml'
+		},
+		body: '<Response><Reject></Reject></Response>'
+	};
+
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
+	// Validate the call is from Twilio
+	if (code !== twilioConf.apiCode) {
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'Missing auth Twilio'
+		});
+		return response;
+	}
+
+	// Validate the sending number
+	const eventData = event.body?.split('&')
+		.map(str => str.split('=').map(str => decodeURIComponent(str)))
+		.reduce((acc, curr) => ({
+			...acc,
+			[curr[0]]: curr[1] || ''
+		}), {}) as TwilioTextEvent;
+	if (typeof eventData.From !== 'string' || !/^\d+$/.test(eventData.From.slice(2))) {
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'Invalid Twilio source'
+		});
+		return response;
+	}
+	const sender = await dynamodb.getItem({
+		TableName: userTable,
+		Key: {
+			phone: {
+				N: eventData.From.slice(2)
+			}
+		}
+	}).promise();
+	if (
+		!sender.Item ||
+		!sender.Item.isActive?.BOOL ||
+		sender.Item.pageOnly?.BOOL ||
+		sender.Item.department?.S === 'Baca'
+	) {
+		return response;
+	}
+
+	let callSid: string = eventData.CallSid;
+	if (
+		eventData.Direction &&
+		eventData.Direction !== 'inbound' &&
+		eventData.ParentCallSid
+	) {
+		callSid = eventData.ParentCallSid;
+	}
+
+	await dynamodb.updateItem({
+		TableName: conferenceTable,
+		Key: {
+			CallSid: {
+				S: callSid,
+			},
+		},
+		ExpressionAttributeNames: {
+			'#cs': 'CallSign',
+			'#fn': 'FirstName',
+			'#ln': 'LastName',
+			'#p': 'Phone',
+			'#t': 'Type',
+			'#r': 'Room',
+		},
+		ExpressionAttributeValues: {
+			':cs': sender.Item.callSign,
+			':fn': sender.Item.fName,
+			':ln': sender.Item.lName,
+			':p': sender.Item.phone,
+			':t': { S: eventData.Type || 'Phone' },
+			':r': { S: sender.Item.department.S },
+		},
+		UpdateExpression: 'SET #cs = :cs, #fn = :fn, #ln = :ln, #p = :p, #t = :t, #r = :r',
+	}).promise();
+
+	response.body = `<?xml version="1.0" encoding="UTF-8"?>
+	<Response>
+		<Say>Welcome ${sender.Item.fName.S}. Connecting you to the ${sender.Item.department.S} conference now</Say>
+		<Dial>
+			<Conference
+				participantLabel="${sender.Item.fName.S} ${sender.Item.lName.S} ${Math.round(Math.random() * 100)}"
+				statusCallback="https://fire.klawil.net/api/twilio?action=conference&amp;code=${encodeURIComponent(twilioConf.apiCode)}"
+				statusCallbackEvents="start end join leave mute">
+			${sender.Item.department.S}</Conference>
+		</Dial>
+	</Response>`;
+
+	return response;
+}
+
+interface TwilioConferenceEvent {
+	ConferenceSid: string;
+	FriendlyName: string;
+	AccountSid: string;
+	StatusCallbackEvent?: string;
+	CallSid?: string;
+}
+
+async function handleConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const code = event.queryStringParameters?.code;
+	const response: APIGatewayProxyResult = {
+		statusCode: 204,
+		body: ''
+	};
+
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
+	// Validate the call is from Twilio
+	if (code !== twilioConf.apiCode) {
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'Missing auth Twilio'
+		});
+		return response;
+	}
+
+	// Parse the event data
+	const eventData = event.body?.split('&')
+		.map(str => str.split('=').map(str => decodeURIComponent(str)))
+		.reduce((acc, curr) => ({
+			...acc,
+			[curr[0]]: curr[1] || ''
+		}), {}) as TwilioConferenceEvent;
+
+	let doUpdate: boolean = false;
+	let promise: Promise<any> | null = null;
+	switch (eventData.StatusCallbackEvent) {
+		case 'participant-join':
+			doUpdate = true;
+			await dynamodb.updateItem({
+				TableName: conferenceTable,
+				Key: {
+					CallSid: {
+						S: eventData.CallSid,
+					},
+				},
+				ExpressionAttributeNames: {
+					'#cid': 'ConferenceSid',
+				},
+				ExpressionAttributeValues: {
+					':cid': {
+						S: eventData.ConferenceSid,
+					},
+				},
+				UpdateExpression: 'SET #cid = :cid',
+			}).promise();
+			promise = require('twilio')(twilioConf.accountSid, twilioConf.authToken).calls(eventData.CallSid)
+				.userDefinedMessageSubscriptions
+				.create({
+					method: 'POST',
+					callback: `https://fire.klawil.net/api/twilio?action=callMessage&code=${encodeURIComponent(twilioConf.apiCode)}`,
+				});
+			break;
+		case 'participant-leave':
+			doUpdate = true;
+			await dynamodb.deleteItem({
+				TableName: conferenceTable,
+				Key: {
+					CallSid: {
+						S: eventData.CallSid,
+					},
+				},
+			}).promise();
+			break;
+	}
+	
+	if (doUpdate)
+		await dynamodb.query({
+			TableName: conferenceTable,
+			IndexName: 'Conference',
+			ExpressionAttributeNames: {
+				'#conf': 'ConferenceSid',
+			},
+			ExpressionAttributeValues: {
+				':conf': { S: eventData.ConferenceSid },
+			},
+			KeyConditionExpression: '#conf = :conf',
+		}).promise()
+			.then(result => result.Items)
+			.then(items => {
+				if (!items || items.length === 0) return;
+
+				const parsedItems = items.map(parseDynamoDbAttributeMap);
+
+				const sendParticipantsTo = parsedItems.filter(call => call.Type === 'Browser');
+				if (sendParticipantsTo.length === 0) return;
+
+				const twilio = require('twilio')(twilioConf.accountSid, twilioConf.authToken);
+				return Promise.all(sendParticipantsTo.map(call => {
+					return twilio.calls(call.CallSid)
+						.userDefinedMessages
+						.create({ content: JSON.stringify({
+							participants: parsedItems,
+							new: eventData.CallSid,
+							you: call.CallSid,
+						}) })
+						.catch(console.error);
+				}));
+			});
+
+	if (promise !== null) await promise;
+
+	return response;
+}
+
+async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+	if (
+		user === null ||
+		!user.isAdmin?.BOOL
+	) {
+		return unauthorizedResponse;
+	}
+
+	// Validate the call SID
+	if (typeof event.queryStringParameters?.callSid !== 'string') {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'Provide a `callSid`',
+			}),
+		};
+	}
+
+	const response: APIGatewayProxyResult = {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+		}),
+	};
+
+	// Get the API config
+	const twilioConfPromise = getTwilioSecret();
+
+	// Get the conference info
+	const conferenceCall = await dynamodb.query({
+		TableName: conferenceTable,
+		ExpressionAttributeNames: {
+			'#call': 'CallSid',
+		},
+		ExpressionAttributeValues: {
+			':call': { S: event.queryStringParameters.callSid },
+		},
+		KeyConditionExpression: '#call = :call',
+	}).promise();
+
+	if (!conferenceCall.Items || conferenceCall.Items.length !== 1) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'Invalid `callSid`',
+			}),
+		};
+	}
+	const twilioConf = await twilioConfPromise;
+	const conferenceItem = parseDynamoDbAttributeMap(conferenceCall.Items[0]);
+
+	const twilioClient = require('twilio')(twilioConf.accountSid, twilioConf.authToken);
+	await twilioClient.conferences(conferenceItem.ConferenceSid)
+		.participants(conferenceItem.CallSid)
+		.update({ hold: true });
+
+	await twilioClient.calls(event.queryStringParameters.callSid)
+		.update({ twiml: '<Response><Say>You have been removed from the call. Goodbye.</Say><Hangup></Hangup></Response>' });
+
+	return response;
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 
@@ -337,6 +635,12 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleText(event);
 			case 'textStatus':
 				return await handleTextStatus(event);
+			case 'voice':
+				return await handleVoice(event);
+			case 'conference':
+				return await handleConference(event);
+			case 'kickUser':
+				return await handleKickUser(event);
 		}
 
 		await incrementMetric('Error', {

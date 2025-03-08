@@ -7,7 +7,7 @@ const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
 const cloudWatch = new AWS.CloudWatch();
 
-const phoneTable = process.env.TABLE_PHONE as string;
+const phoneTable = process.env.TABLE_USER as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
 

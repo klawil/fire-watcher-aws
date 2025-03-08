@@ -17,6 +17,6 @@
     "aws-sdk": "^2.1049.0",
     "node-fetch": "^2.6.7",
     "node-html-parser": "^5.3.3",
-    "twilio": "^3.72.0"
+    "twilio": "^5.0.4"
   }
 }

@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 const twilio = require('twilio');
 
 const messagesTable = process.env.TABLE_MESSAGES as string;
-const phoneTable = process.env.TABLE_PHONE as string;
+const phoneTable = process.env.TABLE_USER as string;
 
 const secretManager = new aws.SecretsManager();
 const cloudWatch = new aws.CloudWatch();
@@ -129,6 +129,9 @@ interface TwilioConfig {
 	pageNumber: string;
 	alertNumber: string;
 	apiCode: string;
+	voiceOutgoingSid: string;
+	voiceApiSid: string;
+	voiceApiSecret: string;
 	[key: string]: string;
 }
 
