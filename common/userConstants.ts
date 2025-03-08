@@ -57,9 +57,10 @@ export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseTy
 	},
 	NSCAD: {
 		name: 'NSCAD',
-		type: 'page',
+		type: 'text',
 		defaultTalkgroups: [ 8198 ],
 		pagePhone: 'page',
+		textPhone: 'chatNSCAD',
 	}
 };
 

@@ -123,14 +123,8 @@ const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 		type: 'chat',
 		department: 'Crestone',
 	},
-	chatBaca: {
-		number: '',
-		account: 'Baca',
-		type: 'chat',
-		department: 'Baca',
-	},
 	chatNSCAD: {
-		number: '',
+		number: '***REMOVED***',
 		type: 'chat',
 		department: 'NSCAD',
 	},
