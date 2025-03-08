@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
-import { ApiFrontendListTextsResponse, TextObject } from '../../common/frontendApi';
+import { ApiFrontendDtrQueryString, ApiFrontendDtrResponse, ApiFrontendListTextsResponse, ApiFrontendStatsResponse, ApiFrontendTalkgroupsResponse, AudioFileObject, TalkgroupObject, TextObject } from '../../common/frontendApi';
 
 const metricSource = 'Frontend';
 
@@ -1292,13 +1292,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		return unauthorizedResponse;
 	}
 
-	const response: GenericApiResponse & {
-		startTime?: number;
-		endTime?: number;
-		period?: number;
-		metrics?: string[];
-		request?: any;
-	} = {
+	const response: ApiFrontendStatsResponse = {
 		success: true,
 		errors: [],
 	};
@@ -1535,66 +1529,73 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	response.metrics = metricsToInclude;
 	response.request = metricRequest;
 
-	response.data = await cloudWatch.getMetricData(metricRequest).promise()
-		.then(response => {
-			if (typeof response.MetricDataResults === 'undefined')
-				return [];
-
-			const metrics: {
-				names: {
-					[key: string]: string;
-				},
-				data: {
-					ts: string;
-					values: {
-						[key: string]: number;
+	try {
+		response.data = await cloudWatch.getMetricData(metricRequest).promise()
+			.then(response => {
+				if (typeof response.MetricDataResults === 'undefined')
+					return {
+						names: {},
+						data: [],
 					};
-				}[];
-			} = {
-				names: {},
-				data: []
-			};
 
-			metrics.names = response.MetricDataResults
-				.reduce((agg: { [key: string]: string }, item) => {
-					agg[item.Id || 'ERR'] = item.Label || '';
+				const metrics: {
+					names: {
+						[key: string]: string;
+					},
+					data: {
+						ts: string;
+						values: {
+							[key: string]: number;
+						};
+					}[];
+				} = {
+					names: {},
+					data: []
+				};
 
-					return agg;
-				}, {});
+				metrics.names = response.MetricDataResults
+					.reduce((agg: { [key: string]: string }, item) => {
+						agg[item.Id || 'ERR'] = item.Label || '';
 
-			metrics.data = response.MetricDataResults
-				.reduce((
-					agg: { ts: string; values: { [key: string]: number; } }[],
-					item
-				) => {
-					item.Timestamps?.forEach((ts, index) => {
-						let isFound = false;
-						const tsString = ts.toISOString();
-						const id = item.Id || '';
-						const val = typeof item.Values !== 'undefined' ? item.Values[index] || 0 : 0;
-						for (let i = 0; i < agg.length; i++) {
-							if (agg[i].ts === tsString) {
-								isFound = true;
-								agg[i].values[id] = val;
-								break;
-							}
-						}
-						if (!isFound) {
-							agg.push({
-								ts: tsString,
-								values: {
-									[id]: val
+						return agg;
+					}, {});
+
+				metrics.data = response.MetricDataResults
+					.reduce((
+						agg: { ts: string; values: { [key: string]: number; } }[],
+						item
+					) => {
+						item.Timestamps?.forEach((ts, index) => {
+							let isFound = false;
+							const tsString = ts.toISOString();
+							const id = item.Id || '';
+							const val = typeof item.Values !== 'undefined' ? item.Values[index] || 0 : 0;
+							for (let i = 0; i < agg.length; i++) {
+								if (agg[i].ts === tsString) {
+									isFound = true;
+									agg[i].values[id] = val;
+									break;
 								}
-							})
-						}
-					});
+							}
+							if (!isFound) {
+								agg.push({
+									ts: tsString,
+									values: {
+										[id]: val
+									}
+								})
+							}
+						});
 
-					return agg;
-				}, []);
+						return agg;
+					}, []);
 
-			return metrics;
-		})
-		.catch(e => [ 'Error', e ]);
+				return metrics;
+			});
+		} catch (e) {
+			response.success = false;
+			response.errors.push((<Error>e).message);
+		}
 
 	return {
 		statusCode: 200,

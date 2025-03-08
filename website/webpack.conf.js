@@ -9,6 +9,7 @@ const config = {
 		texts: './website/ts/texts.ts',
 		weather: './website/ts/weather.ts',
 		users: './website/ts/users.ts',
+		status: './website/ts/status.ts',
 	},
   output: {
     path: path.resolve(__dirname, 'js'),

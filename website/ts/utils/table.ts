@@ -3,6 +3,7 @@ export interface ColumnConfig {
 	filter?: boolean;
 	create?: (td: HTMLTableCellElement) => any,
 	classList?: string[];
+	id?: string;
 }
 
 export interface RowConfig {
@@ -21,6 +22,9 @@ export function createTableRow(tbody: HTMLElement | null, rowConfig: RowConfig) 
 	rowConfig.columns.forEach(column => {
 		const td = document.createElement('td');
 		tr.appendChild(td);
+
+		if (typeof column.id !== 'undefined')
+			td.id = column.id;
 		
 		td.classList.add('align-middle');
 		if (column.classList)

@@ -45,6 +45,27 @@ export interface TextObject {
 	mediaUrls: string;
 	fromNumber: string;
 }
+interface SeenByRecorder {
+	[key: string]: boolean;
+}
+export type SeenByRecorderKeys = 'SupportData' | 'SupportReg' | 'SupportVoice' | 'SiteFailed'
+	| 'ValidInfo' | 'CompositeCtrl' | 'NoServReq' | 'BackupCtrl' | 'SupportAuth' | 'ActiveConn'
+	| 'ConvChannel';
+type BaseSiteObject = {
+	[key in SeenByRecorderKeys]?: SeenByRecorder;
+}
+export interface SiteObject extends BaseSiteObject {
+	SiteId: string;
+	SiteName: string;
+	SiteCounty?: string;
+	SiteRng: number;
+	SiteLon?: number;
+	SiteLat?: number;
+	IsActive: 'y' | 'n';
+	UpdateTime?: {
+		[key: string]: number;
+	};
+}
 
 export interface ApiFrontendDtrQueryString {
 	tg?: string;
@@ -56,8 +77,6 @@ export interface ApiFrontendDtrQueryString {
 }
 export interface ApiFrontendListTextsBody { }
 export interface ApiFrontendPageViewBody { }
-export interface ApiFrontendStatsBody { }
-export interface ApiFrontendSitesBody { }
 
 export interface ApiFrontendDtrResponse extends ApiResponseBase {
 	count: number;
@@ -78,5 +97,25 @@ export interface ApiFrontendListTextsResponse extends ApiResponseBase {
 	data?: TextObject[];
 }
 export interface ApiFrontendPageViewResponse { }
-export interface ApiFrontendStatsResponse { }
-export interface ApiFrontendSitesResponse { }
+export interface ApiFrontendStatsResponse extends ApiResponseBase {
+	errors: string[];
+	startTime?: number;
+	endTime?: number;
+	period?: number;
+	metrics?: string[];
+	data?: {
+		names: {
+			[key: string]: string;
+		},
+		data: {
+			ts: string;
+			values: {
+				[key: string]: number;
+			};
+		}[];
+	};
+	request?: any;
+}
+export interface ApiFrontendSitesResponse extends ApiResponseBase {
+	data: SiteObject[];
+}
