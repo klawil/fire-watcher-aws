@@ -92,7 +92,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				const talkgroupBody: AWS.DynamoDB.UpdateItemInput = {
 					TableName: talkgroupTable,
 					ExpressionAttributeNames: {
-						'#count': 'Count'
+						'#count': 'Count',
+						'#iu': 'InUse'
 					},
 					ExpressionAttributeValues: {
 						':initial': {
@@ -100,6 +101,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						},
 						':num': {
 							N: '1'
+						},
+						':iu': {
+							S: 'Y'
 						}
 					},
 					Key: {
@@ -107,7 +111,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							N: headInfo.Metadata?.talkgroup_num
 						}
 					},
-					UpdateExpression: 'SET #count = if_not_exists(#count, :initial) + :num'
+					UpdateExpression: 'SET #count = if_not_exists(#count, :initial) + :num, #iu = :iu'
 				};
 				try {
 					await dynamodb.updateItem(talkgroupBody).promise();

@@ -131,13 +131,13 @@ export class FireWatcherAwsStack extends Stack {
     });
 
     talkgroupTable.addGlobalSecondaryIndex({
-      indexName: 'CountIndex',
+      indexName: 'InUseIndex',
       partitionKey: {
-        name: 'Count',
-        type: dynamodb.AttributeType.NUMBER
+        name: 'InUse',
+        type: dynamodb.AttributeType.STRING
       },
       sortKey: {
-        name: 'ID',
+        name: 'Count',
         type: dynamodb.AttributeType.NUMBER
       }
     });
