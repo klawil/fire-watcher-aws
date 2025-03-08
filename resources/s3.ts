@@ -28,7 +28,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			const metric = incrementMetric('Call', {
 				source: metricSource,
 				action: `create${Key.indexOf('/dtr') !== -1 ? 'DTR' : 'VHF'}`
-			});
+			}, false);
 			const headInfo = await s3.headObject({
 				Bucket,
 				Key
@@ -134,7 +134,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						source: metricSource,
 						type: 'dtr',
 						event: 'duplicate call'
-					});
+					}, false);
 
 					const itemToDelete = existingItems.Items
 						.sort((a, b) => {
@@ -269,8 +269,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					await Promise.all(promises);
 				} catch (e) {
 					await incrementMetric('Error', {
-						source: metricSource,
-						type: 'tg and devices'
+						source: metricSource
 					});
 					console.error(`ERROR TG AND DEVICES - `, e);
 				}
@@ -312,8 +311,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		}
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'general'
+			source: metricSource
 		});
 		console.error(e);
 	}

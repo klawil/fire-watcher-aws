@@ -125,8 +125,6 @@ export async function sendMessage(
 
 interface ErrorMetric {
 	source: string;
-	type: string;
-	reason?: string;
 }
 
 interface CallMetric {
@@ -142,51 +140,65 @@ interface EventMetric {
 
 export async function incrementMetric(
 	name: 'Error',
-	metricData: ErrorMetric
+	metricData: ErrorMetric,
+	sendLessSpecific?: boolean,
+	sendMoreSpecific?: boolean
 ): Promise<any>
 export async function incrementMetric(
 	name: 'Call',
-	metricData: CallMetric
+	metricData: CallMetric,
+	sendLessSpecific?: boolean,
+	sendMoreSpecific?: boolean
 ): Promise<any>
 export async function incrementMetric(
 	name: 'Event',
-	metricData: EventMetric
+	metricData: EventMetric,
+	sendLessSpecific?: boolean,
+	sendMoreSpecific?: boolean
 ): Promise<any>
 export async function incrementMetric(
 	name: string,
-	metricData: ErrorMetric | CallMetric | EventMetric
+	metricData: ErrorMetric | CallMetric | EventMetric,
+	sendLessSpecific: boolean = true,
+	sendMoreSpecific: boolean = true
 ): Promise<any> {
+	console.log(`METRIC - ${metricData.source} - name - ${JSON.stringify(metricData)}`);
 	const putConfig: aws.CloudWatch.PutMetricDataInput = {
 		Namespace: `CVFD API`,
-		MetricData: [
-			{
-				MetricName: name,
-				Dimensions: (Object.keys(metricData) as Array<keyof typeof metricData>)
-					.reduce((agg: aws.CloudWatch.Dimensions, key) => [
-						...agg,
-						{
-							Name: key,
-							Value: metricData[key]
-						}
-					], []),
-				Timestamp: new Date(),
-				Unit: 'Count',
-				Value: 1
-			},
-			{
-				MetricName: name,
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: metricData.source
-					}
-				],
-				Timestamp: new Date(),
-				Unit: 'Count',
-				Value: 1
-			}
-		]
+		MetricData: []
 	};
+
+	if (sendLessSpecific) {
+		putConfig.MetricData.push({
+			MetricName: name,
+			Dimensions: [
+				{
+					Name: 'source',
+					Value: metricData.source
+				}
+			],
+			Timestamp: new Date(),
+			Unit: 'Count',
+			Value: 1
+		});
+	}
+
+	if (sendMoreSpecific && name !== 'Error') {
+		putConfig.MetricData.push({
+			MetricName: name,
+			Dimensions: (Object.keys(metricData) as Array<keyof typeof metricData>)
+				.reduce((agg: aws.CloudWatch.Dimensions, key) => [
+					...agg,
+					{
+						Name: key,
+						Value: metricData[key]
+					}
+				], []),
+			Timestamp: new Date(),
+			Unit: 'Count',
+			Value: 1
+		});
+	}
 
 	await cloudWatch.putMetricData(putConfig).promise();
 }

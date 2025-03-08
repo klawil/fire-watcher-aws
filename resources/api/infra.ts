@@ -67,9 +67,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		}).promise();
 	} else {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handlePage',
-			reason: 'Invalid Code or Key'
+			source: metricSource
 		});
 	}
 
@@ -111,9 +109,7 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 
 	if (!response.success) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handleHeartbeat',
-			reason: 'Invalid Body'
+			source: metricSource
 		});
 		return {
 			statusCode: 400,
@@ -211,9 +207,7 @@ async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGa
 	if (response.errors.length > 0) {
 		response.success = false;
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handleDtrExistsSingle',
-			reason: 'Invalid Request'
+			source: metricSource
 		});
 		return {
 			statusCode: 400,
@@ -412,7 +406,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			await incrementMetric('Call', {
 				source: metricSource,
 				action
-			});
+			}, true, false);
 		}
 		switch (action) {
 			case 'page':
@@ -434,8 +428,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: '404'
+			source: metricSource
 		});
 		return {
 			statusCode: 404,
@@ -447,8 +440,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		};
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'general'
+			source: metricSource
 		});
 		console.error(e);
 		return {

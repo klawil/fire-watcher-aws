@@ -522,7 +522,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		await incrementMetric('Call', {
 			source: metricSource,
 			action
-		});
+		}, true, false);
 		switch (action) {
 			case 'vhf':
 				return await getVhfList(event);
@@ -535,8 +535,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: '404'
+			source: metricSource
 		});
 		return {
 			statusCode: 404,
@@ -548,8 +547,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'general'
+			source: metricSource
 		});
 		console.error(e);
 		return {

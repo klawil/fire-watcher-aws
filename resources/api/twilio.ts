@@ -89,9 +89,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handleText',
-			reason: 'Invalid Code'
+			source: metricSource
 		});
 		return response;
 	}
@@ -113,9 +111,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}).promise();
 	if (!sender.Item || !sender.Item.isActive.BOOL) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handleText',
-			reason: `${sender.Item ? 'Inactive' : 'Invalid'} Sender`
+			source: metricSource
 		});
 		response.body = `<Response><Message>You do not have access to this text group. Contact your station chief to request access.</Message></Response>`
 		return response;
@@ -177,15 +173,11 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	// Validate the call is from Twilio
 	if (code !== apiCode) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handleTextStatus',
-			reason: 'Invalid Code'
+			source: metricSource
 		});
 	} else if (messageId === null) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'handleTextStatus',
-			reason: 'Invalid Message'
+			source: metricSource
 		});
 	} else {
 		const eventData = event.body?.split('&')
@@ -236,7 +228,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		await incrementMetric('Call', {
 			source: metricSource,
 			action
-		});
+		}, true, false);
 		switch (action) {
 			case 'text':
 				return await handleText(event);
@@ -245,8 +237,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: '404'
+			source: metricSource
 		});
 		return {
 			statusCode: 404,
@@ -258,8 +249,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		};
 	} catch (e) {
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'general'
+			source: metricSource
 		});
 		console.error(e);
 		return {
