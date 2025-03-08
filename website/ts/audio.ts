@@ -68,27 +68,47 @@ const urlFilters: {
 };
 
 const fileTable = <HTMLTableElement>document.getElementById('files');
-const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => [
+const fileTableColumns = (file: AudioFileObject): ColumnConfig[] => {
+	const baseClassList = typeof file.Transcript !== 'undefined'
+		? [ 'no-bottom-border' ]
+		: [];
+	return [
+		{
+			html: file.Len.toString(),
+		},
+		{
+			html: talkgroups[file.Talkgroup]?.name || file.Talkgroup.toString(),
+			classList: [ 'text-start' ],
+		},
+		{
+			html: dateToStr(new Date(file.StartTime * 1000)),
+		},
+		{
+			html: file.Tower
+				? file.Tower === 'vhf'
+					? file.Tower.toUpperCase()
+					: file.Tower
+				: 'N/A',
+		},
+		{
+			html: !file.Tone && file.Emergency !== 1
+				? ''
+				: typeof file.Transcript === 'undefined'
+					? '<i class="bi bi-star"></i>'
+					: '<i class="bi bi-star-fill"></i>',
+		},
+	].map(conf => ({ ...conf, classList: [ ...(conf.classList || []), ...baseClassList ] }));
+};
+const fileTableTranscriptColumns = (file: AudioFileObject): ColumnConfig[] => [
+	{ html: '', },
 	{
-		html: file.Len.toString(),
-	},
-	{
-		html: talkgroups[file.Talkgroup]?.name || file.Talkgroup.toString(),
 		classList: [ 'text-start' ],
+		create: (td: HTMLTableCellElement) => {
+			td.setAttribute('colspan', (fileTableColumns(file).length - 2).toString());
+			td.innerHTML = `<b>Approximate Transcript:</b> ${file.Transcript || 'N/A'}`;
+		},
 	},
-	{
-		html: dateToStr(new Date(file.StartTime * 1000)),
-	},
-	{
-		html: file.Tower
-			? file.Tower === 'vhf'
-				? file.Tower.toUpperCase()
-				: file.Tower
-			: 'N/A',
-	},
-	{
-		html: file.Emergency === 1 || file.Tone ? '<i class="bi bi-star-fill"></i>' : '',
-	},
+	{ html: '', },
 ];
 
 let tgPromise: Promise<void>;
@@ -100,8 +120,10 @@ function displayRows(newFiles: AudioFileObject[], direction: 'after' | 'before',
 
 	// Make the function for actually adding the rows to the table
 	let addRowToFiles = (row: HTMLTableRowElement) => fileTable.appendChild(row);
+	let reversed = false;
 	if (direction === 'after' && fileTable.childElementCount > 0) {
 		newFiles.reverse();
+		reversed = true;
 		addRowToFiles = row => fileTable.insertBefore(row, fileTable.firstChild);
 	}
 
@@ -111,8 +133,24 @@ function displayRows(newFiles: AudioFileObject[], direction: 'after' | 'before',
 			classList: [ 'tg-row' ],
 			columns: fileTableColumns(file),
 		});
+		let transcriptRow: null | HTMLTableRowElement = null;
+		if (typeof file.Transcript !== 'undefined') {
+			transcriptRow = createTableRow(null, {
+				classList: [ 'tg-row' ],
+				columns: fileTableTranscriptColumns(file),
+			});
+			transcriptRow.setAttribute('data-file-id', btoa(file.Key));
+			transcriptRow.addEventListener('click', playFile.bind(null, file.Key))
+		}
+		row.setAttribute('data-file-id', btoa(file.Key));
 		row.addEventListener('click', playFile.bind(null, file.Key))
+		if (reversed && transcriptRow !== null) {
+			addRowToFiles(transcriptRow);
+		}
 		addRowToFiles(row);
+		if (!reversed && transcriptRow !== null) {
+			addRowToFiles(transcriptRow);
+		}
 	});
 }
 

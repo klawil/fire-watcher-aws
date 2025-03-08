@@ -8,6 +8,7 @@ export interface AudioFileObject {
 	Tone: boolean;
 	Emergency?: 0 | 1;
 	Tower?: string;
+	Transcript?: string;
 }
 export interface TalkgroupObject {
 	ID: number;

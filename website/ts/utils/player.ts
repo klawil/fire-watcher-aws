@@ -111,7 +111,8 @@ function markRowAsPlaying(fileName: string) {
 	const rowId = btoa(fileName);
 	Array.from(document.querySelectorAll('tr'))
 		.forEach(row => {
-			if (row.id === rowId)
+			const rowFileId = row.getAttribute('data-file-id');
+			if (rowFileId === rowId)
 				row.classList.add('table-success');
 			else
 				row.classList.remove('table-success');
