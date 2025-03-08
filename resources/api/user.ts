@@ -27,6 +27,15 @@ interface CurrentUser {
 	lName: string | null;
 }
 
+interface UserObject {
+	phone: string;
+	fName: string;
+	lName: string;
+	callSign: string;
+	isActive: boolean;
+	isAdmin: boolean;
+}
+
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
 	validateBodyIsJson(event.body);
@@ -234,6 +243,26 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	// Get the users to return
 	let usersItems: aws.DynamoDB.ScanOutput | aws.DynamoDB.QueryOutput;
 	if (user.isDistrictAdmin?.BOOL) {
+		usersItems = await dynamodb.scan({
+			TableName: userTable,
+			ExpressionAttributeNames: {
+				'#fn': 'fName',
+				'#ln': 'lName',
+				'#d': 'department',
+				'#p': 'phone',
+				'#cs': 'callSign',
+				'#active': 'isActive',
+				'#admin': 'isAdmin',
+				'#dadmin': 'isDistrictAdmin'
+			},
+			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
+		}).promise();
+
+		if (usersItems.Items)
+			usersItems.Items = usersItems.Items.sort((a, b) => Number(a.callSign?.N || 0) > Number(b.callSign?.N || 0)
+				? 1
+				: -1);
+	} else {
 		usersItems = await dynamodb.query({
 			TableName: userTable,
 			IndexName: 'StationIndex',
@@ -253,21 +282,6 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			KeyConditionExpression: '#d = :d',
 			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
 		}).promise();
-	} else {
-		usersItems = await dynamodb.scan({
-			TableName: userTable,
-			ExpressionAttributeNames: {
-				'#fn': 'fName',
-				'#ln': 'lName',
-				'#d': 'department',
-				'#p': 'phone',
-				'#cs': 'callSign',
-				'#active': 'isActive',
-				'#admin': 'isAdmin',
-				'#dadmin': 'isDistrictAdmin'
-			},
-			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
-		}).promise();
 	}
 
 	// Parse the users into a readable format
@@ -280,6 +294,119 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			success: true,
 			users
 		})
+	};
+}
+
+async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+	const unathorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+	if (
+		user === null ||
+		!user.isAdmin?.BOOL
+	) {
+		return unathorizedResponse;
+	}
+
+	// Validate and parse the body
+	validateBodyIsJson(event.body);
+	const body = JSON.parse(event.body as string) as UserObject;
+	const response: ApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the request
+	if (
+		typeof body.phone !== 'string' ||
+		body.phone.replace(/[^0-9]/g, '').length !== 10
+	) {
+		response.errors.push('phone');
+	}
+	if (
+		typeof body.fName !== 'string' ||
+		body.fName.length === 0
+	) {
+		response.errors.push('fName');
+	}
+	if (
+		typeof body.lName !== 'string' ||
+		body.lName.length === 0
+	) {
+		response.errors.push('lName');
+	}
+	if (
+		typeof body.callSign !== 'string' ||
+		body.callSign.length !== 3 ||
+		body.callSign.replace(/[^0-9]/g, '').length !== 3
+	) {
+		response.errors.push('callSign');
+	}
+	if (typeof body.isActive !== 'boolean') {
+		response.errors.push('isActive');
+	}
+	if (typeof body.isAdmin !== 'boolean') {
+		response.errors.push('isAdmin');
+	}
+
+	// Check to see if the phone number already exists
+	const newPhone = await dynamodb.getItem({
+		TableName: userTable,
+		Key: {
+			phone: { N: body.phone }
+		}
+	}).promise();
+	if (
+		(newPhone.Item && create) ||
+		(!newPhone.Item && !create)
+	) {
+		response.errors.push('phone');
+	}
+
+
+	if (response.errors.length > 0) {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+	
+	// Create the user
+	const result = await dynamodb.updateItem({
+		TableName: userTable,
+		Key: {
+			phone: { N: body.phone.replace(/[^0-9]/g, '') }
+		},
+		ExpressionAttributeNames: {
+			'#fn': 'fName',
+			'#ln': 'lName',
+			'#cs': 'callSign',
+			'#act': 'isActive',
+			'#adm': 'isAdmin',
+			'#dep': 'department'
+		},
+		ExpressionAttributeValues: {
+			':fn': { S: body.fName },
+			':ln': { S: body.lName },
+			':cs': { N: body.callSign },
+			':act': { BOOL: body.isActive },
+			':adm': { BOOL: body.isAdmin },
+			':dep': { S: user.department.S }
+		},
+		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep',
+		ReturnValues: 'UPDATED_NEW'
+	}).promise();
+	response.data = [ result ];
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
 	};
 }
 
@@ -301,6 +428,10 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleLogout();
 			case 'list':
 				return await handleList(event);
+			case 'create':
+				return await createOrUpdateUser(event, true);
+			case 'update':
+				return await createOrUpdateUser(event, false);
 		}
 
 		await incrementMetric('Error', {

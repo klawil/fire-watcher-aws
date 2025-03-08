@@ -54,7 +54,7 @@ fetch(`${baseHost}/api/user?action=getUser`)
 
 			document.getElementById('loginLink').classList.add('d-none');
 			const username = document.getElementById('username');
-			username.innerHTML = window.user.user;
+			username.innerHTML = window.user.fName;
 			username.classList.remove('d-none');
 			document.getElementById('logoutLink').classList.remove('d-none');
 		}

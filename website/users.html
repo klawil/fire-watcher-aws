@@ -1,0 +1,23 @@
+---
+title: Manage Users
+layout: base
+requireAdmin: true
+---
+
+<table class="table table-striped">
+	<thead>
+		<tr class="text-center">
+			<th>Phone Number</th>
+			<th>First Name</th>
+			<th>Last Name</th>
+			<th>Callsign</th>
+			<th>Active</th>
+			<th>Admin</th>
+			<th></th>
+		</tr>
+	</thead>
+	<tbody id="tbody"></tbody>
+</table>
+
+{% assign randomNumber = "now" | date: "%N" %}
+<script async src="/js/users.js?v={{ randomNumber }}"></script>
