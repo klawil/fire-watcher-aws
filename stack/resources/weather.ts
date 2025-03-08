@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 import * as AWS from 'aws-sdk';
 import { FireTypes, WeatherResultJson } from '../../common/weather';
-import { getLogger } from '../../common/logger';
+import { getLogger } from './utils/logger';
 
 const logger = getLogger('weather');
 

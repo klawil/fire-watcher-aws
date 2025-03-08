@@ -3,7 +3,7 @@ import { showAlert } from './utils/alerts';
 import { doneLoading } from './utils/loading';
 import { createTableRow } from './utils/table';
 import { authInit } from './utils/auth';
-import { getLogger } from '../../common/logger';
+import { getLogger } from '../../stack/resources/utils/logger';
 
 const logger = getLogger('texts');
 

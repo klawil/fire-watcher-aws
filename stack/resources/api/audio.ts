@@ -3,7 +3,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
 import { mergeDynamoQueries } from '../utils/dynamo';
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject } from '../../../common/audioApi';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../utils/logger';
 
 const logger = getLogger('audio');
 

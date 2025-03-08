@@ -1,7 +1,7 @@
 import { FireTypes, WeatherResultJson } from '../../common/weather';
 import { authInit } from './utils/auth';
 import { doneLoading } from './utils/loading';
-import { getLogger } from '../../common/logger';
+import { getLogger } from '../../stack/resources/utils/logger';
 
 const logger = getLogger('weather');
 

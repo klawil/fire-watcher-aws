@@ -1,5 +1,5 @@
 import { Alert } from 'bootstrap';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../../../stack/resources/utils/logger';
 
 const alertContainer = <HTMLDivElement>document.getElementById('alert-container');
 const logger = getLogger('alerts');

@@ -1,7 +1,7 @@
 import { ApiUserAuthResponse, ApiUserLoginResult } from "../../common/userApi";
 import { showAlert } from "./utils/alerts";
 import { useFidoKey, user } from "./utils/auth";
-import { getLogger } from "../../common/logger";
+import { getLogger } from "../../stack/resources/utils/logger";
 
 const logger = getLogger('login');
 

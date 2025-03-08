@@ -5,7 +5,7 @@ import { formatPhone } from './utils/userConstants';
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
 import { createTableRow } from './utils/table';
-import { getLogger } from '../../common/logger';
+import { getLogger } from '../../stack/resources/utils/logger';
 
 const logger = getLogger('profile');
 

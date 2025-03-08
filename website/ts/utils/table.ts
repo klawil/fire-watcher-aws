@@ -1,4 +1,4 @@
-import { getLogger } from "../../../common/logger";
+import { getLogger } from "../../../stack/resources/utils/logger";
 
 const logger = getLogger('table');
 

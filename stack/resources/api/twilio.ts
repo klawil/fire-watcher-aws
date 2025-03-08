@@ -3,7 +3,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
 import { UserDepartment } from '../../../common/userConstants';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../utils/logger';
 
 const logger = getLogger('twilio');
 

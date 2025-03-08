@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { UserDepartment, defaultDepartment, departmentConfig } from '../../../common/userConstants';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from './logger';
 
 const logger = getLogger('u-gen');
 const twilio = require('twilio');

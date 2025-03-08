@@ -2,7 +2,7 @@ import { ApiFrontendSitesResponse, SeenByRecorderKeys, SiteObject } from "../../
 import { showAlert } from "./alerts";
 import { createTableRow } from "./table";
 import * as leaflet from 'leaflet';
-import { getLogger } from "../../../common/logger";
+import { getLogger } from "../../../stack/resources/utils/logger";
 
 const logger = getLogger('sites');
 

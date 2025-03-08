@@ -3,7 +3,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
 import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, TextObject } from '../../../common/frontendApi';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../utils/logger';
 
 const logger = getLogger('frontend');
 

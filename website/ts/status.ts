@@ -3,7 +3,7 @@ import { authInit } from './utils/auth';
 import { buildMap, updateSitesTable } from './utils/sites';
 import { Chart, ChartConfiguration, ChartDataset, Point, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
-import { getLogger } from '../../common/logger';
+import { getLogger } from '../../stack/resources/utils/logger';
 
 const logger = getLogger('status');
 

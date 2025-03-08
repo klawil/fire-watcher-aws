@@ -5,7 +5,7 @@ import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap } from '../
 import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../../common/conferenceApi';
 import { unauthorizedApiResponse } from '../types/api';
 import { defaultDepartment, departmentConfig } from '../../../common/userConstants';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../utils/logger';
 
 const logger = getLogger('conf');
 

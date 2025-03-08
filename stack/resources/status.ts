@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { parseDynamoDbAttributeMap, sendAlertMessage } from './utils/general';
-import { getLogger } from '../../common/logger';
+import { getLogger } from './utils/logger';
 
 const logger = getLogger('status');
 const dynamodb = new AWS.DynamoDB();

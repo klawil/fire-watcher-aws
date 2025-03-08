@@ -1,5 +1,5 @@
 import { changeUrlParams } from "./url";
-import { getLogger } from "../../../common/logger";
+import { getLogger } from "../../../stack/resources/utils/logger";
 
 const logger = getLogger('player');
 

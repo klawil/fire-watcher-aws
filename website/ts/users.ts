@@ -6,7 +6,7 @@ import { changeButtonColor } from "./utils/button";
 import { doneLoading } from "./utils/loading";
 import { RowConfig, createTableRow } from "./utils/table";
 import { formatPhone } from "./utils/userConstants";
-import { getLogger } from "../../common/logger";
+import { getLogger } from "../../stack/resources/utils/logger";
 
 const logger = getLogger('users');
 

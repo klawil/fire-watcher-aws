@@ -8,7 +8,7 @@ import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse,
 import { unauthorizedApiResponse } from '../types/api';
 import { pagingTalkgroupOrder, validDepartments } from '../../../common/userConstants';
 import { ActivateBody, LoginBody } from '../types/queue';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../utils/logger';
 
 const logger = getLogger('user');
 

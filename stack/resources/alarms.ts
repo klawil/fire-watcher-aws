@@ -1,7 +1,7 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
 import { sendAlertMessage, AlertType } from './utils/general';
-import { getLogger } from '../../common/logger';
+import { getLogger } from './utils/logger';
 
 const logger = getLogger('alarms');
 

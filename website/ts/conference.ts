@@ -6,7 +6,7 @@ import * as twilio from '@twilio/voice-sdk';
 import { ApiUserListResponse, UserObject } from '../../common/userApi';
 import { formatPhone } from './utils/userConstants';
 import { createTableRow } from './utils/table';
-import { getLogger } from '../../common/logger';
+import { getLogger } from '../../stack/resources/utils/logger';
 
 const logger = getLogger('conf');
 

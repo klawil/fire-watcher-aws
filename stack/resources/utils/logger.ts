@@ -10,6 +10,7 @@ export enum LogLevel {
 export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'error';
 
 let globalLogLevel: LogLevel = LogLevel.Error;
+declare var window: any;
 if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
   if (window.location.search.indexOf('debug=') !== -1) {
     const level = parseInt(window.location.search.split('debug=')[1].split('&')[0], 10);
@@ -20,6 +21,7 @@ if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
     globalLogLevel = LogLevel.Debug;
   }
 }
+declare var process: any;
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
   globalLogLevel = LogLevel.Debug;
   if (typeof process.env.DEBUG !== 'undefined') {
@@ -84,6 +86,13 @@ class Logger {
     // Build the logger name portion
     const loggerName = `[ %c${this.name.padEnd(maxLoggerNameLen, ' ')}%c ]`;
 
+    // Build the first portion of the log
+    let logPrefix = ''; 
+    if (typeof process === 'undefined') {
+      logPrefix = `${level < LogLevel.Error ? '  ' : ''}[ %c${levelStrings[level].padEnd(maxLevelStringLen, ' ')}%c ]`;
+    }
+    logPrefix += loggerName;
+
     // Build the argument array
     let consoleArgs: [
       string,
@@ -91,7 +100,7 @@ class Logger {
       string,
       ...any
     ] = [
-      `${level < LogLevel.Error ? '  ' : ''}[ %c${levelStrings[level].padEnd(maxLevelStringLen, ' ')}%c ]${loggerName}`,
+      logPrefix,
       levelStyles[level],
       resetStyleString,
       nameStyleString,

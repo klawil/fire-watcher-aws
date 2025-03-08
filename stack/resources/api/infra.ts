@@ -3,7 +3,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { PageBody } from '../types/queue';
 import { PagingTalkgroup } from '../../../common/userConstants';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../utils/logger';
 
 const logger = getLogger('infra');
 

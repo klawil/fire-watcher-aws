@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from './logger';
 
 const logger = getLogger('u-auth');
 

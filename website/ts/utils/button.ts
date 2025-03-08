@@ -1,4 +1,4 @@
-import { getLogger } from "../../../common/logger";
+import { getLogger } from "../../../stack/resources/utils/logger";
 
 export type ButtonColors = 'primary' | 'secondary' | 'success'
 | 'danger' | 'warning' | 'info' | 'light' | 'dark' | 'link';

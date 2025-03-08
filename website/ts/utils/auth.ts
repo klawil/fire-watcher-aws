@@ -1,6 +1,6 @@
 import { ApiUserFidoAuthBody, ApiUserFidoAuthResponse, ApiUserFidoGetAuthResponse, ApiUserGetUserResponse } from '../../../common/userApi';
 import { showAlert } from './alerts';
-import { getLogger } from '../../../common/logger';
+import { getLogger } from '../../../stack/resources/utils/logger';
 
 const logger = getLogger('auth');
 

@@ -1,7 +1,7 @@
 import * as aws from 'aws-sdk';
 import { CloudFrontRequestEvent, CloudFrontRequestResult, CloudFrontResultResponse } from 'aws-lambda';
 import { allUserCookies, authTokenCookie, authUserCookie } from './utils/auth';
-import { getLogger } from '../../common/logger';
+import { getLogger } from './utils/logger';
 
 const logger = getLogger('auth-mid');
 

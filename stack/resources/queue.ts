@@ -5,7 +5,7 @@ import { getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessag
 import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
 import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
-import { getLogger } from '../../common/logger';
+import { getLogger } from './utils/logger';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
