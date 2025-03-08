@@ -84,6 +84,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    const deviceTable = new dynamodb.Table(this, 'cvfd-devices', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'ID',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
@@ -333,6 +340,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_DTR: dtrTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
+        TABLE_DEVICE: deviceTable.tableName,
         SQS_QUEUE: queue.queueUrl
       }
     });
@@ -341,6 +349,7 @@ export class FireWatcherAwsStack extends Stack {
     bucket.grantRead(s3Handler);
     dtrTable.grantReadWriteData(s3Handler);
     talkgroupTable.grantReadWriteData(s3Handler);
+    deviceTable.grantReadWriteData(s3Handler);
     queue.grantSendMessages(s3Handler);
 
     // Create a handler for the SQS queue
