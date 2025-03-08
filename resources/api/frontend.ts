@@ -560,10 +560,9 @@ async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 }
 
 const statsMap: {
-	[key: string]: aws.CloudWatch.MetricDataQuery;
+	[key: string]: Omit<aws.CloudWatch.MetricDataQuery, "Id">,
 } = {
 	's3-dtr': {
-		Id: 's3_dtr',
 		Label: 'DTR Files Uploaded',
 		MetricStat: {
 			Metric: {
@@ -586,7 +585,6 @@ const statsMap: {
 		}
 	},
 	's3-dtr-dup': {
-		Id: 's3_dtr_dup',
 		Label: 'Duplicate DTR Files Uploaded',
 		MetricStat: {
 			Metric: {
@@ -613,12 +611,10 @@ const statsMap: {
 		}
 	},
 	's3-dtr-uniq': {
-		Id: 's3_dtr_uniq',
 		Label: 'Unique DTR Files Uploaded',
 		Expression: 's3_dtr-s3_dtr_dup'
 	},
 	's3-vhf': {
-		Id: 's3_vhf',
 		Label: 'VHF Files Uploaded',
 		MetricStat: {
 			Metric: {
@@ -641,12 +637,10 @@ const statsMap: {
 		}
 	},
 	's3-created': {
-		Id: 's3_created',
 		Label: 'S3 Files Created',
 		Expression: 's3_dtr+s3_vhf-s3_dtr_dup'
 	},
 	'err-frontend': {
-		Id: 'err_frontend',
 		Label: 'Frontend API Errors',
 		MetricStat: {
 			Metric: {
@@ -665,7 +659,6 @@ const statsMap: {
 		}
 	},
 	'err-infra': {
-		Id: 'err_infra',
 		Label: 'Infrastructure API Errors',
 		MetricStat: {
 			Metric: {
@@ -684,7 +677,6 @@ const statsMap: {
 		}
 	},
 	'err-user': {
-		Id: 'err_user',
 		Label: 'User API Errors',
 		MetricStat: {
 			Metric: {
@@ -703,7 +695,6 @@ const statsMap: {
 		}
 	},
 	'err-twilio': {
-		Id: 'err_twilio',
 		Label: 'Twilio API Errors',
 		MetricStat: {
 			Metric: {
@@ -722,7 +713,6 @@ const statsMap: {
 		}
 	},
 	'err-events': {
-		Id: 'err_events',
 		Label: 'Event API Errors',
 		MetricStat: {
 			Metric: {
@@ -741,7 +731,6 @@ const statsMap: {
 		}
 	},
 	'err-conference': {
-		Id: 'err_conference',
 		Label: 'Conference API Errors',
 		MetricStat: {
 			Metric: {
@@ -760,7 +749,6 @@ const statsMap: {
 		}
 	},
 	'err-s3': {
-		Id: 'err_s3',
 		Label: 'S3 Event Errors',
 		MetricStat: {
 			Metric: {
@@ -779,7 +767,6 @@ const statsMap: {
 		}
 	},
 	'err-queue': {
-		Id: 'err_queue',
 		Label: 'Queue Event Errors',
 		MetricStat: {
 			Metric: {
@@ -798,7 +785,6 @@ const statsMap: {
 		}
 	},
 	'tower-sag-min': {
-		Id: 'tower_sag_min',
 		Label: 'Saguache Tower Decode Rate - Min',
 		MetricStat: {
 			Metric: {
@@ -817,7 +803,6 @@ const statsMap: {
 		}
 	},
 	'tower-sag-max': {
-		Id: 'tower_sag_max',
 		Label: 'Saguache Tower Decode Rate - Max',
 		MetricStat: {
 			Metric: {
@@ -836,7 +821,6 @@ const statsMap: {
 		}
 	},
 	'tower-sag-upload': {
-		Id: 'tower_sag_uploads',
 		Label: 'Saguache Tower Uploads',
 		MetricStat: {
 			Metric: {
@@ -853,7 +837,6 @@ const statsMap: {
 		}
 	},
 	'tower-ala-min': {
-		Id: 'tower_ala_min',
 		Label: 'Alamosa Tower Decode Rate - Min',
 		MetricStat: {
 			Metric: {
@@ -872,7 +855,6 @@ const statsMap: {
 		}
 	},
 	'tower-ala-max': {
-		Id: 'tower_ala_max',
 		Label: 'Alamosa Tower Decode Rate - Max',
 		MetricStat: {
 			Metric: {
@@ -891,7 +873,6 @@ const statsMap: {
 		}
 	},
 	'tower-ala-upload': {
-		Id: 'tower_ala_uploads',
 		Label: 'Alamosa Tower Uploads',
 		MetricStat: {
 			Metric: {
@@ -908,7 +889,6 @@ const statsMap: {
 		}
 	},
 	'tower-pt-min': {
-		Id: 'tower_pt_min',
 		Label: 'Pool Table Tower Decode Rate - Min',
 		MetricStat: {
 			Metric: {
@@ -927,7 +907,6 @@ const statsMap: {
 		}
 	},
 	'tower-pt-max': {
-		Id: 'tower_pt_max',
 		Label: 'Pool Table Tower Decode Rate - Max',
 		MetricStat: {
 			Metric: {
@@ -946,7 +925,6 @@ const statsMap: {
 		}
 	},
 	'tower-pt-upload': {
-		Id: 'tower_pt_uploads',
 		Label: 'Pool Table Uploads',
 		MetricStat: {
 			Metric: {
@@ -963,7 +941,6 @@ const statsMap: {
 		}
 	},
 	'tower-sa-min': {
-		Id: 'tower_sa_min',
 		Label: 'San Antonio Peak Decode Rate - Min',
 		MetricStat: {
 			Metric: {
@@ -982,7 +959,6 @@ const statsMap: {
 		}
 	},
 	'tower-sa-max': {
-		Id: 'tower_sa_max',
 		Label: 'San Antonio Peak Decode Rate - Max',
 		MetricStat: {
 			Metric: {
@@ -1001,7 +977,6 @@ const statsMap: {
 		}
 	},
 	'tower-sa-upload': {
-		Id: 'tower_sa_uploads',
 		Label: 'San Antonio Peak Uploads',
 		MetricStat: {
 			Metric: {
@@ -1018,7 +993,6 @@ const statsMap: {
 		}
 	},
 	'tower-mv-min': {
-		Id: 'tower_mv_min',
 		Label: 'Monte Vista Tower Decode Rate - Min',
 		MetricStat: {
 			Metric: {
@@ -1037,7 +1011,6 @@ const statsMap: {
 		}
 	},
 	'tower-mv-max': {
-		Id: 'tower_mv_max',
 		Label: 'Monte Vista Tower Decode Rate - Max',
 		MetricStat: {
 			Metric: {
@@ -1056,7 +1029,6 @@ const statsMap: {
 		}
 	},
 	'tower-mv-upload': {
-		Id: 'tower_mv_uploads',
 		Label: 'Monte Vista Tower Uploads',
 		MetricStat: {
 			Metric: {
@@ -1073,7 +1045,6 @@ const statsMap: {
 		}
 	},
 	'twilio-init': {
-		Id: 'twilio_init',
 		Label: 'Texts Initiated',
 		MetricStat: {
 			Metric: {
@@ -1086,7 +1057,6 @@ const statsMap: {
 		}
 	},
 	'twilio-sent': {
-		Id: 'twilio_sent',
 		Label: 'Texts Sent',
 		MetricStat: {
 			Metric: {
@@ -1099,7 +1069,6 @@ const statsMap: {
 		}
 	},
 	'twilio-delivered': {
-		Id: 'twilio_delivered',
 		Label: 'Texts Delivered',
 		MetricStat: {
 			Metric: {
@@ -1112,17 +1081,14 @@ const statsMap: {
 		}
 	},
 	'twilio-sent-percent': {
-		Id: 'twilio_sent_percent',
 		Label: '% Texts Sent',
 		Expression: 'FLOOR(100*(twilio-sent/twilio-init))'
 	},
 	'twilio-delivered-percent': {
-		Id: 'twilio_delivered_percent',
 		Label: '% Texts Delivered',
 		Expression: 'FLOOR(100*(twilio-delivered/twilio-init))'
 	},
 	'twilio-sent-time': {
-		Id: 'twilio_sent_time',
 		Label: 'Time to Send Texts',
 		MetricStat: {
 			Metric: {
@@ -1134,7 +1100,6 @@ const statsMap: {
 		}
 	},
 	'twilio-delivered-time': {
-		Id: 'twilio_delivered_time',
 		Label: 'Time to Deliver Texts',
 		MetricStat: {
 			Metric: {
@@ -1146,7 +1111,6 @@ const statsMap: {
 		}
 	},
 	'twilio-page-duration': {
-		Id: 'twilio_page_duration',
 		Label: 'Duration of Page',
 		MetricStat: {
 			Metric: {
@@ -1158,7 +1122,6 @@ const statsMap: {
 		}
 	},
 	'twilio-page-time': {
-		Id: 'twilio_page_time',
 		Label: 'Time to Send Page',
 		MetricStat: {
 			Metric: {
@@ -1170,7 +1133,6 @@ const statsMap: {
 		}
 	},
 	'twilio-delivered-sent-time': {
-		Id: 'twilio_delivered_sent_time',
 		Label: 'Time To Deliver Texts',
 		Expression: 'twilio_delivered_time-twilio_sent_time'
 	},
@@ -1201,7 +1163,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 	const baseId = lambdaFn.toLowerCase();
 	const {name, fn: fnName, errName } = lambdaFunctionNames[lambdaFn];
 	statsMap[`${baseId}-call`] = {
-		Id: `${baseId}_call`,
 		Label: `${name} Calls`,
 		MetricStat: {
 			Metric: {
@@ -1220,7 +1181,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 		},
 	};
 	statsMap[`${baseId}-err`] = {
-		Id: `${baseId}_err`,
 		Label: `${name} Errors`,
 		MetricStat: {
 			Metric: {
@@ -1240,12 +1200,10 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 	};
 	if (typeof errName === 'string')
 		statsMap[`${baseId}-err-all`] = {
-			Id: `${baseId}_err_all`,
 			Label: `${name} Errors`,
 			Expression: `${baseId}_err+err_${errName}`,
 		};
 	statsMap[`${baseId}-dur`] = {
-		Id: `${baseId}_dur`,
 		Label: `${name} Duration`,
 		MetricStat: {
 			Metric: {
@@ -1264,7 +1222,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 		},
 	};
 	statsMap[`${baseId}-dur-max`] = {
-		Id: `${baseId}_dur_max`,
 		Label: `${name} Max Duration`,
 		MetricStat: {
 			Metric: {
@@ -1520,6 +1477,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 			.map(key => {
 				const metricToPush = {
 					...statsMap[key],
+					Id: key.replace(/-/g, '_'),
 					ReturnData: true
 				};
 				if (metricToPush.MetricStat) {
@@ -1552,6 +1510,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 				metricsToInclude.push(key);
 				const metricToPush = {
 					...statsMap[key],
+					Id: key.replace(/-/g, '_'),
 					ReturnData: false
 				};
 				if (metricToPush.MetricStat) {
