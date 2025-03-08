@@ -6,6 +6,7 @@ nvm use 18
 cd stack
 npm run build
 cdk deploy --all
+node test.js
 cd ..
 
 cd website
