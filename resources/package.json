@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.89"
+    "@types/aws-lambda": "^8.10.138"
   },
   "dependencies": {
     "@types/jsdom": "^16.2.14",
