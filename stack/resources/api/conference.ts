@@ -283,7 +283,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 			</Dial>
 		</Response>`,
 		to: `+1${invited.phone}`,
-		from: departmentConfig[defaultDepartment].pagingPhone,
+		from: departmentConfig[defaultDepartment].pagePhone,
 	});
 
 	await dynamodb.updateItem({
@@ -335,7 +335,7 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 			'#r': 'Room',
 		},
 		ExpressionAttributeValues: {
-			':r': { S: user.department },
+			':r': { S: defaultDepartment },
 		},
 		FilterExpression: '#r = :r',
 	}).promise();
@@ -368,7 +368,7 @@ async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 			'#r': 'Room',
 		},
 		ExpressionAttributeValues: {
-			':r': { S: user.department },
+			':r': { S: defaultDepartment },
 		},
 		FilterExpression: '#r = :r',
 	}).promise();

@@ -38,16 +38,7 @@ export async function getRecipients(
 		ExpressionAttributeNames: {},
 		ExpressionAttributeValues: {},
 	};
-	if (pageTg === null) {
-		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.ExpressionAttributeNames['#po'] = 'pageOnly';
-		scanInput.ExpressionAttributeValues[':po'] = {
-			BOOL: false
-		};
-		scanInput.FilterExpression = '(#po = :po OR attribute_not_exists(#po))';
-	} else {
+	if (pageTg !== null) {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
 		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
 
@@ -62,7 +53,10 @@ export async function getRecipients(
 		scanInput.ExpressionAttributeNames['#dep'] = department;
 		scanInput.ExpressionAttributeNames['#ac'] = 'active';
 		scanInput.ExpressionAttributeValues[':ac'] = { BOOL: true };
-		scanInput.FilterExpression += ' AND #dep.#ac = :ac';
+		if ((scanInput.FilterExpression || '').length > 0) {
+			scanInput.FilterExpression += ' AND ';
+		}
+		scanInput.FilterExpression += '#dep.#ac = :ac';
 	}
 
 	if (isTest) {

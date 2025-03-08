@@ -129,8 +129,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}).promise();
 	if (
 		!sender.Item ||
-		!isUserActive(sender.Item) ||
-		sender.Item.pageOnly?.BOOL
+		!isUserActive(sender.Item)
 	) {
 		response.body = `<Response><Message>You do not have access to use the text group. Contact your station chief to request access.</Message></Response>`
 		return response;
@@ -404,7 +403,6 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	if (
 		!sender.Item ||
 		!isUserActive(sender.Item) ||
-		sender.Item.pageOnly?.BOOL ||
 		sender.Item.department?.S === 'Baca'
 	) {
 		return response;

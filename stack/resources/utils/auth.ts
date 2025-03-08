@@ -3,7 +3,6 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { getLogger } from './logger';
 import { parseDynamoDbAttributeMap } from './dynamodb';
 import { InternalUserObject } from '../../../common/userApi';
-import { validDepartments } from '../../../common/userConstants';
 import { authTokenCookie, authUserCookie, isUserActive, isUserAdmin } from '../types/auth';
 
 const logger = getLogger('u-auth');

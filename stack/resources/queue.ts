@@ -2,7 +2,7 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneNumbers } from './utils/general';
-import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig, validDepartments } from '../../common/userConstants';
+import { PagingTalkgroup, defaultDepartment, departmentConfig, pagingConfig, validDepartments } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
 import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
@@ -128,10 +128,10 @@ async function handleActivation(body: ActivateBody) {
 		.map(key => Number(key))
 		.map(key => pagingConfig[key as PagingTalkgroup]?.partyBeingPaged || `Talkgroup ${key}`)
 		.join(', ')
-	const config = departmentConfig[updateResult.Attributes?.department?.S as UserDepartment] || departmentConfig[defaultDepartment];
+	const config = departmentConfig[body.department] || departmentConfig[defaultDepartment];
 	if (typeof config === 'undefined')
 		return;
-	const groupType = config.type === 'page' || updateResult.Attributes?.pageOnly?.BOOL
+	const groupType = config.type === 'page'
 		? 'page'
 		: 'text';
 	const customWelcomeMessage = (
@@ -264,26 +264,21 @@ async function handleTwilio(body: TwilioBody) {
 	) {
 		throw new Error(`Invactive sender (global)`);
 	}
-	if (sender.Item.pageOnly?.BOOL) {
-		throw new Error(`Page only sender`);
-	}
 
 	// Get the number that was messaged
-	const depConf = departmentConfig[sender.Item?.department?.S as UserDepartment] || departmentConfig[defaultDepartment];
+	const depConf = departmentConfig[phoneNumberConfig.department] || departmentConfig[defaultDepartment];
 	if (typeof depConf === 'undefined')
 		throw new Error('Invalid department');
-	const messageTo = eventData.To;
 	const adminSender = !!sender.Item[phoneNumberConfig.department]?.M?.admin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await getTwilioSecret();
-	const pageNumber = depConf.pagePhone;
 	const isFromPageNumber = adminSender && phoneNumberConfig.type === 'page';
 
 	const recipients = await getRecipients(phoneNumberConfig.department, null, isTest)
 		.then((data) => data.filter((number) => {
 			if (isTest) return true;
 
-			return messageTo === pageNumber ||
+			return isFromPageNumber ||
 				number.phone.N !== sender.Item?.phone.N
 		}));
 

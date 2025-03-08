@@ -243,7 +243,6 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		response.phone = user.phone;
 		response.fName = user.fName;
 		response.lName = user.lName;
-		response.department = user.department;
 		response.talkgroups = user.talkgroups;
 		validDepartments.forEach(dep => {
 			if (typeof user[dep] === 'undefined') return;
@@ -374,9 +373,9 @@ const adminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
 	'#p': 'phone',
 	'#tg': 'talkgroups',
 	'#lli': 'lastLogin',
-	'#po': 'pageOnly',
 	'#gt': 'getTranscript',
 };
+validDepartments.forEach(dep => adminUserKeys[`#${dep}`] = dep);
 const districtAdminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
 	...adminUserKeys,
 	'#gaa': 'getApiAlerts',
@@ -384,7 +383,6 @@ const districtAdminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
 	'#gda': 'getDtrAlerts',
 	'#da': 'isDistrictAdmin',
 };
-validDepartments.forEach((dep, idx) => districtAdminUserKeys[`#dep${idx}`] = dep);
 
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.trace('handleList', ...arguments);
@@ -416,9 +414,6 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		// Get the departments the user is admin for
 		let departmentsUserCanSee: UserDepartment[] = validDepartments
 			.filter(dep => !!user[dep]?.admin && !!user[dep]?.active);
-		departmentsUserCanSee.forEach(dep => {
-			keysToGet[`#${dep}`] = dep;
-		});
 		usersItems = await dynamodb.scan({
 			TableName: userTable,
 			ExpressionAttributeNames: keysToGet,
@@ -479,10 +474,6 @@ const allowedToEditAdmin: EditKeyConfig[] = [
 		name: 'getTranscript',
 		type: 'boolean',
 	},
-	{
-		name: 'pageOnly',
-		type: 'boolean',
-	}
 ];
 const allowedToEditDistrictAdmin: EditKeyConfig[] = [
 	...allowedToEditAdmin,
