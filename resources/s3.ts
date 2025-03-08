@@ -36,9 +36,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					ToneIndex: {
 						S: headInfo.Metadata?.tone || 'n'
-					},
-					Source: {
-						S: headInfo.Metadata?.source || 'n/a'
 					}
 				}
 			};

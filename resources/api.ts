@@ -107,6 +107,10 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 			return coll;
 		}, {}))
 			.sort((a, b) => a.Datetime > b.Datetime ? -1 : 1)
+			.map((item) => ({
+				...item,
+				Source: item.Key?.split('/')[1].replace(/_\d{8}_\d{6}.*$/, '')
+			}))
 	});
 
 	// Send for results
