@@ -165,8 +165,8 @@ const pageConfigs: {
 	},
 	'8334': {
 		linkPreset: 'tg8334',
-		pagingParty: 'Center',
-		partyBeingPaged: 'Center EMS',
+		pagingParty: 'Center Dispatch',
+		partyBeingPaged: 'Center EMS/Fire',
 		pageService: 'CENTER',
 		fToTime: dtrFnameToDate
 	},
@@ -628,16 +628,14 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			default:
 				await incrementMetric('Error', {
-					source: metricSource,
-					type: '404'
+					source: metricSource
 				});
 		}
 		return response;
 	} catch (e) {
 		console.error(e);
 		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'general'
+			source: metricSource
 		});
 		throw e;
 	}
