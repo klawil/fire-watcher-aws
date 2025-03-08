@@ -187,6 +187,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						'#tg': 'Talkgroup',
 						'#st': 'StartTime',
 						'#e': 'Emergency',
+						'#t': 'Tone',
 					},
 					ExpressionAttributeValues: {
 						':tg': {
@@ -200,10 +201,13 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						},
 						':e': {
 							N: body.Item?.Emergency?.N
-						}
+						},
+						':t': {
+							BOOL: headInfo.Metadata?.tone === 'true',
+						},
 					},
 					KeyConditionExpression: '#tg = :tg AND #st BETWEEN :st1 AND :st2',
-					FilterExpression: '#e = :e'
+					FilterExpression: '#e = :e AND #t = :t',
 				}).promise();
 				if (
 					!!existingItems.Items &&
