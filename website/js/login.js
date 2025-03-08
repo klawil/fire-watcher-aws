@@ -28,7 +28,7 @@ function submitHandler() {
 	phoneInput.classList.remove('is-invalid');
 	codeInput.classList.remove('is-invalid');
 
-	let url = `/api/user?action=`;
+	let url = `${baseHost}/api/user?action=`;
 	let body = {};
 	if (stage === 1) {
 		url += `login`;

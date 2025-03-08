@@ -26,10 +26,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 	if (lastUpdateId[direction] !== null) return;
 	lastUpdateId[direction] = updateId;
 
-	const host = window.location.origin.indexOf('localhost') !== -1
-		? 'http://localhost:8001'
-		: '';
-	let apiUrl = `${host}/api/frontend?action=vhf`;
+	let apiUrl = `${baseHost}/api/frontend?action=vhf`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
 		if (direction === 'after') {

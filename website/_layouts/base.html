@@ -22,6 +22,9 @@
 				requireAdmin: {% if page.requireAdmin %}true{% else %}false{% endif %},
 				requireUser: {% if page.requireAdmin or page.requireUser %}true{% else %}false{% endif %}
 			};
+			window.baseHost = window.location.origin.indexOf('localhost') !== -1
+				? 'http://localhost:8001'
+				: '';
 		</script>
 	</head>
 	<body>
@@ -49,12 +52,15 @@
 					</ul>
 
 					<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-						<li class="nav-item">
-							<span id="username" class="nav-link d-none">Test</span>
-							<a id="loginLink" class="nav-link{% if page.url == '/login.html' %} active{% endif %}" href="/login.html">Login</a>
+						<li class="nav-item" id="loginLink">
+							<a class="nav-link{% if page.url == '/login.html' %} active{% endif %}" href="/login.html">Login</a>
 						</li>
-						<li class="nav-item d-none" id="logoutLink">
-							<a class="nav-link" href="/api/user?action=logout">Logout</a>
+						<li class="nav-item dropdown d-none" id="logoutLink">
+							<a id="username" href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown">Test</a>
+							<ul class="dropdown-menu">
+								<li><a class="dropdown-item" href="/api/user?action=logout">Logout</a></li>
+								<li class="d-none requireAdmin"><a class="dropdown-item" href="/users.html">Manage Users</a></li>
+							</ul>
 						</li>
 						{% if page.hasFilter %}
 						<li class="nav-item hide-small" id="filter-button-d">

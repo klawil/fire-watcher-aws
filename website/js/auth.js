@@ -18,7 +18,7 @@ function redirectToLogin() {
 	location.href = `/login.html?redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
 }
 
-fetch('/api/user?action=getUser')
+fetch(`${baseHost}/api/user?action=getUser`)
 	.then(r => r.json())
 	.then(data => {
 		window.user = data;

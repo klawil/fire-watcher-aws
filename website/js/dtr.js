@@ -9,9 +9,6 @@ window.talkgroupMap = window.talkgroupMap || {};
 window.talkgroupOptions = window.talkgroupOptions || {};
 
 const nextDataFields = {};
-const host = window.location.origin.indexOf('localhost') !== -1
-	? 'http://localhost:8001'
-	: '';
 
 function updateData(direction = 'after', restart = false, date = false) {
 	const updateId = Date.now();
@@ -27,7 +24,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 	if (lastUpdateId[direction] !== null) return;
 	lastUpdateId[direction] = updateId;
 
-	let apiUrl = `${host}/api/frontend?action=dtr`;
+	let apiUrl = `${baseHost}/api/frontend?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
 		apiUrl += '&'
 		if (direction === 'after') {
@@ -313,7 +310,7 @@ class TalkgroupFilter {
 const numberFormatter = new Intl.NumberFormat('en-us', {
 	maximumFractionDigits: 0
 });
-fetch(`${host}/api/frontend?action=talkgroups`)
+fetch(`${baseHost}/api/frontend?action=talkgroups`)
 	.then(r => r.json())
 	.then(data => {
 		if (!data.success) return;
