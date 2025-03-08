@@ -181,6 +181,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    textsTable.addGlobalSecondaryIndex({
+      indexName: 'pageIndex',
+      partitionKey: {
+        name: 'pageId',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'datetime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     // Create the dead letter queue
     const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
@@ -525,7 +536,6 @@ export class FireWatcherAwsStack extends Stack {
           TABLE_VHF: vhfTable.tableName,
           TABLE_DTR: dtrTable.tableName,
           TABLE_TALKGROUP: talkgroupTable.tableName,
-          TABLE_DEVICE: deviceTable.tableName,
           TABLE_TEXTS: textsTable.tableName,
           TABLE_USER: phoneNumberTable.tableName
         },
@@ -533,9 +543,10 @@ export class FireWatcherAwsStack extends Stack {
           vhfTable,
           dtrTable,
           talkgroupTable,
-          deviceTable,
-          textsTable,
           phoneNumberTable
+        ],
+        readWrite: [
+          textsTable
         ]
       },
       {
@@ -545,7 +556,6 @@ export class FireWatcherAwsStack extends Stack {
           S3_BUCKET: bucket.bucketName,
           SQS_QUEUE: queue.queueUrl,
           TABLE_DTR: dtrTable.tableName,
-          TABLE_VHF: vhfTable.tableName,
           TABLE_USER: phoneNumberTable.tableName,
           TABLE_TEXT: textsTable.tableName,
           TABLE_STATUS: statusTable.tableName
@@ -556,7 +566,6 @@ export class FireWatcherAwsStack extends Stack {
         ],
         readWrite: [
           phoneNumberTable,
-          vhfTable,
           statusTable
         ],
         bucket,

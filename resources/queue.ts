@@ -101,6 +101,7 @@ async function saveMessageData(
 			'#b': 'body',
 			'#m': 'mediaUrls',
 			'#p': 'isPage',
+			'#pid': 'pageId',
 			'#t': 'isTest',
 			'#ts': 'isTestString'
 		},
@@ -115,6 +116,9 @@ async function saveMessageData(
 				S: mediaUrls.join(',')
 			},
 			':p': {
+				S: pageId !== null ? 'y' : 'n'
+			},
+			':pid': {
 				S: pageId !== null ? pageId : 'n'
 			},
 			':t': {
@@ -124,7 +128,7 @@ async function saveMessageData(
 				S: isTest ? 'y' : 'n'
 			}
 		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #t = :t, #ts = :ts'
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #pid = :pid, #t = :t, #ts = :ts'
 	}).promise();
 }
 
@@ -250,18 +254,24 @@ async function handleActivation(body: ActivateOrLoginBody) {
 				S: 'y'
 			}
 		},
-		KeyConditionExpression: 'ToneIndex = :t',
-		IndexName: 'ToneIndex',
+		KeyConditionExpression: 'isPage = :t',
+		IndexName: 'pageIndex',
 		Limit: 1,
 		ScanIndexForward: false
 	}).promise()
-		.then((data) => sendMessage(
-			null,
-			body.phone,
-			createPageMessage(data.Items && data.Items[0].Key.S || ''),
-			[],
-			true
-		)));
+		.then((data) => {
+			if (!data.Items || data.Items.length === 0) return;
+			const pageKey = data.Items[0].pageId.S || 'none';
+			const pageTg = (pageKey.match(/(\d{4})-\d{10}_\d{9}-call_\d+\.m4a/) || ['', '8332'])[1];
+
+			return sendMessage(
+				null,
+				body.phone,
+				createPageMessage(pageKey, pageTg),
+				[],
+				true
+			)
+		}));
 
 	return Promise.all(promises);
 }
@@ -360,7 +370,6 @@ async function handlePage(body: PageBody) {
 	const pageTg = (body.key.match(/(\d{4})-\d{10}_\d{9}-call_\d+\.m4a/) as RegExpMatchArray)[1];
 	const messageBody = createPageMessage(body.key, pageTg);
 	const recipients = await getRecipients('all', pageTg, !!body.isTest);
-	console.log(messageBody, pageTg, recipients);
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
