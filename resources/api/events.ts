@@ -79,6 +79,10 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			}
 		}).promise();
 
+	if (!response.success) {
+		console.error(`400 Error - ${response.errors.join(', ')}`);
+	}
+
 	return {
 		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response)
@@ -110,6 +114,10 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 					Data: JSON.stringify(event)
 				}))
 		}).promise();
+	}
+
+	if (!response.success) {
+		console.error(`400 Error - ${response.errors.join(', ')}`);
 	}
 
 	return {

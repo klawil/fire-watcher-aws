@@ -84,6 +84,10 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		}).promise();
 	}
 
+	if (!response.success) {
+		console.error(`400 Error - ${response.errors.join(', ')}`);
+	}
+
 	return {
 		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response)
@@ -294,6 +298,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	}
 
 	if (!response.success) {
+		console.error(`400 Error - ${response.errors.join(', ')}`);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -510,6 +515,7 @@ async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Pr
 	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
+		console.error(`400 Error - ${response.errors.join(', ')}`);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -557,6 +563,7 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
+		console.error(`400 Error - ${response.errors.join(', ')}`);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -601,6 +608,7 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
+		console.error(`400 Error - ${response.errors.join(', ')}`);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -633,6 +641,7 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 
 	if (response.errors.length > 0) {
 		response.success = false;
+		console.error(`400 Error - ${response.errors.join(', ')}`);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
