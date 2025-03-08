@@ -115,12 +115,15 @@ export class TalkgroupFilter implements AudioFilter {
 		const talkgroupSearch = <HTMLInputElement>document.getElementById('tg-search');
 		talkgroupSearch.addEventListener('input', () => {
 			const searchValue = talkgroupSearch.value.toLowerCase();
-			let filterFunc = (elem: HTMLDivElement) => elem.innerHTML.toLowerCase().indexOf(searchValue) !== -1;
+			let filterFunc = (elem: HTMLTableCellElement) => elem.id.indexOf(searchValue) !== -1;
 			if (searchValue === '')
 				filterFunc = () => true;
 
-			Array.from(this.talkgroupSelect.querySelectorAll('tr'))
-				.forEach(elem => elem.hidden = filterFunc(elem));
+			Array.from(this.talkgroupSelect.querySelectorAll('td'))
+				.forEach(elem => {
+					if (elem.parentElement === null) return;
+					elem.parentElement.hidden = !filterFunc(elem);
+				});
 		});
 
 		if (talkgroups !== null)
@@ -137,7 +140,10 @@ export class TalkgroupFilter implements AudioFilter {
 					id: `tg-${key}`,
 					classList: [ 'tg-row' ],
 					columns: [
-						{ html: talkgroups[key].selectName },
+						{
+							html: talkgroups[key].selectName,
+							id: `${talkgroups[key].name.toLowerCase()}-${key}`,
+						},
 					],
 				});
 
