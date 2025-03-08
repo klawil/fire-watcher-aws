@@ -7,6 +7,7 @@ const secretManager = new AWS.SecretsManager();
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const trafficTable = process.env.TABLE_TRAFFIC as string;
+const apiCode = process.env.SERVER_CODE as string;
 
 const welcomeMessage = `Welcome to the Crestone Volunteer Fire Department text group!
 
@@ -84,7 +85,8 @@ async function sendMessage(
 		body,
 		mediaUrl,
 		from: isPage ? twilioConf.pageNumber : twilioConf.fromNumber,
-		to: `+1${parsePhone(phone)}`
+		to: `+1${parsePhone(phone)}`,
+		statusCallback: `https://fire.klawil.net/api?action=messageStatus&code=${apiCode}`
 	};
 
 	return twilio(twilioConf.accountSid, twilioConf.authToken)

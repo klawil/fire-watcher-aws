@@ -100,7 +100,8 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
-        TWILIO_SECRET: secretArn
+        TWILIO_SECRET: secretArn,
+        SERVER_CODE: apiCode
       },
       timeout: Duration.minutes(1)
     });

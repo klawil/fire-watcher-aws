@@ -203,6 +203,31 @@ async function handleMessage(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	return response;
 }
 
+async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const code = event.queryStringParameters?.code || '';
+	const response = {
+		statusCode: 204,
+		body: ''
+	};
+
+	// Build the event data
+	const eventData = event.body
+		?.split('&')
+		.map((str) => str.split('=').map((str) => decodeURIComponent(str)))
+		.reduce((acc, curr) => ({
+			...acc,
+			[curr[0]]: curr[1] || ''
+		}), {}) as TwilioParams;
+	console.log(`TWILIO STATUS BODY: ${eventData}`);
+
+	// Validate the call is from Twilio
+	if (code !== apiCode) {
+		console.log('TWILIO STATUS FAILED CODE');
+	}
+
+	return response;
+}
+
 async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	// Validate the body
 	const bodyValidResponse = validateBodyIsJson(event.body);
@@ -548,6 +573,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return getList(event);
 			case 'message':
 				return handleMessage(event);
+			case 'messageStatus':
+				return handleMessageStatus(event);
 			case 'page':
 				return handlePage(event);
 			case 'login':
