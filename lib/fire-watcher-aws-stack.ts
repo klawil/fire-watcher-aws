@@ -13,11 +13,21 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
 const secretArn = '***REMOVED***';
 const apiCode = '***REMOVED***';
+
+interface CvfdAlarm {
+  codeName: string;
+  okayAction?: boolean;
+  alarm: cloudwatch.AlarmProps;
+}
 
 export class FireWatcherAwsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -240,6 +250,194 @@ export class FireWatcherAwsStack extends Stack {
     vhfTable.grantReadData(queueHandler);
     textsTable.grantReadWriteData(queueHandler);
     twilioSecret.grantRead(queueHandler);
+
+    // Create a queue for cloudwatch alarms
+    const alarmQueue = new sqs.Queue(this, 'cvfd-alarm-queue');
+    const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/alarms.ts',
+      handler: 'main',
+      timeout: Duration.seconds(30),
+      environment: {
+        TWILIO_SECRET: secretArn
+      }
+    });
+    alarmQueueHandler.addEventSource(new lambdaEventSources.SqsEventSource(alarmQueue));
+    twilioSecret.grantRead(alarmQueueHandler);
+
+    const alarmTopic = new sns.Topic(this, 'cvfd-alarm-topic');
+    alarmTopic.addSubscription(new subscriptions.SqsSubscription(alarmQueue));
+    const alarmAction = new cw_actions.SnsAction(alarmTopic);
+
+    const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
+      evaluationPeriods: 2,
+      datapointsToAlarm: 2,
+      metric: new cloudwatch.Metric({
+        metricName: 'Decode Rate',
+        namespace: 'DTR Metrics',
+        period: Duration.seconds(30),
+        statistic: cloudwatch.Statistic.MINIMUM,
+        dimensionsMap: {
+          Tower: 'Saguache Tower'
+        }
+      }),
+      threshold: 35,
+      alarmDescription: 'Saguache Tower Decode Rate below 35/min',
+      alarmName: 'Saguache Tower',
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    };
+    const baseApiAlarmConfig: cloudwatch.AlarmProps = {
+      evaluationPeriods: 1,
+      datapointsToAlarm: 1,
+      metric: new cloudwatch.Metric({
+        metricName: 'Error',
+        namespace: 'CVFD API',
+        period: Duration.seconds(30),
+        statistic: cloudwatch.Statistic.SUM,
+        dimensionsMap: {
+          source: 'User'
+        }
+      }),
+      threshold: 0,
+      alarmDescription: 'User API Error Occured',
+      alarmName: 'User API Error',
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    };
+    const alarms: CvfdAlarm[] = [
+      {
+        codeName: 'saguache-tower',
+        alarm: {
+          ...baseTowerAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Decode Rate',
+            namespace: 'DTR Metrics',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.MINIMUM,
+            dimensionsMap: {
+              Tower: 'Saguache Tower'
+            }
+          }),
+          alarmDescription: 'Saguache Tower Decode Rate below 40/min',
+          alarmName: 'Saguache Tower'
+        }
+      },
+      {
+        codeName: 'pool-table-tower',
+        alarm: {
+          ...baseTowerAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Decode Rate',
+            namespace: 'DTR Metrics',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.MINIMUM,
+            dimensionsMap: {
+              Tower: 'Pool Table Mountain'
+            }
+          }),
+          alarmDescription: 'Pool Table Tower Decode Rate below 40/min',
+          alarmName: 'Pool Table Tower'
+        }
+      },
+      {
+        codeName: 'user-api',
+        okayAction: false,
+        alarm: {
+          ...baseApiAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Error',
+            namespace: 'CVFD API',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.SUM,
+            dimensionsMap: {
+              source: 'User'
+            }
+          }),
+          alarmDescription: 'User API error occured',
+          alarmName: 'User API Error'
+        }
+      },
+      {
+        codeName: 'twilio-api',
+        okayAction: false,
+        alarm: {
+          ...baseApiAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Error',
+            namespace: 'CVFD API',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.SUM,
+            dimensionsMap: {
+              source: 'Twilio'
+            }
+          }),
+          alarmDescription: 'Twilio API error occured',
+          alarmName: 'Twilio API Error'
+        }
+      },
+      {
+        codeName: 'infra-api',
+        okayAction: false,
+        alarm: {
+          ...baseApiAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Error',
+            namespace: 'CVFD API',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.SUM,
+            dimensionsMap: {
+              source: 'Infra'
+            }
+          }),
+          alarmDescription: 'Infra API error occured',
+          alarmName: 'Infra API Error'
+        }
+      },
+      {
+        codeName: 'frontend-api',
+        okayAction: false,
+        alarm: {
+          ...baseApiAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Error',
+            namespace: 'CVFD API',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.SUM,
+            dimensionsMap: {
+              source: 'Frontend'
+            }
+          }),
+          alarmDescription: 'Frontend API error occured',
+          alarmName: 'Frontend API Error'
+        }
+      },
+      {
+        codeName: 's3-api',
+        okayAction: false,
+        alarm: {
+          ...baseApiAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Error',
+            namespace: 'CVFD API',
+            period: Duration.seconds(30),
+            statistic: cloudwatch.Statistic.SUM,
+            dimensionsMap: {
+              source: 'S3'
+            }
+          }),
+          alarmDescription: 'S3 API error occured',
+          alarmName: 'S3 API Error'
+        }
+      },
+    ];
+
+    alarms.forEach(alarmConfig => {
+      const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm)
+      alarm.addAlarmAction(alarmAction);
+      if (alarmConfig.okayAction !== false)
+        alarm.addOkAction(alarmAction);
+    });
 
     // Create the event trigger
     const s3Destination = new s3Notifications.LambdaDestination(s3Handler);
