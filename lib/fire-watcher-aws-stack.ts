@@ -52,6 +52,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    const messagesTable = new dynamodb.Table(this, 'cvfd-messages', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'datetime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     trafficTable.addGlobalSecondaryIndex({
       indexName: 'ToneIndex',
@@ -100,6 +107,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
+        TABLE_MESSAGES: messagesTable.tableName,
         TWILIO_SECRET: secretArn,
         SERVER_CODE: apiCode
       },
@@ -110,6 +118,7 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
     trafficTable.grantReadData(queueHandler);
+    messagesTable.grantReadWriteData(queueHandler);
     secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn)
       .grantRead(queueHandler);
 
