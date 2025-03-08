@@ -10,22 +10,24 @@ requireAdmin: true
 	}
 </style>
 
-<table class="table table-striped">
-	<thead>
-		<tr class="text-center">
-			<th class="sortLabel" data-keys="phone">Phone Number</th>
-			<th class="sortLabel" data-keys="fName,lName">First Name</th>
-			<th class="sortLabel" data-keys="lName,fName">Last Name</th>
-			<th class="sortLabel districtAdmin" data-keys="department,lName,fName">Department</th>
-			<th class="sortLabel" data-keys="callSign,lName,fName">Callsign</th>
-			<th></th>
-			<th class="districtAdmin">Alerts</th>
-			<th>Pages</th>
-			<th></th>
-		</tr>
-	</thead>
-	<tbody id="tbody"></tbody>
-</table>
+<div class="table-responsive">
+	<table class="table table-striped">
+		<thead>
+			<tr class="text-center">
+				<th class="sortLabel" data-keys="phone">Phone Number</th>
+				<th class="sortLabel" data-keys="fName,lName">First Name</th>
+				<th class="sortLabel" data-keys="lName,fName">Last Name</th>
+				<th class="sortLabel districtAdmin" data-keys="department,lName,fName">Department</th>
+				<th class="sortLabel" data-keys="callSign,lName,fName">Callsign</th>
+				<th></th>
+				<th class="districtAdmin">Alerts</th>
+				<th>Pages</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody id="tbody"></tbody>
+	</table>
+</div>
 
 <div class="modal fade" id="delete-modal" tabindex="-1">
 	<div class="modal-dialog">
