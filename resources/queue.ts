@@ -138,7 +138,7 @@ const timeZone = 'America/Denver';
 function dtrFnameToDate(fileName: string): Date {
 	let d = new Date(0);
 	try {
-		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
+		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/);
 
 		if (parts !== null) {
 			d = new Date(parseInt(parts[1], 10) * 1000);
