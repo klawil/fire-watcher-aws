@@ -289,8 +289,11 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 								UpdateExpression: 'SET #t = :t',
 							}).promise());
 						}
-						await Promise.all(promises);
-						return;
+						const isDeleteTone = itemsToDelete.reduce((isTone, item) => isTone || (!!item.Tone?.BOOL), false);
+						if (isDeleteTone || !body.Item.Tone?.BOOL) {
+							await Promise.all(promises);
+							return;
+						}
 					}
 				}
 			}
