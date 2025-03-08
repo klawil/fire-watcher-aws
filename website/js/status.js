@@ -67,37 +67,37 @@ const color2 = {
 const charts = [
 	{
 		id: 'api-calls',
-		query: 'metrics=api-frontend,api-infra,api-user,api-twilio,s3-created,queue'
+		query: 'metrics=api-frontend,api-infra,api-user,api-twilio,s3-created,queue&live=y'
 	},
 	{
 		id: 'api-errors',
-		query: 'metrics=err-frontend,err-infra,err-user,err-twilio,err-s3,err-queue'
+		query: 'metrics=err-frontend,err-infra,err-user,err-twilio,err-s3,err-queue&live=y'
 	},
 	{
 		id: 'sag-tower',
-		query: 'metrics=tower-sag-max,tower-sag-min&period=300&timerange=86400000',
+		query: 'metrics=tower-sag-max,tower-sag-min&period=300&timerange=86400000&live=y',
 		fill: true
 	},
 	{
 		id: 'pool-table-tower',
-		query: 'metrics=tower-pt-max,tower-pt-min&period=300&timerange=86400000',
+		query: 'metrics=tower-pt-max,tower-pt-min&period=300&timerange=86400000&live=y',
 		fill: true
 	},
 	{
 		id: 'ala-tower',
-		query: 'metrics=tower-ala-max,tower-ala-min&period=300&timerange=86400000',
+		query: 'metrics=tower-ala-max,tower-ala-min&period=300&timerange=86400000&live=y',
 		fill: true
 	},
 	{
 		id: 'texts-count',
-		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=86400&timerange=2419200000'
+		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=86400&timerange=2419200000&live=y'
 	},
 	{
 		id: 'texts-time',
 		val: val => Math.ceil(val / 1000),
 		yMax: 120, // 2 minutes
 		stacked: true,
-		query: 'metrics=twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000'
+		query: 'metrics=twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y'
 	},
 ];
 

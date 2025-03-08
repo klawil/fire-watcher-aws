@@ -1103,6 +1103,12 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	) {
 		response.errors.push('timerange');
 	}
+	if (
+		typeof event.queryStringParameters.live !== 'undefined' &&
+		['y', 'n'].indexOf(event.queryStringParameters.live) === -1
+	) {
+		response.errors.push('live');
+	}
 	if (typeof event.queryStringParameters.metrics !== 'string') {
 		response.errors.push('metrics');
 	} else if (
@@ -1128,6 +1134,9 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	}
 
 	// Build the defaults
+	const dir = event.queryStringParameters.live === 'y'
+		? 'ceil'
+		: 'floor';
 	const defaultPeriod = 60 * 60;
 	const defaultTimeRange = periodToTime
 		.reduce((timerange, item) => {
@@ -1140,7 +1149,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		typeof event.queryStringParameters.endTime === 'undefined' &&
 		typeof event.queryStringParameters.period === 'undefined'
 	) {
-		const nowHour = Math.floor(Date.now() / (1000 * 60 * 60)) * 1000 * 60 * 60;
+		const nowHour = Math[dir](Date.now() / (1000 * 60 * 60)) * 1000 * 60 * 60;
 		event.queryStringParameters.startTime = `${nowHour - (1000 * 60 * 60 * 24)}`;
 		event.queryStringParameters.endTime = `${nowHour}`;
 		event.queryStringParameters.period = `3600`;
@@ -1167,7 +1176,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		} else if (typeof event.queryStringParameters.endTime !== 'undefined') {
 			event.queryStringParameters.startTime = `${Number(event.queryStringParameters.endTime) - timerange}`;
 		} else {
-			const nowTime = Math.floor(Date.now() / (period * 1000)) * period * 1000;
+			const nowTime = Math[dir](Date.now() / (period * 1000)) * period * 1000;
 			event.queryStringParameters.endTime = `${nowTime}`;
 			event.queryStringParameters.startTime = `${nowTime - timerange}`;
 		}
