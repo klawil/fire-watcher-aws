@@ -12,7 +12,7 @@ function padLeft(num, len = 2) {
 }
 
 const vhfPageRegex = /(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/;
-const dtrPageRegex = /\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/;
+const dtrPageRegex = /\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/;
 function parseForPageTime(text) {
 	let d = new Date();
 	if (dtrPageRegex.test(text)) {
