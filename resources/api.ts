@@ -64,7 +64,7 @@ function randomString(len: number, numeric = false): string {
 	return str.join('');
 }
 
-type DynamoDbValues = boolean | number | string | undefined | DynamoDbValues[];
+type DynamoDbValues = boolean | number | string | undefined | AWS.DynamoDB.AttributeValue | DynamoDbValues[];
 
 function parseDynamoDbAttributeValue(value: AWS.DynamoDB.AttributeValue): DynamoDbValues {
 	if (typeof value.S !== 'undefined') {
@@ -75,9 +75,13 @@ function parseDynamoDbAttributeValue(value: AWS.DynamoDB.AttributeValue): Dynamo
 		return value.BOOL;
 	} else if (typeof value.L !== 'undefined') {
 		return value.L?.map(parseDynamoDbAttributeValue);
+	} else if (typeof value.NS !== 'undefined') {
+		return value.NS?.map(val => parseFloat(val));
+	} else if (typeof value.SS !== 'undefined') {
+		return value.SS;
 	}
 
-	return;
+	return value;
 }
 
 interface NewObject {
@@ -347,17 +351,12 @@ async function handleMessageStatus(event: APIGatewayProxyEvent): Promise<APIGate
 			},
 			ExpressionAttributeValues: {
 				':eventListItem': {
-					L: [
-						{
-							N: eventDatetime.toString()
-						}
+					NS: [
+						eventDatetime.toString()
 					]
-				},
-				':emptyList': {
-					L: []
 				}
 			},
-			UpdateExpression: 'SET #eventName = list_append(if_not_exists(#eventName, :emptyList), :eventListItem)'
+			UpdateExpression: 'ADD #eventName :eventListItem'
 		}).promise();
 	}
 

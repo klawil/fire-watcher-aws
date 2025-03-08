@@ -71,7 +71,8 @@ async function saveMessageData(
 	messageId: string,
 	recipients: number,
 	body: string,
-	mediaUrls: string[] = []
+	mediaUrls: string[] = [],
+	isTest: boolean = false
 ) {
 	await dynamodb.updateItem({
 		TableName: messagesTable,
@@ -83,7 +84,8 @@ async function saveMessageData(
 		ExpressionAttributeNames: {
 			'#r': 'recipients',
 			'#b': 'body',
-			'#m': 'mediaUrls'
+			'#m': 'mediaUrls',
+			'#t': 'isTest'
 		},
 		ExpressionAttributeValues: {
 			':r': {
@@ -94,9 +96,12 @@ async function saveMessageData(
 			},
 			':m': {
 				S: mediaUrls.join(',')
+			},
+			':t': {
+				BOOL: isTest
 			}
 		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m'
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #t = :t'
 	}).promise();
 }
 
@@ -305,7 +310,13 @@ async function handleTwilio(body: TwilioBody) {
 		.map((key) => eventData[key as keyof TwilioParams] as string);
 
 	const messageId = new Date().getTime().toString();
-	const insertMessage = saveMessageData(messageId, recipients.length, messageBody, mediaUrls);
+	const insertMessage = saveMessageData(
+		messageId,
+		recipients.length,
+		messageBody,
+		mediaUrls,
+		isTest
+	);
 
 	await Promise.all(recipients
 		.map((number) =>  sendMessage(
@@ -330,7 +341,13 @@ async function handlePage(body: PageBody) {
 	const recipients = await getRecipients();
 
 	const messageId = new Date().getTime().toString();
-	const insertMessage = saveMessageData(messageId, recipients.length, messageBody);
+	const insertMessage = saveMessageData(
+		messageId,
+		recipients.length,
+		messageBody,
+		[],
+		false
+	);
 
 	// Send the messages
 	await Promise.all(recipients
