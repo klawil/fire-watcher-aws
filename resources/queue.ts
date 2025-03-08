@@ -53,7 +53,8 @@ async function saveMessageData(
 			'#r': 'recipients',
 			'#b': 'body',
 			'#m': 'mediaUrls',
-			'#t': 'isTest'
+			'#t': 'isTest',
+			'#ts': 'isTestString'
 		},
 		ExpressionAttributeValues: {
 			':r': {
@@ -67,9 +68,12 @@ async function saveMessageData(
 			},
 			':t': {
 				BOOL: isTest
+			},
+			':ts': {
+				S: isTest ? 'y' : 'n'
 			}
 		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #t = :t'
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #t = :t, #ts = :ts'
 	}).promise();
 }
 
