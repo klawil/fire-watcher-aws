@@ -507,139 +507,124 @@ export class FireWatcherAwsStack extends Stack {
     });
     const apiResource = api.root.addResource('api');
 
-    // Create the frontend API
-    const frontendApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-frontend-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
-        })
-      ],
-      runtime: lambda.Runtime.NODEJS_14_X,
-      entry: __dirname + '/../resources/api/frontend.ts',
-      handler: 'main',
-      environment: {
-        TABLE_VHF: vhfTable.tableName,
-        TABLE_DTR: dtrTable.tableName,
-        TABLE_TALKGROUP: talkgroupTable.tableName,
-        TABLE_DEVICE: deviceTable.tableName,
-        TABLE_TEXTS: textsTable.tableName,
-        TABLE_USER: phoneNumberTable.tableName
+    interface ApiDefinition {
+      name: string;
+      env: {
+        [key: string]: string;
       }
-    });
-    vhfTable.grantReadData(frontendApiHandler);
-    dtrTable.grantReadData(frontendApiHandler);
-    talkgroupTable.grantReadData(frontendApiHandler);
-    deviceTable.grantReadData(frontendApiHandler);
-    textsTable.grantReadData(frontendApiHandler);
-    phoneNumberTable.grantReadData(frontendApiHandler);
-    const frontendApiIntegration = new apigateway.LambdaIntegration(frontendApiHandler, {
-      requestTemplates: {
-        'application/json': '{"statusCode":"200"}'
-      }
-    });
-    const frontendApiResource = apiResource.addResource('frontend');
-    frontendApiResource.addMethod('GET', frontendApiIntegration);
+      read?: dynamodb.Table[];
+      readWrite?: dynamodb.Table[];
+      bucket?: s3.IBucket;
+      queue?: sqs.Queue;
+    }
 
-    // Create the infrastructure API
-    const infraApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-infra-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
-        })
-      ],
-      runtime: lambda.Runtime.NODEJS_14_X,
-      entry: __dirname + '/../resources/api/infra.ts',
-      handler: 'main',
-      environment: {
-        SERVER_CODE: apiCode,
-        S3_BUCKET: bucket.bucketName,
-        SQS_QUEUE: queue.queueUrl,
-        TABLE_DTR: dtrTable.tableName,
-        TABLE_USER: phoneNumberTable.tableName,
-        TABLE_TEXT: textsTable.tableName,
-        TABLE_STATUS: statusTable.tableName
+    const cvfdApis: ApiDefinition[] = [
+      {
+        name: 'frontend',
+        env: {
+          TABLE_VHF: vhfTable.tableName,
+          TABLE_DTR: dtrTable.tableName,
+          TABLE_TALKGROUP: talkgroupTable.tableName,
+          TABLE_DEVICE: deviceTable.tableName,
+          TABLE_TEXTS: textsTable.tableName,
+          TABLE_USER: phoneNumberTable.tableName
+        },
+        read: [
+          vhfTable,
+          dtrTable,
+          talkgroupTable,
+          deviceTable,
+          textsTable,
+          phoneNumberTable
+        ]
       },
-      timeout: Duration.seconds(10)
-    });
-    bucket.grantRead(infraApiHandler);
-    queue.grantSendMessages(infraApiHandler);
-    dtrTable.grantReadData(infraApiHandler);
-    phoneNumberTable.grantReadWriteData(infraApiHandler);
-    textsTable.grantReadData(infraApiHandler);
-    statusTable.grantReadWriteData(infraApiHandler);
-    const infraApiIntegration = new apigateway.LambdaIntegration(infraApiHandler, {
-      requestTemplates: {
-        'application/json': '{"statusCode":"200"}'
+      {
+        name: 'infra',
+        env: {
+          SERVER_CODE: apiCode,
+          S3_BUCKET: bucket.bucketName,
+          SQS_QUEUE: queue.queueUrl,
+          TABLE_DTR: dtrTable.tableName,
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_TEXT: textsTable.tableName,
+          TABLE_STATUS: statusTable.tableName
+        },
+        read: [
+          dtrTable,
+          textsTable
+        ],
+        readWrite: [
+          phoneNumberTable,
+          statusTable
+        ],
+        bucket,
+        queue
+      },
+      {
+        name: 'user',
+        env: {
+          QUEUE_URL: queue.queueUrl,
+          TABLE_USER: phoneNumberTable.tableName
+        },
+        readWrite: [
+          phoneNumberTable
+        ],
+        queue
+      },
+      {
+        name: 'twilio',
+        env: {
+          SERVER_CODE: apiCode,
+          SQS_QUEUE: queue.queueUrl,
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_TEXT: textsTable.tableName
+        },
+        readWrite: [
+          phoneNumberTable,
+          textsTable
+        ],
+        queue
       }
-    });
-    const infraApiResource = apiResource.addResource('infra');
-    infraApiResource.addMethod('GET', infraApiIntegration);
-    infraApiResource.addMethod('POST', infraApiIntegration);
+    ];
 
-    // Create the user API
-    const userApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-user-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
-        })
-      ],
-      runtime: lambda.Runtime.NODEJS_14_X,
-      entry: __dirname + '/../resources/api/user.ts',
-      handler: 'main',
-      environment: {
-        QUEUE_URL: queue.queueUrl,
-        TABLE_USER: phoneNumberTable.tableName
-      },
-      timeout: Duration.seconds(10)
-    });
-    queue.grantSendMessages(userApiHandler);
-    phoneNumberTable.grantReadWriteData(userApiHandler);
-    const userApiIntegration = new apigateway.LambdaIntegration(userApiHandler, {
-      requestTemplates: {
-        'application/json': '{"statusCode":"200"}'
-      }
-    });
-    const userApiResource = apiResource.addResource('user');
-    userApiResource.addMethod('GET', userApiIntegration);
-    userApiResource.addMethod('POST', userApiIntegration);
+    cvfdApis.forEach(config => {
+      const apiHandler = new lambdanodejs.NodejsFunction(this, `cvfd-api-${config.name}-lambda`, {
+        initialPolicy: [
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [ 'cloudwatch:PutMetricData' ],
+            resources: [ '*' ]
+          })
+        ],
+        runtime: lambda.Runtime.NODEJS_14_X,
+        entry: __dirname + `/../resources/api/${config.name}.ts`,
+        handler: 'main',
+        environment: Object.keys(config.env)
+          .reduce((agg: { [key: string]: string }, key) => {
+            agg[key] = config.env[key];
+            return agg;
+          }, {}),
+        timeout: Duration.seconds(10)
+      });
 
-    // Create the twilio API
-    const twilioApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-twilio-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
-        })
-      ],
-      runtime: lambda.Runtime.NODEJS_14_X,
-      entry: __dirname + '/../resources/api/twilio.ts',
-      handler: 'main',
-      environment: {
-        SERVER_CODE: apiCode,
-        SQS_QUEUE: queue.queueUrl,
-        TABLE_USER: phoneNumberTable.tableName,
-        TABLE_TEXT: textsTable.tableName
-      },
-      timeout: Duration.seconds(10)
+      if (config.read)
+        config.read.forEach(table => table.grantReadData(apiHandler));
+      if (config.readWrite)
+        config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
+      if (config.bucket)
+        config.bucket.grantRead(apiHandler);
+      if (config.queue)
+        config.queue.grantSendMessages(apiHandler);
+    
+      const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
+        requestTemplates: {
+          'application/json': '{"statusCode":"200"}'
+        }
+      });
+      const newApiResource = apiResource.addResource(config.name);
+      newApiResource.addMethod('GET', apiIntegration);
+      newApiResource.addMethod('POST', apiIntegration);
     });
-    queue.grantSendMessages(twilioApiHandler);
-    phoneNumberTable.grantReadWriteData(twilioApiHandler);
-    textsTable.grantReadWriteData(twilioApiHandler);
-    const twilioApiIntegration = new apigateway.LambdaIntegration(twilioApiHandler, {
-      requestTemplates: {
-        'application/json': '{"statusCode":"200"}'
-      }
-    });
-    const twilioApiResource = apiResource.addResource('twilio');
-    twilioApiResource.addMethod('GET', twilioApiIntegration);
-    twilioApiResource.addMethod('POST', twilioApiIntegration);
 
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
