@@ -103,7 +103,7 @@ interface PhoneNumberConfig {
 }
 
 const twilioSecretId = process.env.TWILIO_SECRET as string;
-const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
+export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 	pageBaca: {
 		type: 'page',
 		number: '***REMOVED***',
@@ -113,7 +113,6 @@ const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 	page: {
 		number: '***REMOVED***',
 		type: 'page',
-		department: 'Crestone',
 	},
 	alerts: {
 		number: '***REMOVED***',

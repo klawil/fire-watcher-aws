@@ -1,8 +1,8 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
-import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneNumbers } from './utils/general';
-import { PagingTalkgroup, defaultDepartment, departmentConfig, pagingConfig, validDepartments } from '../../common/userConstants';
+import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneCategories, twilioPhoneNumbers } from './utils/general';
+import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
 import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
@@ -18,19 +18,20 @@ const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
 
 const metricSource = 'Queue';
 
+type WelcomeMessageConfigKeys = 'name' | 'type' | 'pageNumber';
 const welcomeMessageParts: {
 	welcome: string;
 	textGroup: string;
+	textPageGroup: string;
 	pageGroup: string;
 	howToLeave: string;
 } = {
 	welcome: `Welcome to the {{name}} {{type}} group!`,
-	textGroup: `This number will be used to send and receive messages from other members of the department.\n\nIn a moment, you will receive a text from another number with a link to a sample page you would have received. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
-	pageGroup: `This number will be used to send pages and only pages.\n\nIn a moment, you will receive a text with a link to a sample page you would have received.`,
+	textGroup: `This number will be used to send and receive messages from other members of the department.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.\n\nYou will receive important announcements from {{pageNumber}}. No-one except department administrators will be able to send announcements from that number.`,
+	textPageGroup: `This number will be used to send and receive messages from other members of the department.\n\nIn a moment, you will receive a text from {{pageNumber}} with a link to a sample page similar to what you will receive. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
+	pageGroup: `This number will be used to send pages or important announcements.\n\nIn a moment, you will receive a text with a link to a sample page like that you will receive.`,
 	howToLeave: `You can leave this group at any time by texting "STOP" to this number.`
 };
-
-type WelcomeMessageConfigKeys = 'name' | 'type';
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
@@ -69,6 +70,16 @@ function randomString(len: number, numeric = false): string {
 	}
 
 	return str.join('');
+}
+
+function formatPhone(phone: number | string): string {
+	logger.trace('formatPhone', ...arguments);
+
+	const first = phone.toString().substring(0, 3);
+	const middle = phone.toString().substring(3, 6);
+	const last = phone.toString().substring(6, 10);
+
+	return `${first}-${middle}-${last}`;
 }
 
 function createPageMessage(
@@ -131,22 +142,34 @@ async function handleActivation(body: ActivateBody) {
 	const config = departmentConfig[body.department] || departmentConfig[defaultDepartment];
 	if (typeof config === 'undefined')
 		return;
+	const messagePieces: {
+		[key in WelcomeMessageConfigKeys]: string;
+	} = {
+		pageNumber: formatPhone(twilioPhoneCategories[config.pagePhone].number.slice(2)),
+		name: config.name,
+		type: config.type,
+	};
 	const groupType = config.type === 'page'
+		? 'page'
+		: pageTgs.length === 0
+			? 'text'
+			: 'textPage';
+	const phoneType = config.type === 'page'
 		? 'page'
 		: 'text';
 	const customWelcomeMessage = (
 		`${welcomeMessageParts.welcome}\n\n` +
 		`${welcomeMessageParts[`${groupType}Group`]}\n\n` +
-		`You will receive pages for: ${pageTgs}\n\n` +
+		(pageTgs.length > 0 ? `You will receive pages for: ${pageTgs}\n\n` : '') +
 		`${welcomeMessageParts.howToLeave}`
 	)
-		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => config[b]);
+		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => messagePieces[b]);
 	promises.push(sendMessage(
 		metricSource,
 		'account',
 		null,
 		body.phone,
-		config[`${groupType}Phone`] || config.pagePhone,
+		config[`${phoneType}Phone`] || config.pagePhone,
 		customWelcomeMessage,
 		[]
 	));
@@ -194,40 +217,42 @@ async function handleActivation(body: ActivateBody) {
 		}));
 
 	// Send the sample page
-	promises.push(dynamodb.query({
-		TableName: dtrTable,
-		IndexName: 'ToneIndex',
-		ExpressionAttributeValues: {
-			':ti': {
-				S: 'y'
+	if (pageTgs.length > 0) {
+		promises.push(dynamodb.query({
+			TableName: dtrTable,
+			IndexName: 'ToneIndex',
+			ExpressionAttributeValues: {
+				':ti': {
+					S: 'y'
+				},
+				':tg': {
+					N: (updateResult.Attributes?.talkgroups?.NS || [ '8332' ])[0]
+				}
 			},
-			':tg': {
-				N: (updateResult.Attributes?.talkgroups?.NS || [ '8332' ])[0]
-			}
-		},
-		ExpressionAttributeNames: {
-			'#ti': 'ToneIndex',
-			'#tg': 'Talkgroup'
-		},
-		KeyConditionExpression: '#ti = :ti',
-		FilterExpression: '#tg = :tg',
-		ScanIndexForward: false
-	}).promise()
-		.then((data) => {
-			if (!data.Items || data.Items.length === 0) return;
-			const pageKey = data.Items[0].Key?.S?.split('/').pop() || 'none';
-			const pageTg = Number(data.Items[0].Talkgroup.N || '8332') as PagingTalkgroup;
+			ExpressionAttributeNames: {
+				'#ti': 'ToneIndex',
+				'#tg': 'Talkgroup'
+			},
+			KeyConditionExpression: '#ti = :ti',
+			FilterExpression: '#tg = :tg',
+			ScanIndexForward: false
+		}).promise()
+			.then((data) => {
+				if (!data.Items || data.Items.length === 0) return;
+				const pageKey = data.Items[0].Key?.S?.split('/').pop() || 'none';
+				const pageTg = Number(data.Items[0].Talkgroup.N || '8332') as PagingTalkgroup;
 
-			return sendMessage(
-				metricSource,
-				'account',
-				null,
-				body.phone,
-				config.pagePhone,
-				createPageMessage(pageKey, pageTg),
-				[]
-			)
-		}));
+				return sendMessage(
+					metricSource,
+					'account',
+					null,
+					body.phone,
+					config.pagePhone,
+					createPageMessage(pageKey, pageTg),
+					[]
+				)
+			}));
+	}
 
 	return Promise.all(promises);
 }
@@ -256,9 +281,12 @@ async function handleTwilio(body: TwilioBody) {
 		throw new Error(`Message to unkown Twilio number - ${eventData.To}`);
 	}
 	const phoneNumberConfig = twilioPhoneNumbers[eventData.To];
-	if (typeof phoneNumberConfig.department === 'undefined') {
-		throw new Error(`Message to Twilio number without assigned department - ${eventData.To}`);
+	if (typeof phoneNumberConfig === 'undefined') {
+		throw new Error(`Message to Twilio number without assigned config - ${eventData.To}`);
 	}
+	const possiblePhoneDepartments = (Object.keys(departmentConfig) as UserDepartment[])
+		.filter(dep => departmentConfig[dep]?.pagePhone === phoneNumberConfig.name
+			|| departmentConfig[dep]?.textPhone === phoneNumberConfig.name);
 	
 	// Validate the sender
 	const sender = await dynamodb.getItem({
@@ -272,55 +300,78 @@ async function handleTwilio(body: TwilioBody) {
 	if (!sender.Item) {
 		throw new Error(`Invalid sender`);
 	}
-	if (
-		typeof phoneNumberConfig.department !== 'undefined' &&
-		!sender.Item[phoneNumberConfig.department].M?.active?.BOOL
-	) {
-		throw new Error(`Invactive sender (${phoneNumberConfig.department})`);
+	const senderDepartments = possiblePhoneDepartments.filter(dep => sender.Item && sender.Item[dep]?.M?.active?.BOOL === true);
+	if (senderDepartments.length === 0) {
+		throw new Error(`Invactive sender (${phoneNumberConfig})`);
 	}
+	if (senderDepartments.length > 1 && phoneNumberConfig.type === 'chat') {
+		throw new Error(`Sender member of multiple departments: ${phoneNumberConfig}, ${senderDepartments}`);
+	}
+	const senderAdminDepartments = senderDepartments.filter(dep => sender.Item && sender.Item[dep]?.M?.admin?.BOOL === true);
 	if (
-		typeof phoneNumberConfig.department === 'undefined' &&
-		!validDepartments.reduce((active, dep) => active ||
-			!sender.Item ||
-			!!sender.Item[dep]?.M?.active?.BOOL, false)
+		phoneNumberConfig.type === 'page' &&
+		(
+			senderAdminDepartments.length > 1 ||
+			(
+				senderAdminDepartments.length === 0 &&
+				senderDepartments.length > 1
+			)
+		)
 	) {
-		throw new Error(`Invactive sender (global)`);
+		throw new Error(`Sender member of multiple departments: ${phoneNumberConfig}, ${senderDepartments}`);
+	}
+
+	// Figure out which department to use and whether this is a page message
+	let departmentToUse: UserDepartment = senderDepartments[0];
+	let isAnnouncement: boolean = false;
+	let includeSender: boolean = false;
+	if (
+		phoneNumberConfig.type === 'page' &&
+		senderAdminDepartments.length > 0
+	) {
+		departmentToUse = senderAdminDepartments[0];
+		isAnnouncement = true;
+		includeSender = true;
+	} else if (
+		phoneNumberConfig.type === 'page' &&
+		senderDepartments.length > 0
+	) {
+		departmentToUse = senderDepartments[0];
+		includeSender = true;
 	}
 
 	// Get the number that was messaged
-	const depConf = departmentConfig[phoneNumberConfig.department] || departmentConfig[defaultDepartment];
+	const depConf = departmentConfig[departmentToUse] || departmentConfig[defaultDepartment];
 	if (typeof depConf === 'undefined')
 		throw new Error('Invalid department');
-	const adminSender = !!sender.Item[phoneNumberConfig.department]?.M?.admin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await getTwilioSecret();
-	const isFromPageNumber = adminSender && phoneNumberConfig.type === 'page';
 
-	const recipients = await getRecipients(phoneNumberConfig.department, null, isTest)
+	const recipients = await getRecipients(departmentToUse, null, isTest)
 		.then((data) => data.filter((number) => {
 			if (isTest) return true;
 
-			return isFromPageNumber ||
+			return includeSender ||
 				number.phone.N !== sender.Item?.phone.N
 		}));
 
 	// Build the message
-	const sendingUserInfo = `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item[phoneNumberConfig.department]?.M?.callSign?.S || 'N/A'})`;
-	const messageBody = `${isFromPageNumber ? `${phoneNumberConfig.department} Announcement` : sendingUserInfo}: ${eventData.Body}${isFromPageNumber ? ` - ${sendingUserInfo}` : ''}`;
+	const sendingUserInfo = `${sender.Item.fName.S} ${sender.Item.lName.S} (${sender.Item[departmentToUse]?.M?.callSign?.S || 'N/A'})`;
+	const messageBody = `${isAnnouncement ? `${depConf.shortName} Announcement` : sendingUserInfo}: ${eventData.Body}${isAnnouncement ? ` - ${sendingUserInfo}` : ''}`;
 	const mediaUrls: string[] = Object.keys(eventData)
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
-		isFromPageNumber ? 'departmentAnnounce' : 'department',
+		isAnnouncement ? 'departmentAnnounce' : 'department',
 		messageId,
 		recipients.length,
 		messageBody,
 		mediaUrls,
 		null,
 		null,
-		phoneNumberConfig.department,
+		departmentToUse,
 		isTest
 	);
 
@@ -328,10 +379,10 @@ async function handleTwilio(body: TwilioBody) {
 		.filter(number => typeof number.phone.N !== 'undefined')
 		.map((number) =>  sendMessage(
 			metricSource,
-			isFromPageNumber ? 'departmentAnnounce' : 'department',
+			isAnnouncement ? 'departmentAnnounce' : 'department',
 			messageId,
 			number.phone.N as string,
-			depConf[`${isFromPageNumber ? 'page' : 'text'}Phone`] || depConf.pagePhone,
+			depConf[`${isAnnouncement ? 'page' : 'text'}Phone`] || depConf.pagePhone,
 			messageBody,
 			mediaUrls
 				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`))

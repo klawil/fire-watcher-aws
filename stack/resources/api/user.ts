@@ -540,7 +540,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	if (
 		(
 			!(user.isAdmin || user.isDistrictAdmin) &&
-			user.phone !== body.phone
+			user.phone.toString() !== body.phone
 		) ||
 		!user.isActive
 	) {

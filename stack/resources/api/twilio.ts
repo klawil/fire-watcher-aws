@@ -1,8 +1,8 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
+import { getTwilioSecret, incrementMetric, parsePhone, twilioPhoneNumbers } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
-import { validDepartments } from '../../../common/userConstants';
+import { departmentConfig, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';
 import { isUserActive } from '../types/auth';
 
@@ -117,6 +117,19 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			...acc,
 			[curr[0]]: curr[1] || ''
 		}), {}) as TwilioTextEvent;
+
+	// Check for config for the department
+	const phoneNumberConfig = twilioPhoneNumbers[eventData.To];
+	if (
+		typeof phoneNumberConfig === 'undefined' ||
+		phoneNumberConfig.type === 'alert'
+	) {
+		response.body = `<Response><Message>Hmmm, it looks like you sent this to the wrong numer</Message></Response>`;
+		return response;
+	}
+	const phoneNumberDepartments = (Object.keys(departmentConfig) as UserDepartment[])
+		.filter(dep => departmentConfig[dep]?.pagePhone === phoneNumberConfig.name ||
+			departmentConfig[dep]?.textPhone === phoneNumberConfig.name);
 	
 	// Validate the sending number
 	const sender = await dynamodb.getItem({
@@ -132,6 +145,38 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		!isUserActive(sender.Item)
 	) {
 		response.body = `<Response><Message>You do not have access to use the text group. Contact your station chief to request access.</Message></Response>`
+		return response;
+	}
+	const userActiveDepartments = phoneNumberDepartments
+		.filter(dep => sender.Item && sender.Item[dep]?.M?.active?.BOOL);
+	const userAdminDepartments = userActiveDepartments
+		.filter(dep => sender.Item && sender.Item[dep]?.M?.admin?.BOOL);
+	if (userActiveDepartments.length === 0) {
+		response.body = `<Response><Message>You do not have access to use the text group. Contact your station chief to request access.</Message></Response>`
+		return response;
+	}
+
+	// See if this number is associated with multiple departments the user is active on
+	if (
+		phoneNumberDepartments.length > 1 &&
+		(
+			( // Texting a page number and >1 admin departments or >1 active departments and no admins
+				phoneNumberConfig.type === 'page' &&
+				(
+					userAdminDepartments.length > 1 ||
+					(
+						userAdminDepartments.length === 0 &&
+						userActiveDepartments.length > 1
+					)
+				)
+			) ||
+			( // Texting a chat number and >1 active departments
+				phoneNumberConfig.type === 'chat' &&
+				userActiveDepartments.length > 1
+			)
+		)
+	) {
+		response.body = `<Response><Message>You have access to multiple departments that use this number. You will have to use the web UI to send a message.</Message></Response>`
 		return response;
 	}
 
