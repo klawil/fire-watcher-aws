@@ -417,7 +417,8 @@ function setUrlParams() {
 			(
 				!afterFilters.hasOwnProperty(key) ||
 				!afterFilters[key].isDefault()
-			)
+			) &&
+			key !== ''
 		)
 		.map((key) => {
 			let str = JSON.stringify(newParams[key]);
