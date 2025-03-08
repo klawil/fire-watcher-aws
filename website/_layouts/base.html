@@ -53,7 +53,8 @@
 
 					<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
 						<li class="nav-item" id="loginLink">
-							<a class="nav-link{% if page.url == '/login.html' %} active{% endif %}" href="/login.html">Login</a>
+							<a class="nav-link{% if page.url == '/login.html' %} active{% endif %}" id="login">Login</a>
+							<script>document.getElementById('login').setAttribute('href', `/login.html?redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`)</script>
 						</li>
 						<li class="nav-item dropdown d-none" id="logoutLink">
 							<a id="username" href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown">Test</a>
