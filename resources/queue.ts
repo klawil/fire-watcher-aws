@@ -123,13 +123,21 @@ function randomString(len: number, numeric = false): string {
 	return str.join('');
 }
 
-function convertFileDateTime(fileName: string): Date {
+function convertFileDateTime(fileName: string, isDtr: boolean): Date {
 	let d = new Date(0);
 	try {
-		const parts = fileName.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+		if (!isDtr) {
+			const parts = fileName.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
 
-		if (parts !== null) {
-			d = new Date(`${parts.slice(1, 4).join('-')}T${parts.slice(4, 7).join(':')}Z`);
+			if (parts !== null) {
+				d = new Date(`${parts.slice(1, 4).join('-')}T${parts.slice(4, 7).join(':')}Z`);
+			}
+		} else {
+			const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
+
+			if (parts !== null) {
+				d = new Date(parseInt(parts[1], 10) * 1000);
+			}
 		}
 	} catch (e) {}
 
@@ -138,10 +146,11 @@ function convertFileDateTime(fileName: string): Date {
 
 function createPageMessage(
 	fileKey: string,
+	isDtr: boolean,
 	callSign: string | null = null
 ): string {
-	const queryParam = fileKey.split('/')[1];
-	const d = convertFileDateTime(queryParam);
+	const queryParam = isDtr ? fileKey.split('/')[2] : fileKey.split('/')[1];
+	const d = convertFileDateTime(queryParam, isDtr);
 
 	const dateString = d.toLocaleDateString('en-US', {
 		timeZone: 'America/Denver',
@@ -158,7 +167,7 @@ function createPageMessage(
 		second: '2-digit'
 	});
 
-	let pageStr = `Saguache Sheriff: PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/?f=${queryParam}`;
+	let pageStr = `Saguache Sheriff: PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/${isDtr ? 'dtr.html' : ''}?f=${queryParam}`;
 	if (callSign !== null) {
 		pageStr += `&cs=${callSign}`;
 	}
@@ -239,7 +248,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		.then((data) => sendMessage(
 			null,
 			body.phone,
-			createPageMessage(data.Items && data.Items[0].Key.S || ''),
+			createPageMessage(data.Items && data.Items[0].Key.S || '', false),
 			[],
 			true
 		)));
@@ -330,14 +339,14 @@ async function handleTwilio(body: TwilioBody) {
 }
 
 interface PageBody {
-	action: 'page';
+	action: 'page' | 'dtrPage';
 	key: string;
 	isTest?: boolean;
 }
 
 async function handlePage(body: PageBody) {
 	// Build the message body
-	const messageBody = createPageMessage(body.key);
+	const messageBody = createPageMessage(body.key, body.action === 'dtrPage');
 	const recipients = await getRecipients('all', !!body.isTest);
 
 	const messageId = Date.now().toString();
@@ -349,12 +358,23 @@ async function handlePage(body: PageBody) {
 		!!body.isTest
 	);
 
+	if (recipients.map(r => r.phone.N).indexOf('***REMOVED***') === -1) {
+		recipients.push({
+			phone: {
+				N: '***REMOVED***'
+			},
+			callSign: {
+				N: '120'
+			}
+		});
+	}
+
 	// Send the messages
 	await Promise.all(recipients
 		.map((phone) => sendMessage(
 			messageId,
 			phone.phone.N,
-			createPageMessage(body.key, phone.callSign.N),
+			createPageMessage(body.key, body.action === 'dtrPage', phone.callSign.N),
 			[],
 			true
 		)));
@@ -407,6 +427,7 @@ async function parseRecord(event: lambda.SQSRecord) {
 				response = await handleTwilio(body);
 				break;
 			case 'page':
+			case 'dtrPage':
 				response = await handlePage(body);
 				break;
 			case 'login':

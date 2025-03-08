@@ -4,11 +4,13 @@ import { incrementMetric } from './utils/general';
 
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
+const sqs = new aws.SQS();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const deviceTable = process.env.TABLE_DEVICE as string;
+const sqsQueue = process.env.SQS_QUEUE as string;
 
 const metricSource = 'S3';
 
@@ -104,6 +106,14 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
+				if (headInfo.Metadata?.tone === 'true') {
+					body.Item.CsLooked = {
+						NS: []
+					};
+					body.Item.CsLookedTime = {
+						NS: []
+					};
+				}
 				if (sourceList.length === 0) {
 					delete body.Item.Sources;
 				}
@@ -140,6 +150,18 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					!!existingItems.Items &&
 					existingItems.Items.length > 1
 				) {
+					let queuePromise: Promise<null | aws.SQS.SendMessageResult> = new Promise(res => res(null));
+					if (headInfo.Metadata?.tone === 'true') {
+						queuePromise = sqs.sendMessage({
+							MessageBody: JSON.stringify({
+								action: 'dtrPage',
+								key: Key,
+								isTest: true
+							}),
+							QueueUrl: sqsQueue
+						}).promise();
+					}
+
 					const matchingItems = existingItems.Items.filter(item => {
 						const itemStartTime = Number(item.StartTime.N);
 						const itemEndTime = Number(item.EndTime.N);

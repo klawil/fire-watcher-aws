@@ -55,15 +55,15 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}
 
 	if (response.success && body.key.indexOf('BG_FIRE') === -1) {
-		const event = {
-			action: 'page',
+		const sqsEvent = {
+			action: event.queryStringParameters?.action,
 			key: body.key,
 			isTest: !!body.isTest
 		};
-		response.data = [ event ];
+		response.data = [ sqsEvent ];
 
 		await sqs.sendMessage({
-			MessageBody: JSON.stringify(event),
+			MessageBody: JSON.stringify(sqsEvent),
 			QueueUrl: sqsQueue
 		}).promise();
 	} else {
@@ -511,6 +511,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}
 		switch (action) {
 			case 'page':
+			case 'dtrPage':
 				return await handlePage(event);
 			case 'heartbeat':
 				return await handleHeartbeat(event);
