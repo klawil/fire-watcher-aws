@@ -36,6 +36,14 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    const captchaTable = new dynamodb.Table(this, 'cvfd-captcha', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'CaptchaId',
+        type: dynamodb.AttributeType.STRING
+      },
+      timeToLiveAttribute: 'ExpTime'
+    });
     const trafficTable = new dynamodb.Table(this, 'cvfd-traffic', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -91,10 +99,10 @@ export class FireWatcherAwsStack extends Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/api.ts',
       handler: 'main',
-      timeout: Duration.seconds(30),
       environment: {
         BUCKET: bucketName,
         TABLE_PHONE: phoneNumberTable.tableName,
+        TABLE_CAPTCHA: captchaTable.tableName,
         TABLE_TRAFFIC: trafficTable.tableName,
         TABLE_MESSAGES: messagesTable.tableName
       }
@@ -103,6 +111,7 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the API handler
     bucket.grantRead(apiHandler);
     phoneNumberTable.grantReadWriteData(apiHandler);
+    captchaTable.grantReadWriteData(apiHandler);
     trafficTable.grantReadData(apiHandler);
     messagesTable.grantReadWriteData(apiHandler);
 
