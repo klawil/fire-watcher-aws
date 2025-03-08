@@ -123,8 +123,6 @@ export async function sendMessage(
 		});
 }
 
-
-
 interface ErrorMetric {
 	source: string;
 	type: string;
@@ -179,4 +177,14 @@ export async function incrementMetric(
 	};
 
 	await cloudWatch.putMetricData(putConfig).promise();
+}
+
+export function validateBodyIsJson(body: string | null): true {
+	if (body === null) {
+		throw new Error(`Invalid JSON body - null`);
+	}
+
+	JSON.parse(body);
+
+	return true;
 }

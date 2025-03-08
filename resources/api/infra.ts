@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric } from '../utils';
+import { incrementMetric, validateBodyIsJson } from '../utils';
 
 const metricSource = 'Infra';
 
@@ -38,6 +38,13 @@ interface TextCommand {
 		UpdateExpression: string;
 	};
 };
+
+interface PageApiResponse {
+	success: boolean;
+	errors: string[];
+	message?: string;
+	data?: any[];
+}
 
 const textCommands: {
 	[key: string]: TextCommand;
@@ -229,6 +236,46 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	return response;
 }
 
+async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: PageApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body
+	if (!body.code || body.code !== apiCode) {
+		response.success = false;
+		response.errors.push('code');
+		response.errors.push('key');
+	}
+	if (!body.key) {
+		response.success = false;
+		response.errors.push('key');
+	}
+
+	if (response.success && body.key.indexOf('BG_FIRE') === -1) {
+		const event = {
+			action: 'page',
+			key: body.key
+		};
+
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify(event),
+			QueueUrl: sqsQueue
+		}).promise();
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 
@@ -242,6 +289,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleText(event);
 			case 'textStatus':
 				return await handleTextStatus(event);
+			case 'page':
+				return await handlePage(event);
 		}
 
 		incrementMetric('Error', {
