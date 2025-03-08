@@ -424,6 +424,46 @@ async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Pr
 	};
 }
 
+async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the code
+	event.queryStringParameters = event.queryStringParameters || {};
+	if (event.queryStringParameters.code !== apiCode) {
+		response.success = false;
+		response.errors.push('auth');
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Retrieve the texts
+	const result = await dynamodb.query({
+		TableName: textTable,
+		IndexName: 'isTestIndex',
+		Limit: 10,
+		ScanIndexForward: false,
+		ExpressionAttributeNames: {
+			'#its': 'isTestString'
+		},
+		ExpressionAttributeValues: {
+			':its': { S: 'y' }
+		},
+		KeyConditionExpression: '#its = :its'
+	}).promise();
+	response.data = result.Items?.map(parseDynamoDbAttributeMap);
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || '';
 
@@ -445,6 +485,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleTestState(event, true);
 			case 'endTest':
 				return await handleTestState(event, false);
+			case 'getTexts':
+				return await getTestTexts(event);
 		}
 
 		await incrementMetric('Error', {
