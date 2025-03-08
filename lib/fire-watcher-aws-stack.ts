@@ -72,7 +72,7 @@ export class FireWatcherAwsStack extends Stack {
     const queue = new sqs.Queue(this, 'cvfd-queue', {
       deadLetterQueue: {
         queue: deadLetterQueue,
-        maxReceiveCount: 1
+        maxReceiveCount: 2
       }
     });
 
