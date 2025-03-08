@@ -80,12 +80,20 @@ export async function getRecipients(
 		.then((data) => data.Items || []);
 }
 
-type AccountSidKey = `accountSid${string}`;
-type AuthTokenKey = `authToken${string}`;
+type ValidTwilioAccounts = '' | PhoneNumberAccount;
+type ValidTwilioNumberTypes = 'page' | 'alert' | 'chat';
 
-interface TwilioConfig {
-	[key: AccountSidKey]: string;
-	[key: AuthTokenKey]: string;
+type AccountSidKey = `accountSid${ValidTwilioAccounts}`;
+type AuthTokenKey = `authToken${ValidTwilioAccounts}`;
+type PhoneNumberKey = `phoneNumber${ValidTwilioAccounts}${ValidTwilioNumberTypes}`;
+
+type TwilioConfig = {
+	[key in AccountSidKey]: string;
+} & {
+	[key in AuthTokenKey]: string;
+} & {
+	[key in PhoneNumberKey]?: string;
+} & {
 	accountSid: string;
 	authToken: string;
 	apiCode: string;
@@ -96,9 +104,9 @@ interface TwilioConfig {
 
 interface PhoneNumberConfig {
 	name?: string;
-	number: string;
+	number: string; // PhoneNumberKey;
 	account?: PhoneNumberAccount;
-	type: 'page' | 'alert' | 'chat';
+	type: ValidTwilioNumberTypes;
 	department?: UserDepartment;
 }
 
@@ -106,49 +114,43 @@ const twilioSecretId = process.env.TWILIO_SECRET as string;
 export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 	pageBaca: {
 		type: 'page',
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberBacapage',
 		account: 'Baca',
 		department: 'Baca',
 	},
 	page: {
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberCrestonepage',
 		type: 'page',
 		account: 'Crestone',
 	},
 	alerts: {
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberalert',
 		type: 'alert',
 	},
 	chatCrestone: {
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberCrestonechat',
 		type: 'chat',
 		department: 'Crestone',
 		account: 'Crestone',
 	},
 	chatNSCAD: {
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberNSCADchat',
 		type: 'chat',
 		department: 'NSCAD',
 		account: 'NSCAD',
 	},
 	pageNSCAD: {
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberNSCADpage',
 		type: 'page',
 		department: 'NSCAD',
 		account: 'NSCAD',
 	},
 	pageSaguache: {
-		number: '***REMOVED***',
+		number: '***REMOVED***', // 'phoneNumberSaguachepage',
 		type: 'page',
 		department: 'Saguache',
 		account: 'Saguache',
 	},
-	// pageCrestone: {
-	// 	number: '+',
-	// 	type: 'page',
-	// 	department: 'Crestone',
-	// 	account: 'Crestone',
-	// },
 };
 export const twilioPhoneNumbers: { [key: string]: PhoneNumberConfig } = Object.keys(twilioPhoneCategories)
 	.reduce((agg: {

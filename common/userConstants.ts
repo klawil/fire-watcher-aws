@@ -1,6 +1,30 @@
-export type UserDepartment = 'Crestone' | 'NSCAD' | 'Baca' | 'PageOnly' | 'Saguache';
-export type PagingTalkgroup = 8332 | 18332 | 18331 | 8198 | 8334
- | 8281 | 8181;
+export const validDepartments = [
+	'Baca',
+	'Crestone',
+	'NSCAD',
+	'PageOnly',
+	'Saguache',
+] as const;
+export type UserDepartment = typeof validDepartments[number];
+
+export const validPhoneNumberAccounts = [
+	'Baca',
+	'NSCAD',
+	'Crestone',
+	'Saguache',
+] as const;
+export type PhoneNumberAccount = typeof validPhoneNumberAccounts[number];
+
+export const pagingTalkgroupOrder = [
+	8332,
+	18332,
+	18331,
+	8198,
+	8334,
+	8281,
+	8181,
+] as const;
+export type PagingTalkgroup = typeof pagingTalkgroupOrder[number];
 
 interface DepartmentConfig {
 	name: string;
@@ -16,32 +40,6 @@ interface PageConfig {
 	partyBeingPaged: string;
 	pageService: string;
 }
-
-export const validDepartments: UserDepartment[] = [
-	'Baca',
-	'Crestone',
-	'NSCAD',
-	'PageOnly',
-	'Saguache',
-];
-
-export type PhoneNumberAccount = 'Baca' | 'NSCAD' | 'Crestone' | 'Saguache';
-export const validPhoneNumberAccounts: PhoneNumberAccount[] = [
-	'Baca',
-	'NSCAD',
-	'Crestone',
-	'Saguache',
-];
-
-export const pagingTalkgroupOrder: PagingTalkgroup[] = [
-	8332,
-	18332,
-	18331,
-	8198,
-	8334,
-	8281,
-	8181,
-];
 
 export const defaultDepartment = 'Crestone';
 
