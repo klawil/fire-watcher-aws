@@ -455,7 +455,7 @@ export class FireWatcherAwsStack extends Stack {
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
     textsTable.grantReadWriteData(queueHandler);
-    dtrTable.grantReadData(queueHandler);
+    dtrTable.grantReadWriteData(queueHandler);
     twilioSecret.grantRead(queueHandler);
     dtrTranslationTable.grantReadWriteData(queueHandler);
 
