@@ -29,6 +29,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				},
 				Tone: {
 					BOOL: headInfo.Metadata?.tone === 'y'
+				},
+				ToneIndex: {
+					S: headInfo.Metadata?.tone || 'n'
 				}
 			}
 		};

@@ -7,6 +7,7 @@ const sqs = new AWS.SQS();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const captchaTable = process.env.TABLE_CAPTCHA as string;
+const phoneTable = process.env.TABLE_PHONE as string;
 const queueUrl = process.env.SQS_QUEUE as string;
 
 const captchaTtl = 1000 * 60 * 5;
@@ -127,28 +128,35 @@ interface RegisterApiResponse {
 	message?: string;
 }
 
+function validateBodyIsJson(body: string | undefined): true | APIGatewayProxyResultV2 {
+	const errorBody: RegisterApiResponse = {
+		success: false,
+		message: 'Invalid API format',
+		errors: []
+	};
+	const errorResponse: APIGatewayProxyResultV2 = {
+		statusCode: 400,
+		body: JSON.stringify(errorBody)
+	};
+
+	if (!body) {
+		return errorResponse;
+	}
+
+	try {
+		JSON.parse(body);
+	} catch (e) {
+		return errorResponse;
+	}
+
+	return true;
+}
+
 async function registerPhase1(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	// Validate the body
-	let isBodyValid = true;
-	try {
-		if (event.body) {
-			JSON.parse(event.body);
-		} else {
-			isBodyValid = false;
-		}
-	} catch (e) {
-		isBodyValid = false;
-	}
-	if (!isBodyValid) {
-		const response: RegisterApiResponse = {
-			success: false,
-			message: 'Invalid API format',
-			errors: []
-		};
-		return {
-			statusCode: 400,
-			body: JSON.stringify(response)
-		};
+	const bodyValidResponse = validateBodyIsJson(event.body);
+	if (bodyValidResponse !== true) {
+		return bodyValidResponse;
 	}
 
 	// Parse the body
@@ -233,6 +241,73 @@ async function registerPhase1(event: APIGatewayProxyEventV2): Promise<APIGateway
 	};
 }
 
+async function registerPhase2(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+	// Validate the body
+	const bodyValidResponse = validateBodyIsJson(event.body);
+	if (bodyValidResponse !== true) {
+		return bodyValidResponse;
+	}
+
+	// Parse the body
+	const body = JSON.parse(event.body as string);
+	const response: RegisterApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the body parameters
+	if (!body.phone || !phoneRegex.test(body.phone)) {
+		response.success = false;
+		response.errors.push('phone');
+	}
+	if (!body.code) {
+		response.success = false;
+		response.errors.push('code');
+	}
+
+	// Validate the code (if available)
+	if (response.success) {
+		const code = await dynamodb.getItem({
+			TableName: phoneTable,
+			Key: {
+				phone: {
+					N: body.phone.replace(/[^0-9]/g, '')
+				}
+			}
+		}).promise();
+
+		if (!code.Item) {
+			response.success = false;
+			response.errors.push('code');
+		} else {
+			const expiry = parseInt(code.Item.codeExpiry.N as string);
+			const answer = code.Item.code.N?.padStart(6, '0');
+
+			response.success = expiry >= Date.now() && body.code === answer;
+			if (!response.success) {
+				response.errors.push('code');
+			}
+		}
+	}
+
+	if (response.success) {
+		response.message = 'Subscribed!';
+		const event = {
+			action: 'activate',
+			phone: body.phone
+		};
+		await sqs.sendMessage({
+			MessageBody: JSON.stringify(event),
+			QueueUrl: queueUrl
+		}).promise();
+	}
+
+	return {
+		statusCode: response.success ? 200 : 400,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
 	try {
 		const action = event.queryStringParameters?.action || 'list';
@@ -245,6 +320,7 @@ export async function main(event: APIGatewayProxyEventV2): Promise<APIGatewayPro
 				return registerPhase1(event);
 			case 'register2':
 				console.log(event.body);
+				return registerPhase2(event);
 		}
 
 		return {

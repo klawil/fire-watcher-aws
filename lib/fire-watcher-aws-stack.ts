@@ -67,6 +67,18 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    trafficTable.addGlobalSecondaryIndex({
+      indexName: 'ToneIndex',
+      partitionKey: {
+        name: 'ToneIndex',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'Datetime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
     // Create a handler that pushes file information into Dynamo DB
     const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
       runtime: lambda.Runtime.NODEJS_14_X,
@@ -88,6 +100,7 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
+        TABLE_TRAFFIC: trafficTable.tableName,
         TWILIO_SECRET: secretArn
       },
       timeout: Duration.minutes(1)
@@ -95,11 +108,20 @@ export class FireWatcherAwsStack extends Stack {
 
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
+    trafficTable.grantReadData(queueHandler);
     secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn)
       .grantRead(queueHandler);
 
+    // Create the dead letter queue
+    const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
+
     // Create the SQS queue
-    const queue = new sqs.Queue(this, 'cvfd-queue');
+    const queue = new sqs.Queue(this, 'cvfd-queue', {
+      deadLetterQueue: {
+        queue: deadLetterQueue,
+        maxReceiveCount: 3
+      }
+    });
     queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
 
     // Create the event trigger

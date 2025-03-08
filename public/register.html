@@ -52,6 +52,10 @@
 			<div class="row mb-3" id="submit-row">
 				<input type="button" class="col btn btn-success" id="submit" value="Submit" />
 			</div>
+
+			<div class="row mb-3 hidden" id="success-row">
+				<a href="/" type="button" class="col btn btn-success" id="success" value="Submit">Return to List</a>
+			</div>
 		</div>
 
 		<script>
@@ -61,7 +65,10 @@
 				[ 'success' ]
 			]
 
-			const inputs = [ ...document.querySelectorAll('input') ]
+			const inputs = [
+				...document.querySelectorAll('input'),
+				...document.querySelectorAll('a')
+			]
 				.reduce((agg, elem) => ({
 					...agg,
 					[elem.id]: elem
