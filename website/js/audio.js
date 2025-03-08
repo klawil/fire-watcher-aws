@@ -105,31 +105,43 @@ const filterButtons = [
 
 if (filterModal) {
 	filterApplyButton.addEventListener('click', () => {
+		Object.keys(urlFilters)
+			.forEach(key => urlFilters[key].update());
+		Object.keys(afterFilters)
+			.forEach(key => afterFilters[key].update());
 		setUrlParams();
 		updateData('after', true);
 	});
 }
 
 class CheckBoxFilter {
+	value = [];
+
 	constructor(querySelector) {
 		this.elements = [ ...document.querySelectorAll(querySelector) ];
+		this.update();
 		this.defaultUrl = this.getUrl();
 	}
 
+	update() {
+		this.value = this.elements
+			.filter(checkbox => checkbox.checked)
+			.map(checkbox => checkbox.value);
+	}
+
 	get() {
-		return this.elements
-			.filter((checkbox) => checkbox.checked)
-			.map((checkbox) => checkbox.value);
+		return this.value;
 	}
 
 	set(urlValue) {
 		const vals = urlValue.split('|');
 		this.elements
 			.forEach((checkbox) => checkbox.checkbox = vals.indexOf(checkbox.value) !== -1);
+		this.update();
 	}
 
 	getUrl() {
-		return this.get().join('|');
+		return this.value.join('|');
 	}
 
 	isDefault() {
@@ -138,21 +150,29 @@ class CheckBoxFilter {
 }
 
 class ToggleFilter {
+	value = undefined;
+
 	constructor(id) {
 		this.element = document.getElementById(id);
+		this.update();
 		this.defaultUrl = this.getUrl();
 	}
 
+	update() {
+		this.value = this.element.checked ? 'y' : undefined;
+	}
+
 	get() {
-		return this.element.checked ? 'y' : undefined;
+		return this.value;
 	}
 
 	set(urlValue) {
 		this.element.checked = urlValue === 'y';
+		this.update();
 	}
 
 	getUrl() {
-		return `${this.get()}`;
+		return `${this.value}`;
 	}
 
 	isDefault() {

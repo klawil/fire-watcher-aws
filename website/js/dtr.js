@@ -118,13 +118,13 @@ class TalkgroupFilter {
 	chosenTalkgroups = [];
 
 	presets = {
-		'NSCAD': [ 8198 ],
-		'NSCFPD': [ 8330, 8332, 8333 ],
-		'BGFD/BGEMS': [ 8090, 8331 ],
-		'Saguache SO': [ 8335, 8336 ],
-		'NSCAD and NSCFPD': [ 8198, 8330, 8332, 8333 ],
-		'SC All': [ 8090, 8198, 8330, 8331, 8332, 8333, 8335, 8336 ],
-		'SC All (no ARCC 5)': [ 8198, 8330, 8331, 8332, 8333, 8335, 8336 ],
+		'NSCAD': [ '8198' ],
+		'NSCFPD': [ '8330', '8332', '8333' ],
+		'BGFD/BGEMS': [ '8090', '8331' ],
+		'Saguache SO': [ '8335', '8336' ],
+		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333' ],
+		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336' ],
+		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336' ],
 	};
 
 	constructor() {
@@ -172,6 +172,7 @@ class TalkgroupFilter {
 		Object.keys(talkgroupMap)
 			.forEach(key => this.createTalkgroupElem(key, talkgroupMap[key]));
 
+		this.update();
 		this.defaultUrl = this.getUrl();
 	}
 
@@ -202,24 +203,34 @@ class TalkgroupFilter {
 		return elemParent;
 	}
 
-	get() {
+	update() {
 		this.activeTab = this.tabContents
 			.filter(div => div.classList.contains('show'))[0]
 			.id;
 
-		if (this.activeTab === 'all') return undefined;
+		if (this.activeTab === 'all') return;
 
 		this.emergOnlyCheckbox.checked = false;
 
 		if (this.activeTab === 'presets'){
-			if (this.chosenPreset === null) return undefined;
+			if (this.chosenPreset === null) return;
 
 			this.chosenPreset = this.presetSelect.value;
-			return this.presets[this.chosenPreset];
+			return;
 		}
 		 
 		this.chosenTalkgroups = [ ...this.talkgroupSelected.querySelectorAll('tr') ]
 			.map(elem => elem.id.slice(3));
+	}
+	
+	get() {
+		if (this.activeTab === 'all') return undefined;
+
+		if (this.activeTab === 'presets'){
+			if (this.chosenPreset === null) return undefined;
+
+			return this.presets[this.chosenPreset];
+		}
 
 		if (this.chosenTalkgroups.length === 0) return undefined;
 
@@ -259,10 +270,11 @@ class TalkgroupFilter {
 		this.tabContents
 			.filter(div => div.id === this.activeTab)
 			.forEach(div => div.classList.add('active', 'show'));
+
+		this.update();
 	}
 
 	getUrl(forApi = false) {
-		this.get();
 		const responseForAll = forApi ? undefined : 'all';
 
 		switch (this.activeTab) {
