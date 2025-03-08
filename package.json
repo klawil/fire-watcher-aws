@@ -9,7 +9,8 @@
     "build-lambda": "tsc resources/auth_middleware.ts",
     "build-website": "webpack -c website/webpack.conf.js",
     "watch": "webpack -c website/webpack.conf.js --watch",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "server": "nodemon -w server.js -w website/webpack.conf.js server.js"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.138",
