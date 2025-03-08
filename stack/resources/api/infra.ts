@@ -531,7 +531,7 @@ async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGa
 	};
 }
 
-const testingUser = '***REMOVED***';
+const testingUser = process.env.TESTING_USER as string;
 async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Promise<APIGatewayProxyResult> {
 	logger.trace('handleTestState', ...arguments);
 	const response: GenericApiResponse = {
