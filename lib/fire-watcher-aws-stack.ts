@@ -889,16 +889,11 @@ export class FireWatcherAwsStack extends Stack {
           QUEUE_URL: queue.queueUrl,
           TWILIO_SECRET: secretArn,
           TABLE_USER: phoneNumberTable.tableName,
-          TABLE_CONFERENCE: conferenceTable.tableName,
         },
         readWrite: [
           phoneNumberTable
         ],
-        read: [
-          conferenceTable,
-        ],
         queue,
-        secret: twilioSecret,
       },
       {
         name: 'twilio',
@@ -915,7 +910,7 @@ export class FireWatcherAwsStack extends Stack {
           conferenceTable,
         ],
         queue,
-        secret: twilioSecret
+        secret: twilioSecret,
       },
       {
         name: 'events',
@@ -923,6 +918,19 @@ export class FireWatcherAwsStack extends Stack {
           FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
         },
         firehose: eventsFirehose
+      },
+      {
+        name: 'conference',
+        env: {
+          TWILIO_SECRET: secretArn,
+          TABLE_USER: phoneNumberTable.tableName,
+          TABLE_CONFERENCE: conferenceTable.tableName,
+        },
+        readWrite: [
+          phoneNumberTable,
+          conferenceTable,
+        ],
+        secret: twilioSecret,
       },
     ];
 

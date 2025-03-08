@@ -7,7 +7,7 @@ const logType = (type) => function() {
 }
 
 async function updateAccessToken() {
-	await fetch(`${baseHost}/api/user?action=token`)
+	await fetch(`${baseHost}/api/conference?action=token`)
 		.then(r => r.json())
 		.then(data => {
 			if (!data.success) throw new Error(`Invalid token response: ${data.message}`);
@@ -48,7 +48,7 @@ const kickUser = (btn, callSid) => async () => {
 	modifyButton(btn, 'Removing...', 'btn-secondary', true, false);
 
 	try {
-		await fetch(`${baseHost}/api/twilio?action=kickUser&callSid=${encodeURIComponent(callSid)}`)
+		await fetch(`${baseHost}/api/conference?action=kickUser&callSid=${encodeURIComponent(callSid)}`)
 			.then(r => r.json())
 			.then(console.log);
 	} catch (e) {
@@ -145,7 +145,7 @@ async function loadParticipants() {
 	const localLastStartTime = Date.now();
 	lastStartTime = localLastStartTime;
 
-	return fetch(`${baseHost}/api/user?action=getConference`)
+	return fetch(`${baseHost}/api/conference?action=get`)
 		.then(r => r.json())
 		.then(data => {
 			if (participantsLoading.parentElement !== null)
@@ -356,7 +356,7 @@ async function inviteButtonClick(btn) {
 
 	let wasSuccess = false;
 	try {
-		const apiResponse = await fetch(`${baseHost}/api/twilio?action=invite&phone=${btn.getAttribute('data-phone')}`)
+		const apiResponse = await fetch(`${baseHost}/api/conference?action=invite&phone=${btn.getAttribute('data-phone')}`)
 			.then(r => r.json());
 		
 		wasSuccess = apiResponse.success;

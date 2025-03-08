@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, randomString, validateBodyIsJson } from '../utils/general';
+import { incrementMetric, parseDynamoDbAttributeMap, randomString, validateBodyIsJson } from '../utils/general';
 import { authTokenCookie, authUserCookie, getCookies, getLoggedInUser } from '../utils/auth';
 
 const metricSource = 'User';
@@ -11,7 +11,6 @@ const sqs = new aws.SQS();
 
 const queueUrl = process.env.QUEUE_URL as string;
 const userTable = process.env.TABLE_USER as string;
-const conferenceTable = process.env.TABLE_CONFERENCE as string;
 
 const validDepartments: string[] = [
 	'Crestone',
@@ -659,85 +658,6 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
-async function getTwilioAccessToken(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
-	if (
-		user === null ||
-		!user.isActive?.BOOL
-	) {
-		return unauthorizedResponse;
-	}
-
-	const twilioConf = await getTwilioSecret();
-
-	const AccessToken = require('twilio').jwt.AccessToken;
-	const voiceGrant = new AccessToken.VoiceGrant({
-		outgoingApplicationSid: twilioConf.voiceOutgoingSid,
-	});
-
-	const token = new AccessToken(
-		twilioConf.accountSid,
-		twilioConf.voiceApiSid,
-		twilioConf.voiceApiSecret,
-		{ identity: 'user', ttl: 15 * 60 }
-	);
-	token.addGrant(voiceGrant);
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			token: token.toJwt(),
-		}),
-	};
-}
-
-async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const user = await getLoggedInUser(event);
-
-	const unauthorizedResponse = {
-		statusCode: 403,
-		body: JSON.stringify({
-			success: false,
-			message: 'You are not permitted to access this area'
-		})
-	};
-	if (
-		user === null ||
-		!user.isActive?.BOOL
-	) {
-		return unauthorizedResponse;
-	}
-
-	const activeUsers = await dynamodb.scan({
-		TableName: conferenceTable,
-		ExpressionAttributeNames: {
-			'#r': 'Room',
-		},
-		ExpressionAttributeValues: {
-			':r': { S: user.department?.S },
-		},
-		FilterExpression: '#r = :r',
-	}).promise();
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify({
-			success: true,
-			data: activeUsers.Items?.map(parseDynamoDbAttributeMap)
-				.filter(v => typeof v.ConferenceSid !== 'undefined'),
-		}),
-	};
-}
-
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 	try {
@@ -762,10 +682,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await createOrUpdateUser(event, false);
 			case 'delete':
 				return await deleteUser(event);
-			case 'token':
-				return await getTwilioAccessToken(event);
-			case 'getConference':
-				return await getConference(event);
 		}
 
 		console.error(`Invalid action - '${action}'`);
