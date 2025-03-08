@@ -118,7 +118,10 @@ let currentCharts = {};
 
 let refreshConfig = null;
 let lastInitId = null;
-function refreshCharts() {
+function refreshCharts(refreshFrom = null) {
+	if (refreshFrom !== null && refreshFrom !== lastInitId)
+		return;
+
 	const thisInitId = Date.now()
 	lastInitId = thisInitId;
 	Promise.all(charts.map(chart => fetch(`${baseHost}/api/frontend?action=stats&${chart.query}`)
@@ -302,7 +305,7 @@ function refreshCharts() {
 			if (thisInitId !== lastInitId) return;
 
 			if (refreshConfig !== null)
-				setTimeout(refreshCharts, refreshConfig);
+				setTimeout(refreshCharts, refreshConfig, thisInitId);
 		});
 }
 
@@ -333,6 +336,9 @@ refreshData.addEventListener('change', () => {
 		refreshConfig = null;
 	} else {
 		refreshConfig = parseInt(refreshData.value, 10);
-		refreshCharts();
+		if (lastInitId !== null && Date.now() - lastInitId >= refreshConfig)
+			refreshCharts();
+		else
+			setTimeout(refreshCharts, refreshConfig + lastInitId - Date.now());
 	}
 });
