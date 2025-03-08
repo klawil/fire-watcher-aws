@@ -386,13 +386,15 @@ async function handleTwilio(body: TwilioBody) {
 	const adminSender = !!sender.Item?.isAdmin?.BOOL;
 	const isTest = !!sender.Item?.isTest?.BOOL;
 	const twilioConf = await getTwilioSecret();
-	const isFromPageNumber = adminSender && messageTo === twilioConf.pageNumber;
+	const pageNumber = twilioConf[`pageNumber${sender.Item?.department?.S}`]
+		|| twilioConf.pageNumber;
+	const isFromPageNumber = adminSender && messageTo === pageNumber;
 
 	const recipients = await getRecipients(sender.Item?.department.S || '', null, isTest)
 		.then((data) => data.filter((number) => {
 			if (isTest) return true;
 
-			return messageTo === twilioConf.pageNumber ||
+			return messageTo === pageNumber ||
 				number.phone.N !== sender.Item?.phone.N
 		}));
 
