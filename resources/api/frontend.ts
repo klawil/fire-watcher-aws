@@ -569,7 +569,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'source',
-						Value: 'User'
+						Value: 'Twilio'
 					}
 				]
 			},
