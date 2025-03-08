@@ -47,8 +47,8 @@ function dateToStr(d: Date) {
 }
 
 const lastUpdateId: {
-	before?: number;
-	after?: number;
+	before: number | null;
+	after: number | null;
 } = {
 	before: null,
 	after: null,
@@ -102,10 +102,10 @@ function fileToTime(name: string) {
 	if (!dtrFileNameRegex.test(name) && !vhfFileNameRegex.test(name)) return false;
 
 	if (dtrFileNameRegex.test(name)) {
-		const parts = name.match(dtrFileNameRegex);
+		const parts = name.match(dtrFileNameRegex) as string[];
 		return parseInt(parts[1], 10);
 	} else {
-		const parts = name.match(vhfFileNameRegex);
+		const parts = name.match(vhfFileNameRegex) as string[];
 		return new Date(`${parts[3]}-${parts[4]}-${parts[5]}T${parts[6]}:${parts[7]}:${parts[8]}Z`).getTime() / 1000;
 	}
 }
@@ -134,7 +134,7 @@ function displayRows(newFiles: AudioFileObject[], direction: 'after' | 'before',
 async function updateData(
 	direction: 'after' | 'before' = 'after',
 	restart = false,
-	date: Date = null
+	date: Date | null = null
 ) {
 	if (date !== null) {
 		restart = true;
@@ -180,7 +180,7 @@ async function updateData(
 
 	Object.keys(urlFilters)
 		.filter(key => urlFilters[key].get(true) !== null)
-		.forEach(key => parameters.push(`${key}=${encodeURIComponent(urlFilters[key].get(true))}`));
+		.forEach(key => parameters.push(`${key}=${encodeURIComponent(urlFilters[key].get(true) as string)}`));
 
 	apiUrl += parameters.join('&');
 	
@@ -238,10 +238,12 @@ async function updateData(
 
 		playFile(rowToPlay.Key);
 		const row = document.getElementById(btoa(rowToPlay.Key));
+		if (row === null) return;
 		row.scrollIntoView({ block: 'center' });
 		handleLoadNewFiles(null);
 	} else if (direction === 'after' && !isLive) {
 		const row = document.getElementById(btoa(apiResults.files[0].Key));
+		if (row === null) return;
 		row.scrollIntoView({ block: 'center' });
 		setTimeout(() => row.classList.add('tg-row-highlight'), 100);
 		setTimeout(() => row.classList.remove('tg-row-highlight'), 800);
@@ -269,8 +271,8 @@ let lastScrollY: number = 0;
 let lastScrollEventDown: number = 0;
 let lastScrollEventUp: number = 0;
 const scrollDebounce = 2000;
-function handleLoadNewFiles(e: Event) {
-	let scrollingDown: boolean = null;
+function handleLoadNewFiles(e: Event | null) {
+	let scrollingDown: boolean | null = null;
 	if (e !== null) {
 		scrollingDown = window.scrollY > lastScrollY;
 		lastScrollY = window.scrollY;
@@ -325,16 +327,22 @@ async function init() {
 		return;
 	}
 
-	let tgPromiseRes: Function;
+	let tgPromiseRes: Function = () => {};
 	tgPromise = new Promise(res => tgPromiseRes = res);
 	
 	// Get the starting point
 	const urlParams = getUrlParams();
-	let startDate: Date = null;
-	if (typeof urlParams.date !== 'undefined') {
+	let startDate: Date | null = null;
+	if (
+		typeof urlParams.date !== 'undefined' &&
+		urlParams.date !== null
+	) {
 		startDate = new Date(urlParams.date);
 		deleteUrlParams([ 'date' ]);
-	}	else if (typeof urlParams.f) {
+	}	else if (
+		typeof urlParams.f !== 'undefined' &&
+		urlParams.f !== null
+	) {
 		const fileDate = fileToTime(urlParams.f);
 		if (fileDate !== false)
 			startDate = new Date((fileDate - 1) * 1000);
@@ -342,7 +350,7 @@ async function init() {
 
 	Object.keys(urlFilters).sort().reverse().forEach(key => {
 		if (typeof urlParams[key] !== 'undefined' && urlParams[key] !== null)
-			urlFilters[key].set(urlParams[key]);
+			urlFilters[key].set(urlParams[key] as string);
 	});
 
 	// Report that the user opened a page
@@ -370,7 +378,7 @@ async function init() {
 	const tgData: ApiAudioTalkgroupsResponse = await fetch(`/api/audio?action=talkgroups`)
 		.then(r => r.json());
 	
-	if (!tgData.success) {
+	if (!tgData.success || typeof tgData.talkgroups === 'undefined') {
 		doneLoading();
 		showAlert('danger', 'Failed to load talkgroups');
 		tgPromiseRes();
@@ -390,7 +398,8 @@ async function init() {
 
 			return agg;
 		}, {});
-	urlFilters.tg.setTalkgroups(talkgroups);
+	if (typeof urlFilters.tg.setTalkgroups !== 'undefined')
+		urlFilters.tg.setTalkgroups(talkgroups);
 
 	tgPromiseRes();
 }
@@ -425,6 +434,7 @@ filterApplyJumpButton.addEventListener('click', () => {
 	const currentFile = getUrlParams().f;
 	if (
 		typeof currentFile === 'undefined' ||
+		currentFile === null ||
 		fileToTime(currentFile) === false
 	)
 		updateData('after', true);
@@ -432,11 +442,11 @@ filterApplyJumpButton.addEventListener('click', () => {
 		updateData('after', true, new Date(<number>fileToTime(currentFile) * 1000));
 });
 
-const timeButtons = [
-	document.getElementById('time-button-d'),
-	document.getElementById('time-button-m')
+const timeButtons: HTMLButtonElement[] = [
+	<HTMLButtonElement>document.getElementById('time-button-d'),
+	<HTMLButtonElement>document.getElementById('time-button-m')
 ];
-const timeApplyButton = document.getElementById('time-apply');
+const timeApplyButton = <HTMLButtonElement>document.getElementById('time-apply');
 const timeSelect = {
 	hour: <HTMLInputElement>document.getElementById('start-date-hour'),
 	minute: <HTMLInputElement>document.getElementById('start-date-minute'),

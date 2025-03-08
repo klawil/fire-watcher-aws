@@ -11,7 +11,7 @@ export interface AudioFilter {
 export class ToggleFilter implements AudioFilter {
 	value: string | null = null;
 	element: HTMLInputElement
-	defaultUrl: string;
+	defaultUrl: string | null;
 
 	constructor(id: string) {
 		this.element = <HTMLInputElement>document.getElementById(id);
@@ -82,7 +82,7 @@ export class TalkgroupFilter implements AudioFilter {
 	talkgroupSelect: HTMLDivElement;
 	talkgroupSelected: HTMLDivElement;
 
-	defaultUrl: string;
+	defaultUrl: string | null;
 
 	constructor(talkgroups: Talkgroups | null) {
 		const tabs = [
@@ -113,7 +113,7 @@ export class TalkgroupFilter implements AudioFilter {
 		this.talkgroupSelect = <HTMLDivElement>document.getElementById('talkgroup-select');
 		this.talkgroupSelected = <HTMLDivElement>document.getElementById('talkgroup-select-active');
 		const talkgroupSearch = <HTMLInputElement>document.getElementById('tg-search');
-		talkgroupSearch.addEventListener('input', e => {
+		talkgroupSearch.addEventListener('input', () => {
 			const searchValue = talkgroupSearch.value.toLowerCase();
 			let filterFunc = (elem: HTMLDivElement) => elem.innerHTML.toLowerCase().indexOf(searchValue) !== -1;
 			if (searchValue === '')

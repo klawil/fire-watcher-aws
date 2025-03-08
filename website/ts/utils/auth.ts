@@ -34,7 +34,7 @@ export async function useFidoKey(keyIds: string[], isTest: boolean): Promise<boo
 			response: {
 				authenticatorData: bufferToBase64(credential.response.authenticatorData),
 				signature: bufferToBase64(credential.response.signature),
-				userHandle: bufferToBase64(credential.response.userHandle),
+				userHandle: bufferToBase64(credential.response.userHandle as ArrayBuffer),
 				clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
 				id: credential.id,
 				type: credential.type,
@@ -46,7 +46,7 @@ export async function useFidoKey(keyIds: string[], isTest: boolean): Promise<boo
 			body: JSON.stringify(userAuthBody),
 		}).then(r => r.json());
 	} catch (e) {
-		result.message = e.message;
+		result.message = (<Error>e).message;
 		console.error(e);
 	}
 
@@ -72,11 +72,11 @@ if (user.isUser) {
 	Array.from(document.getElementsByClassName('requireUser'))
 		.forEach(elem => elem.classList.remove('d-none'));
 
-	document.getElementById('loginLink').classList.add('d-none');
-	const username = document.getElementById('username');
-	username.innerHTML = user.fName;
+	(<HTMLAnchorElement>document.getElementById('loginLink')).classList.add('d-none');
+	const username = <HTMLDivElement>document.getElementById('username');
+	username.innerHTML = user.fName || 'User';
 	username.classList.remove('d-none');
-	document.getElementById('logoutLink').classList.remove('d-none');
+	(<HTMLAnchorElement>document.getElementById('logoutLink')).classList.remove('d-none');
 }
 if (user.isAdmin) {
 	Array.from(document.getElementsByClassName('requireAdmin'))

@@ -25,24 +25,6 @@ interface ChartConfig {
 	val?: (a: number) => number;
 }
 
-const formatHourMinute: TimeFormatFn = date => {
-	const dateString = date.toLocaleDateString('en-us', {
-		timeZone: 'America/Denver',
-		weekday: 'short'
-	});
-	let timeString = date.toLocaleTimeString('en-US', {
-		timeZone: 'America/Denver',
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit'
-	});
-
-	if (timeString === '24:00') {
-		timeString = `${dateString} 00:00`;
-	}
-
-	return timeString;
-}
 const formatDayHour: TimeFormatFn = date => {
 	const dateString = date.toLocaleDateString('en-us', {
 		timeZone: 'America/Denver',
@@ -159,7 +141,11 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 	const data: ApiFrontendStatsResponse = await fetch(`/api/frontend?action=stats&${conf.query}`)
 		.then(r => r.json());
 	
-	if (!data.success) return new Error(`Failed to build chart ${conf.id}`);
+	if (
+		!data.success ||
+		typeof data.data === 'undefined' ||
+		typeof data.startTime === 'undefined'
+	) return new Error(`Failed to build chart ${conf.id}`);
 	
 	try {
 		conf.val = conf.val || (val => val);
@@ -183,7 +169,10 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 				.forEach(key => chartData[item.ts][key] = item.values[key] || 0);
 		});
 		labels.forEach(label => Object.keys(names)
-			.forEach(key => chartData[label][key] = conf.val(chartData[label][key] || 0)));
+			.forEach(key => {
+				if (typeof conf.val !== 'undefined')
+					chartData[label][key] = conf.val(chartData[label][key] || 0);
+			}));
 
 		const formatter = periodFormatters.reduce((f, val) => {
 			if (data.period <= val.period) return val.formatter;
@@ -216,23 +205,33 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 				},
 			},
 		};
-		if (window.innerWidth >= 992)
+		if (window.innerWidth >= 992) {
+			chartConfig.options = chartConfig.options || {};
 			chartConfig.options.plugins = {
 				legend: {
 					position: 'right',
 				},
 			};
-		else
+		} else {
+			chartConfig.options = chartConfig.options || {};
 			chartConfig.options.plugins = {
 				legend: {
 					position: 'bottom',
 				},
 			};
+		}
 
 		// Chart type configs
-		if (conf.type === 'Timing')
+		if (conf.type === 'Timing') {
+			chartConfig.options = chartConfig.options || {};
+			chartConfig.options.scales = chartConfig.options.scales || {};
+			chartConfig.options.scales.y = chartConfig.options.scales.y || {};
 			chartConfig.options.scales.y.stacked = true;
+		}
 		if (conf.type === 'Tower') {
+			chartConfig.options = chartConfig.options || {};
+			chartConfig.options.scales = chartConfig.options.scales || {};
+			chartConfig.options.scales.y = chartConfig.options.scales.y || {};
 			chartConfig.options.scales.y.max = 45;
 			chartConfig.options.scales.y2 = {
 				type: 'linear',
@@ -242,7 +241,7 @@ async function buildChart(conf: ChartConfig): Promise<Error | null> {
 					drawOnChartArea: false,
 				},
 			};
-			datasets.forEach(dataset => dataset.label = dataset.label.split(' - ').pop());
+			datasets.forEach(dataset => dataset.label = (dataset.label || '').split(' - ').pop());
 
 			datasets[0].borderColor = color1.borderColor;
 			datasets[0].backgroundColor = color1.backgroundColor;

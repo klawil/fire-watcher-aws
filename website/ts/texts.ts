@@ -7,10 +7,10 @@ const dtrPageRegex = /\d{4}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/;
 function parseForPageTime(pageId: string): number {
 	let d = new Date();
 	if (dtrPageRegex.test(pageId)) {
-		const match = pageId.match(dtrPageRegex);
+		const match = pageId.match(dtrPageRegex) as string[];
 		d = new Date(parseInt(match[1], 10) * 1000);
 	} else {
-		const match = pageId.match(vhfPageRegex);
+		const match = pageId.match(vhfPageRegex) as string[];
 		d.setUTCFullYear(parseInt(match[1], 10));
 		d.setUTCMonth(parseInt(match[2], 10) - 1);
 		d.setUTCDate(parseInt(match[3], 10));
@@ -86,6 +86,9 @@ function getPercentile(values: number[], percentile: number) {
 
 function buildTable(items: TextObject[], isPage: boolean) {
 	const rows = items.map(text => {
+		text.sent = text.sent || [];
+		text.delivered = text.delivered || [];
+		text.undelivered = text.undelivered || [];
 		const cells = [
 			dateTimeToTimeStr(text.datetime),
 			text.body,
@@ -99,7 +102,7 @@ function buildTable(items: TextObject[], isPage: boolean) {
 			getPercentile(text.delivered, 100),
 		];
 
-		if (isPage) {
+		if (isPage && typeof text.pageTime !== 'undefined') {
 			text.csLooked = text.csLooked || [];
 			cells.splice(
 				7, 0,
@@ -128,7 +131,7 @@ async function init() {
 	const apiResults: ApiFrontendListTextsResponse = await fetch(`/api/frontend?action=listTexts`)
 		.then(r => r.json());
 
-	if (!apiResults.success) {
+	if (!apiResults.success || typeof apiResults.data === 'undefined') {
 		showAlert('danger', 'Failed to get texts');
 		console.error(apiResults);
 		return;
@@ -141,7 +144,10 @@ async function init() {
 	const textsByType: {
 		page: TextObject[];
 		other: TextObject[];
-	} = texts.reduce((agg, text) => {
+	} = texts.reduce((agg: {
+		page: TextObject[];
+		other: TextObject[];
+	}, text) => {
 		text.delivered = text.delivered || [];
 		text.sent = text.sent || [];
 		text.undelivered = text.undelivered || [];
@@ -149,7 +155,7 @@ async function init() {
 		if (text.isPage === 'y')
 			text.pageTime = parseForPageTime(text.body);
 		
-		const baselineTime = text.isPage === 'y' ? text.pageTime : text.datetime;
+		const baselineTime = text.isPage === 'y' ? text.pageTime || text.datetime : text.datetime;
 
 		text.delivered = text.delivered.map(t => t - baselineTime);
 
@@ -160,8 +166,8 @@ async function init() {
 		return agg;
 	}, { page: [], other: [] });
 
-	document.getElementById('texts').innerHTML = buildTable(textsByType.other, false);
-	document.getElementById('pages').innerHTML = buildTable(textsByType.page, true);
+	(<HTMLTableSectionElement>document.getElementById('texts')).innerHTML = buildTable(textsByType.other, false);
+	(<HTMLTableSectionElement>document.getElementById('pages')).innerHTML = buildTable(textsByType.page, true);
 
 	doneLoading();
 }

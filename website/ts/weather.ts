@@ -29,8 +29,8 @@ const fireTypeLabels: {
 	ongoing: 'Ongoing',
 	rx: 'RX',
 };
-const maxFireTypeLabelLen = Object.keys(fireTypeLabels)
-	.map((key: FireTypes) => fireTypeLabels[key])
+const maxFireTypeLabelLen = (<FireTypes[]>Object.keys(fireTypeLabels))
+	.map(key => fireTypeLabels[key] || key)
 	.reduce((len, label) => len < label.length ? label.length : len, 0);
 
 function padEndWithSpaces(value: string | number, len: number) {
@@ -59,9 +59,9 @@ async function init() {
 		+ `RM GACC ... ${result.readiness['RM Area']} ... <a href="https://gacc.nifc.gov/rmcc/intell.php">RM GACC Intel</a>`;
 	
 	insertionPoints.fires.innerHTML = `<b>${padEndWithSpaces('Type', maxFireTypeLabelLen)} ... Saguache ... Colorado</b><br>`
-		+ Object.keys(result.stateFires)
-			.filter((key: FireTypes) => typeof fireTypeLabels[key] !== 'undefined')
-			.map((key: FireTypes) => `${padEndWithSpaces(fireTypeLabels[key], maxFireTypeLabelLen)} ... ${padStartWithSpaces(result.stateFires[key][0], 8)} ... ${padStartWithSpaces(result.stateFires[key][1], 8)}`)
+		+ (<FireTypes[]>Object.keys(result.stateFires))
+			.filter(key => typeof fireTypeLabels[key] !== 'undefined')
+			.map(key => `${padEndWithSpaces(fireTypeLabels[key] || key, maxFireTypeLabelLen)} ... ${padStartWithSpaces(result.stateFires[key][0], 8)} ... ${padStartWithSpaces(result.stateFires[key][1], 8)}`)
 			.join('<br>');
 	doneLoading();
 }

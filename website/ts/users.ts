@@ -23,10 +23,10 @@ interface InputConfig {
 	maxWidth?: string;
 }
 
-const tbody = document.getElementById('tbody');
+const tbody = <HTMLTableSectionElement>document.getElementById('tbody');
 const modalItems = {
-	name: document.getElementById('deleteUser'),
-	button: document.getElementById('deleteConfirm'),
+	name: <HTMLDivElement>document.getElementById('deleteUser'),
+	button: <HTMLButtonElement>document.getElementById('deleteConfirm'),
 };
 
 function getUserRowConfig(u: UserObject | null): RowConfig {
@@ -178,11 +178,15 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 					button.addEventListener('click', async () => {
 						button.disabled = true;
 						changeButtonColor(button, 'secondary');
-						const inputs: (HTMLInputElement | HTMLSelectElement)[] = [
-							...Array.from(td.parentElement.querySelectorAll('input')),
-							...Array.from(td.parentElement.querySelectorAll('select')),
-						];
-						inputs.forEach(input => input.classList.remove('is-invalid'));
+						const parent = td.parentElement;
+						let inputs: (HTMLInputElement | HTMLSelectElement)[] = [];
+						if (parent !== null) {
+							inputs = [
+								...Array.from(parent.querySelectorAll('input')),
+								...Array.from(parent.querySelectorAll('select')),
+							];
+							inputs.forEach(input => input.classList.remove('is-invalid'));
+						}
 
 						const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=${u === null ? 'create' : 'update'}`, {
 							method: 'POST',
@@ -195,7 +199,8 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 							if (u === null) {
 								createTableRow(tbody, getUserRowConfig(newUser));
 								createTableRow(tbody, getUserRowConfig(null));
-								td.parentElement.parentElement.removeChild(td.parentElement);
+								if (parent !== null && parent.parentElement !== null)
+									parent.parentElement.removeChild(parent);
 								userRows.push(newUser);
 							}
 							resortRows();
@@ -205,7 +210,7 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 							showAlert('danger', 'Failed to save user');
 							apiResult.errors = apiResult.errors || [];
 							inputs
-								.filter(input => apiResult.errors.indexOf(input.getAttribute('name')) !== -1)
+								.filter(input => apiResult.errors.indexOf(input.getAttribute('name') || '') !== -1)
 								.forEach(input => input.classList.add('is-invalid'));
 						}
 					});
@@ -222,7 +227,8 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 
 							modalItems.name.innerHTML = `${newUser.fName} ${newUser.lName}`;
 							const newButton = <HTMLButtonElement>modalItems.button.cloneNode(true);
-							modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
+							if (modalItems.button.parentElement !== null)
+								modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
 							modalItems.button = newButton;
 
 							newButton.addEventListener('click', async () => {
@@ -236,9 +242,10 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 									}),
 								}).then(r => r.json());
 
-								if (result.success)
-									td.parentElement.parentElement.removeChild(td.parentElement);
-								else {
+								if (result.success) {
+									if (td.parentElement !== null && td.parentElement.parentElement !== null)
+										td.parentElement.parentElement.removeChild(td.parentElement);
+								} else {
 									changeButtonColor(deleteButton, 'danger');
 									showAlert('danger', 'Failed to delete user');
 								}
@@ -382,7 +389,7 @@ function buildCheckboxes(
 			input.setAttribute('role', 'switch');
 			input.name = checkbox.name;
 			input.id = `checkboxes-${checkbox.name}-${u === null ? 'new' : u.callSign}`;
-			input.checked = u[checkbox.name];
+			input.checked = !!u[checkbox.name];
 			input.classList.add('form-check-input');
 			input.addEventListener('change', () => {
 				u[checkbox.name] = input.checked;
@@ -450,9 +457,10 @@ function sortRows(keysString: string) {
 		})
 		.forEach(user => {
 			const tr = document.getElementById(user.phone);
-			tbody.appendChild(tr);
+			if (tr !== null)
+				tbody.appendChild(tr);
 		});
-	tbody.appendChild(document.getElementById('new-user-row'));
+	tbody.appendChild(<HTMLTableRowElement>document.getElementById('new-user-row'));
 }
 function resortRows() {
 	if (currentSortIndex > 0) {
@@ -472,11 +480,11 @@ declare global {
 window.resortRows = resortRows;
 Array.from(document.querySelectorAll('.sortLabel'))
 	.forEach(label => label.addEventListener('click', () =>
-		sortRows(label.getAttribute('data-keys'))));
+		sortRows(label.getAttribute('data-keys') || '')));
 
 async function init() {
 	if (user.isDistrictAdmin)
-		document.getElementById('customStyles').innerHTML = '';
+		(<HTMLStyleElement>document.getElementById('customStyles')).innerHTML = '';
 
 	const apiResult: ApiUserListResponse = await fetch(`/api/user?action=list`)
 		.then(r => r.json());

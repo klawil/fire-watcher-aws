@@ -32,10 +32,12 @@ const makeSiteStringFn = (keysAndNames: {
 	[key in SeenByRecorderKeys]?: string;
 }) => (site: SiteObject) => {
 	let flags: string[] = [];
-	Object.keys(keysAndNames).forEach((key: SeenByRecorderKeys) => {
-		let flagStr = keysAndNames[key];
-		const numTrue = Object.keys(site[key]).filter(seen => site[key][seen]).length;
-		if (numTrue !== Object.keys(site[key]).length)
+	(<SeenByRecorderKeys[]>Object.keys(keysAndNames)).forEach((key) => {
+		const siteData = site[key];
+		if (typeof siteData === 'undefined') return;
+		let flagStr = keysAndNames[key] as string;
+		const numTrue = Object.keys(siteData).filter(seen => siteData[seen]).length;
+		if (numTrue !== Object.keys(siteData).length)
 			flagStr += '?';
 		if (numTrue > 0)
 			flags.push(flagStr);
@@ -73,7 +75,7 @@ const siteFailedIcon: leaflet.IconOptions = {
 const circleLiveColor = '#3388ff';
 const circleFailedColor = '#ff5733';
 
-let map: leaflet.Map = null;
+let map: leaflet.Map | null = null;
 export async function buildMap(divId: string) {
 	map = window.L.map(divId).setView([ 37.749, -106.073 ], 8);
 	window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -89,7 +91,7 @@ function sortSiteTable() {
 	const rowIdsSorted = [ ...rowIds ].sort();
 
 	if (JSON.stringify(rowIdsSorted) !== JSON.stringify(rowIds)) {
-		rowIdsSorted.forEach(rowId => siteTable.appendChild(document.getElementById(rowId)));
+		rowIdsSorted.forEach(rowId => siteTable.appendChild(<HTMLTableRowElement>document.getElementById(rowId)));
 	}
 }
 
@@ -104,13 +106,19 @@ export async function updateSitesTable() {
 		}
 
 		siteData.data.forEach(site => {
+			const siteUpdate = site.UpdateTime;
+			const siteFailed = site.SiteFailed;
+			if (
+				typeof siteUpdate === 'undefined' ||
+				typeof siteFailed === 'undefined'
+			) return;
 			const minUpdateTime = Math.floor(Date.now() / 1000) - (60 * 15);
-			siteUpdateTime[site.SiteId] = Math.max.apply(null, Object.keys(site.UpdateTime).map(key => site.UpdateTime[key] * 1000));
+			siteUpdateTime[site.SiteId] = Math.max.apply(null, Object.keys(siteUpdate).map(key => siteUpdate[key] * 1000));
 			let newData: {
 				[key: string]: string;
 			} = {
-				failed: Object.keys(site.SiteFailed).filter(key => site.SiteFailed[key]).length > 0 ? 'FAILED' : 'N',
-				seen: Object.keys(site.UpdateTime).filter(key => site.UpdateTime[key] >= minUpdateTime).sort().join(', '),
+				failed: Object.keys(siteFailed).filter(key => siteFailed[key]).length > 0 ? 'FAILED' : 'N',
+				seen: Object.keys(siteUpdate).filter(key => siteUpdate[key] >= minUpdateTime).sort().join(', '),
 				updated: new Date(siteUpdateTime[site.SiteId]).toLocaleTimeString('en-US', localeTimeOptions),
 				flags: makeSiteFlags(site),
 				services: makeSiteServices(site),
@@ -165,7 +173,11 @@ export async function updateSitesTable() {
 			}
 
 			// Build the markers if needed
-			if (map !== null) {
+			if (
+				map !== null &&
+				typeof site.SiteLat !== 'undefined' &&
+				typeof site.SiteLon !== 'undefined'
+			) {
 				const markerOpacity = Date.now() - siteUpdateTime[site.SiteId] >= fadeSiteTime ? 0.5 : 1;
 				const popupContent = `<b>${site.SiteName}</b><br>Failed: ${newData.failed}<br>Seen By: ${newData.seen}<br>Updated: ${newData.updated}`;
 				const icon: leaflet.Icon = window.L.icon(newData.failed === 'FAILED' ? siteFailedIcon : siteLiveIcon);
@@ -188,7 +200,7 @@ export async function updateSitesTable() {
 					}
 				}
 
-				siteMarkers[site.SiteId].getPopup().setContent(popupContent);
+				siteMarkers[site.SiteId].getPopup()?.setContent(popupContent);
 				siteMarkers[site.SiteId].setIcon(icon);
 				siteMarkers[site.SiteId].setOpacity(markerOpacity);
 				if (siteCircles[site.SiteId]) {

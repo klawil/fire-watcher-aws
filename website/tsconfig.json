@@ -12,6 +12,8 @@
 		"alwaysStrict": true,
 		"allowUnreachableCode": true,
 		"noImplicitAny": true,
+		"strict": true,
+		"noUnusedLocals": true
 	},
 	"include": [ "./ts/*.ts", "ts/utils/auth.ts", "ts/utils/userConstants.ts" ]
 }

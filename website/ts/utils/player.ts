@@ -1,9 +1,9 @@
 import { changeUrlParams } from "./url";
 
 const player = <HTMLAudioElement>document.getElementById('player');
-const playerDuration = document.getElementById('player-duration');
-const playerBar = document.getElementById('player-progress');
-const playerBarContainer = document.getElementById('player-progress-container');
+const playerDuration = <HTMLDivElement>document.getElementById('player-duration');
+const playerBar = <HTMLDivElement>document.getElementById('player-progress');
+const playerBarContainer = <HTMLDivElement>document.getElementById('player-progress-container');
 const playButtons: HTMLButtonElement[] = [
 	<HTMLButtonElement>document.getElementById('play-button-m'),
 	<HTMLButtonElement>document.getElementById('play-button-d'),
@@ -33,9 +33,11 @@ autoPlayButtons.forEach(btn => btn.addEventListener('click', () => {
 	const method: 'add' | 'remove' = autoPlayEnabled ? 'add' : 'remove';
 
 	autoPlayButtons.forEach(button => {
-		if (button.tagName === 'LI')
-			button.querySelector('a').classList[method]('active');
-		else {
+		if (button.tagName === 'LI') {
+			const a = button.querySelector('a');
+			if (a !== null)
+				a.classList[method]('active');
+		} else {
 			button.blur();
 			button.classList[method]('player-active');
 		}
@@ -48,6 +50,7 @@ player.addEventListener('play', () => {
 	playButtonAction = 'pause';
 	playButtons.forEach(btn => {
 		const bi = btn.querySelector('.bi');
+		if (bi === null) return;
 		bi.classList.add('bi-pause-fill');
 		bi.classList.remove('bi-play-fill');
 	});
@@ -57,6 +60,7 @@ player.addEventListener('pause', () => {
 	playButtonAction = 'play';
 	playButtons.forEach(btn => {
 		const bi = btn.querySelector('.bi');
+		if (bi === null) return;
 		bi.classList.add('bi-play-fill');
 		bi.classList.remove('bi-pause-fill');
 	});
@@ -111,14 +115,15 @@ export function playFile(fileName: string) {
 		console.error(e);
 	}
 	player.setAttribute('data-file', fileName);
+	const fileNameShort = fileName.split('/').pop() || fileName;
 	downloadButtons.forEach(btn => {
 		btn.setAttribute('href', player.src);
-		btn.setAttribute('download', fileName.split('/').pop());
+		btn.setAttribute('download', fileNameShort);
 	});
 
 	markRowAsPlaying(fileName);
 
 	changeUrlParams({
-		f: fileName.split('/').pop(),
+		f: fileNameShort,
 	});
 }

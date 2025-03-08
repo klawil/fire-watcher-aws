@@ -6,9 +6,7 @@ export function getUrlParams(): UrlParams {
 	return window.location.search
 		.slice(1)
 		.split('&')
-		.reduce((agg: {
-			[key: string]: string;
-		}, str: string) => {
+		.reduce((agg: UrlParams, str: string) => {
 			const values = str.split('=')
 				.map((v) => decodeURIComponent(v));
 			if (values.length === 1)
@@ -25,15 +23,16 @@ export function setUrlParams(newUrlParams: UrlParams) {
 		.sort()
 		.filter(key => key !== '')
 		.map(key => {
-			if (newUrlParams[key] === null)
+			const newParamValue = newUrlParams[key];
+			if (newParamValue === null || typeof newParamValue === 'undefined')
 				return encodeURIComponent(key);
 
-			return `${encodeURIComponent(key)}=${encodeURIComponent(newUrlParams[key])}`;
+			return `${encodeURIComponent(key)}=${encodeURIComponent(newParamValue)}`;
 		})
 		.join('&');
 
 	if (newSearch !== window.location.search.slice(1))
-		history.pushState(null, null, `?${newSearch}`);
+		history.pushState(null, '', `?${newSearch}`);
 }
 
 export function changeUrlParams(changeUrlParams: UrlParams) {

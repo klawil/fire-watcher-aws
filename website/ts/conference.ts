@@ -97,17 +97,17 @@ function updateButton(btn: HTMLButtonElement, state: string) {
 	btn.innerHTML += (spinner ? ' ': '') + innerText;
 }
 
-const participantsLoading = document.getElementById('participantsLoading');
-const participantsTable = document.getElementById('participantsTable');
-const participantsNone = document.getElementById('participantsNone');
+const participantsLoading = <HTMLDivElement>document.getElementById('participantsLoading');
+const participantsTable = <HTMLTableSectionElement>document.getElementById('participantsTable');
+const participantsNone = <HTMLDivElement>document.getElementById('participantsNone');
 const participantsBody = <HTMLTableSectionElement>document.getElementById('participants');
 
 const endButton = <HTMLButtonElement>document.getElementById('endButton');
-const endButtonContainer = document.getElementById('endButtonContainer');
+const endButtonContainer = <HTMLDivElement>document.getElementById('endButtonContainer');
 const startButton = <HTMLButtonElement>document.getElementById('startButton');
 
-const invitableUsersContainer = document.getElementById('addMembersContainer');
-const invitableUsersTable = document.getElementById('invitableUsers');
+const invitableUsersContainer = <HTMLDivElement>document.getElementById('addMembersContainer');
+const invitableUsersTable = <HTMLTableSectionElement>document.getElementById('invitableUsers');
 
 let lastParticipants: ConferenceAttendeeObject[] = [];
 let lastStartTime: number;
@@ -130,7 +130,7 @@ const createKickUserFn = (btn: HTMLButtonElement, callSid: string) => async () =
 		result = await fetch (`/api/conference?action=kickUser&callSid=${encodeURIComponent(callSid)}`)
 			.then(r => r.json());
 	} catch (e) {
-		result.message = e.message;
+		result.message = (<Error>e).message;
 	}
 
 	if (!result.success) {
@@ -200,13 +200,16 @@ function showParticipants(participants: ConferenceAttendeeObject[]) {
 	});
 
 	Array.from(participantsBody.querySelectorAll('tr')).forEach(row => {
-		if (validParticipants.includes(row.id)) return;
+		if (
+			validParticipants.includes(row.id) ||
+			row.parentElement === null
+		) return;
 
 		row.parentElement.removeChild(row);
 	});
 
-	Array.from(invitableUsersTable.querySelectorAll('.invite-button')).forEach((btn: HTMLButtonElement) => {
-		const callSign = parseInt(btn.getAttribute('data-callsign'), 10);
+	(<HTMLButtonElement[]>Array.from(invitableUsersTable.querySelectorAll('.invite-button'))).forEach(btn => {
+		const callSign = parseInt(btn.getAttribute('data-callsign') || '999', 10);
 		if (
 			!inMeetingCallsign.includes(callSign) &&
 			btn.getAttribute('data-state') === 'on_call'
@@ -231,7 +234,7 @@ async function loadParticipants() {
 	if (participantsLoading.parentElement !== null)
 		participantsLoading.parentElement.removeChild(participantsLoading);
 
-	if (!participants.success) {
+	if (!participants.success || typeof participants.data === 'undefined') {
 		showAlert('danger', 'Failed to load conference participants');
 		return;
 	}
@@ -253,7 +256,7 @@ async function loadParticipants() {
 async function updateAccessToken(device: twilio.Device) {
 	const tokenResult: ApiConferenceTokenResponse = await fetch(`/api/conference?action=token`)
 		.then(r => r.json());
-	if (!tokenResult.success)
+	if (!tokenResult.success || typeof tokenResult.token === 'undefined')
 		throw new Error('Failed to update access token');
 	device.updateToken(tokenResult.token);
 }
@@ -283,10 +286,10 @@ async function leaveCall() {
 		myCallSid = '';
 		wasSuccess = true;
 	} catch (e) {
-		if (typeof e === 'undefined')
+		if (typeof e === 'undefined' || e === null)
 			showAlert('danger', 'Failed to leave the call');
 		else
-			showAlert('danger', `Failed to leave - ${e.message}`);
+			showAlert('danger', `Failed to leave - ${(<Error>e).message}`);
 	}
 	promiseResolved = true;
 
@@ -330,10 +333,10 @@ async function joinCall() {
 		});
 		wasSuccess = true;
 	} catch (e) {
-		if (typeof e === 'undefined')
+		if (typeof e === 'undefined' || e === null)
 			showAlert('danger', 'Failed to start or join the call');
 		else
-			showAlert('danger', `Failed to start or join - ${e.message}`);
+			showAlert('danger', `Failed to start or join - ${(<Error>e).message}`);
 	}
 	promiseResolved = true;
 

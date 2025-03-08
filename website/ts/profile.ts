@@ -26,13 +26,11 @@ function formatValue(value: string | boolean | number): string {
 		return formatPhone(value);
 	}
 
-	if (typeof value === 'string') {
-		return value;
-	}
-
 	if (typeof value === 'boolean') {
 		return `<i class="bi bi-${value ? 'check-circle-fill text-success' : 'x-circle-fill text-danger'}">`;
 	}
+
+	return value;
 }
 
 function makePageCheckbox(container: HTMLElement, key: number) {
@@ -66,6 +64,8 @@ async function updateUser() {
 
 	Array.from(document.querySelectorAll('.update-input'))
 		.forEach(elem => elem.classList.remove('is-invalid'));
+
+	if (typeof user.phone === 'undefined') return;
 
 	const userBody: ApiUserUpdateBody = {
 		isMe: true,
@@ -114,6 +114,7 @@ async function testFidoKey(btn: HTMLButtonElement, key: string) {
 	btn.disabled = true;
 	btn.classList.remove('btn-danger', 'btn-success', 'btn-secondary');
 	btn.classList.add('btn-secondary');
+	if (typeof user.fidoKeys === 'undefined' || typeof user.fidoKeys[key] === 'undefined') return;
 
 	await useFidoKey([ user.fidoKeys[key] ], true);
 
@@ -176,7 +177,7 @@ async function addFidoKey() {
 		}).then(r => r.json());
 	} catch (e) {
 		console.error(e);
-		result.message = e.message;
+		result.message = (<Error>e).message;
 	}
 
 	const alertMessage = `New Key Registration: ${result.success ? 'Success!' : `Failed - ${result.message}`}`;
@@ -201,7 +202,8 @@ function init() {
 	});
 
 	const pageGroupContainer = document.getElementById('talkgroups');
-	talkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
+	if (pageGroupContainer !== null)
+		talkgroupOrder.forEach(key => makePageCheckbox(pageGroupContainer, key));
 
 	const fidoRow = <HTMLTableRowElement>document.getElementById('create-fido-row');
 	Object.keys(user.fidoKeys || {}).forEach(key => {
@@ -227,7 +229,8 @@ function init() {
 				},
 			]
 		});
-		fidoRow.parentElement.insertBefore(tr, fidoRow);
+		if (fidoRow.parentElement !== null)
+			fidoRow.parentElement.insertBefore(tr, fidoRow);
 	});
 
 	updateUserButton.disabled = false;
@@ -237,7 +240,7 @@ function init() {
 }
 
 if (window.PublicKeyCredential) {
-	Array.from(document.getElementsByClassName('hide-no-fido')).forEach((div: HTMLDivElement) => {
+	(<HTMLDivElement[]>Array.from(document.getElementsByClassName('hide-no-fido'))).forEach((div) => {
 		div.hidden = false;
 	});
 }

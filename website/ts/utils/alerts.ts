@@ -1,6 +1,6 @@
 import { Alert } from 'bootstrap';
 
-const alertContainer = document.getElementById('alert-container');
+const alertContainer = <HTMLDivElement>document.getElementById('alert-container');
 
 type AlertType = 'success' | 'danger';
 
