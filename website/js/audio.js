@@ -97,31 +97,41 @@ const filterButtons = [
 if (filterModal) {
 	filterButtons.forEach((btn) => btn.addEventListener('click', () => filterButtons.forEach((button) => button.blur())));
 	filterApplyButton.addEventListener('click', () => {
-		Object.keys(afterFilterConfigs)
-			.forEach((filterKey) => {
-				afterFilters[filterKey] = afterFilterConfigs[filterKey]();
-			});
-
-		Object.keys(urlFilterConfigs)
-			.forEach((filterKey) => {
-				urlFilters[filterKey] = urlFilterConfigs[filterKey]();
-			});
-
+		setUrlParams();
 		updateData('after', true);
 	});
 }
 
-const getArrayOfCheckedCheckboxes = (items) => () => {
-	return [ ...items ]
-		.filter((checkbox) => checkbox.checked)
-		.map((checkbox) => checkbox.value);
+class CheckBoxFilter {
+	constructor(querySelector) {
+		this.elements = [ ...document.querySelectorAll(querySelector) ];
+		this.defaultUrl = this.getUrl();
+	}
+
+	get() {
+		return this.elements
+			.filter((checkbox) => checkbox.checked)
+			.map((checkbox) => checkbox.value);
+	}
+
+	set(urlValue) {
+		const vals = urlValue.split('|');
+		this.elements
+			.forEach((checkbox) => checkbox.checkbox = vals.indexOf(checkbox.value) !== -1);
+	}
+
+	getUrl() {
+		return this.get().join('|');
+	}
+
+	isDefault() {
+		return this.getUrl() === this.defaultUrl;
+	}
 }
 
 // Data fetch configuration
 const afterFilters = {};
-const afterFilterConfigs = {};
 const urlFilters = {};
-const urlFilterConfigs = {};
 let files = [];
 const fileTable = document.getElementById('files');
 let fileKeyField = 'File';
@@ -292,26 +302,104 @@ function secondsToString(seconds) {
 function filterData(data) {
 	return data.filter(f => Object.keys(afterFilters)
 		.reduce((keep, key) => {
+			const value = afterFilters[key].get();
 			if (
 				!keep ||
-				afterFilters[key] === null
+				value === null
 			) return keep;
 
-			if (typeof afterFilters[key] === 'string') {
-				return afterFilters[key] === f[key];
+			if (typeof value === 'string') {
+				return value === f[key];
 			}
 
-			if (Array.isArray(afterFilters[key])) {
-				return afterFilters[key].indexOf(f[key]) !== -1;
+			if (Array.isArray(value)) {
+				return value.indexOf(f[key]) !== -1;
 			}
 
-			if (typeof afterFilters[key] === 'function') {
-				return afterFilters[key](f[key], f);
+			if (typeof value === 'function') {
+				return value(f[key], f);
 			}
 
 			console.log(`INVALID FILTER - ${key}`);
 			return false;
 		}, true));
+}
+
+// Functions for dealing with the URL
+const defaultFilterValues = {};
+function init() {
+	// Layer on the URL parameters
+	const urlParams = getUrlParams();
+	Object.keys(urlParams)
+		.forEach((param) => {
+			if (typeof afterFilters[param] !== 'undefined') {
+				afterFilters[param].set(urlParams[param]);
+			}
+
+			if (typeof urlFilters[param] !== 'undefined') {
+				urlFilters[param].set(urlParams[param]);
+			}
+		});
+
+	setUrlParams();
+	updateData();
+}
+
+function getUrlParams() {
+	return window.location.search
+		.slice(1)
+		.split('&')
+		.reduce((agg, str) => {
+			const values = str.split('=')
+				.map((v) => decodeURIComponent(v));
+			try {
+				agg[values[0]] = JSON.parse(values[1]);
+			} catch (e) {
+				agg[values[0]] = values[1];
+			}
+
+			return agg;
+		}, {});
+}
+
+function setUrlParams() {
+	const newParams = {
+		...getUrlParams()
+	};
+	Object.keys(urlFilters)
+		.forEach((filterKey) => {
+			newParams[filterKey] = urlFilters[filterKey].getUrl();
+		});
+	Object.keys(afterFilters)
+		.forEach((filterKey) => {
+			newParams[filterKey] = afterFilters[filterKey].getUrl();
+		});
+
+	const newSearch = Object.keys(newParams)
+		.sort()
+		.filter((key) =>
+			(
+				!urlFilters.hasOwnProperty(key) ||
+				!urlFilters[key].isDefault()
+			) &&
+			(
+				!afterFilters.hasOwnProperty(key) ||
+				!afterFilters[key].isDefault()
+			)
+		)
+		.map((key) => {
+			let str = JSON.stringify(newParams[key]);
+			if (typeof newParams[key] === 'string' || typeof newParams[key] === 'undefined') {
+				str = newParams[key];
+			}
+
+			return `${encodeURIComponent(key)}=${encodeURIComponent(str)}`;
+		})
+		.join('&');
+
+	if (newSearch !== window.location.search.slice(1)) {
+		history.pushState(null, null, `?${newSearch}`);
+	}
 }
 
 // Allow functions to be run on init

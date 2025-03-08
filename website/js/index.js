@@ -112,11 +112,35 @@ window.addEventListener('scroll', () => {
 	}
 });
 
+class ToneFilter {
+	id = 'only-pages';
+
+	constructor() {
+		this.element = document.getElementById('only-pages');
+		this.defaultUrl = this.getUrl();
+	}
+
+	get() {
+		return this.element.checked ? 'y' : undefined;
+	}
+
+	set(urlValue) {
+		this.element.checked = urlValue === 'y';
+	}
+
+	getUrl() {
+		return `${this.get()}`;
+	}
+
+	isDefault() {
+		return this.getUrl() === this.defaultUrl;
+	}
+}
+
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
-	afterFilters.Source = [ 'SAG_FIRE_VHF' ];
-	afterFilterConfigs.Source = getArrayOfCheckedCheckboxes(document.querySelectorAll('input[name="vhf-source"]'));
-	urlFilterConfigs.tone = () => document.getElementById('only-pages').checked ? 'y' : undefined;
+	afterFilters.Source = new CheckBoxFilter('input[name="vhf-source"]');
+	urlFilters.tone = new ToneFilter();
 
 	rowConfig = [
 		f => f.Len,
@@ -126,5 +150,5 @@ window.audioQ.push(() => {
 	];
 	defaultFunc = playLastTone;
 	
-	updateData();
+	init();
 });
