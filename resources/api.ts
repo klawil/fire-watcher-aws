@@ -446,32 +446,6 @@ async function handleLocationUpdate(event: APIGatewayProxyEvent): Promise<APIGat
 	};
 }
 
-interface CurrentUserAPIResponse {
-	isUser: boolean;
-	isAdmin: boolean;
-	user: string | null;
-}
-
-async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const user = await getLoggedInUser(event);
-	const response: CurrentUserAPIResponse = {
-		isUser: false,
-		isAdmin: false,
-		user: null
-	};
-
-	if (user !== null) {
-		response.isUser = true;
-		response.isAdmin = !!user.isAdmin?.BOOL;
-		response.user = user.name?.S || null;
-	}
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify(response)
-	};
-}
-
 interface HeartbeatBody {
 	code: string;
 	Server: string;
@@ -579,8 +553,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleAllActivate(event);
 			case 'location':
 				return await handleLocationUpdate(event);
-			case 'getUser':
-				return await getUser(event);
 			case 'heartbeat':
 				return await handleHeartbeat(event);
 		}
