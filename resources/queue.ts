@@ -695,20 +695,20 @@ async function handleTranscribe(body: TranscribeBody) {
 		? 'No voices detected'
 		: result.results.transcripts[0].transcript;
 	let tg: string;
-	const jobInfo = await dynamodb.getItem({
-		TableName: dtrTranslationTable,
-		Key: { Key: { S: body.detail.TranscriptionJobName } },
-	}).promise();
-	if (jobInfo.Item) {
-		tg = jobInfo.Item.Talkgroup.N as string;
+	const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || []).reduce((agg: { [key: string]: string; }, value) => {
+		agg[value.Key] = value.Value;
+		return agg;
+	}, {});
+	if (jobInfo.Talkgroup) {
+		tg = jobInfo.Talkgroup as string;
 		messageBody = createPageMessage(
-			jobInfo.Item.File.S as string,
+			jobInfo.File as string,
 			tg,
 			null,
 			transcript
 		);
 
-		promise = getItemToUpdate(jobInfo.Item.FileKey.S as string)
+		promise = getItemToUpdate(jobInfo.FileKey as string)
 			.then(item => {
 				if (item === null) return;
 
