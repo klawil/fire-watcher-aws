@@ -180,7 +180,7 @@ function refreshCharts(refreshFrom = null) {
 				},
 				options: {
 					interaction: {
-						mode: 'x'
+						mode: 'index',
 					}
 				}
 			};
@@ -200,13 +200,18 @@ function refreshCharts(refreshFrom = null) {
 			if (chart.yMax) {
 				chartConfig.options.scales = {
 					y: {
-						max: chart.yMax
+						max: chart.yMax,
+						min: 0,
 					}
 				};
+			} else {
+				chartConfig.options.scales = {
+					y: {
+						min: 0,
+					}
+				}
 			}
 			if (chart.stacked) {
-				chartConfig.options.scales = chartConfig.options.scales || {};
-				chartConfig.options.scales.y = chartConfig.options.scales.y || {};
 				chartConfig.options.scales.y.stacked = true;
 			}
 			if (chart.fill) {
@@ -307,7 +312,6 @@ function refreshCharts(refreshFrom = null) {
 					}
 				};
 			}
-
 
 			if (typeof currentCharts[chart.id] === 'undefined')
 				currentCharts[chart.id] = new Chart(
