@@ -11,6 +11,7 @@ const defaultLimit = 100;
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
 const dtrTable = process.env.TABLE_DTR as string;
+const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const phoneTable = process.env.TABLE_PHONE as string;
 const messagesTable = process.env.TABLE_MESSAGES as string;
 const statusTable = process.env.TABLE_STATUS as string;
@@ -581,6 +582,64 @@ async function dtrFileExists(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 		statusCode: 200,
 		headers: {},
 		body: JSON.stringify(badFiles)
+	};
+}
+
+async function dtrTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const filters: string[] = [];
+	event.queryStringParameters = event.queryStringParameters || {};
+	const queryConfigs: AWS.DynamoDB.QueryInput[] = [];
+
+	const partitions = [ 'Y' ];
+	if (event.queryStringParameters.all === 'y') {
+		partitions.push('N');
+	}
+
+	partitions.forEach(partition => {
+		queryConfigs.push({
+			TableName: talkgroupTable,
+			IndexName: 'InUseIndex',
+			ExpressionAttributeNames: {
+				'#iu': 'InUse',
+				'#name': 'Name',
+				'#id': 'ID',
+				'#c': 'Count'
+			},
+			ExpressionAttributeValues: {
+				':iu': {
+					S: partition
+				}
+			},
+			KeyConditionExpression: '#iu = :iu',
+			ProjectionExpression: '#id,#name,#c'
+		});
+	});
+
+	const data = await runDynamoQueries(queryConfigs, 'Count');
+
+	data.Items?.map(item => {
+		if (typeof item.Count === 'undefined') {
+			item.Count = {
+				N: '0'
+			}
+		}
+	});
+
+	const body = JSON.stringify({
+		success: true,
+		count: data.Count,
+		scanned: data.ScannedCount,
+		continueToken: data.LastEvaluatedKeys,
+		before: data.MinSortKey,
+		after: data.MaxSortKey,
+		data: data.Items
+			?.map(item => parseDynamoDbAttributeMap(item))
+	});
+
+	return {
+		statusCode: 200,
+		headers: {},
+		body
 	};
 }
 
@@ -1278,6 +1337,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleHeartbeat(event);
 			case 'dtrCheck':
 				return await dtrFileExists(event);
+			case 'talkgroups':
+				return await dtrTalkgroups(event);
 		}
 
 		console.log(`API - 404`);
