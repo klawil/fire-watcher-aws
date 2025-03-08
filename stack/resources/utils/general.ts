@@ -94,10 +94,11 @@ interface TwilioConfig {
 	voiceApiSecret: string;
 }
 
+export type PhoneNumberAccount = 'Baca' | 'NSCAD' | 'Crestone';
 interface PhoneNumberConfig {
 	name?: string;
 	number: string;
-	account?: 'Baca' | 'NSCAD';
+	account?: PhoneNumberAccount;
 	type: 'page' | 'alert' | 'chat';
 	department?: UserDepartment;
 }
@@ -129,6 +130,12 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 		department: 'NSCAD',
 		account: 'NSCAD',
 	},
+	// pageNSCAD: {
+	// 	number: '***REMOVED***',
+	// 	type: 'page',
+	// 	department: 'NSCAD',
+	// 	account: 'NSCAD',
+	// },
 };
 export const twilioPhoneNumbers: { [key: string]: PhoneNumberConfig } = Object.keys(twilioPhoneCategories)
 	.reduce((agg: {

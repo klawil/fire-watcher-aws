@@ -5,6 +5,7 @@ import { TwilioBody, TwilioErrorBody } from '../types/queue';
 import { departmentConfig, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { getLogger } from '../utils/logger';
 import { isUserActive } from '../types/auth';
+import { getLoggedInUser } from '../utils/auth';
 
 const logger = getLogger('twilio');
 
@@ -505,6 +506,104 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	return response;
 }
 
+interface TwilioUsageItem {
+	accountSid: string;
+	category: string;
+	count: string;
+	countUnit: string;
+	price: string;
+	priceUnit: string;
+	startDate: Date;
+	endDate: Date;
+}
+
+async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+
+	const unauthorizedResponse = {
+		statusCode: 400,
+		body: JSON.stringify({
+			success: false,
+			message: 'You do not have access to this area',
+		})
+	};
+
+	if (
+		!user ||
+		(
+			!user.isAdmin &&
+			!user.isDistrictAdmin
+		)
+	) {
+		return unauthorizedResponse;
+	}
+
+	const account = event.queryStringParameters?.account;
+	if (
+		typeof account === 'undefined' &&
+		!user.isDistrictAdmin
+	) {
+		return unauthorizedResponse;
+	}
+
+	if (
+		typeof account !== 'undefined' &&
+		(
+			typeof account !== 'string' ||
+			![
+				'Baca', 'NSCAD', 'Crestone',
+			].includes(account)
+		)
+	) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'Invalid account to access',
+			})
+		};
+	}
+
+	const twilioSecret = await getTwilioSecret();
+	const accountSid = twilioSecret[`accountSid${account || ''}`];
+	const authToken = twilioSecret[`authToken${account || ''}`];
+	if (
+		typeof accountSid === 'undefined' ||
+		typeof authToken === 'undefined'
+	) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify({
+				success: false,
+				message: 'Unable to find authentication information for that account',
+			})
+		};
+	}
+	const twilioData: TwilioUsageItem[] = await new Promise((res, rej) => {
+		require('twilio')(accountSid, authToken).api.v2010.account.usage.records.lastMonth
+			.list({
+				limit: 1000,
+				includeSubaccounts: true,
+			}, (err: any, items: TwilioUsageItem[]) => err ? rej(err) : res(items));
+	});
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+			data: twilioData
+				.filter(item => Number(item.price) > 0)
+				.map(item => ({
+					cat: item.category,
+					price: Number(item.price),
+					priceUnit: item.priceUnit,
+					count: Number(item.count),
+					countUnit: item.countUnit,
+				}))
+		})
+	}
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
@@ -517,6 +616,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleTextStatus(event);
 			case 'voice':
 				return await handleVoice(event);
+			case 'billing':
+				return await getBilling(event);
 		}
 
 		logger.error('main', 'Invalid Action', action);
