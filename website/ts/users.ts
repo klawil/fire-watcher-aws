@@ -354,6 +354,46 @@ function buildCheckboxes(
 	return container;
 }
 
+function buildDepartmentSelect(
+	parent: HTMLElement,
+	defaultDep: UserDepartment | 'Default',
+	userValues: ApiUserUpdateBody,
+	label: string,
+	key: 'department' | 'pagingPhone' = 'department',
+	includeDefault: boolean = false,
+) {
+	const departmentContainer = document.createElement('div');
+	parent.appendChild(departmentContainer);
+	departmentContainer.classList.add('input-group', 'p-2');
+	const departmentLabel = document.createElement('label');
+	departmentContainer.appendChild(departmentLabel);
+	departmentLabel.classList.add('input-group-text');
+	departmentLabel.innerHTML = label;
+	const departmentSelect = document.createElement('select');
+	departmentContainer.appendChild(departmentSelect);
+	departmentSelect.classList.add('form-select');
+	[
+		...userAdminDepartments,
+		...(includeDefault ? [ 'Default' ] : []),
+	]
+		.forEach(dep => {
+			const option = document.createElement('option');
+			departmentSelect.appendChild(option);
+			option.value = dep;
+			option.innerHTML = dep;
+			if (dep === defaultDep) {
+				option.selected = true;
+			}
+		});
+	departmentSelect.addEventListener('change', () => {
+		if (departmentSelect.value === 'Default') {
+			(userValues[key] as UserDepartment | null) = null;
+		} else {
+			userValues[key] = departmentSelect.value as UserDepartment;
+		}
+	});
+}
+
 function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 	const saveButton = document.createElement('button');
 
@@ -441,29 +481,12 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 	// Department and callsign (if new user)
 	if (u === null) {
 		if (userAdminDepartments.length > 1) {
-			const departmentContainer = document.createElement('div');
-			mainSubContainer1.appendChild(departmentContainer);
-			departmentContainer.classList.add('input-group', 'p-2');
-			const departmentLabel = document.createElement('label');
-			departmentContainer.appendChild(departmentLabel);
-			departmentLabel.classList.add('input-group-text');
-			departmentLabel.innerHTML = 'Department';
-			const departmentSelect = document.createElement('select');
-			departmentContainer.appendChild(departmentSelect);
-			departmentSelect.classList.add('form-select');
-			userAdminDepartments
-				.forEach(dep => {
-					const option = document.createElement('option');
-					departmentSelect.appendChild(option);
-					option.value = dep;
-					option.innerHTML = dep;
-					if (dep === localDefaultDepartment) {
-						option.selected = true;
-					}
-				});
-			departmentSelect.addEventListener('change', () => {
-				userValues.department = departmentSelect.value as UserDepartment;
-			});
+			buildDepartmentSelect(
+				mainSubContainer1,
+				localDefaultDepartment,
+				userValues,
+				'Department',
+			);
 		}
 		setTimeout(() => userValues.department = localDefaultDepartment, 100);
 
@@ -472,6 +495,24 @@ function buildUserEdit(u: UserObject | null, parent: HTMLElement) {
 			placeholder: 'Call Sign',
 			val: u => u.callSign || '',
 		}, mainSubContainer1, userValues);
+	}
+
+	// Paging phone number
+	if (
+		u !== null &&
+		user.isDistrictAdmin &&
+		validDepartments.filter(dep => u[dep]).length > 1
+	) {
+		buildDepartmentSelect(
+			mainSubContainer1,
+			typeof u.pagingPhone !== 'undefined' && u.pagingPhone !== null
+				? u.pagingPhone
+				: 'Default',
+			userValues,
+			'Paging Phone',
+			'pagingPhone',
+			true,
+		);
 	}
 
 	// Pages

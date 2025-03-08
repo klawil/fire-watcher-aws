@@ -137,6 +137,18 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 	// 	department: 'NSCAD',
 	// 	account: 'NSCAD',
 	// },
+	// pageSaguache: {
+	// 	number: '***REMOVED***',
+	// 	type: 'page',
+	// 	department: 'Saguache',
+	// 	account: 'Saguache',
+	// },
+	// pageCrestone: {
+	// 	number: '+',
+	// 	type: 'page',
+	// 	department: 'Crestone',
+	// 	account: 'Crestone',
+	// },
 };
 export const twilioPhoneNumbers: { [key: string]: PhoneNumberConfig } = Object.keys(twilioPhoneCategories)
 	.reduce((agg: {
@@ -275,23 +287,38 @@ export async function saveMessageData(
 	await Promise.all(promises);
 }
 
+const DEFAULT_PAGE_NUMBER = 'page';
 export function getPageNumber(user: AWS.DynamoDB.AttributeMap): string {
-	let phoneToUse = 'page';
+	// Loop over the departments the person is a member of and look for paging groups
+	let possibleDepartments: UserDepartment[] = [];
 	for (let i = 0; i < validDepartments.length; i++) {
 		const dep = validDepartments[i];
 		if (!user[dep]?.M?.active?.BOOL) {
 			continue;
 		}
-
-		// Determine if the department has a different page number
-		if (typeof twilioPhoneCategories[`page${dep}`] === 'undefined') {
-			return 'page';
-		}
-
-		phoneToUse = `page${dep}`;
+		possibleDepartments.push(dep);
 	}
 
-	return phoneToUse;
+	// Use the only department if there is one
+	if (possibleDepartments.length === 1) {
+		return typeof twilioPhoneCategories[`page${possibleDepartments[0]}`] !== 'undefined'
+			? `page${possibleDepartments[0]}`
+			: DEFAULT_PAGE_NUMBER;
+	}
+
+	// Check for explicitly set paging number usage
+	if (
+		typeof user.pagingPhone?.S !== 'undefined' &&
+		validDepartments.includes(user.pagingPhone.S as UserDepartment) &&
+		typeof twilioPhoneCategories[`page${user.pagingPhone.S as UserDepartment}`] !== 'undefined'
+	) {
+		return `page${user.pagingPhone.S as UserDepartment}`;
+	}
+
+	// Use the global paging number if the user is:
+	// - a member of multiple departments without a paging number set
+	// - a member no departments
+	return DEFAULT_PAGE_NUMBER;
 }
 
 interface TwilioMessageConfig {

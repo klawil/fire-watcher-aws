@@ -385,6 +385,7 @@ const districtAdminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
 	'#gda': 'getDtrAlerts',
 	'#da': 'isDistrictAdmin',
 	'#lt': 'loginTokens',
+	'#pgp': 'pagingPhone',
 };
 
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -447,7 +448,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 interface EditKeyConfig {
 	required?: boolean;
 	name: keyof ApiUserUpdateBody;
-	type: 'phone' | 'string' | 'talkgroups' | 'boolean' | 'department';
+	type: 'phone' | 'string' | 'talkgroups' | 'boolean' | 'department' | 'optDepartment';
 	regex?: RegExp;
 	partOfDepartment?: boolean;
 }
@@ -495,6 +496,10 @@ const allowedToEditDistrictAdmin: EditKeyConfig[] = [
 	{
 		name: 'isDistrictAdmin',
 		type: 'boolean',
+	},
+	{
+		name: 'pagingPhone',
+		type: 'optDepartment',
 	},
 ];
 const fieldsForCreate: EditKeyConfig[] = [
@@ -582,6 +587,10 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			case 'boolean':
 				isInvalid = typeof value !== 'boolean';
 				break;
+			case 'optDepartment':
+				if (value === null) {
+					break;
+				}
 			case 'department':
 				isInvalid = typeof value !== 'string' ||
 					!validDepartments.includes(value as UserDepartment);
@@ -709,6 +718,10 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 					setValue = { BOOL: true };
 				}
 				break;
+			case 'optDepartment':
+				if (body[item.name] !== null) {
+					setValue = { S: body[item.name] as string };
+				}
 		}
 
 		if (setValue === false) {

@@ -13,6 +13,7 @@ interface UserObjectBase {
 		tokenExpiry: number;
 	}[];
 	lastLogin?: number;
+	pagingPhone?: UserDepartment;
 }
 type UserObjectBaseBooleans = {
 	[key in UserObjectBooleans]?: boolean;
@@ -66,6 +67,7 @@ export interface ApiUserUpdateBody {
 	isDistrictAdmin?: boolean;
 	department?: UserDepartment;
 	callSign?: string;
+	pagingPhone?: UserDepartment | null;
 }
 export interface ApiUserUpdateGroupBody {
 	phone: string;
