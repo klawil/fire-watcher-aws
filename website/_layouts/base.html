@@ -46,9 +46,6 @@
 						<li class="nav-item">
 							<a class="nav-link{% if page.url == '/weather.html' %} active{% endif %}" href="/weather.html">Weather</a>
 						</li>
-						<li class="nav-item d-none requireAdmin" id="link-texts">
-							<a class="nav-link{% if page.url == '/texts.html' %} active{% endif %}" href="/texts.html">Texts</a>
-						</li>
 					</ul>
 
 					<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
@@ -57,9 +54,10 @@
 						</li>
 						<li class="nav-item dropdown d-none" id="logoutLink">
 							<a id="username" href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown">Test</a>
-							<ul class="dropdown-menu">
+							<ul class="dropdown-menu dropdown-menu-end">
 								<li><a class="dropdown-item" id="logoutHref">Logout</a></li>
 								<li class="d-none requireAdmin"><a class="dropdown-item" href="/users.html">Manage Users</a></li>
+								<li class="d-none requireAdmin" id="link-texts"><a class="dropdown-item" href="/texts.html">View Texts</a></li>
 								<script>
 									document.getElementById('loginHref').setAttribute('href', `/login.html?redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
 									document.getElementById('logoutHref').setAttribute('href', `/api/user?action=logout&redirectTo=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
