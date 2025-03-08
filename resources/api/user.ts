@@ -38,12 +38,14 @@ interface ApiResponse {
 
 interface CurrentUser {
 	isUser: boolean;
-	isAdmin: boolean;
-	isDistrictAdmin: boolean;
-	fName: string | null;
-	lName: string | null;
-	department: string | null;
-	talkgroups: string[];
+	isAdmin?: boolean;
+	isDistrictAdmin?: boolean;
+	phone?: string;
+	callSign?: string;
+	fName?: string;
+	lName?: string;
+	department?: string;
+	talkgroups?: string[];
 }
 
 interface UserObject {
@@ -211,21 +213,19 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 	const response: CurrentUser = {
 		isUser: false,
 		isAdmin: false,
-		isDistrictAdmin: false,
-		fName: null,
-		lName: null,
-		department: null,
-		talkgroups: []
+		isDistrictAdmin: false
 	};
 
 	if (user !== null) {
 		response.isUser = true;
 		response.isAdmin = !!user.isAdmin?.BOOL;
 		response.isDistrictAdmin = !!user.isDistrictAdmin?.BOOL;
-		response.fName = user.fName?.S || null;
-		response.lName = user.lName?.S || null;
-		response.department = user.department?.S || null;
-		response.talkgroups = user.talkgroups?.NS || [];
+		response.phone = user.phone?.N;
+		response.callSign = user.callSign?.N;
+		response.fName = user.fName?.S;
+		response.lName = user.lName?.S;
+		response.department = user.department?.S;
+		response.talkgroups = user.talkgroups?.NS;
 	}
 
 	return {
