@@ -11,7 +11,8 @@ const possibleDepartments = [
 ];
 
 const pageNames = {
-	'8332': 'NSCFPD',
+	'8332': 'NSCFPD DTR',
+	'18332': 'NSCFPD VHF',
 	'18331': 'Baca',
 	'8334': 'Center',
 	'8198': 'NSCAD'

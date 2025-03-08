@@ -25,7 +25,8 @@ const validTalkgroups: string[] = [
 	'8198',
 	'8332',
 	'8334',
-	'18331'
+	'18331',
+	'18332'
 ];
 
 interface ApiResponse {

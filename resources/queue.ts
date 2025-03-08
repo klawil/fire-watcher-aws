@@ -71,8 +71,55 @@ const welcomeMessageConfig: { [key: string]: {
 const tgToPageDept: { [key: string]: string } = {
 	'8332': 'NSCFPD',
 	'18331': 'Baca ES',
+	'18332': 'NSCFPD',
 	'8198': 'NSCAD',
 	'8334': 'Center ES'
+};
+
+const pageConfigs: {
+	[key: string]: {
+		linkPreset: string;
+		pagingParty: string;
+		partyBeingPaged: string;
+		pageService: string;
+		fToTime: (fNAme: string) => string;
+	}
+} = {
+	'8198': {
+		linkPreset: 'pNSCAD',
+		pagingParty: 'Saguache SO',
+		partyBeingPaged: 'NSCAD',
+		pageService: 'AMBO',
+		fToTime: dtrFnameToDate
+	},
+	'8332': {
+		linkPreset: 'pNSCFPD',
+		pagingParty: 'Saguache SO',
+		partyBeingPaged: 'NSCFPD',
+		pageService: 'FIRE',
+		fToTime: dtrFnameToDate
+	},
+	'18331': {
+		linkPreset: 'pBGFD%252FBGEMS',
+		pagingParty: 'Alamosa',
+		partyBeingPaged: 'BGEMS/BGFD',
+		pageService: 'BACA',
+		fToTime: vhfFnameToDate
+	},
+	'18332': {
+		linkPreset: 'pNSCFPD',
+		pagingParty: 'Saguache SO',
+		partyBeingPaged: 'NSCFPD',
+		pageService: 'FIRE',
+		fToTime: vhfFnameToDate
+	},
+	'8334': {
+		linkPreset: 'tg8334',
+		pagingParty: 'Center Dispatch',
+		partyBeingPaged: 'Center EMS/Fire',
+		pageService: 'CENTER',
+		fToTime: dtrFnameToDate
+	},
 };
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
@@ -134,45 +181,6 @@ function vhfFnameToDate(fileName: string): string {
 
 	return `on ${dateString} at ${timeString}`;
 }
-
-const pageConfigs: {
-	[key: string]: {
-		linkPreset: string;
-		pagingParty: string;
-		partyBeingPaged: string;
-		pageService: string;
-		fToTime: (fNAme: string) => string;
-	}
-} = {
-	'8198': {
-		linkPreset: 'pNSCAD',
-		pagingParty: 'Saguache SO',
-		partyBeingPaged: 'NSCAD',
-		pageService: 'AMBO',
-		fToTime: dtrFnameToDate
-	},
-	'8332': {
-		linkPreset: 'pNSCFPD',
-		pagingParty: 'Saguache SO',
-		partyBeingPaged: 'NSCFPD',
-		pageService: 'FIRE',
-		fToTime: dtrFnameToDate
-	},
-	'18331': {
-		linkPreset: 'pBGFD%252FBGEMS',
-		pagingParty: 'Alamosa',
-		partyBeingPaged: 'BGEMS/BGFD',
-		pageService: 'BACA',
-		fToTime: vhfFnameToDate
-	},
-	'8334': {
-		linkPreset: 'tg8334',
-		pagingParty: 'Center Dispatch',
-		partyBeingPaged: 'Center EMS/Fire',
-		pageService: 'CENTER',
-		fToTime: dtrFnameToDate
-	},
-};
 
 async function getRecipients(
 	department: string,

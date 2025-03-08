@@ -21,18 +21,15 @@ const vhfConfig: {
 	[key: string]: {
 		tg: string;
 		freq: string;
-		sendPage: boolean;
 	}
 } = {
 	'BG_FIRE_VHF': {
 		tg: '18331',
-		freq: '154445000',
-		sendPage: true
+		freq: '154445000'
 	},
 	'SAG_FIRE_VHF': {
 		tg: '18332',
-		freq: '154190000',
-		sendPage: false
+		freq: '154190000'
 	}
 };
 
@@ -75,11 +72,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			let config: {
 				tg: string;
 				freq: string;
-				sendPage: boolean;
 			} = {
 				tg: '999999',
 				freq: '0',
-				sendPage: true
 			};
 			if (Key.indexOf('/dtr') !== -1) {
 				try {
@@ -261,7 +256,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			}
 
-			if (body.Item.Tone?.BOOL && config.sendPage) {
+			if (body.Item.Tone?.BOOL) {
 				promises.push(sqs.sendMessage({
 					MessageBody: JSON.stringify({
 						action: 'page',
