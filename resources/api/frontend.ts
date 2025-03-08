@@ -1001,6 +1001,18 @@ const statsMap: {
 			Stat: 'p80'
 		}
 	},
+	'twilio-page-duration': {
+		Id: 'twilio_page_duration',
+		Label: 'Duration of Page',
+		MetricStat: {
+			Metric: {
+				Namespace: 'Twilio Health',
+				MetricName: 'PageDuration'
+			},
+			Period: 60,
+			Stat: 'p80'
+		}
+	},
 	'twilio-page-time': {
 		Id: 'twilio_page_time',
 		Label: 'Time to Send Page',

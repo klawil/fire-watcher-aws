@@ -58,6 +58,10 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		response.success = false;
 		response.errors.push('tg');
 	}
+	if (!body.len || typeof body.len !== 'number') {
+		response.success = false;
+		response.errors.push('len');
+	}
 
 	if (
 		response.success &&
@@ -68,6 +72,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			action: 'page',
 			key: body.key,
 			tg: body.tg,
+			len: body.len,
 			isTest: !!body.isTest
 		};
 		response.data = [ sqsEvent ];

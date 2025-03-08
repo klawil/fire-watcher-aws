@@ -260,7 +260,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					MessageBody: JSON.stringify({
 						action: 'page',
 						tg: body.Item.Talkgroup?.N,
-						key: Key.split('/')[2] || Key.split('/')[1]
+						key: Key.split('/')[2] || Key.split('/')[1],
+						len: Number(body.Item.Len.N)
 					}),
 					QueueUrl: sqsQueue
 				}).promise());

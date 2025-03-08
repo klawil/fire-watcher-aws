@@ -95,9 +95,8 @@ const charts = [
 	{
 		id: 'texts-time',
 		val: val => val > 1500000 ? 0 : Math.ceil(val / 1000),
-		// yMax: 240, // 4 minutes
 		stacked: true,
-		query: 'metrics=twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y'
+		query: 'metrics=twilio-page-duration,twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y'
 	},
 ];
 

@@ -432,6 +432,7 @@ interface PageBody {
 	action: 'page';
 	key: string;
 	tg: string;
+	len?: number;
 	isTest?: boolean;
 }
 
@@ -441,18 +442,43 @@ async function handlePage(body: PageBody) {
 	const messageBody = createPageMessage(body.key, body.tg);
 	const recipients = await getRecipients('all', body.tg, !!body.isTest);
 
+	body.len = body.len || 0;
+
 	let metricPromise: Promise<any> = new Promise(res => res(null));
+	const pageConfig = pageConfigs[body.tg];
+	const pageTime = pageConfig.fToTime(body.key);
+	const lenMs = body.len * 1000;
+	if (body.isTest) {
+		console.log([
+			{
+				MetricName: 'PageDuration',
+				Timestamp: pageTime,
+				Unit: 'Milliseconds',
+				Value: lenMs
+			},
+			{
+				MetricName: 'PageToQueue',
+				Timestamp: pageTime,
+				Unit: 'Milliseconds',
+				Value: pageInitTime.getTime() - pageTime.getTime() - lenMs
+			}
+		]);
+	}
 	if (!body.isTest) {
-		const pageConfig = pageConfigs[body.tg];
-		const pageTime = pageConfig.fToTime(body.key);
 		metricPromise = cloudWatch.putMetricData({
 			Namespace: 'Twilio Health',
 			MetricData: [
 				{
+					MetricName: 'PageDuration',
+					Timestamp: pageTime,
+					Unit: 'Milliseconds',
+					Value: lenMs
+				},
+				{
 					MetricName: 'PageToQueue',
 					Timestamp: pageTime,
 					Unit: 'Milliseconds',
-					Value: pageInitTime.getTime() - pageTime.getTime()
+					Value: pageInitTime.getTime() - pageTime.getTime() - lenMs
 				}
 			]
 		}).promise()
