@@ -6,9 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as certmanager from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
@@ -110,8 +108,12 @@ export class FireWatcherAwsStack extends Stack {
     });
     api.root.addResource('api').addMethod('GET', apiIntegration);
 
+    // Create a role for cloudfront to use to access s3
+    const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
+    bucket.grantRead(s3AccessIdentity);
+
     // Create the cloudfront distribution
-    const cfDistro = new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
+    new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
       viewerCertificate: {
         aliases: [ 'fire.klawil.net' ],
         props: {
@@ -123,7 +125,8 @@ export class FireWatcherAwsStack extends Stack {
       originConfigs: [
         {
           s3OriginSource: {
-            s3BucketSource: bucket
+            s3BucketSource: bucket,
+            originAccessIdentity: s3AccessIdentity
           },
           behaviors: [{
             isDefaultBehavior: true
