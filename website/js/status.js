@@ -66,28 +66,28 @@ const charts = [
 	},
 	{
 		id: 'sag-tower',
-		query: 'metrics=tower-sag-max,tower-sag-min&period=300',
+		query: 'metrics=tower-sag-max,tower-sag-min&period=300&timerange=86400000',
 		fill: true
 	},
 	{
 		id: 'pool-table-tower',
-		query: 'metrics=tower-pt-max,tower-pt-min&period=300',
+		query: 'metrics=tower-pt-max,tower-pt-min&period=300&timerange=86400000',
 		fill: true
 	},
 	{
 		id: 'ala-tower',
-		query: 'metrics=tower-ala-max,tower-ala-min&period=300',
+		query: 'metrics=tower-ala-max,tower-ala-min&period=300&timerange=86400000',
 		fill: true
 	},
 	{
 		id: 'texts-count',
-		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=21600'
+		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=86400&timerange=2419200000'
 	},
 	{
 		id: 'texts-time',
 		val: val => Math.ceil(val / 1000),
 		yMax: 120, // 2 minutes
-		query: 'metrics=twilio-sent-time,twilio-delivered-time,twilio-page-time&period=21600'
+		query: 'metrics=twilio-sent-time,twilio-delivered-time,twilio-page-time&period=86400&timerange=2419200000'
 	},
 ];
 
@@ -156,6 +156,13 @@ charts.forEach(chart => {
 						annotations: {
 							line1: {
 								type: 'line',
+								label: {
+									content: 'Service Degraded',
+									display: true,
+									color: '#000',
+									backgroundColor: 'transparent',
+									yAdjust: 10
+								},
 								yMin: 30,
 								yMax: 30,
 								borderColor: 'rgb(255, 99, 132)',

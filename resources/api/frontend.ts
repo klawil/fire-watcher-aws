@@ -1092,6 +1092,12 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	) {
 		response.errors.push('period');
 	}
+	if (
+		typeof event.queryStringParameters.timerange !== 'undefined' &&
+		!numberRegex.test(event.queryStringParameters.timerange)
+	) {
+		response.errors.push('timerange');
+	}
 	if (typeof event.queryStringParameters.metrics !== 'string') {
 		response.errors.push('metrics');
 	} else if (
@@ -1141,12 +1147,15 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	) {
 		const period = Number(event.queryStringParameters.period);
 		
-		const timerange = periodToTime
-			.reduce((timerange, item) => {
-				if (period <= item.period) return item.timerange;
+		let timerange = Number(event.queryStringParameters.timerange);
+		if (typeof event.queryStringParameters.timerange === 'undefined') {
+			timerange = periodToTime
+				.reduce((timerange, item) => {
+					if (period <= item.period) return item.timerange;
 
-				return timerange;
-			}, periodToTime[0].timerange);
+					return timerange;
+				}, periodToTime[0].timerange);
+		}
 
 		if (typeof event.queryStringParameters.startTime !== 'undefined') {
 			event.queryStringParameters.endTime = `${Number(event.queryStringParameters.startTime) + timerange}`;
