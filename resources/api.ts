@@ -129,8 +129,13 @@ type DynamoOutput = AWS.DynamoDB.QueryOutput & {
 
 async function runDynamoQueries(
 	queryConfigs: AWS.DynamoDB.QueryInput[],
-	sortKey: string = ''
+	sortKey: string = '',
+	afterKey: string = ''
 ): Promise<DynamoOutput> {
+	if (afterKey === '') {
+		afterKey = sortKey;
+	}
+
 	return await Promise.all(queryConfigs.map((queryConfig) => dynamodb.query(queryConfig).promise()))
 		.then((data) => data.reduce((agg: DynamoOutput, result) => {
 			if (
@@ -196,6 +201,7 @@ async function runDynamoQueries(
 				let maxSortKey: null | number = null;
 				data.Items?.forEach((item) => {
 					const sortKeyValue = Number(item[sortKey].N);
+					const afterKeyValue = Number(item[afterKey].N);
 
 					if (
 						minSortKey === null ||
@@ -204,8 +210,8 @@ async function runDynamoQueries(
 
 					if (
 						maxSortKey === null ||
-						sortKeyValue > maxSortKey
-					) maxSortKey = sortKeyValue;
+						afterKeyValue > maxSortKey
+					) maxSortKey = afterKeyValue;
 				});
 
 				data.MinSortKey = minSortKey;
@@ -373,6 +379,8 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 }
 
 const dtrStartTimeIndex = 'StartTimeIndex';
+const dtrAddedIndex = 'AddedIndex';
+const dtrAddedTgIndex = 'AddedTgIndex';
 
 async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const filters: string[] = [];
@@ -473,10 +481,14 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	) {
 		const after = event.queryStringParameters.after;
 		queryConfigs.forEach((queryConfig) => {
+			queryConfig.IndexName = queryConfig.IndexName === dtrStartTimeIndex
+				? dtrAddedIndex
+				: dtrAddedTgIndex;
+
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+			queryConfig.ExpressionAttributeNames['#st'] = 'Added';
 			queryConfig.ExpressionAttributeValues[':st'] = {
 				N: after
 			};
@@ -509,7 +521,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		});
 	}
 
-	const data = await runDynamoQueries(queryConfigs, 'StartTime');
+	const data = await runDynamoQueries(queryConfigs, 'StartTime', 'Added');
 
 	const body = JSON.stringify({
 		success: true,
