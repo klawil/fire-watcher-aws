@@ -551,7 +551,10 @@ async function handleTranscribe(body: TranscribeBody) {
 
 	// Build the message
 	const tg = result.jobName.split('-')[0];
-	const messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${result.results.transcripts[0].transcript}`;
+	let transcript = result.results.transcripts[0].transcript === ''
+		? 'No voices detected'
+		: result.results.transcripts[0].transcript;
+	const messageBody = `Transcript for ${pageConfigs[tg].partyBeingPaged} page:\n\n${transcript}`;
 
 	// Get recipients and send
 	const recipients = (await getRecipients('all', tg))
