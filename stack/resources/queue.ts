@@ -24,8 +24,8 @@ const welcomeMessageParts: {
 	pageGroup: string;
 	howToLeave: string;
 } = {
-	welcome: `Welcome to the {{name}} {{type}}!`,
-	textGroup: `This number will be used to send and receive messages from other members of the Fire Department.\n\nIn a moment, you will receive a text from another number with a link to a sample page you would have received. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
+	welcome: `Welcome to the {{name}} {{type}} group!`,
+	textGroup: `This number will be used to send and receive messages from other members of the department.\n\nIn a moment, you will receive a text from another number with a link to a sample page you would have received. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.`,
 	pageGroup: `This number will be used to send pages and only pages.\n\nIn a moment, you will receive a text with a link to a sample page you would have received.`,
 	howToLeave: `You can leave this group at any time by texting "STOP" to this number.`
 };
