@@ -1,12 +1,15 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
 import { sendAlertMessage, AlertType } from './utils/general';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('alarms');
 
 const metricSource = 'Alarms';
 const cloudWatch = new aws.CloudWatch();
 
 export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
-	console.log(`Body`, JSON.stringify(event));
+	logger.trace('main', ...arguments);
 
 	const tags: { 'cvfd-alarm-type': AlertType, [key: string]: string } = {
 		'cvfd-alarm-type': 'Api',
@@ -19,7 +22,7 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 			tags[tag.Key] = tag.Value;
 		});
 	} catch (e) {
-		console.error(e);
+		logger.error('main', e);
 	}
 
 	const alarmData = event.alarmData;

@@ -1,4 +1,4 @@
-import { PagingTalkgroup, UserDepartment } from "../../../../common/userConstants";
+import { PagingTalkgroup, UserDepartment } from "../../../common/userConstants";
 
 export interface ActivateBody {
 	action: 'activate';

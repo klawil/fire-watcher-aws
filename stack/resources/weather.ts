@@ -1,7 +1,10 @@
 import fetch from 'node-fetch';
-import { HTMLElement, parse } from 'node-html-parser';
+import { parse } from 'node-html-parser';
 import * as AWS from 'aws-sdk';
 import { FireTypes, WeatherResultJson } from '../../common/weather';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('weather');
 
 interface GaccUrlObject {
 	new: string;
@@ -50,6 +53,7 @@ const s3Bucket = process.env.S3_BUCKET as string;
 const s3File = 'weather.json';
 
 async function processGaccUrl(url: string): Promise<number[]> {
+  logger.trace('processGaccUrl', ...arguments);
   try {
     const data: GaccJson = await fetch(url)
       .then(r => r.json());
@@ -66,12 +70,13 @@ async function processGaccUrl(url: string): Promise<number[]> {
         return agg;
       }, []);
   } catch (e) {
-    console.error('processGaccUrl', e);
+    logger.error('processGaccUrl', e);
     return [ -1, -1 ];
   }
 }
 
 async function getStateFires(): Promise<WeatherResultJson['stateFires']> {
+  logger.trace('getStateFires', ...arguments);
   try {
     const keys: FireTypes[] = Object.keys(currentFireUrls) as FireTypes[];
 
@@ -86,7 +91,7 @@ async function getStateFires(): Promise<WeatherResultJson['stateFires']> {
       rx: [ -1, -1 ],
     });
   } catch (e) {
-    console.error('getStateFires', e);
+    logger.error('getStateFires', e);
     return {
       new: [ -1, -1 ],
       ongoing: [ -1, -1 ],
@@ -96,6 +101,7 @@ async function getStateFires(): Promise<WeatherResultJson['stateFires']> {
 }
 
 async function getReadinessInfo(): Promise<WeatherResultJson['readiness']> {
+  logger.trace('getReadinessInfo', ...arguments);
   try {
     const html = await fetch(readiness)
       .then(r => r.text());
@@ -113,12 +119,13 @@ async function getReadinessInfo(): Promise<WeatherResultJson['readiness']> {
       }, null);
     return readinessInfo;
   } catch (e) {
-    console.error('getReadinessInfo', e);
+    logger.error('getReadinessInfo', e);
     return {};
   }
 }
 
 function dateToLocalString(d: Date): string[] {
+  logger.trace('dateToLocalString', ...arguments);
 	let dateString = d.toLocaleDateString('en-US', {
 		timeZone: 'America/Denver',
 		weekday: 'short',
@@ -141,6 +148,7 @@ function dateToLocalString(d: Date): string[] {
 }
 
 function buildTimeframe(onset: string, ends: string): string {
+  logger.trace('buildTimeframe', ...arguments);
   const dOnset = new Date(onset);
   const dEnds = new Date(ends);
 
@@ -159,6 +167,7 @@ function buildTimeframe(onset: string, ends: string): string {
 }
 
 async function getAreaAlerts(): Promise<WeatherResultJson['weather']> {
+  logger.trace('getAreaAlerts', ...arguments);
   try {
     const weatherAlerts: NwsJson = await fetch(weatherAlertsApi, {
       headers: {
@@ -199,12 +208,13 @@ async function getAreaAlerts(): Promise<WeatherResultJson['weather']> {
       .replace(/\n/g, '<br>')
       .replace(/(\.\.\.)([^ ])/g, (a, b, c) => `${b} ${c}`);
   } catch (e) {
-    console.error('getAreaAlerts', e);
+    logger.error('getAreaAlerts', e);
     return '';
   }
 }
 
 async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
+  logger.trace('getCountyRestrictions', ...arguments);
   try {
     const html = await fetch(countyRestrictionUrl)
       .then(r => r.text());
@@ -225,12 +235,13 @@ async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
       .join('\n\n\n')
       .replace(/\n/g, '<br>')
   } catch (e) {
-    console.error('getCountyRestrictions', e);
+    logger.error('getCountyRestrictions', e);
     return '';
   }
 }
 
 async function uploadFile(text: string) {
+  logger.trace('uploadFile', ...arguments);
   const s3 = new AWS.S3();
 
   const uploadParams = {
@@ -243,6 +254,7 @@ async function uploadFile(text: string) {
 }
 
 export async function main() {
+  logger.trace('main', ...arguments);
   try {
     const dataRaw = await Promise.all([
       getStateFires(),
@@ -259,6 +271,6 @@ export async function main() {
     };
     await uploadFile(JSON.stringify(data));
   } catch (e) {
-    console.error('main', e);
+    logger.error('main', e);
   }
 }

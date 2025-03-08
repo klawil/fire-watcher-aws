@@ -3,6 +3,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, sendAlertMessage, validateBodyIsJson } from '../utils/general';
 import { PageBody } from '../types/queue';
 import { PagingTalkgroup } from '../../../common/userConstants';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('infra');
 
 const metricSource = 'Infra';
 
@@ -42,6 +45,7 @@ interface PageHttpBody {
 }
 
 async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handlePage', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -95,7 +99,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	}
 
 	if (!response.success) {
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handlePage', '400', response);
 	}
 
 	return {
@@ -105,6 +109,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 }
 
 async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleHeartbeat', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -138,7 +143,7 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		});
 
 	if (!response.success) {
-		console.log(JSON.stringify(response));
+		logger.error('handleHeartbeat', response);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Invalid heartbeat'
@@ -267,6 +272,7 @@ const keyMap: { [key in keyof AdjacentSitesBodyItemCombined]: string } = {
 const onlyChangeInFields = [ 'SiteFailed', 'NoServReq', 'BackupCtrl' ];
 
 async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleSiteStatus', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -319,7 +325,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	}
 
 	if (!response.success) {
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handleSiteStatus', '400', response);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -440,6 +446,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 }
 
 async function handleDtrExists(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleDtrExists', ...arguments);
 	validateBodyIsJson(event.body);
 
 	const s3 = new aws.S3();
@@ -460,6 +467,7 @@ async function handleDtrExists(event: APIGatewayProxyEvent): Promise<APIGatewayP
 }
 
 async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleDtrExistsSingle', ...arguments);
 	event.queryStringParameters = event.queryStringParameters || {};
 	const response: GenericApiResponse & {
 		exists: boolean;
@@ -523,6 +531,7 @@ async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGa
 
 const testingUser = '***REMOVED***';
 async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Promise<APIGatewayProxyResult> {
+	logger.trace('handleTestState', ...arguments);
 	const response: GenericApiResponse = {
 		success: true,
 		errors: []
@@ -536,7 +545,7 @@ async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Pr
 	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handleTestState', '400', response);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -571,6 +580,7 @@ async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Pr
 }
 
 async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getTestTexts', ...arguments);
 	const response: GenericApiResponse = {
 		success: true,
 		errors: []
@@ -584,7 +594,7 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('getTestTexts', '400', response);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -615,6 +625,7 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleMetrics', ...arguments);
 	const date = new Date();
 	const response: GenericApiResponse = {
 		success: true,
@@ -629,7 +640,7 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	if (event.queryStringParameters.code !== twilioConf.apiCode) {
 		response.success = false;
 		response.errors.push('auth');
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handleMetrics', '400', response);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -662,7 +673,7 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 
 	if (response.errors.length > 0) {
 		response.success = false;
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handleMetrics', '400', response);
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -698,6 +709,7 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
 	try {
@@ -723,7 +735,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleMetrics(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid Action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -737,7 +749,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			source: metricSource,
 			type: 'Thrown error'
 		});
-		console.error(e);
+		logger.error('main', e);
 		return {
 			statusCode: 400,
 			headers: {},

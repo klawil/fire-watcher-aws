@@ -1,5 +1,8 @@
 import * as aws from 'aws-sdk';
 import { UserDepartment, defaultDepartment, departmentConfig } from '../../../common/userConstants';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('u-gen');
 const twilio = require('twilio');
 
 const messagesTable = process.env.TABLE_MESSAGES as string;
@@ -12,6 +15,7 @@ const dynamodb = new aws.DynamoDB();
 type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
 
 export function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): DynamoDbValues {
+	logger.trace('parseDynamoDbAttributeValue', ...arguments);
 	if (typeof value.S !== 'undefined') {
 		return value.S;
 	} else if (typeof value.N !== 'undefined') {
@@ -36,6 +40,7 @@ interface NewObject {
 }
 
 export function parseDynamoDbAttributeMap(item: aws.DynamoDB.AttributeMap): NewObject {
+	logger.trace('parseDynamoDbAttributeMap', ...arguments);
 	const newObj: NewObject = {};
 
 	Object.keys(item)
@@ -47,6 +52,7 @@ export function parseDynamoDbAttributeMap(item: aws.DynamoDB.AttributeMap): NewO
 }
 
 export function parsePhone(num: string, toHuman: boolean = false): string {
+	logger.trace('parsePhone', ...arguments);
 	if (!toHuman) {
 		return num.replace(/[^0-9]/g, '');
 	}
@@ -64,6 +70,7 @@ export async function getRecipients(
 	pageTg: number | null,
 	isTest: boolean = false
 ) {
+	logger.trace('getRecipients', ...arguments);
 	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
 		FilterExpression: '#a = :a',
@@ -141,6 +148,7 @@ const twilioSecretId = process.env.TWILIO_SECRET as string;
 
 let twilioSecret: null | Promise<TwilioConfig> = null;
 export async function getTwilioSecret(): Promise<TwilioConfig> {
+	logger.trace('getTwilioSecret', ...arguments);
 	if (twilioSecret !== null) {
 		return twilioSecret;
 	}
@@ -150,7 +158,7 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
 	}).promise()
 		.then(data => JSON.parse(data.SecretString as string))
 		.catch (e => {
-			console.error(e);
+			logger.error('getTwilioSecret', e);
 			return null;
 		});
 
@@ -166,6 +174,7 @@ export async function saveMessageData(
 	pageTg: number | null = null,
 	isTest: boolean = false
 ) {
+	logger.trace('saveMessageData', ...arguments);
 	let promises: Promise<any>[] = [];
 	promises.push(dynamodb.updateItem({
 		TableName: messagesTable,
@@ -226,8 +235,7 @@ export async function saveMessageData(
 		]
 	}).promise()
 		.catch(e => {
-			console.error(`Error with metrics`);
-			console.error(e);
+			logger.error('saveMesageData', 'twilio metrics', e);
 		}));
 
 	await Promise.all(promises);
@@ -251,6 +259,7 @@ export async function sendMessage(
 	isPage: boolean = false,
 	isAlert: boolean = false
 ) {
+	logger.trace('sendMessage', ...arguments);
 	const depConf = departmentConfig[department || defaultDepartment] || departmentConfig[defaultDepartment];
 
 	if (
@@ -258,7 +267,7 @@ export async function sendMessage(
 		typeof department === 'undefined' ||
 		typeof depConf === 'undefined'
 	) {
-		console.error(`Trying to send message to invalid destination\nphone: ${phone}\ndepartment: ${department}\nMessage: ${body}`);
+		logger.error('sendMessage', 'invalid destination', phone, department, depConf);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Invalid destination'
@@ -319,14 +328,14 @@ export async function sendMessage(
 		saveMessageDataPromise
 	])
 		.catch((e: any) => {
-			console.log(`QUEUE - ERROR - sendMessage`);
-			console.error(e);
+			logger.error('sendMessage', e);
 		});
 }
 
 export type AlertType = 'Api' | 'Dtr' | 'Vhf';
 
 export async function sendAlertMessage(metricSource: string, alertType: AlertType, body: string) {
+	logger.trace('sendAlertMessage', ...arguments);
 	const messageId = Date.now().toString();
 	const recipients = (await getRecipients('all', null))
 		.filter(user => user[`get${alertType}Alerts`]?.BOOL);
@@ -385,7 +394,7 @@ export async function incrementMetric(
 	sendLessSpecific: boolean = true,
 	sendMoreSpecific: boolean = true
 ): Promise<any> {
-	console.log(`METRIC - ${metricData.source} - ${name} - ${JSON.stringify(metricData)}`);
+	logger.trace('incrementMetric', ...arguments);
 	const putConfig: aws.CloudWatch.PutMetricDataInput = {
 		Namespace: `CVFD API`,
 		MetricData: []
@@ -427,6 +436,7 @@ export async function incrementMetric(
 }
 
 export function validateBodyIsJson(body: string | null): true {
+	logger.trace('validateBodyIsJson', ...arguments);
 	if (body === null) {
 		throw new Error(`Invalid JSON body - null`);
 	}
@@ -437,6 +447,7 @@ export function validateBodyIsJson(body: string | null): true {
 }
 
 export function randomString(len: number, numeric = false): string {
+	logger.trace('randomString', ...arguments);
 	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 	if (numeric) {
 		chars = '0123456789';

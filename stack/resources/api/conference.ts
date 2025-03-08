@@ -5,6 +5,9 @@ import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap } from '../
 import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../../common/conferenceApi';
 import { unauthorizedApiResponse } from '../types/api';
 import { defaultDepartment, departmentConfig } from '../../../common/userConstants';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('conf');
 
 const metricSource = 'Conference';
 
@@ -14,6 +17,7 @@ const userTable = process.env.TABLE_USER as string;
 const conferenceTable = process.env.TABLE_CONFERENCE as string;
 
 async function getToken(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getToken', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
@@ -56,6 +60,7 @@ interface TwilioConferenceEvent {
 }
 
 async function handleJoin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleJoin', ...arguments);
 	const code = event.queryStringParameters?.code;
 	const response: APIGatewayProxyResult = {
 		statusCode: 204,
@@ -146,7 +151,7 @@ async function handleJoin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 							participants: parsedItems,
 							you: call.CallSid,
 						}) })
-						.catch(console.error);
+						.catch((e: any) => logger.error('handleJoin', 'sending messages', e));
 				}));
 			});
 
@@ -154,6 +159,7 @@ async function handleJoin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 }
 
 async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleKickUser', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
@@ -222,6 +228,7 @@ async function handleKickUser(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 }
 
 async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleInvite', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
@@ -312,6 +319,7 @@ async function handleInvite(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getConference', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
@@ -344,6 +352,7 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 }
 
 async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('endConference', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (
 		user === null ||
@@ -381,6 +390,7 @@ async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
 	try {
@@ -399,7 +409,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await endConference(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -409,7 +419,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		};
 	} catch (e) {
-		console.error(e);
+		logger.error('main', e);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Thrown error'

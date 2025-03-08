@@ -1,4 +1,7 @@
 import * as aws from 'aws-sdk';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('dynamo');
 
 interface DynamoListOutput extends aws.DynamoDB.QueryOutput {
 	Items: aws.DynamoDB.ItemList;
@@ -17,6 +20,7 @@ export async function mergeDynamoQueries(
 	sortKey: string,
 	afterKey: string = ''
 ): Promise<DynamoListOutput> {
+	logger.trace('mergeDynamoQueries', ...arguments);
 	if (afterKey === '') {
 		afterKey = sortKey;
 	}

@@ -3,6 +3,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
 import { mergeDynamoQueries } from '../utils/dynamo';
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject } from '../../../common/audioApi';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('audio');
 
 const metricSource = 'Audio';
 
@@ -26,6 +29,7 @@ const dtrTableIndexes: {
  * @param addedAfter Number The timestamp to get values added after (ms since epoch)
  */
 async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getList', ...arguments);
 	const queryStringParameters: {
 		tg?: string;
 		emerg?: 'y' | 'n';
@@ -145,6 +149,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 }
 
 async function getTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getTalkgroups', ...arguments);
 	event.queryStringParameters = event.queryStringParameters || {};
 	const queryConfigs: aws.DynamoDB.QueryInput[] = [];
 
@@ -192,6 +197,7 @@ async function getTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 	try {
 		switch (action) {
@@ -201,7 +207,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getTalkgroups(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -215,7 +221,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			source: metricSource,
 			type: 'Thrown exception'
 		});
-		console.error(e);
+		logger.error('main', e);
 		return {
 			statusCode: 400,
 			headers: {},

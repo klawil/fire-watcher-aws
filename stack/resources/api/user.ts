@@ -8,6 +8,9 @@ import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse,
 import { unauthorizedApiResponse } from '../types/api';
 import { pagingTalkgroupOrder, validDepartments } from '../../../common/userConstants';
 import { ActivateBody, LoginBody } from '../types/queue';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('user');
 
 const metricSource = 'User';
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
@@ -36,6 +39,7 @@ interface FidoKeys {
 };
 
 async function loginUser(user: AWS.DynamoDB.AttributeMap) {
+	logger.trace('loginUser', ...arguments);
 	// Find the previous tokens that should be deleted
 	const now = Date.now();
 	const validUserTokens = user.loginTokens?.L
@@ -78,6 +82,7 @@ async function loginUser(user: AWS.DynamoDB.AttributeMap) {
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleLogin', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -139,6 +144,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 }
 
 async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleAuth', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -201,6 +207,7 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 }
 
 async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getUser', ...arguments);
 	const user = await getLoggedInUser(event);
 	const response: ApiUserGetUserResponse = {
 		success: true,
@@ -281,6 +288,7 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 }
 
 async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleLogout', ...arguments);
 	let redirectLocation = '/';
 	if (event.queryStringParameters?.redirectTo) {
 		redirectLocation = event.queryStringParameters.redirectTo;
@@ -334,6 +342,7 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleList', ...arguments);
 	const user = await getLoggedInUser(event);
 	const unauthorizedResponse = {
 		statusCode: 403,
@@ -415,6 +424,7 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 }
 
 async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean): Promise<APIGatewayProxyResult> {
+	logger.trace('createOrUpdateUser', ...arguments);
 	const user = await getLoggedInUser(event);
 	const unauthorizedResponse = {
 		statusCode: 403,
@@ -642,6 +652,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 }
 
 async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('deleteUser', ...arguments);
 	const user = await getLoggedInUser(event);
 	const unauthorizedResponse = {
 		statusCode: 403,
@@ -699,6 +710,7 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 }
 
 function getFidoLib() {
+	logger.trace('getFidoLib', ...arguments);
 	return new Fido2Lib({
 		timeout: 60,
 		rpId: 'fire.klawil.net',
@@ -708,14 +720,17 @@ function getFidoLib() {
 }
 
 function base64ToBuffer(base64: string): Buffer {
+	logger.trace('base64ToBuffer', ...arguments);
 	return Buffer.from(base64, 'base64');
 }
 
 function bufferToBase64(buffer: ArrayBuffer): string {
+	logger.trace('bufferToBase64', ...arguments);
 	return Buffer.from(buffer).toString('base64');
 }
 
 async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('fidoGetChallenge', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (user === null)
 		return unauthorizedApiResponse;
@@ -768,6 +783,7 @@ async function fidoGetChallenge(event: APIGatewayProxyEvent): Promise<APIGateway
 }
 
 async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('fidoRegister', ...arguments);
 	const user = await getLoggedInUser(event);
 	if (user === null)
 		return unauthorizedApiResponse;
@@ -849,6 +865,7 @@ async function fidoRegister(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 async function fidoGetAuth(): Promise<APIGatewayProxyResult> {
+	logger.trace('fidoGetAuth', ...arguments);
 	const f2l = getFidoLib();
 	const options = await f2l.assertionOptions();
 	const responseBody: ApiUserFidoGetAuthResponse = {
@@ -862,6 +879,7 @@ async function fidoGetAuth(): Promise<APIGatewayProxyResult> {
 }
 
 async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('fidoAuth', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -957,6 +975,7 @@ async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 	try {
 		switch (action) {
@@ -986,7 +1005,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await fidoAuth(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid Action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -1000,7 +1019,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			source: metricSource,
 			type: 'Thrown error'
 		});
-		console.error(e);
+		logger.error('main', e);
 		return {
 			statusCode: 400,
 			headers: {},

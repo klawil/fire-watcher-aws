@@ -3,6 +3,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
 import { UserDepartment } from '../../../common/userConstants';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('twilio');
 
 const metricSource = 'Twilio';
 
@@ -84,6 +87,7 @@ const applePrefixes = [
 	.map(p => `${p}+`);
 
 async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleText', ...arguments);
 	const code = event.queryStringParameters?.code;
 	const response: APIGatewayProxyResult = {
 		statusCode: 200,
@@ -182,6 +186,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 }
 
 async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleTextStatus', ...arguments);
 	const eventDatetime = Date.now();
 	const code = event.queryStringParameters?.code;
 	const messageId = event.queryStringParameters?.msg || null;
@@ -195,13 +200,13 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 
 	// Validate the call is from Twilio
 	if (code !== twilioConf.apiCode) {
-		console.log(`Invalid API code - ${code}`);
+		logger.error('handleTextStatus', 'invalid API code');
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Invalid Twilio code'
 		});
 	} else if (messageId === null) {
-		console.log(`Invalid message ID - ${messageId}`);
+		logger.error('handleTextStatus', 'invalid message ID');
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Invalid message ID'
@@ -320,8 +325,7 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 				]
 			}).promise()
 				.catch(e => {
-					console.error(`Error with metrics`);
-					console.error(e);
+					logger.error('handleTextStatus', 'metrics', e);
 				}));
 		}
 
@@ -332,6 +336,7 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 }
 
 async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleVoice', ...arguments);
 	const code = event.queryStringParameters?.code;
 	const response: APIGatewayProxyResult = {
 		statusCode: 200,
@@ -435,6 +440,7 @@ async function handleVoice(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
 	try {
@@ -447,7 +453,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleVoice(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid Action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -457,11 +463,11 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			})
 		};
 	} catch (e) {
-		console.error(e);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Thrown error'
 		});
+		logger.error('main', e);
 		return {
 			statusCode: 400,
 			headers: {},

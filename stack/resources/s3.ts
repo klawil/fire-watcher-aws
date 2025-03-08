@@ -3,7 +3,9 @@ import * as aws from 'aws-sdk';
 import { incrementMetric } from './utils/general';
 import { PageBody } from './types/queue';
 import { PagingTalkgroup } from '../../common/userConstants';
+import { getLogger } from '../../common/logger';
 
+const logger = getLogger('s3');
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
@@ -42,6 +44,7 @@ interface SourceListItem {
 }
 
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
+	logger.trace('parseRecord', ...arguments);
 	try {
 		const Bucket = record.s3.bucket.name;
 		const Key = record.s3.object.key;
@@ -251,6 +254,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						const itemsToDelete = allItems
 							.slice(0, -1);
 						const keptItem = allItems.slice(-1)[0];
+						logger.debug('itemsToDelete', itemsToDelete);
+						logger.debug('keptItem', keptItem);
+						logger.debug('body', body.Item);
 						promises.push(dynamodb.batchWriteItem({
 							RequestItems: {
 								[dtrTable]: itemsToDelete.map(itemToDelete => ({
@@ -281,7 +287,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 									}))
 								}
 							}).promise()
-								.catch(e => console.error(e)));
+								.catch(e => logger.error('parseRecord', 'translate table', e)));
 						}
 						if (transcript !== null) {
 							promises.push(dynamodb.updateItem({
@@ -305,6 +311,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							keptItem.Key.S !== Key || // We're not saving this file
 							!shouldDoTranscript // This file doesn't need a transcript
 						) {
+							logger.debug('Deuplicate, no transcript or page');
 							await Promise.all(promises);
 							return;
 						}
@@ -335,6 +342,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}).promise());
 
 				if (!doTranscriptOnly && body.Item.Tone?.BOOL) {
+					logger.debug('Transcript and page');
 					const queueMessage: PageBody = {
 						action: 'page',
 						tg: Number(body.Item.Talkgroup?.N) as PagingTalkgroup,
@@ -347,6 +355,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}).promise());
 				} else {
 					// Exit early if we just wanted to kick off the transcript
+					logger.debug('Transcript only');
 					await Promise.all(promises);
 					return;
 				}
@@ -386,7 +395,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					source: metricSource,
 					type: 'Talkgroup Update'
 				});
-				console.error(`ERROR TG AND DEVICES - `, e);
+				logger.error('parseRecord', 'talkgroup and devices', e);
 			}
 		} else {
 			await incrementMetric('Call', {
@@ -415,7 +424,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					TableName: dtrTable
 				};
-				console.log(`Delete: ${JSON.stringify(body)}`);
+				logger.info('parseRecord', 'delete', body);
 				const promises: Promise<any>[] = [];
 				promises.push(dynamodb.deleteItem(body).promise());
 
@@ -455,7 +464,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			
 				await Promise.all(promises);
 			} else {
-				console.log(`Delete Not Found: ${Key}`);
+				logger.error('parseRecord', 'delete', 'not found', Key);
 			}
 		}
 	} catch (e) {
@@ -463,14 +472,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			source: metricSource,
 			type: 'Thrown exception'
 		});
-		console.error(e);
+		logger.error('parseRecord', e);
 	}
 }
 
 export async function main(event: lambda.S3Event): Promise<void> {
+	logger.trace('main', ...arguments);
 	try {
 		await Promise.all(event.Records.map(parseRecord));
 	} catch (e) {
-		console.error(e);
+		logger.error('main', e);
 	}
 }

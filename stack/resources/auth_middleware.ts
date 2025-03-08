@@ -1,6 +1,9 @@
 import * as aws from 'aws-sdk';
 import { CloudFrontRequestEvent, CloudFrontRequestResult, CloudFrontResultResponse } from 'aws-lambda';
 import { allUserCookies, authTokenCookie, authUserCookie } from './utils/auth';
+import { getLogger } from '../../common/logger';
+
+const logger = getLogger('auth-mid');
 
 interface MapOfStrings {
 	[key: string]: string;
@@ -37,10 +40,10 @@ const dynamodb = new aws.DynamoDB({
 });
 
 exports.main = async function main(event: CloudFrontRequestEvent): Promise<CloudFrontRequestResult> {
+	logger.trace('main', ...arguments);
 	const cfEvent = event.Records[0].cf;
 	const requestUri = cfEvent.request.uri;
 	const requestQueryString = cfEvent.request.querystring;
-	console.log(JSON.stringify(cfEvent));
 
 	// Handle permanently moved pages
 	if (typeof redirect301[requestUri] !== 'undefined') {

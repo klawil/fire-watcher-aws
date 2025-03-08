@@ -5,7 +5,9 @@ import { getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessag
 import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
 import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
+import { getLogger } from '../../common/logger';
 
+const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
 const cloudWatch = new AWS.CloudWatch();
@@ -35,6 +37,7 @@ const codeTtl = 1000 * 60 * 5; // 5 minutes
 const timeZone = 'America/Denver';
 
 function dateToTimeString(d: Date): string {
+	logger.trace('dateToTimeString', ...arguments);
 	const dateString = d.toLocaleDateString('en-US', {
 		timeZone: timeZone,
 		weekday: 'short',
@@ -54,6 +57,7 @@ function dateToTimeString(d: Date): string {
 }
 
 function randomString(len: number, numeric = false): string {
+	logger.trace('randomString', ...arguments);
 	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 	if (numeric) {
 		chars = '0123456789';
@@ -73,6 +77,7 @@ function createPageMessage(
 	callSign: string | null = null,
 	transcript: string | null = null
 ): string {
+	logger.trace('createPageMessage', ...arguments);
 	const pageConfig = pagingConfig[pageTg];
 
 	if (typeof pageConfig === 'undefined')
@@ -92,6 +97,7 @@ function createPageMessage(
 }
 
 async function handleActivation(body: ActivateBody) {
+	logger.trace('handleActivation', ...arguments);
 	const promises: Promise<any>[] = [];
 
 	// Update the user to active in the table
@@ -218,6 +224,7 @@ interface TwilioParams {
 }
 
 async function handleTwilio(body: TwilioBody) {
+	logger.trace('handleTwilio', ...arguments);
 	// Pull out the information needed to validate the Twilio request
 	const eventData = body.body
 		?.split('&')
@@ -302,6 +309,7 @@ async function handleTwilio(body: TwilioBody) {
 }
 
 async function handleTwilioError(body: TwilioErrorBody) {
+	logger.trace('handleTwilioError', ...arguments);
 	const recipients = (await getRecipients('all', null))
 		.filter(user => user.getSystemAlerts?.BOOL ||
 			(
@@ -333,6 +341,7 @@ async function handleTwilioError(body: TwilioErrorBody) {
 }
 
 async function handlePage(body: PageBody) {
+	logger.trace('handlePage', ...arguments);
 	// Build the message body
 	const pageInitTime = new Date();
 	const messageBody = createPageMessage(body.key, body.tg);
@@ -344,7 +353,7 @@ async function handlePage(body: PageBody) {
 	const pageTime = fNameToDate(body.key);
 	const lenMs = body.len * 1000;
 	if (body.isTest) {
-		console.log([
+		logger.info('handlePage', [
 			{
 				MetricName: 'PageDuration',
 				Timestamp: pageTime,
@@ -377,8 +386,7 @@ async function handlePage(body: PageBody) {
 			]
 		}).promise()
 			.catch(e => {
-				console.error('Error with metrics');
-				console.error(e);
+				logger.error('handlePage', 'metrics', e);
 			});
 	}
 
@@ -410,6 +418,7 @@ async function handlePage(body: PageBody) {
 }
 
 async function handleLogin(body: LoginBody) {
+	logger.trace('handleLogin', ...arguments);
 	const code = randomString(6, true);
 	const codeTimeout = Date.now() + codeTtl;
 
@@ -476,6 +485,7 @@ interface TranscribeResult {
 };
 
 async function getItemToUpdate(key: string | null): Promise<AWS.DynamoDB.AttributeMap | null> {
+	logger.trace('getItemToUpdate', ...arguments);
 	if (key === null) return key;
 
 	let item: AWS.DynamoDB.AttributeMap | null = null;
@@ -511,6 +521,7 @@ async function getItemToUpdate(key: string | null): Promise<AWS.DynamoDB.Attribu
 }
 
 async function handleTranscribe(body: TranscribeBody) {
+	logger.trace('handleTranscribe', ...arguments);
 	// Check for the correct transcription job fomat
 	if (!/^\d{4,5}\-\d+$/.test(body.detail.TranscriptionJobName)) {
 		throw new Error(`Invalid transcription job name - ${body.detail.TranscriptionJobName}`);
@@ -620,11 +631,11 @@ async function handleTranscribe(body: TranscribeBody) {
 }
 
 async function parseRecord(event: lambda.SQSRecord) {
+	logger.debug('parseRecord', ...arguments);
 	const body = JSON.parse(event.body);
 	if (typeof body.action === 'undefined' && typeof body['detail-type'] !== 'undefined') {
 		body.action = 'transcribe';
 	}
-	console.log(JSON.stringify(body));
 	try {
 		let response;
 		switch (body.action) {
@@ -654,7 +665,7 @@ async function parseRecord(event: lambda.SQSRecord) {
 		}
 		return response;
 	} catch (e) {
-		console.error(e);
+		logger.error('parseRecord', e);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Thrown exception'
@@ -664,5 +675,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 }
 
 export async function main(event: lambda.SQSEvent) {
+	logger.trace('main', ...arguments);
 	await Promise.all(event.Records.map(parseRecord));
 }

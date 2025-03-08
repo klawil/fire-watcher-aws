@@ -10,13 +10,21 @@ export enum LogLevel {
 export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'error';
 
 let globalLogLevel: LogLevel = LogLevel.Error;
-if (window.location.search.indexOf('debug=') !== -1) {
-  const level = parseInt(window.location.search.split('debug=')[1].split('&')[0], 10);
-  if (typeof LogLevel[level] !== 'undefined') {
-    globalLogLevel = level;
+if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
+  if (window.location.search.indexOf('debug=') !== -1) {
+    const level = parseInt(window.location.search.split('debug=')[1].split('&')[0], 10);
+    if (typeof LogLevel[level] !== 'undefined') {
+      globalLogLevel = level;
+    }
+  } else if (window.location.search.indexOf('debug') !== -1) {
+    globalLogLevel = LogLevel.Debug;
   }
-} else if (window.location.search.indexOf('debug') !== -1) {
+}
+if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
   globalLogLevel = LogLevel.Debug;
+  if (typeof process.env.DEBUG !== 'undefined') {
+    globalLogLevel = LogLevel.Trace;
+  }
 }
 
 const levelStrings: string[] = [

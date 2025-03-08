@@ -1,6 +1,9 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, validateBodyIsJson } from '../utils/general';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('events');
 
 const metricSource = 'Events';
 const FIREHOSE_NAME = process.env.FIREHOSE_NAME as string;
@@ -24,6 +27,7 @@ interface GenericApiResponse {
 }
 
 function validateEventBody(body: EventBody, index: number, response: GenericApiResponse): boolean {
+	logger.trace('validateEventBody', ...arguments);
 	body.timestamp = Date.now();
 	let thisItemSuccess = true;
 
@@ -67,6 +71,7 @@ function validateEventBody(body: EventBody, index: number, response: GenericApiR
 }
 
 async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleEvent', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -88,7 +93,7 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		}).promise();
 
 	if (!response.success) {
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handleEvent', '400', response);
 	}
 
 	return {
@@ -98,6 +103,7 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 }
 
 async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handleEvents', ...arguments);
 	// Validate the body
 	validateBodyIsJson(event.body);
 
@@ -121,8 +127,7 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	}
 
 	if (!response.success) {
-		console.error(event.body);
-		console.error(`400 Error - ${response.errors.join(', ')}`);
+		logger.error('handleEvents', event.body, response);
 	}
 
 	return {
@@ -132,6 +137,7 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
 	try {
@@ -142,7 +148,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleEvents(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -156,7 +162,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			source: metricSource,
 			type: 'Thrown error'
 		});
-		console.error(e);
+		logger.error('main', e);
 		return {
 			statusCode: 400,
 			headers: {},

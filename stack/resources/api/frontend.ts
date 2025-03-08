@@ -3,6 +3,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
 import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, TextObject } from '../../../common/frontendApi';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('frontend');
 
 const metricSource = 'Frontend';
 
@@ -79,6 +82,7 @@ const lambdaFunctionNames: { [key: string]: {
 };
 
 async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getTexts', ...arguments);
 	const unauthorizedResponse = {
 		statusCode: 403,
 		body: JSON.stringify({
@@ -134,6 +138,7 @@ interface GenericApiResponse {
 }
 
 async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('handlePageView', ...arguments);
 	const date = new Date();
 	const response: GenericApiResponse = {
 		success: true,
@@ -970,6 +975,7 @@ const periodToTime: {
 ];
 
 async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getStats', ...arguments);
 	const unauthorizedResponse = {
 		statusCode: 403,
 		body: JSON.stringify({
@@ -1303,6 +1309,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 }
 
 async function getSites(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('getSites', ...arguments);
 	const unauthorizedResponse = {
 		statusCode: 403,
 		body: JSON.stringify({
@@ -1346,6 +1353,7 @@ async function getSites(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 	try {
 		switch (action) {
@@ -1359,7 +1367,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getSites(event);
 		}
 
-		console.error(`Invalid action - '${action}'`);
+		logger.error('main', 'Invalid action', action);
 		return {
 			statusCode: 404,
 			headers: {},
@@ -1373,7 +1381,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			source: metricSource,
 			type: 'Thrown exception'
 		});
-		console.error(e);
+		logger.error('main', e);
 		return {
 			statusCode: 400,
 			headers: {},

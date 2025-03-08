@@ -1,5 +1,8 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import { getLogger } from '../../../common/logger';
+
+const logger = getLogger('u-auth');
 
 const dynamodb = new aws.DynamoDB();
 
@@ -21,6 +24,7 @@ interface Cookies {
 }
 
 export function getCookies(event: APIGatewayProxyEvent): Cookies {
+	logger.trace('getCookies', ...arguments);
 	return (event.headers.Cookie || '')
 		.split('; ')
 		.reduce((agg: Cookies, val) => {
@@ -37,7 +41,7 @@ export function getCookies(event: APIGatewayProxyEvent): Cookies {
 }
 
 export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.DynamoDB.AttributeMap> {
-	console.log('AUTH - CALL');
+	logger.trace('getLoggedInUser', ...arguments);
 
 	try {
 		const cookies = getCookies(event);
@@ -47,7 +51,7 @@ export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null
 			typeof cookies[authUserCookie] === 'undefined' ||
 			typeof cookies[authTokenCookie] === 'undefined'
 		) {
-			console.log('AUTH - FAILED - NO COOKIES');
+			logger.warn('getLoggedInUser', 'failed', 'no cookies');
 			return null;
 		}
 
@@ -61,7 +65,7 @@ export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null
 			}
 		}).promise();
 		if (!user.Item) {
-			console.log('AUTH - FAILED - INVALID USER');
+			logger.warn('getLoggedInUser', 'failed', 'invalid user');
 			return null;
 		}
 
@@ -70,20 +74,18 @@ export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null
 			.map(t => parseInt(t.M?.tokenExpiry?.N || '0', 10));
 		
 		if (!matchingTokens || matchingTokens.length === 0) {
-			console.log('AUTH - FAILED - INVALID TOKEN');
+			logger.warn('getLoggedInUser', 'failed', 'invalid token');
 			return null;
 		}
 
 		if (Date.now() > matchingTokens[0]) {
-			console.log('AUTH - FAILED - EXPIRED TOKEN');
+			logger.warn('getLoggedInUser', 'failed', 'expired token');
 			return null;
 		}
 
 		return user.Item;
 	} catch (e) {
-		console.log('AUTH - FAILED - ERROR');
-		console.log('API - ERROR - getLoggedInUser');
-		console.error(e);
+		logger.error('getLoggedInUser', e);
 		return null;
 	}
 }

@@ -1,6 +1,8 @@
 import * as AWS from 'aws-sdk';
 import { parseDynamoDbAttributeMap, sendAlertMessage } from './utils/general';
+import { getLogger } from '../../common/logger';
 
+const logger = getLogger('status');
 const dynamodb = new AWS.DynamoDB();
 
 const metricSource = 'Status';
@@ -25,6 +27,7 @@ type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
 };
 
 export async function main() {
+	logger.trace('main', ...arguments);
 
 	// Get all of the heartbeats
 	const heartbeats: Heartbeat[] = await dynamodb.scan({
@@ -125,7 +128,7 @@ export async function main() {
 		});
 
 	if (messages.length > 0) {
-		console.log(messages.join('\n'));
+		logger.debug('main', 'alert messages', messages);
 		await sendAlertMessage(metricSource, 'Vhf', messages.join('\n'));
 	}
 
