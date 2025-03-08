@@ -94,7 +94,7 @@ interface TwilioConfig {
 	voiceApiSecret: string;
 }
 
-export type PhoneNumberAccount = 'Baca' | 'NSCAD' | 'Crestone';
+export type PhoneNumberAccount = 'Baca' | 'NSCAD' | 'Crestone' | 'Saguache';
 interface PhoneNumberConfig {
 	name?: string;
 	number: string;
@@ -123,7 +123,7 @@ export const twilioPhoneCategories: { [key: string]: PhoneNumberConfig } = {
 		number: '***REMOVED***',
 		type: 'chat',
 		department: 'Crestone',
-		// account: 'Crestone',
+		account: 'Crestone',
 	},
 	chatNSCAD: {
 		number: '***REMOVED***',
