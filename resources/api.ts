@@ -21,7 +21,7 @@ const ignorePrefixes = [
 	'Liked',
 	'Loved',
 	'Disliked',
-	'Laughed at',
+	'Laughed+at',
 	'Questioned'
 ]
 	.map(p => `${p}+`);
