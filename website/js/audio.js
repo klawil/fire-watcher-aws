@@ -104,7 +104,12 @@ const filterButtons = [
 ];
 
 if (filterModal) {
-	filterButtons.forEach((btn) => btn.addEventListener('click', () => filterButtons.forEach((button) => button.blur())));
+	filterButtons.forEach((btn) => btn.addEventListener('click', () => {
+		const elem = document.getElementById('tg-select-2');
+		const dropdown = new bootstrap.Dropdown(elem);
+		dropdown.show();
+		filterButtons.forEach((button) => button.blur());
+	}));
 	filterApplyButton.addEventListener('click', () => {
 		setUrlParams();
 		updateData('after', true);

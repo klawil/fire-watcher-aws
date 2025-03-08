@@ -394,6 +394,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		talkgroups.forEach((tg) => {
 			queryConfigs.push({
 				TableName: dtrTable,
+				IndexName: 'StartTimeTgIndex',
 				ScanIndexForward: false,
 				ExpressionAttributeNames: {
 					'#tg': 'Talkgroup'
@@ -419,7 +420,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		emergencyValues.forEach((emerg) => {
 			queryConfigs.push({
 				TableName: dtrTable,
-				IndexName: dtrAddedIndex,
+				IndexName: 'StartTimeEmergIndex', // dtrAddedIndex,
 				ScanIndexForward: false,
 				ExpressionAttributeNames: {
 					'#emerg': 'Emergency'
@@ -473,7 +474,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'Added';
+			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
 			queryConfig.ExpressionAttributeValues[':st'] = {
 				N: before
 			};
@@ -490,7 +491,7 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
 			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'Added';
+			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
 			queryConfig.ExpressionAttributeValues[':st'] = {
 				N: after
 			};
