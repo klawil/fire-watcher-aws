@@ -313,16 +313,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						{ Key: 'FileKey', Value: Key },
 					]
 				}).promise());
-				promises.push(dynamodb.putItem({
-					TableName: dtrTranslationTable,
-					Item: {
-						Key: { S: transcribeJobName },
-						Talkgroup: { N: body.Item.Talkgroup?.N },
-						File: { S: toneFile },
-						FileKey: { S: Key },
-						TTL: { N: (Math.floor(Date.now() / 1000) + (10 * 60)).toString() },
-					}
-				}).promise());
 
 				promises.push(sqs.sendMessage({
 					MessageBody: JSON.stringify({
