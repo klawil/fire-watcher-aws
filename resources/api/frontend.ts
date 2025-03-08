@@ -2,6 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
+import { ApiFrontendListTextsResponse, TextObject } from '../../common/frontendApi';
 
 const metricSource = 'Frontend';
 
@@ -434,15 +435,17 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		KeyConditionExpression: '#its = :its'
 	}).promise();
 
+	const responseBody: ApiFrontendListTextsResponse = {
+		success: true,
+		count: result.Count,
+		scanned: result.ScannedCount,
+		data: result.Items?.map(parseDynamoDbAttributeMap)
+			.map(v => v as unknown as TextObject),
+	}
 	return {
 		statusCode: 200,
 		headers: {},
-		body: JSON.stringify({
-			success: true,
-			count: result.Count,
-			scanned: result.ScannedCount,
-			data: result.Items?.map(parseDynamoDbAttributeMap)
-		})
+		body: JSON.stringify(responseBody),
 	};
 }
 

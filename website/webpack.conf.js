@@ -4,6 +4,8 @@ const config = {
 	mode: 'production',
   entry: {
 		profile: './website/ts/profile.ts',
+		login: './website/ts/login.ts',
+		texts: './website/ts/texts.ts',
 	},
   output: {
     path: path.resolve(__dirname, 'js'),
