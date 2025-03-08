@@ -584,6 +584,11 @@ interface TranscribeResult {
 }
 
 async function handleTranscribe(body: TranscribeBody) {
+	// Check for the correct transcription job fomat
+	if (!/^\d{4,5}\-\d+$/.test(body.detail.TranscriptionJobName)) {
+		throw new Error(`Invalid transcription job name - ${body.detail.TranscriptionJobName}`);
+	}
+
 	// Get the transcription results
 	const transcriptionInfo = await transcribe.getTranscriptionJob({
 		TranscriptionJobName: body.detail.TranscriptionJobName
