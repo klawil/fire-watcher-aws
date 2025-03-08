@@ -145,6 +145,7 @@ window.addEventListener('scroll', () => {
 	}
 });
 
+window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
 	afterFilters.Source = new CheckBoxFilter('input[name="vhf-source"]');
 	urlFilters.tone = new ToggleFilter('only-pages');
