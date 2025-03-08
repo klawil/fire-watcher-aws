@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
+import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, sendAlertMessage, validateBodyIsJson } from '../utils/general';
 
 const metricSource = 'Infra';
 
@@ -14,6 +14,7 @@ const dtrTable = process.env.TABLE_DTR as string;
 const userTable = process.env.TABLE_PHONE as string;
 const textTable = process.env.TABLE_TEXT as string;
 const statusTable = process.env.TABLE_STATUS as string;
+const siteTable = process.env.TABLE_SITE as string;
 
 interface GenericApiResponse {
 	success: boolean;
@@ -170,6 +171,177 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	}).promise()
 		.then(data => data.Items || [])
 		.then(data => data.map(parseDynamoDbAttributeMap));
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
+interface AdjacentSitesBodyItem {
+	rfss: string;
+	site: string;
+	sys_shortname: string;
+	conv_ch: boolean;
+	site_failed: boolean;
+	valid_info: boolean;
+	composite_ctrl: boolean;
+	active_conn: boolean;
+	backup_ctrl: boolean;
+	no_service_req: boolean;
+	supports_data: boolean;
+	supports_voice: boolean;
+	supports_registration: boolean;
+	supports_authentication: boolean;
+};
+
+interface AdjacentSitesBody {
+	type: 'adjacent';
+	code: string;
+	adjacent: ('' | AdjacentSitesBodyItem[])[]
+};
+
+async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as AdjacentSitesBody;
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Get the API code
+	const twilioConf = await getTwilioSecret();
+
+	// Validate the body
+	if (!body.code || body.code !== twilioConf.apiCode) {
+		response.success = false;
+		response.errors.push('code');
+	}
+	const neededFields: { [key in keyof AdjacentSitesBodyItem]: string } = {
+		rfss: 'string',
+		site: 'string',
+		sys_shortname: 'string',
+		conv_ch: 'boolean',
+		site_failed: 'boolean',
+		valid_info: 'boolean',
+		composite_ctrl: 'boolean',
+		active_conn: 'boolean',
+		backup_ctrl: 'boolean',
+		no_service_req: 'boolean',
+		supports_data: 'boolean',
+		supports_voice: 'boolean',
+		supports_registration: 'boolean',
+		supports_authentication: 'boolean',
+	};
+	if (!Array.isArray(body.adjacent)) {
+		response.success = false;
+		response.errors.push('adjacent');
+	} else {
+		body.adjacent
+			.filter(adjacent => adjacent !== '')
+			.forEach((adjacentItems, i1) => (adjacentItems as AdjacentSitesBodyItem[]).forEach((item, i2) => {
+				(Object.keys(neededFields) as (keyof AdjacentSitesBodyItem)[]).forEach(key => {
+					if (typeof item[key] !== neededFields[key]) {
+						response.errors.push(`${i1}-${i2}-${key}`);
+						response.success = false;
+					}
+				});
+			}));
+	}
+
+	if (!response.success) {
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Consolidate the rows
+	const sites: { [key: string]: AdjacentSitesBodyItem } = {};
+	body.adjacent
+		.filter(sites => sites !== '')
+		.forEach(sysSites => (sysSites as AdjacentSitesBodyItem[]).forEach(site => {
+			const siteId = `${site.rfss}-${site.site}`;
+
+			if (typeof sites[siteId] === 'undefined') {
+				sites[siteId] = site;
+				return;
+			}
+
+			sites[siteId].sys_shortname += `,${site.sys_shortname}`;
+			(Object.keys(neededFields) as (keyof AdjacentSitesBodyItem)[])
+				.filter(key => neededFields[key] !== 'string')
+				.forEach(key => {
+					(sites[siteId][key] as boolean) = (sites[siteId][key] as boolean) && (site[key] as boolean);
+				});
+		}));
+
+	const updateTime = Date.now();
+	await Promise.all(Object.keys(sites).map(siteId => {
+		const site = sites[siteId];
+		const siteValues: aws.DynamoDB.ExpressionAttributeValueMap = {
+			':sys': { S: site.sys_shortname },
+			':cc': { BOOL: site.conv_ch },
+			':sf': { BOOL: site.site_failed },
+			':vi': { BOOL: site.valid_info },
+			':compc': { BOOL: site.composite_ctrl },
+			':ac': { BOOL: site.active_conn },
+			':bc': { BOOL: site.backup_ctrl },
+			':nsr': { BOOL: site.no_service_req },
+			':sd': { BOOL: site.supports_data },
+			':sv': { BOOL: site.supports_voice },
+			':sr': { BOOL: site.supports_registration },
+			':sa': { BOOL: site.supports_authentication },
+			':ut': { N: updateTime.toString() },
+		};
+		const siteNames: aws.DynamoDB.ExpressionAttributeNameMap = {
+			'#sys': 'SysShortname',
+			'#cc': 'ConvChannel',
+			'#sf': 'SiteFailed',
+			'#vi': 'ValidInfo',
+			'#compc': 'CompositeCtrl',
+			'#ac': 'ActiveConn',
+			'#bc': 'BackupCtrl',
+			'#nsr': 'NoServReq',
+			'#sd': 'SupportData',
+			'#sv': 'SupportVoice',
+			'#sr': 'SupportReg',
+			'#sa': 'SupportAuth',
+			'#ut': 'UpdateTime',
+		};
+		return dynamodb.updateItem({
+			TableName: siteTable,
+			Key: {
+				SiteId: {
+					S: siteId
+				}
+			},
+			ExpressionAttributeNames: siteNames,
+			ExpressionAttributeValues: siteValues,
+			UpdateExpression: 'SET #sys = :sys, #cc = :cc, #sf = :sf, #vi = :vi, #compc = :compc, #ac = :ac, #bc = :bc, #nsr = :nsr, #sd = :sd, #sv = :sv, #sr = :sr, #sa = :sa, #ut = :ut',
+			ReturnValues: 'ALL_OLD'
+		}).promise()
+			.then(result => {
+				if (!result.Attributes) return;
+
+				const changedKeys: string[] = Object.keys(siteValues)
+					.filter(k => typeof siteValues[k].BOOL !== 'undefined')
+					.filter(k =>
+						result.Attributes &&
+						(typeof result.Attributes[siteNames[k.replace(':', '#')]] === 'undefined' ||
+						result.Attributes[siteNames[k.replace(':', '#')]].BOOL !== siteValues[k].BOOL))
+					.map(k => siteNames[k.replace(':', '#')]);
+
+				if (changedKeys.length > 0) {
+					return sendAlertMessage(metricSource, `Update for site ${siteId} - ${changedKeys.join(', ')}`);
+				}
+
+				return;
+			});
+	}));
 
 	return {
 		statusCode: 200,
@@ -447,6 +619,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handlePage(event);
 			case 'heartbeat':
 				return await handleHeartbeat(event);
+			case 'site_status':
+				return await handleSiteStatus(event);
 			case 'dtrExists':
 				return await handleDtrExists(event);
 			case 'dtrExistsSingle':

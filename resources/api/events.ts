@@ -23,38 +23,38 @@ interface GenericApiResponse {
 	data?: any[];
 }
 
-function validateEventBody(body: EventBody, response: GenericApiResponse): void {
+function validateEventBody(body: EventBody, index: number, response: GenericApiResponse): void {
 	body.timestamp = Date.now();
 
 	// Validate the body
 	if (typeof body.event !== 'string') {
 		response.success = false;
-		response.errors.push('event');
+		response.errors.push(`${index}-event`);
 	}
 	if (typeof body.tower !== 'string') {
 		response.success = false;
-		response.errors.push('tower');
+		response.errors.push(`${index}-tower`);
 	}
 	if (
 		typeof body.radioId !== 'string' ||
 		!/^[0-9]+$/.test(body.radioId)
 	) {
 		response.success = false;
-		response.errors.push('radioId');
+		response.errors.push(`${index}-radioId`);
 	}
 	if (
 		typeof body.talkgroup !== 'string' ||
 		!/^[0-9]*$/.test(body.talkgroup)
 	) {
 		response.success = false;
-		response.errors.push('talkgroup');
+		response.errors.push(`${index}-talkgroup`);
 	}
 	if (
 		typeof body.talkgroupList !== 'string' ||
 		!/^([0-9]*,?)+$/.test(body.talkgroupList)
 	) {
 		response.success = false;
-		response.errors.push('talkgroup');
+		response.errors.push(`${index}-talkgroupList`);
 	}
 }
 
@@ -96,7 +96,7 @@ async function handleEvents(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 		errors: []
 	};
 
-	body.forEach(event => validateEventBody(event, response));
+	body.forEach((event, i) => validateEventBody(event, i, response));
 
 	if (
 		response.success &&

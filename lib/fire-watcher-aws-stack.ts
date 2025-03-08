@@ -84,6 +84,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    const siteTable = new dynamodb.Table(this, 'cvfd-sites', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'SiteId',
+        type: dynamodb.AttributeType.STRING
+      }
+    });
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
@@ -213,7 +220,7 @@ export class FireWatcherAwsStack extends Stack {
         updateBehavior: 'LOG'
       },
       schedule: {
-        scheduleExpression: 'cron(15 * * * ? *)'
+        scheduleExpression: 'cron(15 */2 * * ? *)'
       }
     });
     eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
@@ -228,7 +235,7 @@ export class FireWatcherAwsStack extends Stack {
         bufferingHints: {
           intervalInSeconds: 300,
         },
-        prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:hh}/event=!{partitionKeyFromQuery:event}/',
+        prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/event=!{partitionKeyFromQuery:event}/',
         errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
         dataFormatConversionConfiguration: {
           enabled: true,
@@ -470,7 +477,7 @@ export class FireWatcherAwsStack extends Stack {
         period: Duration.minutes(2),
         statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
-          Tower: 'Saguache Tower'
+          Tower: 'SaguacheTower'
         }
       }),
       threshold: 35,
@@ -506,7 +513,7 @@ export class FireWatcherAwsStack extends Stack {
         period: Duration.hours(1),
         statistic: cloudwatch.Stats.SUM,
         dimensionsMap: {
-          Tower: 'saguache'
+          Tower: 'SaguacheTower'
         }
       }),
       threshold: 0,
@@ -538,7 +545,7 @@ export class FireWatcherAwsStack extends Stack {
             period: Duration.hours(1),
             statistic: cloudwatch.Stats.SUM,
             dimensionsMap: {
-              Tower: 'pooltable'
+              Tower: 'PoolTable'
             }
           }),
           alarmDescription: 'No files uploaded for Pool Table',
@@ -802,7 +809,9 @@ export class FireWatcherAwsStack extends Stack {
           TABLE_DTR: dtrTable.tableName,
           TABLE_PHONE: phoneNumberTable.tableName,
           TABLE_TEXT: textsTable.tableName,
-          TABLE_STATUS: statusTable.tableName
+          TABLE_STATUS: statusTable.tableName,
+          TABLE_SITE: siteTable.tableName,
+          TABLE_TEXTS: textsTable.tableName
         },
         read: [
           dtrTable,
@@ -810,7 +819,9 @@ export class FireWatcherAwsStack extends Stack {
         ],
         readWrite: [
           phoneNumberTable,
-          statusTable
+          statusTable,
+          siteTable,
+          textsTable
         ],
         bucket,
         queue,

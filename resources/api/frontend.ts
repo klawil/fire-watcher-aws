@@ -862,7 +862,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'Saguache Tower'
+						Value: 'SaguacheTower'
 					}
 				]
 			},
@@ -881,7 +881,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'Saguache Tower'
+						Value: 'SaguacheTower'
 					}
 				]
 			},
@@ -899,7 +899,7 @@ const statsMap: {
 				MetricName: 'Upload',
 				Dimensions: [ {
 					Name: 'Tower',
-					Value: 'saguache'
+					Value: 'SaguacheTower'
 				} ]
 			},
 			Period: 60,
@@ -954,7 +954,7 @@ const statsMap: {
 				MetricName: 'Upload',
 				Dimensions: [ {
 					Name: 'Tower',
-					Value: 'alamosa'
+					Value: 'Alamosa'
 				} ]
 			},
 			Period: 60,
@@ -972,7 +972,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'Pool Table Mountain'
+						Value: 'PoolTable'
 					}
 				]
 			},
@@ -991,7 +991,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'Pool Table Mountain'
+						Value: 'PoolTable'
 					}
 				]
 			},
@@ -1009,7 +1009,7 @@ const statsMap: {
 				MetricName: 'Upload',
 				Dimensions: [ {
 					Name: 'Tower',
-					Value: 'pooltable'
+					Value: 'PoolTable'
 				} ]
 			},
 			Period: 60,
@@ -1027,7 +1027,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'San Antonio Peak'
+						Value: 'SanAntonio'
 					}
 				]
 			},
@@ -1046,7 +1046,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'San Antonio Peak'
+						Value: 'SanAntonio'
 					}
 				]
 			},
@@ -1064,7 +1064,7 @@ const statsMap: {
 				MetricName: 'Upload',
 				Dimensions: [ {
 					Name: 'Tower',
-					Value: 'sanantonio'
+					Value: 'SanAntonio'
 				} ]
 			},
 			Period: 60,
