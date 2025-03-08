@@ -4,6 +4,23 @@ layout: base
 requireAdmin: true
 ---
 
+<div class="row">
+	<div class="form-check form-switch col">
+		<input class="form-check-input" type="checkbox" role="switch" id="realtime-switch">
+		<label class="form-check-label" for="realtime-switch">Show Realtime Data</label>
+	</div>
+	<div class="form-check form-switch col input-group">
+		<span class="input-group-text">Refresh Data</span>
+		<select class="form-select form-control" id="refresh-interval">
+			<option value="off" selected>Off</option>
+			<option value="10000">10s</option>
+			<option value="30000">30s</option>
+			<option value="60000">60s</option>
+			<option value="300000">5m</option>
+		</select>
+	</div>
+</div>
+
 <h3 class="text-center">Api Calls</h3>
 <div class="row"><div class="col-12"><canvas id="api-calls"></canvas></div></div>
 <h3 class="text-center">S3 Uploads</h3>
