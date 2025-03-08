@@ -45,17 +45,6 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
-    const vhfTable = new dynamodb.Table(this, 'cvfd-traffic', {
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: {
-        name: 'Key',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'Datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
     const dtrTable = new dynamodb.Table(this, 'cvfd-dtr-added', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -108,18 +97,6 @@ export class FireWatcherAwsStack extends Stack {
       },
       sortKey: {
         name: 'callSign',
-        type: dynamodb.AttributeType.NUMBER
-      }
-    });
-
-    vhfTable.addGlobalSecondaryIndex({
-      indexName: 'ToneIndex',
-      partitionKey: {
-        name: 'ToneIndex',
-        type: dynamodb.AttributeType.STRING
-      },
-      sortKey: {
-        name: 'Datetime',
         type: dynamodb.AttributeType.NUMBER
       }
     });
@@ -558,14 +535,12 @@ export class FireWatcherAwsStack extends Stack {
       {
         name: 'frontend',
         env: {
-          TABLE_VHF: vhfTable.tableName,
           TABLE_DTR: dtrTable.tableName,
           TABLE_TALKGROUP: talkgroupTable.tableName,
           TABLE_TEXTS: textsTable.tableName,
           TABLE_USER: phoneNumberTable.tableName
         },
         read: [
-          vhfTable,
           dtrTable,
           talkgroupTable,
           phoneNumberTable

@@ -9,7 +9,6 @@ const dynamodb = new aws.DynamoDB();
 
 const defaultListLimit = 100;
 
-const vhfTable = process.env.TABLE_VHF as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const talkgroupTable = process.env.TABLE_TALKGROUP as string;
 const textsTable = process.env.TABLE_TEXTS as string;
@@ -125,139 +124,6 @@ async function mergeDynamoQueries(
 
 			return data;
 		});
-}
-
-async function getVhfList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-
-	// Set the default query parameters
-	event.queryStringParameters = event.queryStringParameters || {};
-	event.queryStringParameters = {
-		minLen: '0',
-		...event.queryStringParameters
-	};
-
-	// Build the query configs
-	const queryConfigs: QueryInputWithAttributes[] = [];
-
-	// Add the tone filters
-	const toneFilters: string[] = [];
-	if (event.queryStringParameters.tone) {
-		toneFilters.push(event.queryStringParameters.tone === 'y' ? 'y' : 'n');
-	} else {
-		toneFilters.push('y', 'n');
-	}
-	toneFilters.forEach(tone => queryConfigs.push({
-		TableName: vhfTable,
-		IndexName: 'ToneIndex',
-		Limit: defaultListLimit,
-		ScanIndexForward: false,
-		ExpressionAttributeNames: {
-			'#t': 'ToneIndex',
-			'#l': 'Len'
-		},
-		ExpressionAttributeValues: {
-			':t': {
-				S: tone
-			},
-			':l': {
-				N: event.queryStringParameters?.minLen
-			}
-		},
-		KeyConditionExpression: '#t = :t',
-		FilterExpression: '#l >= :l'
-	}));
-
-	// Check for a start scanning key
-	if (typeof event.queryStringParameters.next !== 'undefined') {
-		const scanningKeys: (aws.DynamoDB.Key | undefined)[] = event.queryStringParameters.next
-			.split('|')
-			.map(str => {
-				if (str === '') return;
-
-				const parts = str.split(',');
-				return {
-					ToneIndex: {
-						S: parts[0]
-					},
-					Datetime: {
-						N: parts[1]
-					},
-					Key: {
-						S: parts[2]
-					}
-				};
-			});
-
-		queryConfigs.forEach((queryConfig, index) => {
-			if (!scanningKeys[index]) return;
-
-			queryConfig.ExclusiveStartKey = scanningKeys[index];
-		});
-	}
-
-	// Handle fetching items before/after a certain point
-	if (
-		typeof event.queryStringParameters.before !== 'undefined' &&
-		!isNaN(Number(event.queryStringParameters.before))
-	) {
-		const before = event.queryStringParameters.before;
-		queryConfigs.forEach(queryConfig => {
-			queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
-			queryConfig.ExpressionAttributeValues[':dt'] = {
-				N: before
-			};
-			queryConfig.KeyConditionExpression += ' AND #dt < :dt';
-		});
-	} else if (
-		typeof event.queryStringParameters.after !== 'undefined' &&
-		!isNaN(Number(event.queryStringParameters.after))
-	) {
-		const after = event.queryStringParameters.after;
-		queryConfigs.forEach(queryConfig => {
-			queryConfig.ScanIndexForward = true;
-			queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
-			queryConfig.ExpressionAttributeValues[':dt'] = {
-				N: after
-			};
-			queryConfig.KeyConditionExpression += ' AND #dt > :dt';
-		});
-	}
-
-	// Run the queries and generate the results
-	const data = await mergeDynamoQueries(queryConfigs, 'Datetime');
-	const body = JSON.stringify({
-		success: true,
-		count: data.Count,
-		scanned: data.ScannedCount,
-		continue: data.LastEvaluatedKeys
-			.map(item => {
-				if (item === null) return '';
-
-				return `${item.ToneIndex.S},${item.Datetime.N},${item.Key.S}`;
-			})
-			.join('|'),
-		before: data.MinSortKey,
-		after: data.MaxSortKey,
-		data: data.Items
-			.map(parseDynamoDbAttributeMap)
-			.map(item => {
-				let Source = (item.Key as string).split('/')[1].replace(/_\d{8}_\d{6}.*$/, '');
-
-				if (Source === 'FIRE')
-					Source = 'SAG_FIRE_VHF';
-
-				return {
-					...item,
-					Source
-				};
-			})
-	});
-
-	return {
-		statusCode: 200,
-		headers: {},
-		body
-	};
 }
 
 async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -637,8 +503,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			action
 		}, true, false);
 		switch (action) {
-			case 'vhf':
-				return await getVhfList(event);
 			case 'dtr':
 				return await getDtrList(event);
 			case 'talkgroups':
