@@ -19,6 +19,8 @@ import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as eventbridge from 'aws-cdk-lib/aws-events';
 import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
+import * as glue from 'aws-cdk-lib/aws-glue';
+import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 
 const bucketName = '***REMOVED***';
 const certArn = '***REMOVED***';
@@ -87,6 +89,122 @@ export class FireWatcherAwsStack extends Stack {
       partitionKey: {
         name: 'ID',
         type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
+    // Make the S3 bucket for the kinesis stuff
+    const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
+
+    // Make the Glue table
+    const glueCatalogId = '***REMOVED***'; // Account ID
+    const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
+      catalogId: glueCatalogId,
+      databaseInput: {
+        name: 'cvfd-data-db'
+      }
+    });
+    const eventsGlueTable = new glue.CfnTable(this, 'cvfd-events-glue-table-orc', {
+      databaseName: 'cvfd-data-db',
+      catalogId: glueCatalogId,
+      tableInput: {
+        name: 'cvfd-events',
+        tableType: 'EXTERNAL_TABLE',
+        partitionKeys: [
+          { name: 'year', type: 'int' },
+          { name: 'month', type: 'int' },
+          { name: 'day', type: 'int' },
+          { name: 'event', type: 'string' },
+        ],
+        storageDescriptor: {
+          compressed: true,
+          inputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat',
+          outputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat',
+          serdeInfo: {
+            serializationLibrary: 'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
+          },
+          columns: [
+            { name: 'radioId', type: 'int' },
+            { name: 'talkgroup', type: 'int' },
+            { name: 'talkgroupList', type: 'string' },
+            { name: 'tower', type: 'string' },
+          ],
+          location: eventsS3Bucket.s3UrlForObject() + '/data/'
+        }
+      }
+    });
+    eventsGlueTable.addDependency(eventsGlueDatabase);
+
+    // Make the kinesis firehose
+    const eventsFirehoseRole = new iam.Role(this, 'cvfd-events-firehose-role', {
+      assumedBy: new iam.ServicePrincipal('firehose.amazonaws.com')
+    });
+    eventsS3Bucket.grantReadWrite(eventsFirehoseRole);
+    eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      resources: [
+        `arn:aws:glue:us-east-2:${glueCatalogId}:table/*`,
+        `arn:aws:glue:us-east-2:${glueCatalogId}:database/*`,
+        `arn:aws:glue:us-east-2:${glueCatalogId}:catalog`,
+      ],
+      actions: [
+        'glue:GetDatabase',
+        'glue:GetTable',
+        'glue:GetPartition*',
+        'glue:GetTableVersions',
+      ]
+    }));
+    eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      resources: [ '*' ],
+      actions: [
+        'glue:GetDatabase',
+        'glue:GetTable',
+        'glue:GetPartition*',
+        'glue:GetTableVersions',
+      ]
+    }));
+    eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      resources: [ '*' ],
+      actions: [ 'logs:CreateLogGroup', 'logs:PutLogEvents', 'logs:CreateLogStream' ]
+    }));
+
+    const eventsFirehose = new kinesisfirehose.CfnDeliveryStream(this, 'cvfd-events-firehose', {
+      deliveryStreamName: 'cvfd-events-delivery-stream',
+      extendedS3DestinationConfiguration: {
+        bucketArn: eventsS3Bucket.bucketArn,
+        roleArn: eventsFirehoseRole.roleArn,
+        bufferingHints: {
+          intervalInSeconds: 60,
+        },
+        prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/event=!{partitionKeyFromQuery:event}/',
+        errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
+        dataFormatConversionConfiguration: {
+          enabled: true,
+          inputFormatConfiguration: {
+            deserializer: { openXJsonSerDe: { } }
+          },
+          outputFormatConfiguration: {
+            serializer: { orcSerDe: { } }
+          },
+          schemaConfiguration: {
+            catalogId: eventsGlueTable.catalogId,
+            roleArn: eventsFirehoseRole.roleArn,
+            databaseName: eventsGlueTable.databaseName,
+            tableName: 'cvfd-events'
+          }
+        },
+        processingConfiguration: {
+          enabled: true,
+          processors: [{
+            type: 'MetadataExtraction',
+            parameters: [
+              { parameterName: 'JsonParsingEngine', parameterValue: 'JQ-1.6' },
+              { parameterName: 'MetadataExtractionQuery', parameterValue: '{event:.event}' },
+            ]
+          }]
+        },
+        dynamicPartitioningConfiguration: { enabled: true }
       }
     });
 
@@ -645,6 +763,7 @@ export class FireWatcherAwsStack extends Stack {
       readWrite?: dynamodb.Table[];
       bucket?: s3.IBucket;
       queue?: sqs.Queue;
+      firehose?: kinesisfirehose.CfnDeliveryStream,
       secret?: secretsManager.ISecret;
       metrics?: boolean;
     }
@@ -716,7 +835,14 @@ export class FireWatcherAwsStack extends Stack {
         ],
         queue,
         secret: twilioSecret
-      }
+      },
+      {
+        name: 'events',
+        env: {
+          FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
+        },
+        firehose: eventsFirehose
+      },
     ];
 
     cvfdApis.forEach(config => {
@@ -747,6 +873,15 @@ export class FireWatcherAwsStack extends Stack {
         config.bucket.grantRead(apiHandler);
       if (config.queue)
         config.queue.grantSendMessages(apiHandler);
+      if (config.firehose)
+        apiHandler.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          resources: [ config.firehose.attrArn ],
+          actions: [
+            'firehose:PutRecord',
+            'firehose:PutRecordBatch',
+          ]
+        }));
       if (config.secret)
         config.secret.grantRead(apiHandler);
     

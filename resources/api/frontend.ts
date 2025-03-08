@@ -578,6 +578,25 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
+	'api-events': {
+		Id: 'api_events',
+		Label: 'Event API Calls',
+		MetricStat: {
+			Metric: {
+				Namespace: 'CVFD API',
+				MetricName: 'Call',
+				Dimensions: [
+					{
+						Name: 'source',
+						Value: 'Events'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count'
+		}
+	},
 	's3-dtr': {
 		Id: 's3_dtr',
 		Label: 'DTR Files Uploaded',
@@ -753,6 +772,25 @@ const statsMap: {
 					{
 						Name: 'source',
 						Value: 'Twilio'
+					}
+				]
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count'
+		}
+	},
+	'err-events': {
+		Id: 'err_events',
+		Label: 'Event API Errors',
+		MetricStat: {
+			Metric: {
+				Namespace: 'CVFD API',
+				MetricName: 'Error',
+				Dimensions: [
+					{
+						Name: 'source',
+						Value: 'Events'
 					}
 				]
 			},
