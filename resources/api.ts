@@ -19,20 +19,31 @@ async function getList(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyRe
 	};
 	const filters: string[] = [];
 
-	// Check for the next key
-	if (event.queryStringParameters?.after) {
-		queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
-		queryConfig.ExpressionAttributeValues[':after'] = {
-			N: event.queryStringParameters.after
-		};
-		queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
-		queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
-		filters.push('#dt > :after');
-	}
+	// Set the default query parameters
+	event.queryStringParameters = event.queryStringParameters || {};
+	event.queryStringParameters = {
+		after: (Date.now() - (1000 * 60 * 60 * 24 * 28 * 2)).toString(),
+		minLen: '4',
+		...event.queryStringParameters
+	};
+
+	// Add the "after" parameter
+	queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+	queryConfig.ExpressionAttributeValues[':after'] = {
+		N: event.queryStringParameters.after
+	};
+	queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+	queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
+	filters.push('#dt > :after');
+
+	// Add the length filter
+	queryConfig.ExpressionAttributeValues[':minLen'] = {
+		N: event.queryStringParameters.minLen
+	};
+	filters.push('Len >= :minLen');
 
 	// Check for the tone filter
-	if (event.queryStringParameters?.tone) {
-		queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+	if (event.queryStringParameters.tone) {
 		queryConfig.ExpressionAttributeValues[':tone'] = {
 			BOOL: event.queryStringParameters.tone === 'y'
 		};
