@@ -397,7 +397,44 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					TableName: dtrTable
 				};
 				console.log(`Delete: ${JSON.stringify(body)}`);
-				await dynamodb.deleteItem(body).promise();
+				const promises: Promise<any>[] = [];
+				promises.push(dynamodb.deleteItem(body).promise());
+
+				promises.push(
+					dynamodb.getItem({
+						TableName: talkgroupTable,
+						Key: {
+							ID: dynamoQuery.Items[0].Talkgroup
+						}
+					}).promise()
+						.then(result => {
+							if (!result.Item) return;
+
+							const newCount = Number(result.Item.Count.N) - 1;
+
+							return dynamodb.updateItem({
+								TableName: talkgroupTable,
+								Key: {
+									ID: (dynamoQuery.Items as aws.DynamoDB.ItemList)[0].Talkgroup
+								},
+								ExpressionAttributeNames: {
+									'#c': 'Count',
+									'#iu': 'InUse'
+								},
+								ExpressionAttributeValues: {
+									':c': {
+										N: newCount >= 0 ? newCount.toString() : '0'
+									},
+									':iu': {
+										S: newCount > 0 ? 'Y' : 'N'
+									}
+								},
+								UpdateExpression: 'SET #c = :c, #iu = :iu'
+							}).promise();
+						})
+				);
+			
+				await Promise.all(promises);
 			} else {
 				console.log(`Delete Not Found: ${Key}`);
 			}
