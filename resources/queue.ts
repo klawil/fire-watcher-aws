@@ -19,19 +19,29 @@ In a moment, you will receive a copy of the last page sent out over VHF.
 You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
-async function getRecipients(isTest: boolean = false) {
-	const scanInput: AWS.DynamoDB.ScanInput = {
+async function getRecipients(
+	department: string,
+	isTest: boolean = false
+) {
+	let scanInput: AWS.DynamoDB.QueryInput = {
 		TableName: phoneTable,
 		FilterExpression: '#a = :a',
 		ExpressionAttributeNames: {
 			'#a': 'isActive'
 		},
 		ExpressionAttributeValues: {
-			':a': {
-				BOOL: true
-			}
+			':a': { BOOL: true }
 		}
 	};
+	if (department !== 'all') {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.IndexName = 'StationIndex';
+		scanInput.KeyConditionExpression = '#dep = :dep';
+		scanInput.ExpressionAttributeNames['#dep'] = 'department';
+		scanInput.ExpressionAttributeValues[':dep'] = { S: department };
+	}
 
 	if (isTest) {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
@@ -44,7 +54,14 @@ async function getRecipients(isTest: boolean = false) {
 		scanInput.FilterExpression += ' AND #t = :t';
 	}
 
-	return dynamodb.scan(scanInput).promise()
+	let promise;
+	if (department !== 'all') {
+		promise = dynamodb.query(scanInput).promise();
+	} else {
+		promise = dynamodb.scan(scanInput).promise();
+	}
+
+	return promise
 		.then((data) => data.Items || []);
 }
 
@@ -173,16 +190,18 @@ async function handleActivation(body: ActivateOrLoginBody) {
 	promises.push(sendMessage(null, body.phone, welcomeMessage));
 
 	// Send the message to the admins
-	promises.push(dynamodb.scan({
+	promises.push(dynamodb.query({
 		TableName: phoneTable,
+		IndexName: 'StationIndex',
 		ExpressionAttributeNames: {
-			'#admin': 'isAdmin'
+			'#admin': 'isAdmin',
+			'#dep': 'department'
 		},
 		ExpressionAttributeValues: {
-			':a': {
-				BOOL: true
-			}
+			':a': { BOOL: true },
+			':dep': { S: updateResult.Attributes?.department?.S }
 		},
+		KeyConditionExpression: '#dep = :dep',
 		FilterExpression: '#admin = :a'
 	}).promise()
 		.then((admins) => Promise.all((admins.Items || []).map((item) => {
@@ -264,11 +283,9 @@ async function handleTwilio(body: TwilioBody) {
 	const twilioConf = await getTwilioSecret();
 	const isFromPageNumber = adminSender && messageTo === twilioConf.pageNumber;
 
-	const recipients = await getRecipients()
+	const recipients = await getRecipients(sender.Item?.department.S || '', isTest)
 		.then((data) => data.filter((number) => {
-			if (isTest) {
-				return number.phone.N === sender.Item?.phone.N;
-			}
+			if (isTest) return true;
 
 			return messageTo === twilioConf.pageNumber ||
 				number.phone.N !== sender.Item?.phone.N
@@ -310,7 +327,7 @@ interface PageBody {
 async function handlePage(body: PageBody) {
 	// Build the message body
 	const messageBody = createPageMessage(body.key);
-	const recipients = await getRecipients(!!body.isTest);
+	const recipients = await getRecipients('all', !!body.isTest);
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
@@ -363,32 +380,6 @@ async function handleLogin(body: ActivateOrLoginBody) {
 	await sendMessage(null, body.phone, `This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`);
 }
 
-async function testSystem() {
-	const recipients = await getRecipients()
-		.then((r) => r.filter((i) => i.test?.BOOL));
-
-	console.log(`QUEUE - TEST - ${recipients.length} recipients`);
-	console.log(JSON.stringify(recipients));
-
-	// Test the paging system
-	await Promise.all(recipients
-		.map((phone) => sendMessage(
-			null,
-			phone.phone.N,
-			createPageMessage('testPage/testPage'),
-			[],
-			true
-		)));
-
-	// Test the regular messaging system
-	await Promise.all(recipients
-		.map((phone) => sendMessage(
-			null,
-			phone.phone.N,
-			'System: Test message 👍'
-		)));
-}
-
 async function parseRecord(event: lambda.SQSRecord) {
 	const body = JSON.parse(event.body);
 	try {
@@ -406,9 +397,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			case 'login':
 				response = await handleLogin(body);
-				break;
-			case 'test':
-				response = await testSystem();
 				break;
 			default:
 				console.log(`QUEUE - 404`);

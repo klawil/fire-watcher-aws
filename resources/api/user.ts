@@ -379,7 +379,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	}
 	
 	// Create the user
-	const result = await dynamodb.updateItem({
+	const updateConfig: aws.DynamoDB.UpdateItemInput = {
 		TableName: userTable,
 		Key: {
 			phone: { N: body.phone }
@@ -398,11 +398,14 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			':cs': { N: body.callSign },
 			':act': { BOOL: body.isActive },
 			':adm': { BOOL: body.isAdmin },
-			':dep': { S: user.department.S }
+			':dep': { S: newPhone.Item
+				? newPhone.Item.department.S
+				: user.department.S }
 		},
 		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep',
 		ReturnValues: 'UPDATED_NEW'
-	}).promise();
+	};
+	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {
 		response.success = false;
 	} else if (
