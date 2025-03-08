@@ -98,6 +98,7 @@ playerBarContainer.addEventListener('click', (e) => {
 // Add the filtering functionality
 const filterModal = document.getElementById('filter-modal');
 const filterApplyButton = document.getElementById('filter-apply');
+const filterApplyJumpButton = document.getElementById('filter-apply-time');
 const filterButtons = [
 	document.getElementById('filter-button-d'),
 	document.getElementById('filter-button-m')
@@ -105,6 +106,14 @@ const filterButtons = [
 
 if (filterModal) {
 	filterApplyButton.addEventListener('click', () => {
+		Object.keys(urlFilters)
+			.forEach(key => urlFilters[key].update());
+		Object.keys(afterFilters)
+			.forEach(key => afterFilters[key].update());
+		setUrlParams();
+		updateData('after', true);
+	});
+	filterApplyJumpButton.addEventListener('click', () => {
 		Object.keys(urlFilters)
 			.forEach(key => urlFilters[key].update());
 		Object.keys(afterFilters)
