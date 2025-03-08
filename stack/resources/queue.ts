@@ -4,7 +4,7 @@ import * as https from 'https';
 import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneCategories, twilioPhoneNumbers } from './utils/general';
 import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { fNameToDate } from '../../common/file';
-import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
+import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
 
 const logger = getLogger('queue');
@@ -428,6 +428,76 @@ async function handleTwilioError(body: TwilioErrorBody) {
 	await insertMessage;
 }
 
+async function handleAnnounce(body: AnnounceBody) {
+	logger.trace('handleAnnounce', ...arguments);
+	const recipients = await getRecipients(
+		typeof body.department === 'undefined' ? 'all' : body.department,
+		typeof body.talkgroup === 'undefined' ? null : body.talkgroup,
+		body.isTest,
+	);
+	if (recipients.length === 0) {
+		throw new Error(`Message sent to empty group - ${body}`);
+	}
+
+	// Build the message body
+	const sender = await dynamodb.getItem({
+		TableName: phoneTable,
+		Key: {
+			phone: {
+				N: body.phone,
+			},
+		},
+	}).promise();
+	if (!sender.Item) {
+		throw new Error(`Invalid announcer`);
+	}
+
+	// Build the body
+	let announceBody = '';
+	if (typeof body.department !== 'undefined') {
+		announceBody = departmentConfig[body.department]?.shortName || 'Unkown';
+	} else if (typeof body.talkgroup !== 'undefined') {
+		announceBody = `${pagingConfig[body.talkgroup].partyBeingPaged} Pages`;
+	}
+	announceBody += ` Announcement: ${body.body} - ${sender.Item?.fName?.S} ${sender.Item?.lName?.S}`;
+	if (
+		typeof body.department !== 'undefined' &&
+		sender.Item &&
+		typeof sender.Item[body.department]?.M?.callSign?.S !== 'undefined'
+	) {
+		announceBody += ` (${sender.Item[body.department]?.M?.callSign?.S})`;
+	}
+
+	// Save the message data
+	const messageId = Date.now().toString();
+	const messageType = typeof body.department === 'undefined' ? 'pageAnnounce' : 'departmentAnnounce';
+	const insertMessage = saveMessageData(
+		messageType,
+		messageId,
+		recipients.length,
+		announceBody,
+		[],
+		null,
+		typeof body.talkgroup !== 'undefined' ? body.talkgroup : null,
+		typeof body.department !== 'undefined' ? body.department : null,
+		body.isTest,
+	);
+
+	// Send the messages
+	await Promise.all(recipients
+		.filter(phone => typeof phone.phone?.N !== 'undefined')
+		.map(phone => sendMessage(
+			metricSource,
+			messageType,
+			messageId,
+			phone.phone.N as string,
+			getPageNumber(phone),
+			announceBody,
+			[],
+		)));
+	await insertMessage;
+}
+
 async function handlePage(body: PageBody) {
 	logger.trace('handlePage', ...arguments);
 	// Build the message body
@@ -493,7 +563,7 @@ async function handlePage(body: PageBody) {
 
 	// Send the messages
 	await Promise.all(recipients
-		.filter(phone => typeof phone.phone.N !== 'undefined')
+		.filter(phone => typeof phone.phone?.N !== 'undefined')
 		.map(phone => sendMessage(
 			metricSource,
 			'page',
@@ -750,6 +820,9 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			case 'twilio_error':
 				response = await handleTwilioError(body);
+				break;
+			case 'announce':
+				response = await handleAnnounce(body);
 				break;
 			case 'page':
 				response = await handlePage(body);

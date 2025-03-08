@@ -3,21 +3,24 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, validateBodyIsJson } from '../utils/general';
 import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { getLoggedInUser } from '../utils/auth';
-import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, TextObject } from '../../../common/frontendApi';
+import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, AnnouncementApiBody, TextObject } from '../../../common/frontendApi';
 import { getLogger } from '../utils/logger';
-import { UserDepartment, validDepartments } from '../../../common/userConstants';
+import { pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
+import { AnnounceBody } from '../types/queue';
 
 const logger = getLogger('frontend');
 
 const metricSource = 'Frontend';
 
 const dynamodb = new aws.DynamoDB();
+const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 
 const defaultListLimit = 100;
 
 const textsTable = process.env.TABLE_TEXTS as string;
 const siteTable = process.env.TABLE_SITE as string;
+const sqsQueue = process.env.SQS_QUEUE as string;
 
 const lambdaFunctionNames: { [key: string]: {
 	name: string,
@@ -83,7 +86,7 @@ const lambdaFunctionNames: { [key: string]: {
 	},
 };
 
-const anyAdminTextTypes: MessageType[] = [ 'page', 'transcript', 'alert', 'pageAnnounce', ];
+const anyAdminTextTypes: MessageType[] = [ 'page', 'transcript', 'pageAnnounce', ];
 
 async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.trace('getTexts', ...arguments);
@@ -170,6 +173,111 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		statusCode: 200,
 		headers: {},
 		body: JSON.stringify(responseBody),
+	};
+}
+
+async function sendAnnouncement(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	logger.trace('sendText', ...arguments);
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+
+	// Get the current user
+	const user = await getLoggedInUser(event);
+	if (
+		user === null ||
+		!user.isAdmin
+	) {
+		return unauthorizedResponse;
+	}
+
+	// Validate the body
+	validateBodyIsJson(event.body);
+	const body = JSON.parse(event.body as string) as AnnouncementApiBody;
+	const response: GenericApiResponse = {
+		success: true,
+		errors: [],
+	};
+
+	// Validate the body
+	if (
+		typeof body.body !== 'string' ||
+		body.body === ''
+	) {
+		response.errors.push('body');
+	}
+	if (
+		typeof body.department !== 'undefined' &&
+		!validDepartments.includes(body.department)
+	) {
+		response.errors.push('department');
+	}
+	if (
+		typeof body.talkgroup !== 'undefined' &&
+		!pagingTalkgroupOrder.includes(body.talkgroup)
+	) {
+		response.errors.push('talkgroup');
+	}
+	if (
+		response.errors.length === 0 &&
+		typeof body.department === 'undefined' &&
+		typeof body.talkgroup === 'undefined'
+	) {
+		response.errors.push('department', 'talkgroup');
+	}
+	if (
+		response.errors.length === 0 &&
+		typeof body.department !== 'undefined' &&
+		typeof body.talkgroup !== 'undefined'
+	) {
+		response.errors.push('department', 'talkgroup');
+	}
+	if (
+		response.errors.length === 0 &&
+		typeof body.talkgroup !== 'undefined' &&
+		!user.isDistrictAdmin
+	) {
+		return unauthorizedResponse;
+	}
+
+	// Return validation errors
+	if (response.errors.length > 0) {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response),
+		};
+	}
+
+	// Check to make sure the user can send a text to the given department
+	if (
+		typeof body.department !== 'undefined' &&
+		!user.isDistrictAdmin &&
+		!user[body.department]?.active
+	) {
+		return unauthorizedResponse;
+	}
+
+	const queueMessage: AnnounceBody = {
+		action: 'announce',
+		phone: user.phone.toString(),
+		body: body.body,
+		isTest: body.test === true,
+		department: body.department,
+		talkgroup: body.talkgroup,
+	};
+	await sqs.sendMessage({
+		MessageBody: JSON.stringify(queueMessage),
+		QueueUrl: sqsQueue,
+	}).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response),
 	};
 }
 
@@ -1410,6 +1518,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await getStats(event);
 			case 'sites':
 				return await getSites(event);
+			case 'announce':
+				return await sendAnnouncement(event);
 		}
 
 		logger.error('main', 'Invalid action', action);

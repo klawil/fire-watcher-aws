@@ -923,6 +923,7 @@ export class FireWatcherAwsStack extends Stack {
       {
         name: 'frontend',
         env: {
+          SQS_QUEUE: queue.queueUrl,
           TABLE_TEXTS: textsTable.tableName,
           TABLE_USER: phoneNumberTable.tableName,
           TABLE_SITE: siteTable.tableName,
@@ -934,6 +935,7 @@ export class FireWatcherAwsStack extends Stack {
         readWrite: [
           textsTable
         ],
+        queue,
         metrics: true,
       },
     ];

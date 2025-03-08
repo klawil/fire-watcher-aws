@@ -19,6 +19,15 @@ export interface TwilioErrorBody {
 	department: UserDepartment[];
 }
 
+export interface AnnounceBody {
+	action: 'announce';
+	body: string;
+	phone: string;
+	isTest: boolean;
+	department?: UserDepartment;
+	talkgroup?: PagingTalkgroup;
+}
+
 export interface PageBody {
 	action: 'page';
 	key: string;
