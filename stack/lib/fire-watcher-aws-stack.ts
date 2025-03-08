@@ -219,6 +219,9 @@ export class FireWatcherAwsStack extends Stack {
       { prefix: 'data/' }
     );
 
+    // Make the S3 bucket for caching cost data from AWS
+    const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
+
     // Make the Glue table
     const glueCatalogId = '***REMOVED***'; // Account ID
     const glueDatabaseName = 'cvfd-data-db';
@@ -839,6 +842,7 @@ export class FireWatcherAwsStack extends Stack {
       }
       read?: dynamodb.Table[];
       readWrite?: dynamodb.Table[];
+      readWriteBucket?: s3.Bucket[];
       bucket?: s3.IBucket;
       queue?: sqs.Queue;
       cost?: boolean;
@@ -906,11 +910,15 @@ export class FireWatcherAwsStack extends Stack {
           TABLE_USER: phoneNumberTable.tableName,
           TABLE_MESSAGES: textsTable.tableName,
           TABLE_CONFERENCE: conferenceTable.tableName,
+          COSTS_BUCKET: costDataS3Bucket.bucketName,
         },
         readWrite: [
           phoneNumberTable,
           textsTable,
           conferenceTable,
+        ],
+        readWriteBucket: [
+          costDataS3Bucket,
         ],
         queue,
         secret: twilioSecret,
@@ -994,6 +1002,8 @@ export class FireWatcherAwsStack extends Stack {
         config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
       if (config.bucket)
         config.bucket.grantRead(apiHandler);
+      if (config.readWriteBucket)
+        config.readWriteBucket.forEach(bucket => bucket.grantReadWrite(apiHandler));
       if (config.queue)
         config.queue.grantSendMessages(apiHandler);
       if (config.firehose)

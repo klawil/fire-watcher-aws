@@ -15,11 +15,13 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 const costExplorer = new aws.CostExplorer();
+const s3 = new aws.S3();
 
 const sqsQueue = process.env.SQS_QUEUE as string;
 const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_MESSAGES as string;
 const conferenceTable = process.env.TABLE_CONFERENCE as string;
+const costCacheBucket = process.env.COSTS_BUCKET as string;
 
 interface TwilioTextEvent {
 	From: string;
@@ -522,6 +524,103 @@ function dateToString(date: Date): string {
 	return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 }
 
+interface CostItem {
+	type: 'twilio' | 'aws';
+	cat: string;
+	price: number;
+	priceUnit: string;
+	count: number;
+	countUnit: string;
+}
+
+interface AwsCostCache {
+	dateTimePulled: string;
+	data: CostItem[];
+}
+
+async function getAwsBillingData(start: Date, department: PhoneNumberAccount | null): Promise<CostItem[]> {
+	const monthName = dateToString(start);
+	const fileName = `${monthName}-${department !== null ? department : 'all'}.json`;
+
+	// Check for cached data - Only check cache for non-this months
+	if (
+		start.getMonth() !== new Date().getMonth() ||
+		start.getFullYear() !== new Date().getFullYear()
+	) {
+		try {
+			const data = await s3.getObject({
+				Bucket: costCacheBucket,
+				Key: fileName,
+			}).promise();
+			if (typeof data.Body !== 'undefined') {
+				const body = JSON.parse(data.Body.toString()) as AwsCostCache;
+				return body.data;
+			}
+		} catch (e) {
+			logger.error(`Error getting ${monthName}`, e);
+		}
+	}
+
+	let endDate = new Date(start.getTime());
+	endDate.setDate(28);
+	endDate = new Date(endDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+	endDate.setDate(1);
+	endDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
+
+	const awsData = await costExplorer.getCostAndUsage({
+		Granularity: 'MONTHLY',
+		Metrics: [ 'UnblendedCost', 'UsageQuantity' ],
+		TimePeriod: {
+			Start: dateToString(start),
+			End: dateToString(endDate),
+		},
+		GroupBy: [
+			{
+				Type: 'DIMENSION',
+				Key: 'SERVICE',
+			},
+		],
+		...(department !== null
+			? {
+				Filter: {
+					CostCategories: {
+						Key: 'Department',
+						Values: [ department ],
+					},
+				},
+			}
+			: {}
+		),
+	}).promise();
+
+	const cache: AwsCostCache = {
+		dateTimePulled: new Date().toUTCString(),
+		data: [],
+	};
+	if (
+		awsData.ResultsByTime &&
+		awsData.ResultsByTime.length > 0 &&
+		awsData.ResultsByTime[0].Groups
+	) {
+		cache.data = awsData.ResultsByTime[0].Groups
+			.map(group => ({
+				type: 'aws',
+				cat: group.Keys?.join('|') || 'Unknown',
+				price: Number(group.Metrics?.UnblendedCost?.Amount || '0'),
+				priceUnit: group.Metrics?.UnblendedCost?.Unit || 'Unkown',
+				count: Number(group.Metrics?.UsageQuantity?.Amount || '0'),
+				countUnit: group.Metrics?.UsageQuantity?.Unit || 'Unkown',
+			}));
+	}
+
+	await s3.putObject({
+		Bucket: costCacheBucket,
+		Key: fileName,
+		Body: JSON.stringify(cache),
+	}).promise();
+	return cache.data;
+}
+
 async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const user = await getLoggedInUser(event);
 
@@ -571,43 +670,20 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	const month = event.queryStringParameters?.month || 'last';
 	let endDateTwilio = new Date()
 	endDateTwilio.setDate(1);
-	let endDateAws = new Date(endDateTwilio.getTime() - (24 * 60 * 60 * 1000));
-	let startDate = new Date(endDateAws.getTime());
+	let startDate = new Date(endDateTwilio.getTime() - (24 * 60 * 60 * 1000));
 	startDate.setDate(1);
 	if (month === 'this') {
 		startDate = new Date();
 		startDate.setDate(1);
 		endDateTwilio.setDate(28);
-		endDateTwilio = new Date(endDateTwilio.getTime() + (7 * 24 * 60 * 60 *  1000));
+		endDateTwilio = new Date(endDateTwilio.getTime() + (7 * 24 * 60 * 60 * 1000));
 		endDateTwilio.setDate(1);
-		endDateAws = new Date(endDateTwilio.getTime() - (24 * 60 * 60 * 1000));
 	}
 
-	const awsDataPromise = costExplorer.getCostAndUsage({
-		Granularity: 'MONTHLY',
-		Metrics: [ 'UnblendedCost', 'UsageQuantity' ],
-		TimePeriod: {
-			Start: dateToString(startDate),
-			End: dateToString(endDateAws),
-		},
-		GroupBy: [
-			{
-				Type: 'DIMENSION',
-				Key: 'SERVICE',
-			},
-		],
-		...(typeof account !== 'undefined'
-			? {
-				Filter: {
-					CostCategories: {
-						Key: 'Department',
-						Values: [ account ],
-					},
-				},
-			}
-			: {}
-		),
-	}).promise();
+	let awsDataPromise: Promise<CostItem[]> = new Promise(res => res([]));
+	if (month !== 'this') {
+		awsDataPromise = getAwsBillingData(startDate, (account as PhoneNumberAccount) || null);
+	}
 
 	const twilioSecret = await getTwilioSecret();
 	const accountSid = twilioSecret[`accountSid${account || ''}`];
@@ -640,7 +716,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		body: JSON.stringify({
 			success: true,
 			start: startDate,
-			end: endDateAws,
+			end: endDateTwilio,
 			data: [
 				...twilioData
 					.filter(item => Number(item.price) > 0)
@@ -652,23 +728,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 						count: Number(item.count),
 						countUnit: item.countUnit,
 					})),
-				...(
-					(
-						awsData.ResultsByTime &&
-						awsData.ResultsByTime.length > 0 &&
-						awsData.ResultsByTime[0].Groups
-					)
-					? awsData.ResultsByTime[0].Groups
-						.map(group => ({
-							type: 'aws',
-							cat: group.Keys?.join('|') || 'Unknown',
-							price: Number(group.Metrics?.UnblendedCost?.Amount || '0'),
-							priceUnit: group.Metrics?.UnblendedCost?.Unit || 'Unkown',
-							count: Number(group.Metrics?.UsageQuantity?.Amount || '0'),
-							countUnit: group.Metrics?.UsageQuantity?.Unit || 'Unkown',
-						}))
-					: []
-				)
+				...awsData,
 			],
 		})
 	}
