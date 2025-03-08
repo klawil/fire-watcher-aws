@@ -120,6 +120,17 @@ function playLastTone() {
 	}
 }
 
+const fileNameRegex = /(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
+const dataTimeKey = 'Datetime';
+const dataFileKey = 'Key';
+
+function fileToTime(name) {
+	if (!fileNameRegex.test(name)) return false;
+
+	const parts = name.match(fileNameRegex);
+	return new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`).getTime();
+}
+
 window.addEventListener('scroll', () => {
 	const scrollY = window.scrollY;
 	const winHeight = window.innerHeight;
@@ -138,14 +149,12 @@ window.addEventListener('scroll', () => {
 window.audioQ = window.audioQ || [];
 window.audioQ.push(() => {
 	const currentParams = getUrlParams();
-	console.log(currentParams);
 	if (
 		typeof currentParams.cs !== 'undefined' &&
 		currentParams.cs !== '' &&
 		typeof currentParams.f !== 'undefined' &&
 		currentParams.f !== ''
 	) {
-		console.log(currentParams.cs);
 		fetch(`/api/infra?action=metricFE`, {
 			method: 'POST',
 			body: JSON.stringify({

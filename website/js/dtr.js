@@ -34,6 +34,7 @@ function updateData(direction = 'after', restart = false, date = false) {
 		}
 	} else if (date !== false) {
 		fromDate = true;
+		if (`${date}`.length < 13) date *= 1000;
 		apiUrl += `&after=${date}`;
 	}
 
@@ -107,6 +108,17 @@ function playLive() {
 
 	play(fileToPlay);
 	scrollRowIntoView(fileToPlay);
+}
+
+const fileNameRegex = /\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/;
+const dataTimeKey = 'StartTime';
+const dataFileKey = 'File';
+
+function fileToTime(name) {
+	if (!fileNameRegex.test(name)) return false;
+
+	const parts = name.match(fileNameRegex);
+	return parseInt(parts[1], 10);
 }
 
 window.addEventListener('scroll', () => {

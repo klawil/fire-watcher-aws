@@ -153,7 +153,7 @@ if (timeModal) {
 		chosenDate += Number(timeSelect.minute.value) * 60 * 1000;
 	
 		updateData('after', true, chosenDate);
-	});
+	}); // http://localhost:4000/?f=SAG_FIRE_VHF_20230522_232106.mp3
 }
 
 class CheckBoxFilter {
@@ -302,7 +302,25 @@ function display(dataToDisplay, location, restart) {
 			play(f);
 			scrollRowIntoView(f);
 		} else {
-			defaultFunc();
+			const newTime = fileToTime(f);
+			if (newTime === false) {
+				defaultFunc();
+			} else {
+				if (
+					dataToDisplay[0][dataTimeKey] >= newTime &&
+					dataToDisplay[dataToDisplay.length - 1][dataTimeKey] <= newTime
+				) {
+					let i = 0;
+					while (i < dataToDisplay.length && dataToDisplay[i][dataTimeKey] > newTime) {
+						i++;
+					}
+					play(dataToDisplay[i][dataFileKey]);
+					scrollRowIntoView(dataToDisplay[i][dataFileKey]);
+				} else {
+					isInit = true;
+					updateData('after', true, newTime - 1);
+				}
+			}
 		}
 	} else if (restart) {
 		defaultFunc();
