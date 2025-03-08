@@ -119,11 +119,42 @@ async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.
 	}
 }
 
+async function runDynamoQueries(queryConfigs: AWS.DynamoDB.QueryInput[]): Promise<AWS.DynamoDB.QueryOutput> {
+	return await Promise.all(queryConfigs.map((queryConfig) => dynamodb.query(queryConfig).promise()))
+		.then((data) => data.reduce((agg: AWS.DynamoDB.QueryOutput, result) => {
+			if (
+				typeof result.Count !== 'undefined' &&
+				typeof agg.Count !== 'undefined'
+			) {
+				agg.Count += result.Count;
+			}
+
+			if (
+				typeof result.ScannedCount !== 'undefined' &&
+				typeof agg.ScannedCount !== 'undefined'
+			) {
+				agg.ScannedCount += result.ScannedCount;
+			}
+
+			if (
+				typeof result.Items !== 'undefined' &&
+				typeof agg.Items !== 'undefined'
+			) {
+				agg.Items = [
+					...agg.Items,
+					...result.Items
+				];
+			}
+
+			return agg;
+		}, {
+			Items: [],
+			Count: 0,
+			ScannedCount: 0
+		}));
+}
+
 async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	const queryConfig: AWS.DynamoDB.ScanInput = {
-		TableName: trafficTable
-	};
-	const filters: string[] = [];
 
 	// Set the default query parameters
 	event.queryStringParameters = event.queryStringParameters || {};
@@ -133,39 +164,48 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		...event.queryStringParameters
 	};
 
-	// Add the "after" parameter
-	queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
-	queryConfig.ExpressionAttributeValues[':after'] = {
-		N: event.queryStringParameters.after
-	};
-	queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
-	queryConfig.ExpressionAttributeNames['#dt'] = 'Datetime';
-	filters.push('#dt > :after');
+	// Build the query configs
+	const queryConfigs: AWS.DynamoDB.QueryInput[] = [];
 
-	// Add the length filter
-	queryConfig.ExpressionAttributeValues[':minLen'] = {
-		N: event.queryStringParameters.minLen
-	};
-	filters.push('Len >= :minLen');
-
-	// Check for the tone filter
+	// Add the tone filters
+	const toneFilters: string[] = [];
 	if (event.queryStringParameters.tone) {
-		queryConfig.ExpressionAttributeValues[':tone'] = {
-			BOOL: event.queryStringParameters.tone === 'y'
-		};
-		filters.push('Tone = :tone');
+		toneFilters.push(event.queryStringParameters.tone === 'y' ? 'y' : 'n');
+	} else {
+		toneFilters.push('y', 'n');
 	}
+	toneFilters.forEach((tone) => {
+		queryConfigs.push({
+			TableName: trafficTable,
+			IndexName: 'ToneIndex',
+			ExpressionAttributeNames: {
+				'#t': 'ToneIndex',
+				'#dt': 'Datetime',
+				'#l': 'Len'
+			},
+			ExpressionAttributeValues: {
+				':t': {
+					S: tone
+				},
+				':dt': {
+					N: event.queryStringParameters?.after
+				},
+				':l': {
+					N: event.queryStringParameters?.minLen
+				}
+			},
+			KeyConditionExpression: '#t = :t AND #dt > :dt',
+			FilterExpression: '#l >= :l'
+		});
+	});
 
-	// Add the filter strings
-	if (filters.length > 0) {
-		queryConfig.FilterExpression = filters.join(' and ');
-	}
-
-	const data = await dynamodb.scan(queryConfig).promise();
+	const data = await runDynamoQueries(queryConfigs);
 
 	// Parse the results
 	const body = JSON.stringify({
 		success: true,
+		count: data.Count,
+		scanned: data.ScannedCount,
 		data: data.Items?.map((item) => Object.keys(item).reduce((coll: { [key: string]: any; }, key) => {
 			if (typeof item[key].N !== 'undefined') {
 				coll[key] = Number.parseFloat(item[key].N as string);
@@ -201,10 +241,6 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		body
 	};
 }
-
-type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
-  [Property in Key]-?: Type[Property];
-};
 
 const dtrStartTimeIndex = 'StartTimeIndex';
 
@@ -288,23 +324,14 @@ async function getDtrList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		});
 	}
 
-	const data: AWS.DynamoDB.ItemList = await Promise.all(queryConfigs
-		.map((queryConfig) => dynamodb.query(queryConfig).promise()))
-		.then((data) => data.reduce((agg: AWS.DynamoDB.ItemList, dataL) => {
-			if (typeof dataL.Items !== 'undefined') {
-				return [
-					...agg,
-					...dataL.Items
-				];
-			}
-
-			return agg;
-		}, []))
+	const data = await runDynamoQueries(queryConfigs);
 
 	const body = JSON.stringify({
 		success: true,
-		data: data
-			.map((item) => parseDynamoDbAttributeMap(item))
+		count: data.Count,
+		scanned: data.ScannedCount,
+		data: data.Items
+			?.map((item) => parseDynamoDbAttributeMap(item))
 			.sort((a, b) => (a.datetime as number) > (b.datetime as number) ? -1 : 1),
 		query: queryConfigs.map((queryConfig) => queryConfig.FilterExpression),
 		values: queryConfigs.map((queryConfig) => queryConfig.ExpressionAttributeValues)

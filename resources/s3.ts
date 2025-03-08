@@ -69,6 +69,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					EndTime: {
 						N: headInfo.Metadata?.stop_time
 					},
+					Added: {
+						N: Date.now().toString()
+					},
 					Len: {
 						N: headInfo.Metadata?.call_length
 					},
