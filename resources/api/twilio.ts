@@ -112,12 +112,13 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	if (
 		!sender.Item ||
 		!sender.Item.isActive?.BOOL ||
-		sender.Item.pageOnly?.BOOL
+		sender.Item.pageOnly?.BOOL ||
+		sender.Item.department?.S === 'Baca'
 	) {
 		await incrementMetric('Error', {
 			source: metricSource
 		});
-		response.body = `<Response><Message>You do not have access to this text group. Contact your station chief to request access.</Message></Response>`
+		response.body = `<Response><Message>You do not have access to use the text group. Contact your station chief to request access.</Message></Response>`
 		return response;
 	}
 

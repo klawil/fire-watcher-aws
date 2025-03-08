@@ -206,6 +206,13 @@ async function getRecipients(
 			BOOL: false
 		};
 		scanInput.FilterExpression += ' AND (#po = :po OR attribute_not_exists(#po))';
+	} else {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
+		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
+		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg };
 	}
 	if (department !== 'all') {
 		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
@@ -215,14 +222,6 @@ async function getRecipients(
 		scanInput.KeyConditionExpression = '#dep = :dep';
 		scanInput.ExpressionAttributeNames['#dep'] = 'department';
 		scanInput.ExpressionAttributeValues[':dep'] = { S: department };
-	}
-	if (pageTg !== null) {
-		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-
-		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
-		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
-		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg };
 	}
 
 	if (isTest) {
@@ -495,6 +494,9 @@ async function handleTwilio(body: TwilioBody) {
 	}
 	if (sender.Item.pageOnly?.BOOL) {
 		throw new Error(`Page only sender`);
+	}
+	if (sender.Item.department?.S === 'Baca') {
+		throw new Error(`Baca sender`);
 	}
 
 	// Get the number that was messaged
