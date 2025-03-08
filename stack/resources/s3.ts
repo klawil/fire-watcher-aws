@@ -392,31 +392,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			}
 
-			if (fileTag !== null) {
-				promises.push(s3.getObjectTagging({
-					Bucket,
-					Key,
-				}).promise()
-					.then(tags => {
-						let TagSet: aws.S3.TagSet = [];
-						if (tags.TagSet) {
-							TagSet = tags.TagSet;
-						}
-
-						TagSet.push({
-							Key: 'CostCenter',
-							Value: fileTag,
-						});
-						return s3.putObjectTagging({
-							Bucket,
-							Key,
-							Tagging: {
-								TagSet,
-							},
-						}).promise();
-					}));
-			}
-
 			if (shouldDoTranscript) {
 				const transcribeJobName = `${body.Item.Talkgroup.N}-${Date.now()}`;
 				const toneFile = Key.split('/')[2] || Key.split('/')[1];
