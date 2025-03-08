@@ -1,6 +1,6 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
-import { incrementMetric } from './utils/general';
+import { incrementMetric, PhoneNumberAccount } from './utils/general';
 import { PageBody } from './types/queue';
 import { PagingTalkgroup } from '../../common/userConstants';
 import { getLogger } from './utils/logger';
@@ -43,6 +43,16 @@ interface SourceListItem {
 	src: number;
 }
 
+const talkgroupsToTag: {
+	[key: string]: PhoneNumberAccount;
+} = {
+	'8198': 'NSCAD',
+	'8332': 'Crestone',
+	'18332': 'Crestone',
+	'18331': 'Baca',
+	'8331': 'Baca',
+};
+
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	logger.trace('parseRecord', ...arguments);
 	try {
@@ -82,6 +92,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				tg: '999999',
 				freq: '0',
 			};
+			let fileTag: PhoneNumberAccount | null = null;
 			if (Key.indexOf('/dtr') !== -1) {
 				try {
 					if (typeof headInfo.Metadata?.source_list !== 'undefined') {
@@ -125,6 +136,12 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
+				if (
+					headInfo.Metadata?.talkgroup_num &&
+					typeof talkgroupsToTag[headInfo.Metadata?.talkgroup_num] !== 'undefined'
+				) {
+					fileTag = talkgroupsToTag[headInfo.Metadata?.talkgroup_num];
+				}
 				if (sourceList.length === 0) {
 					delete body.Item.Sources;
 				}
@@ -177,6 +194,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						N: config.tg
 					}
 				};
+				if (typeof talkgroupsToTag[config.tg] !== 'undefined') {
+					fileTag = talkgroupsToTag[config.tg];
+				}
 			}
 			await dynamodb.putItem(body).promise();
 
@@ -372,9 +392,46 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			}
 
+			if (fileTag !== null) {
+				promises.push(s3.getObjectTagging({
+					Bucket,
+					Key,
+				}).promise()
+					.then(tags => {
+						let TagSet: aws.S3.TagSet = [];
+						if (tags.TagSet) {
+							TagSet = tags.TagSet;
+						}
+
+						TagSet.push({
+							Key: 'CostCenter',
+							Value: fileTag,
+						});
+						return s3.putObjectTagging({
+							Bucket,
+							Key,
+							Tagging: {
+								TagSet,
+							},
+						}).promise();
+					}));
+			}
+
 			if (shouldDoTranscript) {
 				const transcribeJobName = `${body.Item.Talkgroup.N}-${Date.now()}`;
 				const toneFile = Key.split('/')[2] || Key.split('/')[1];
+				const Tags: aws.TranscribeService.TagList = [
+					{ Key: 'Talkgroup', Value: body.Item.Talkgroup?.N as string },
+					{ Key: 'File', Value: toneFile },
+					{ Key: 'FileKey', Value: Key },
+					{ Key: 'IsPage', Value: body.Item.Tone?.BOOL ? 'y' : 'n' },
+				];
+				if (fileTag !== null) {
+					Tags.push({
+						Key: 'CostCenter',
+						Value: fileTag,
+					});
+				}
 				promises.push(transcribe.startTranscriptionJob({
 					TranscriptionJobName: transcribeJobName,
 					LanguageCode: 'en-US',
@@ -386,12 +443,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						MaxSpeakerLabels: 5,
 						ShowSpeakerLabels: true,
 					},
-					Tags: [
-						{ Key: 'Talkgroup', Value: body.Item.Talkgroup?.N as string },
-						{ Key: 'File', Value: toneFile },
-						{ Key: 'FileKey', Value: Key },
-						{ Key: 'IsPage', Value: body.Item.Tone?.BOOL ? 'y' : 'n' },
-					]
+					Tags,
 				}).promise());
 
 				if (!doTranscriptOnly && body.Item.Tone?.BOOL) {
