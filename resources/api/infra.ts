@@ -54,9 +54,13 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		response.errors.push('key');
 	}
 
-	if (response.success && body.key.indexOf('BG_FIRE') === -1) {
+	if (
+		response.success &&
+		body.key.indexOf('BG_FIRE') === -1 &&
+		event.queryStringParameters?.action === 'dtrPage'
+	) {
 		const sqsEvent = {
-			action: event.queryStringParameters?.action,
+			action: 'page',
 			key: body.key,
 			isTest: !!body.isTest
 		};
@@ -66,10 +70,10 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			MessageBody: JSON.stringify(sqsEvent),
 			QueueUrl: sqsQueue
 		}).promise();
-	} else {
-		await incrementMetric('Error', {
-			source: metricSource
-		});
+	// } else {
+	// 	await incrementMetric('Error', {
+	// 		source: metricSource
+	// 	});
 	}
 
 	return {

@@ -142,7 +142,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					!!existingItems.Items &&
 					existingItems.Items.length > 1
 				) {
-
 					const matchingItems = existingItems.Items.filter(item => {
 						const itemStartTime = Number(item.StartTime.N);
 						const itemEndTime = Number(item.EndTime.N);
@@ -200,8 +199,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				if (headInfo.Metadata?.tone === 'true') {
 					queuePromise = sqs.sendMessage({
 						MessageBody: JSON.stringify({
-							action: 'dtrPage',
-							key: Key,
+							action: 'page',
+							key: Key.split('/')[2],
 							isTest: true
 						}),
 						QueueUrl: sqsQueue

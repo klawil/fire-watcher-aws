@@ -302,8 +302,15 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				'#cs': 'callSign',
 				'#active': 'isActive',
 				'#admin': 'isAdmin',
-				'#dadmin': 'isDistrictAdmin'
+				'#dadmin': 'isDistrictAdmin',
+				'#tg': 'talkgroups'
 			},
+			ExpressionAttributeValues: {
+				':tg': {
+					N: '8332'
+				}
+			},
+			FilterExpression: 'contains(#tg, :tg)',
 			ProjectionExpression: '#fn,#ln,#d,#p,#cs,#active,#admin,#dadmin'
 		}).promise();
 
@@ -461,6 +468,17 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		UpdateExpression: 'SET #fn = :fn, #ln = :ln, #cs = :cs, #act = :act, #adm = :adm, #dep = :dep',
 		ReturnValues: 'UPDATED_NEW'
 	};
+	if (
+		create &&
+		updateConfig.ExpressionAttributeNames &&
+		updateConfig.ExpressionAttributeValues
+	) {
+		updateConfig.ExpressionAttributeNames['#tg'] = 'talkgroups';
+		updateConfig.ExpressionAttributeValues[':tg'] = {
+			NS: [ '8332' ]
+		};
+		updateConfig.UpdateExpression += ', #tg = :tg';
+	}
 	const result = await dynamodb.updateItem(updateConfig).promise();
 	if (!result.Attributes) {
 		response.success = false;

@@ -21,8 +21,14 @@ To send a message to other members of your department, just send a text to this 
 You can leave this group at any time by texting "STOP" to this number.`;
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
+const pageTgNames: { [key: string]: string } = {
+	'8198': 'AMBO',
+	'8332': 'FIRE'
+};
+
 async function getRecipients(
 	department: string,
+	pageTg: string | null,
 	isTest: boolean = false
 ) {
 	let scanInput: AWS.DynamoDB.QueryInput = {
@@ -43,6 +49,14 @@ async function getRecipients(
 		scanInput.KeyConditionExpression = '#dep = :dep';
 		scanInput.ExpressionAttributeNames['#dep'] = 'department';
 		scanInput.ExpressionAttributeValues[':dep'] = { S: department };
+	}
+	if (pageTg !== null) {
+		scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
+		scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
+
+		scanInput.FilterExpression += ' AND contains(#tg, :tg)';
+		scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
+		scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg };
 	}
 
 	if (isTest) {
@@ -72,6 +86,7 @@ async function saveMessageData(
 	recipients: number,
 	body: string,
 	mediaUrls: string[] = [],
+	pageId: string | null = null,
 	isTest: boolean = false
 ) {
 	await dynamodb.updateItem({
@@ -85,6 +100,7 @@ async function saveMessageData(
 			'#r': 'recipients',
 			'#b': 'body',
 			'#m': 'mediaUrls',
+			'#p': 'isPage',
 			'#t': 'isTest',
 			'#ts': 'isTestString'
 		},
@@ -98,6 +114,9 @@ async function saveMessageData(
 			':m': {
 				S: mediaUrls.join(',')
 			},
+			':p': {
+				S: pageId !== null ? pageId : 'n'
+			},
 			':t': {
 				BOOL: isTest
 			},
@@ -105,7 +124,7 @@ async function saveMessageData(
 				S: isTest ? 'y' : 'n'
 			}
 		},
-		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #t = :t, #ts = :ts'
+		UpdateExpression: 'SET #r = :r, #b = :b, #m = :m, #p = :p, #t = :t, #ts = :ts'
 	}).promise();
 }
 
@@ -123,21 +142,13 @@ function randomString(len: number, numeric = false): string {
 	return str.join('');
 }
 
-function convertFileDateTime(fileName: string, isDtr: boolean): Date {
+function convertFileDateTime(fileName: string): Date {
 	let d = new Date(0);
 	try {
-		if (!isDtr) {
-			const parts = fileName.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+		const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
 
-			if (parts !== null) {
-				d = new Date(`${parts.slice(1, 4).join('-')}T${parts.slice(4, 7).join(':')}Z`);
-			}
-		} else {
-			const parts = fileName.match(/\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/);
-
-			if (parts !== null) {
-				d = new Date(parseInt(parts[1], 10) * 1000);
-			}
+		if (parts !== null) {
+			d = new Date(parseInt(parts[1], 10) * 1000);
 		}
 	} catch (e) {}
 
@@ -146,11 +157,10 @@ function convertFileDateTime(fileName: string, isDtr: boolean): Date {
 
 function createPageMessage(
 	fileKey: string,
-	isDtr: boolean,
+	pageTg: string,
 	callSign: string | null = null
 ): string {
-	const queryParam = isDtr ? fileKey.split('/')[2] : fileKey.split('/')[1];
-	const d = convertFileDateTime(queryParam, isDtr);
+	const d = convertFileDateTime(fileKey);
 
 	const dateString = d.toLocaleDateString('en-US', {
 		timeZone: 'America/Denver',
@@ -167,7 +177,7 @@ function createPageMessage(
 		second: '2-digit'
 	});
 
-	let pageStr = `Saguache Sheriff: PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/${isDtr ? 'dtr.html' : ''}?f=${queryParam}`;
+	let pageStr = `Saguache Sheriff: ${pageTgNames[pageTg]} PAGE on ${dateString} at ${timeString} - https://fire.klawil.net/dtr.html?f=${fileKey}&tg=tg${pageTg}`;
 	if (callSign !== null) {
 		pageStr += `&cs=${callSign}`;
 	}
@@ -248,7 +258,7 @@ async function handleActivation(body: ActivateOrLoginBody) {
 		.then((data) => sendMessage(
 			null,
 			body.phone,
-			createPageMessage(data.Items && data.Items[0].Key.S || '', false),
+			createPageMessage(data.Items && data.Items[0].Key.S || ''),
 			[],
 			true
 		)));
@@ -303,7 +313,7 @@ async function handleTwilio(body: TwilioBody) {
 	const twilioConf = await getTwilioSecret();
 	const isFromPageNumber = adminSender && messageTo === twilioConf.pageNumber;
 
-	const recipients = await getRecipients(sender.Item?.department.S || '', isTest)
+	const recipients = await getRecipients(sender.Item?.department.S || '', null, isTest)
 		.then((data) => data.filter((number) => {
 			if (isTest) return true;
 
@@ -323,6 +333,7 @@ async function handleTwilio(body: TwilioBody) {
 		recipients.length,
 		messageBody,
 		mediaUrls,
+		null,
 		isTest
 	);
 
@@ -339,15 +350,17 @@ async function handleTwilio(body: TwilioBody) {
 }
 
 interface PageBody {
-	action: 'page' | 'dtrPage';
+	action: 'page';
 	key: string;
 	isTest?: boolean;
 }
 
 async function handlePage(body: PageBody) {
 	// Build the message body
-	const messageBody = createPageMessage(body.key, body.action === 'dtrPage');
-	const recipients = await getRecipients('all', !!body.isTest);
+	const pageTg = (body.key.match(/(\d{4})-\d{10}_\d{9}-call_\d+\.m4a/) as RegExpMatchArray)[1];
+	const messageBody = createPageMessage(body.key, pageTg);
+	const recipients = await getRecipients('all', pageTg, !!body.isTest);
+	console.log(messageBody, pageTg, recipients);
 
 	const messageId = Date.now().toString();
 	const insertMessage = saveMessageData(
@@ -355,6 +368,7 @@ async function handlePage(body: PageBody) {
 		recipients.length,
 		messageBody,
 		[],
+		body.key,
 		!!body.isTest
 	);
 
@@ -374,7 +388,7 @@ async function handlePage(body: PageBody) {
 		.map((phone) => sendMessage(
 			messageId,
 			phone.phone.N,
-			createPageMessage(body.key, body.action === 'dtrPage', phone.callSign.N),
+			createPageMessage(body.key, pageTg, phone.callSign.N),
 			[],
 			true
 		)));
@@ -427,7 +441,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 				response = await handleTwilio(body);
 				break;
 			case 'page':
-			case 'dtrPage':
 				response = await handlePage(body);
 				break;
 			case 'login':
