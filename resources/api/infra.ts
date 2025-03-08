@@ -10,6 +10,7 @@ const sqs = new aws.SQS();
 const apiCode = process.env.SERVER_CODE as string;
 const s3Bucket = process.env.S3_BUCKET as string;
 const sqsQueue = process.env.SQS_QUEUE as string;
+const dtrTable = process.env.TABLE_DTR as string;
 const userTable = process.env.TABLE_USER as string;
 const textTable = process.env.TABLE_TEXT as string;
 const statusTable = process.env.TABLE_STATUS as string;
@@ -400,6 +401,69 @@ async function handleDtrExists(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	};
 }
 
+async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	event.queryStringParameters = event.queryStringParameters || {};
+	const response: GenericApiResponse & {
+		exists: boolean;
+	} = {
+		success: true,
+		exists: false,
+		errors: []
+	};
+	
+	// Validate the query parameters
+	if (
+		!event.queryStringParameters.tg ||
+		!/^[0-9]+$/.test(event.queryStringParameters.tg)
+	) {
+		response.errors.push('tg');
+	}
+	if (
+		!event.queryStringParameters.start ||
+		!/^[0-9]+$/.test(event.queryStringParameters.start)
+	) {
+		response.errors.push('start');
+	}
+	if (response.errors.length > 0) {
+		response.success = false;
+		await incrementMetric('Error', {
+			source: metricSource,
+			type: 'handleDtrExistsSingle',
+			reason: 'Invalid Request'
+		});
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Find the item
+	const result = await dynamodb.query({
+		TableName: dtrTable,
+		IndexName: 'StartTimeTgIndex',
+		ExpressionAttributeNames: {
+			'#tg': 'Talkgroup',
+			'#st': 'StartTime'
+		},
+		ExpressionAttributeValues: {
+			':tg': {
+				N: event.queryStringParameters.tg
+			},
+			':st': {
+				N: event.queryStringParameters.start
+			}
+		},
+		KeyConditionExpression: '#tg = :tg AND #st = :st'
+	}).promise();
+	response.exists = typeof result.Items !== 'undefined'
+		&& result.Items.length > 0;
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 const testingUser = '***REMOVED***';
 async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Promise<APIGatewayProxyResult> {
 	const response: GenericApiResponse = {
@@ -504,6 +568,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleHeartbeat(event);
 			case 'dtrExists':
 				return await handleDtrExists(event);
+			case 'dtrExistsSingle':
+				return await handleDtrExistsSingle(event);
 			case 'startTest':
 				return await handleTestState(event, true);
 			case 'endTest':
