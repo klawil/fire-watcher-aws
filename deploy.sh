@@ -1,6 +1,5 @@
-#!/bin/bash
+source ~/.zshrc
 
-source ~/.bash_profile
 nvm use 14
 
 cd website
