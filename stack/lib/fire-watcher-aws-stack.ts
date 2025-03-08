@@ -19,9 +19,6 @@ import * as eventbridge from 'aws-cdk-lib/aws-events';
 import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
-import * as sns from 'aws-cdk-lib/aws-sns';
-import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
-import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
 
 const bucketName = '***REMOVED***';
