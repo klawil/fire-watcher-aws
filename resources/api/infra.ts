@@ -282,6 +282,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 		}));
 
 	const updateTime = Date.now();
+	const updateItemsStrings: string[] = [];
 	await Promise.all(Object.keys(sites).map(siteId => {
 		const site = sites[siteId];
 		const siteValues: aws.DynamoDB.ExpressionAttributeValueMap = {
@@ -337,16 +338,20 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 					.filter(k =>
 						result.Attributes &&
 						(typeof result.Attributes[siteNames[k.replace(':', '#')]] === 'undefined' ||
-						result.Attributes[siteNames[k.replace(':', '#')]].BOOL !== siteValues[k].BOOL))
-					.map(k => siteNames[k.replace(':', '#')]);
+						result.Attributes[siteNames[k.replace(':', '#')]].BOOL !== siteValues[k].BOOL));
 
 				if (changedKeys.length > 0) {
-					return sendAlertMessage(metricSource, `Update for site ${result.Attributes?.SiteName?.S || 'N/A'} (${siteId}) in ${result.Attributes?.SiteName?.S || 'N/A'} - ${changedKeys.join(', ')}`);
+					const changeStrings: string[] = changedKeys.map(key => `${siteNames[key.replace(':', '#')]} became ${siteValues[key].BOOL}`);
+					updateItemsStrings.push(`Update for site ${result.Attributes?.SiteName?.S || 'N/A'} (${siteId}) in ${result.Attributes?.SiteCounty?.S || 'N/A'} - ${changeStrings.join(', ')}`);
 				}
 
 				return;
 			});
 	}));
+
+	if (updateItemsStrings.length > 0) {
+		await sendAlertMessage(metricSource, updateItemsStrings.join('\n'));
+	}
 
 	return {
 		statusCode: 200,
