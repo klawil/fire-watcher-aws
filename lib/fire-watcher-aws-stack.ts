@@ -1,11 +1,13 @@
 import { Stack, StackProps, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deployment from 'aws-cdk-lib/aws-s3-deployment';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 
 const bucketName = '***REMOVED***';
@@ -17,6 +19,14 @@ export class FireWatcherAwsStack extends Stack {
 
     // Created outside of the CDK
     const bucket = s3.Bucket.fromBucketName(this, bucketName, bucketName);
+
+    // Push the static files into the bucket
+    new s3deployment.BucketDeployment(this, 'cvfd-deploy-s3', {
+      sources: [ s3deployment.Source.asset('./public') ],
+      destinationBucket: bucket,
+      accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
+      exclude: [ 'audio/*' ]
+    });
 
     // Create the tables for dynamo DB
     const phoneNumberTable = new dynamodb.Table(this, 'cvfd-phone', {
@@ -110,7 +120,24 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
-    bucket.grantRead(s3AccessIdentity);
+
+    // We have to build the whole policy because CDK is stupid
+    const s3ReadPolicy = new iam.PolicyStatement();
+    s3ReadPolicy.addActions('s3:GetBucket*');
+    s3ReadPolicy.addActions('s3:GetObject*');
+    s3ReadPolicy.addActions('s3:List*');
+    s3ReadPolicy.addResources(bucket.bucketArn);
+    s3ReadPolicy.addResources(`${bucket.bucketArn}/*`);
+    s3ReadPolicy.addCanonicalUserPrincipal(s3AccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId);
+
+    // Add the new policy to the bucket
+    if (!bucket.policy) {
+      new s3.BucketPolicy(this, 'cvfd-s3-policy', {
+        bucket
+      }).document.addStatements(s3ReadPolicy);
+    } else {
+      bucket.policy.document.addStatements(s3ReadPolicy);
+    }
 
     // Create the cloudfront distribution
     new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
@@ -129,7 +156,9 @@ export class FireWatcherAwsStack extends Stack {
             originAccessIdentity: s3AccessIdentity
           },
           behaviors: [{
-            isDefaultBehavior: true
+            isDefaultBehavior: true,
+            defaultTtl: Duration.seconds(0),
+            maxTtl: Duration.seconds(0)
           }]
         },
         {
