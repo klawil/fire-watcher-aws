@@ -579,26 +579,6 @@ export class FireWatcherAwsStack extends Stack {
       },
       {
         tag: 'Dtr',
-        codeName: 'pooltable-tower',
-        alarm: {
-          ...baseTowerAlarmConfig,
-          evaluationPeriods: 15,
-          datapointsToAlarm: 15,
-          metric: new cloudwatch.Metric({
-            metricName: 'Decode Rate',
-            namespace: 'DTR Metrics',
-            period: Duration.minutes(2),
-            statistic: cloudwatch.Stats.MINIMUM,
-            dimensionsMap: {
-              Tower: 'PoolTable'
-            }
-          }),
-          alarmDescription: 'Recording audio from the Pool Table Tower may not be occurring on may only be occurring intermitently',
-          alarmName: 'Pool Table Tower Decode Rate'
-        }
-      },
-      {
-        tag: 'Dtr',
         codeName: 'saguache-tower-upload',
         alarm: {
           ...baseUploadAlarmConfig,
@@ -624,26 +604,6 @@ export class FireWatcherAwsStack extends Stack {
           }),
           alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 12 hours which may indicate the tower is not being recorded',
           alarmName: 'Pool Table Uploads',
-        }
-      },
-      {
-        tag: 'Dtr',
-        codeName: 'san-antonio-upload',
-        alarm: {
-          ...baseUploadAlarmConfig,
-          evaluationPeriods: 4,
-          datapointsToAlarm: 4,
-          metric: new cloudwatch.Metric({
-            metricName: 'Upload',
-            namespace: 'DTR Metrics',
-            period: Duration.hours(3),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              Tower: 'SanAntonio'
-            }
-          }),
-          alarmDescription: 'No files have been uploaded for San Antonio Peak in the past 12 hours which may indicate the tower is not being recorded',
-          alarmName: 'San Antonio Peak Uploads',
         }
       },
       {
