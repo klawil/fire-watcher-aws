@@ -14,13 +14,13 @@
     "@types/aws-sdk": "^2.7.0",
     "@types/jest": "^26.0.10",
     "@types/node": "10.17.27",
-    "aws-cdk": "^2.3.0",
+    "aws-cdk": "^2.100.0",
     "esbuild": "^0.14.10",
     "ts-node": "^9.0.0",
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.3.0",
+    "aws-cdk-lib": "2.100.0",
     "constructs": "^10.0.0",
     "node-fetch": "^2.6.8",
     "source-map-support": "^0.5.16"

@@ -214,7 +214,7 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*' ]
         })
       ],
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       entry: __dirname + '/../resources/s3.ts',
       handler: 'main',
       environment: {
@@ -246,7 +246,7 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*' ]
         })
       ],
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       entry: __dirname + '/../resources/queue.ts',
       handler: 'main',
       environment: {
@@ -275,7 +275,7 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*' ]
         })
       ],
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       entry: __dirname + '/../resources/alarms.ts',
       handler: 'main',
       timeout: Duration.seconds(30),
@@ -521,7 +521,7 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*' ]
         })
       ],
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       entry: __dirname + '/../resources/status.ts',
       handler: 'main',
       environment: {
@@ -541,13 +541,15 @@ export class FireWatcherAwsStack extends Stack {
 
     // Schedule the function for every minute
     const statusEventRule = new events.Rule(this, 'status-rule', {
-      schedule: events.Schedule.cron({})
+      schedule: events.Schedule.cron({
+        minute: '*'
+      })
     });
     statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
 
     // Create the weather updater
     const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       entry: __dirname + '/../resources/weather.ts',
       handler: 'main',
       environment: {
@@ -561,7 +563,9 @@ export class FireWatcherAwsStack extends Stack {
 
     // Schedule the function for every 15 minutes
     const weatherEventRule = new events.Rule(this, '-rule', {
-      schedule: events.Schedule.cron({})
+      schedule: events.Schedule.cron({
+        minute: '*'
+      })
     });
     weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));
 
@@ -664,7 +668,7 @@ export class FireWatcherAwsStack extends Stack {
             resources: [ '*' ]
           })
         ],
-        runtime: lambda.Runtime.NODEJS_14_X,
+        runtime: lambda.Runtime.NODEJS_18_X,
         entry: __dirname + `/../resources/api/${config.name}.ts`,
         handler: 'main',
         environment: Object.keys(config.env)

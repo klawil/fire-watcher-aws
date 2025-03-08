@@ -560,7 +560,9 @@ async function handleLogin(body: ActivateOrLoginBody) {
 		null,
 		body.phone,
 		updateResult.Attributes?.department?.S,
-		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`
+		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`,
+		[],
+		true
 	);
 }
 

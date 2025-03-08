@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 source ~/.zshrc
-nvm use 14
+nvm use 18
 
 cdk deploy
 
