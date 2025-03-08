@@ -11,7 +11,8 @@ const insertionPoints = {
 	readiness: document.getElementById('readiness'),
 	fires: document.getElementById('fires'),
 	alerts: document.getElementById('alerts'),
-	restrictions: document.getElementById('restrictions')
+	restrictions: document.getElementById('restrictions'),
+	updated: document.getElementById('updated')
 };
 const fireTypeLabels = {
 	new: 'New',
@@ -53,4 +54,5 @@ fetch('/weather.json')
 
 		insertionPoints.alerts.innerHTML = data.weather || '<b>No active alerts</b>';
 		insertionPoints.restrictions.innerHTML = data.bans;
+		insertionPoints.updated.innerHTML = data.updated;
 	});
