@@ -90,6 +90,18 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    phoneNumberTable.addGlobalSecondaryIndex({
+      indexName: 'StationIndex',
+      partitionKey: {
+        name: 'department',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'callSign',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
     vhfTable.addGlobalSecondaryIndex({
       indexName: 'ToneIndex',
       partitionKey: {
