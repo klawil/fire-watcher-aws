@@ -2,9 +2,9 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getLoggedInUser } from '../utils/auth';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
-import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../common/conferenceApi';
-import { unauthorizedApiResponse } from '../../common/common';
-import { defaultDepartment, departmentConfig } from '../../common/userConstants';
+import { ApiConferenceEndResponse, ApiConferenceGetResponse, ApiConferenceInviteResponse, ApiConferenceKickUserResponse, ApiConferenceTokenResponse, ConferenceAttendeeObject } from '../../../common/conferenceApi';
+import { unauthorizedApiResponse } from '../types/api';
+import { defaultDepartment, departmentConfig } from '../../../common/userConstants';
 
 const metricSource = 'Conference';
 

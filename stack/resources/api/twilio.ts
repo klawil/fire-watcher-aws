@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parsePhone } from '../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
-import { UserDepartment } from '../../common/userConstants';
+import { UserDepartment } from '../../../common/userConstants';
 
 const metricSource = 'Twilio';
 

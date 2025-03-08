@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 import * as AWS from 'aws-sdk';
-import { WeatherResultJson } from '../common/weather';
+import { WeatherResultJson } from '../../common/weather';
 
 interface GaccUrlObject {
 	new: string;

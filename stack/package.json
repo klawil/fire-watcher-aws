@@ -1,0 +1,26 @@
+{
+  "name": "fire-watcher-aws",
+  "version": "0.1.0",
+  "bin": {
+    "fire-watcher-aws": "bin/fire-watcher-aws.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build-lambda": "tsc resources/auth_middleware.ts",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.138",
+    "@types/jest": "^26.0.10",
+    "@types/node": "10.17.27",
+    "aws-cdk": "^2.100.0",
+    "esbuild": "^0.14.10",
+    "ts-node": "^9.0.0",
+    "typescript": "~4.2.4"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.144.0",
+    "constructs": "^10.0.0",
+    "node-fetch": "^2.6.8"
+  }
+}

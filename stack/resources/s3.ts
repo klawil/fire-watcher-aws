@@ -2,7 +2,7 @@ import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
 import { incrementMetric } from './utils/general';
 import { PageBody } from './types/queue';
-import { PagingTalkgroup } from '../common/userConstants';
+import { PagingTalkgroup } from '../../../common/userConstants';
 
 const s3 = new aws.S3();
 const dynamodb = new aws.DynamoDB();

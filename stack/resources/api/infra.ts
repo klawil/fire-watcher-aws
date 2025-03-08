@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, parseDynamoDbAttributeMap, sendAlertMessage, validateBodyIsJson } from '../utils/general';
 import { PageBody } from '../types/queue';
-import { PagingTalkgroup } from '../../common/userConstants';
+import { PagingTalkgroup } from '../../../common/userConstants';
 
 const metricSource = 'Infra';
 

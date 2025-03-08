@@ -1,5 +1,5 @@
 import * as aws from 'aws-sdk';
-import { UserDepartment, defaultDepartment, departmentConfig } from '../../common/userConstants';
+import { UserDepartment, defaultDepartment, departmentConfig } from '../../../common/userConstants';
 const twilio = require('twilio');
 
 const messagesTable = process.env.TABLE_MESSAGES as string;

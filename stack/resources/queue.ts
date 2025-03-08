@@ -2,8 +2,8 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage } from './utils/general';
-import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../common/userConstants';
-import { fNameToDate } from '../common/file';
+import { PagingTalkgroup, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
+import { fNameToDate } from '../../common/file';
 import { ActivateBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 
 const dynamodb = new AWS.DynamoDB();

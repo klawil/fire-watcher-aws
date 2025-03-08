@@ -2,7 +2,7 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
-import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, TextObject } from '../../common/frontendApi';
+import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, TextObject } from '../../../common/frontendApi';
 
 const metricSource = 'Frontend';
 
