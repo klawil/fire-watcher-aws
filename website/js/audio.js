@@ -257,8 +257,8 @@ function display(dataToDisplay, location, restart) {
 		isInit = false;
 		const f = new URL(window.location.href).searchParams.get('f');
 		if (f !== null && document.getElementById(f) !== null) {
-			scrollRowIntoView(f);
 			play(f);
+			scrollRowIntoView(f);
 		} else {
 			defaultFunc();
 		}
@@ -328,7 +328,12 @@ function scrollRowIntoView(f) {
 	) return;
 
 	const newScroll = window.scrollY + elemToScrollTo.getBoundingClientRect().top - 80;
-	window.scrollTo(0, newScroll);
+	lastUpdateId.after = Date.now();
+	setTimeout(() => lastUpdateId.after = null, 2000);
+	window.scrollTo({
+		left: 0,
+		top: newScroll
+	});
 }
 
 function markRowAsPlaying(file) {
@@ -396,7 +401,7 @@ function init() {
 		});
 
 	setUrlParams();
-	updateData();
+	updateData('after', true);
 }
 
 function getUrlParams() {

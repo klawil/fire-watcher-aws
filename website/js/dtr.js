@@ -1,3 +1,9 @@
+let lastUpdateId = {
+	before: null,
+	after: null
+};
+let allowUpdateAfter = true;
+let fromDate = false;
 const dataUpdateFrequency = 10000;
 window.talkgroupMap = window.talkgroupMap || {};
 window.talkgroupOptions = window.talkgroupOptions || {};
@@ -7,21 +13,19 @@ const host = window.location.origin.indexOf('localhost') !== -1
 	? 'http://localhost:8001'
 	: '';
 
-let isUpdatingBefore = false;
-let updatingId = 0;
-let nextTimeout = null;
 function updateData(direction = 'after', restart = false) {
-	if (nextTimeout !== null) clearTimeout(nextTimeout);
-
-	updatingId++;
-	if (updatingId > 1000) updatingId = 0;
-	const thisUpdatingId = updatingId;
+	const updateId = Date.now();
 
 	if (restart) {
 		delete nextDataFields.after;
 		delete nextDataFields.before;
 		delete nextDataFields.continue;
+		lastUpdateId.before = null;
+		lastUpdateId.after = null;
 	}
+
+	if (lastUpdateId[direction] !== null) return;
+	lastUpdateId[direction] = updateId;
 
 	let apiUrl = `${host}/api?action=dtr`;
 	if (typeof nextDataFields.after !== 'undefined') {
@@ -29,7 +33,6 @@ function updateData(direction = 'after', restart = false) {
 		if (direction === 'after') {
 			apiUrl += `after=${nextDataFields.after}`;
 		} else {
-			isUpdatingBefore = true;
 			apiUrl += `before=${nextDataFields.before}&continue=${encodeURIComponent(nextDataFields.continue)}`
 		}
 	}
@@ -44,7 +47,8 @@ function updateData(direction = 'after', restart = false) {
 	fetch(apiUrl)
 		.then((r) => r.json())
 		.then((r) => {
-			if (thisUpdatingId !== updatingId) return console.log('Exit early');
+			if (lastUpdateId[direction] !== updateId) return;
+			lastUpdateId[direction] = null;
 
 			if (
 				r.before &&
@@ -84,32 +88,39 @@ function updateData(direction = 'after', restart = false) {
 				];
 			}
 			files = filterData(files);
-			display(filterData(r.data), direction, restart);
+			display(
+				filterData(r.data),
+				direction,
+				restart
+			);
 		})
-		.catch(console.error)
-		.then(() => {
-			if (direction === 'after' && thisUpdatingId === updatingId) {
-				nextTimeout = setTimeout(updateData, dataUpdateFrequency, 'after');
-			} else if (direction !== 'after') {
-				isUpdatingBefore = false;
-			}
-		});
+		.catch(console.error);
 }
+setInterval(() => {
+	if (allowUpdateAfter || playNewFiles) updateData('after');
+}, dataUpdateFrequency);
 
 function playLive() {
-	play(files[0].File);
-	scrollRowIntoView(files[0].File);
+	let fileToPlay = files[0].File;
+	if (fromDate) {
+		fileToPlay = files[files.length - 1].File;
+	}
+
+	play(fileToPlay);
+	scrollRowIntoView(fileToPlay);
 }
 
 window.addEventListener('scroll', () => {
-	if (isUpdatingBefore) return;
-
 	const scrollY = window.scrollY;
 	const winHeight = window.innerHeight;
 	const bodyHeight = document.body.getBoundingClientRect().height;
+	allowUpdateAfter = false;
 
 	if (scrollY + winHeight >= bodyHeight - 60) {
 		updateData('before');
+	} else if (scrollY <= 60) {
+		allowUpdateAfter = true;
+		updateData('after');
 	}
 });
 
@@ -338,5 +349,4 @@ fetch(`${host}/api?action=talkgroups`)
 			
 			init();
 		});
-	})
-	.then(console.log);
+	});

@@ -1,3 +1,8 @@
+let lastUpdateId = {
+	before: null,
+	after: null
+};
+let allowUpdateAfter = true;
 const dataUpdateFrequency = 10000;
 const sourceMap = {
 	SAG_FIRE_VHF: 'Saguache Fire VHF',
@@ -8,11 +13,18 @@ const nextDataFields = {};
 
 let isUpdatingBefore = false;
 function updateData(direction = 'after', restart = false) {
+	const updateId = Date.now();
+
 	if (restart) {
 		delete nextDataFields.after;
 		delete nextDataFields.before;
 		delete nextDataFields.continue;
+		lastUpdateId.before = null;
+		lastUpdateId.after = null;
 	}
+
+	if (lastUpdateId[direction] !== null) return;
+	lastUpdateId[direction] = updateId;
 
 	const host = window.location.origin.indexOf('localhost') !== -1
 		? 'http://localhost:8001'
@@ -40,6 +52,9 @@ function updateData(direction = 'after', restart = false) {
 	fetch(apiUrl)
 		.then((r) => r.json())
 		.then((r) => {
+			if (lastUpdateId[direction] !== updateId) return;
+			lastUpdateId[direction] = null;
+
 			if (
 				r.before &&
 				(
@@ -89,6 +104,9 @@ function updateData(direction = 'after', restart = false) {
 			}
 		});
 }
+setInterval(() => {
+	if (allowUpdateAfter || playNewFiles) updateData('after');
+}, dataUpdateFrequency);
 
 function playLastTone() {
 	let lastTone = files.filter((file) => file.Tone)[0];
@@ -100,14 +118,16 @@ function playLastTone() {
 }
 
 window.addEventListener('scroll', () => {
-	if (isUpdatingBefore) return;
-
 	const scrollY = window.scrollY;
 	const winHeight = window.innerHeight;
 	const bodyHeight = document.body.getBoundingClientRect().height;
+	allowUpdateAfter = false;
 
 	if (scrollY + winHeight >= bodyHeight - 60) {
 		updateData('before');
+	} else if (scrollY <= 60) {
+		allowUpdateAfter = true;
+		updateData('after');
 	}
 });
 
