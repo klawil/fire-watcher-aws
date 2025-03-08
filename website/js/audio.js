@@ -114,6 +114,48 @@ if (filterModal) {
 	});
 }
 
+// Add the time selection functionality
+const timeModal = document.getElementById('time-modal');
+const timeApplyButton = document.getElementById('time-apply');
+const timeButtons = [
+	document.getElementById('time-button-d'),
+	document.getElementById('time-button-m')
+];
+const timeSelect = {
+	date: document.getElementById('start-date'),
+	hour: document.getElementById('start-date-hour'),
+	minute: document.getElementById('start-date-minute')
+};
+let startDatePicker;
+
+if (timeModal) {
+	let firstTimeCall = true;
+	timeButtons.forEach(div => div.addEventListener('click', () => {
+		if (!firstTimeCall) return;
+		firstTimeCall = false;
+		startDatePicker = new Datepicker(timeSelect.date, {
+			format: 'yyyy-mm-dd',
+			maxDate: new Date(),
+			minDate: '2022-07-13',
+			maxView: 2,
+			todayBtn: true
+		});
+
+		let currentTime = new Date();
+		document.getElementById('start-date-hour').value = currentTime.getHours().toString().padStart(2, '0');
+		document.getElementById('start-date-minute').value = (Math.floor(currentTime.getMinutes() / 15) * 15).toString().padStart(2, '0');
+	}));
+	timeApplyButton.addEventListener('click', () => {
+		if (typeof startDatePicker.getDate() == 'undefined') return;
+
+		let chosenDate = startDatePicker.getDate().getTime();
+		chosenDate += Number(timeSelect.hour.value) * 60 * 60 * 1000;
+		chosenDate += Number(timeSelect.minute.value) * 60 * 1000;
+	
+		updateData('after', true, chosenDate);
+	});
+}
+
 class CheckBoxFilter {
 	value = [];
 

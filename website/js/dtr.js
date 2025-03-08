@@ -13,7 +13,7 @@ const host = window.location.origin.indexOf('localhost') !== -1
 	? 'http://localhost:8001'
 	: '';
 
-function updateData(direction = 'after', restart = false) {
+function updateData(direction = 'after', restart = false, date = false) {
 	const updateId = Date.now();
 
 	if (restart) {
@@ -35,6 +35,9 @@ function updateData(direction = 'after', restart = false) {
 		} else {
 			apiUrl += `before=${nextDataFields.before}&continue=${encodeURIComponent(nextDataFields.continue)}`
 		}
+	} else if (date !== false) {
+		fromDate = true;
+		apiUrl += `&after=${date}`;
 	}
 
 	const queryParams = Object.keys(urlFilters)
@@ -49,6 +52,8 @@ function updateData(direction = 'after', restart = false) {
 		.then((r) => {
 			if (lastUpdateId[direction] !== updateId) return;
 			lastUpdateId[direction] = null;
+
+			if (restart) files = [];
 
 			if (
 				r.before &&
@@ -88,11 +93,8 @@ function updateData(direction = 'after', restart = false) {
 				];
 			}
 			files = filterData(files);
-			display(
-				filterData(r.data),
-				direction,
-				restart
-			);
+			display(filterData(r.data), direction, restart);
+			fromDate = false;
 		})
 		.catch(console.error);
 }

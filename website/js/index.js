@@ -3,6 +3,7 @@ let lastUpdateId = {
 	after: null
 };
 let allowUpdateAfter = true;
+let fromDate = false;
 const dataUpdateFrequency = 10000;
 const sourceMap = {
 	SAG_FIRE_VHF: 'Saguache Fire VHF',
@@ -11,8 +12,7 @@ const sourceMap = {
 
 const nextDataFields = {};
 
-let isUpdatingBefore = false;
-function updateData(direction = 'after', restart = false) {
+function updateData(direction = 'after', restart = false, date = false) {
 	const updateId = Date.now();
 
 	if (restart) {
@@ -37,9 +37,11 @@ function updateData(direction = 'after', restart = false) {
 		if (direction === 'after') {
 			apiUrl += `after=${nextDataFields.after}`;
 		} else {
-			isUpdatingBefore = true;
 			apiUrl += `before=${nextDataFields.before}&continue=${encodeURIComponent(nextDataFields.continue)}`
 		}
+	} else if (date !== false) {
+		fromDate = true;
+		apiUrl += `?after=${date}`;
 	}
 
 	const queryParams = Object.keys(urlFilters)
@@ -54,6 +56,8 @@ function updateData(direction = 'after', restart = false) {
 		.then((r) => {
 			if (lastUpdateId[direction] !== updateId) return;
 			lastUpdateId[direction] = null;
+
+			if (restart) files = [];
 
 			if (
 				r.before &&
@@ -94,26 +98,30 @@ function updateData(direction = 'after', restart = false) {
 			}
 			files = filterData(files);
 			display(filterData(r.data), direction, restart);
+			fromDate = false;
 		})
-		.catch(console.error)
-		.then(() => {
-			if (direction === 'after') {
-				setTimeout(updateData, dataUpdateFrequency, 'after');
-			} else {
-				isUpdatingBefore = false;
-			}
-		});
+		.catch(console.error);
 }
 setInterval(() => {
 	if (allowUpdateAfter || playNewFiles) updateData('after');
 }, dataUpdateFrequency);
 
 function playLastTone() {
-	let lastTone = files.filter((file) => file.Tone)[0];
+	const tones = files.filter(file => file.Tone);
+	let fileToPlay = tones[0];
+	if (fromDate) {
+		fileToPlay = tones[tones.length - 1];
+	}
 
-	if (lastTone) {
-		play(lastTone.File);
-		scrollRowIntoView(lastTone.File);
+	if (!fileToPlay && fromDate) {
+		fileToPlay = files[files.length - 1];
+	} else if (!fileToPlay) {
+		fileToPlay = files[0];
+	}
+
+	if (fileToPlay) {
+		play(fileToPlay.File);
+		scrollRowIntoView(fileToPlay.File);
 	}
 }
 
