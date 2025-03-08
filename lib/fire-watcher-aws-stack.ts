@@ -58,8 +58,8 @@ export class FireWatcherAwsStack extends Stack {
     const dtrTable = new dynamodb.Table(this, 'cvfd-dtr', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
-        name: 'Key',
-        type: dynamodb.AttributeType.STRING
+        name: 'Talkgroup',
+        type: dynamodb.AttributeType.NUMBER
       },
       sortKey: {
         name: 'StartTime',
@@ -93,6 +93,18 @@ export class FireWatcherAwsStack extends Stack {
       },
       sortKey: {
         name: 'Datetime',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'StartTimeIndex',
+      partitionKey: {
+        name: 'Emergency',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'StartTime',
         type: dynamodb.AttributeType.NUMBER
       }
     });
