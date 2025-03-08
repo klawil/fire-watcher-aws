@@ -249,6 +249,7 @@ export async function sendMessage(
 		typeof phone === 'undefined' ||
 		typeof department === 'undefined'
 	) {
+		console.error(`Trying to send message to invalid destination\nphone: ${phone}\ndepartment: ${department}\nMessage: ${body}`);
 		return;
 	}
 
@@ -299,7 +300,6 @@ export async function sendMessage(
 			.messages.create(messageConfig),
 		saveMessageDataPromise
 	])
-		.then(results => results[0])
 		.catch((e: any) => {
 			console.log(`QUEUE - ERROR - sendMessage`);
 			console.error(e);

@@ -518,7 +518,8 @@ async function handleLogin(body: ActivateOrLoginBody) {
 				N: `${codeTimeout}`
 			}
 		},
-		UpdateExpression: 'SET #c = :c, #ce = :ce'
+		UpdateExpression: 'SET #c = :c, #ce = :ce',
+		ReturnValues: 'ALL_NEW'
 	}).promise();
 
 	await sendMessage(
