@@ -111,14 +111,21 @@ function playLive() {
 }
 
 const fileNameRegex = /\d{4}-(\d{10})_\d{9}-call_\d+\.m4a/;
+const vhfFileNameRegex = /(SAG|BG)_FIRE_VHF_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
 const dataTimeKey = 'StartTime';
 const dataFileKey = 'File';
 
 function fileToTime(name) {
-	if (!name || !fileNameRegex.test(name)) return false;
+	if (!name) return false;
+	if (!fileNameRegex.test(name) && !vhfFileNameRegex.test(name)) return false;
 
-	const parts = name.match(fileNameRegex);
-	return parseInt(parts[1], 10);
+	if (fileNameRegex.test(name)) {
+		const parts = name.match(fileNameRegex);
+		return parseInt(parts[1], 10);
+	} else {
+		const parts = name.match(vhfFileNameRegex);
+		return new Date(`${parts[2]}-${parts[3]}-${parts[4]}T${parts[5]}:${parts[6]}:${parts[7]}Z`).getTime() / 1000;
+	}
 }
 
 window.addEventListener('scroll', () => {
@@ -152,13 +159,13 @@ class TalkgroupFilter {
 	 */
 	presets = {
 		'NSCAD': [ '8198' ],
-		'NSCFPD': [ '8332', '8333' ],
+		'NSCFPD': [ '8332', '8333', '18332' ],
 		'Sag Mac': [ '8330' ],
-		'BGFD/BGEMS': [ '8090', '8331' ],
+		'BGFD/BGEMS': [ '8090', '8331', '18331' ],
 		'SC Sheriff': [ '8335', '8336' ],
-		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333' ],
-		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336' ],
-		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336' ],
+		'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333', '18332' ],
+		'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
+		'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
 	};
 
 	constructor() {
