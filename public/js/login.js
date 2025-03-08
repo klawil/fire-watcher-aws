@@ -16,6 +16,13 @@ phoneInput.addEventListener('keyup', () => {
 	else phoneInput.value = `${first}`;
 });
 
+const searchParams = location.search
+	.slice(1)
+	.split('&')
+	.filter(v => v !== '')
+	.map(v => v.split('=').map(v => decodeURIComponent(v)))
+	.reduce((agg, row) => ({ ...agg, [row[0]]: row[1] }), {});
+
 let stage = 1;
 function submitHandler() {
 	phoneInput.classList.remove('is-invalid');
@@ -52,7 +59,7 @@ function submitHandler() {
 				codeContainer.classList.remove('hidden');
 			} else if (stage === 3) {
 				showAlert('success', 'You are now logged in');
-				window.location = '/';
+				redirectToPage();
 			}
 		})
 		.catch(e => {
@@ -71,3 +78,19 @@ function showAlert(type, message) {
 	elem.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
 	alertContainer.appendChild(elem);
 }
+
+function redirectToPage() {
+	let newLocation = '/';
+	if (typeof searchParams.redirectTo !== 'undefined') {
+		newLocation = searchParams.redirectTo;
+	}
+
+	window.location = newLocation;
+}
+
+window.afterAuth = window.afterAuth || [];
+window.afterAuth.push(() => {
+	if (window.user.isUser) {
+		redirectToPage();
+	}
+});
