@@ -157,6 +157,11 @@ charts.forEach(chart => {
 				};
 			}
 			if (chart.fill && datasets.length === 2) {
+				chartConfig.options.scales = {
+					y: {
+						min: 0
+					}
+				};
 				datasets.forEach(dataset => dataset.label = dataset.label.split(' - ').pop());
 				datasets[0].borderColor = color1.borderColor;
 				datasets[0].backgroundColor = color1.backgroundColor;
