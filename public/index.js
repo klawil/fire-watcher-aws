@@ -92,15 +92,18 @@ function display() {
 	const rows = files
 		.filter((file) => allowedSources.indexOf(file.Source) !== -1)
 		.map((file) => [
-			file.Local,
-			sourceMap[file.Source] || file.Source,
-			secondsToString(file.Len),
-			file.Tone ? 'TONE' : '',
-			`<button class="btn btn-success" onclick="play('${file.File}');">Play</button>`
-		]
-			.map((cell) => `<td>${cell}</td>`)
-			.join(''))
-		.map((row, index) => `<tr id="${files[index].File}">${row}</tr>`)
+			`<tr id="${file.File}">`,
+			[
+				file.Local,
+				sourceMap[file.Source] || file.Source,
+				secondsToString(file.Len),
+				file.Tone ? 'TONE' : '',
+				`<button class="btn btn-success" onclick="play('${file.File}');">Play</button>`
+			]
+				.map((cell) => `<td>${cell}</td>`)
+				.join(''),
+			`</tr>`
+		].join(''))
 		.join('\n');
 
 	document.getElementById('files').innerHTML = rows;
