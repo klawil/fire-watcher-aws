@@ -485,7 +485,7 @@ export class FireWatcherAwsStack extends Stack {
         period: Duration.minutes(2),
         statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
-          Tower: 'SaguacheTower'
+          Tower: 'Saguache'
         }
       }),
       threshold: 35,
@@ -521,7 +521,7 @@ export class FireWatcherAwsStack extends Stack {
         period: Duration.hours(1),
         statistic: cloudwatch.Stats.SUM,
         dimensionsMap: {
-          Tower: 'SaguacheTower'
+          Tower: 'Saguache'
         }
       }),
       threshold: 0,

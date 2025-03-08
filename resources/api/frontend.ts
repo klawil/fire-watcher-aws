@@ -863,7 +863,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'SaguacheTower'
+						Value: 'Saguache'
 					}
 				]
 			},
@@ -882,7 +882,7 @@ const statsMap: {
 				Dimensions: [
 					{
 						Name: 'Tower',
-						Value: 'SaguacheTower'
+						Value: 'Saguache'
 					}
 				]
 			},
@@ -900,7 +900,7 @@ const statsMap: {
 				MetricName: 'Upload',
 				Dimensions: [ {
 					Name: 'Tower',
-					Value: 'SaguacheTower'
+					Value: 'Saguache'
 				} ]
 			},
 			Period: 60,
