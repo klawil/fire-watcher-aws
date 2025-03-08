@@ -30,30 +30,6 @@
 			}
 		</style>
 		{% endif %}
-
-		<style>
-			#loadingCircle .spinner-border {
-				width: 10rem;
-				height: 10rem;
-			}
-			#loadingCircle {
-				position: fixed;
-				left: calc(50% - 5rem);
-				top: calc(50% - 5rem);
-			}
-
-			.alert-fixed {
-				position: fixed;
-				top: 60px;
-				left: 5px;
-				right: 5px;
-				z-index: 99999;
-			}
-
-			.no-bottom-border {
-				border-bottom: none !important;
-			}
-		</style>
 	</head>
 	<body>
 		<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
@@ -180,9 +156,15 @@
 		</nav>
 	
 		<script async src="/libs/datepicker.min.js?v={{ randomNumber }}"></script>
+		{% else %}
+		<style>
+			body {
+				padding-bottom: 0px !important;
+			}
+		</style>
 		{% endif %}
 
-		<nav class="navbar bg-body-tertiary py-3 my-4 border-top">
+		<nav class="navbar bg-body-tertiary py-3 mt-4 border-top">
 			<div class="container-fluid justify-content-center">
 				<a class="navbar-brand mx-4" href="#">
 					<img src="/favicon.png" alt="COFRN" width="30" height="24">

@@ -42,3 +42,25 @@ body {
 .tg-row-highlight {
 	background-color: #cff4fc;
 }
+
+#loadingCircle .spinner-border {
+	width: 10rem;
+	height: 10rem;
+}
+#loadingCircle {
+	position: fixed;
+	left: calc(50% - 5rem);
+	top: calc(50% - 5rem);
+}
+
+.alert-fixed {
+	position: fixed;
+	top: 60px;
+	left: 5px;
+	right: 5px;
+	z-index: 99999;
+}
+
+.no-bottom-border {
+	border-bottom: none !important;
+}
