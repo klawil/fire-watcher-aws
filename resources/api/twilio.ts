@@ -643,10 +643,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleKickUser(event);
 		}
 
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: '404'
-		});
+		console.error(`Invalid action - '${action}'`);
 		return {
 			statusCode: 404,
 			headers: {},
