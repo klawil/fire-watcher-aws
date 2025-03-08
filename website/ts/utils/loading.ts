@@ -1,4 +1,9 @@
+let hasBeenCalled = false;
+
 export function doneLoading() {
+	if (hasBeenCalled) return;
+	hasBeenCalled = true;
+
 	const spinnerDiv = document.getElementById('loadingCircle');
 	const contentDiv = document.getElementById('pageContent');
 

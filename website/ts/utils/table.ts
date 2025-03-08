@@ -8,6 +8,7 @@ export interface ColumnConfig {
 
 export interface RowConfig {
 	id?: string;
+	classList?: string[];
 	columns: ColumnConfig[];
 }
 
@@ -18,6 +19,9 @@ export function createTableRow(tbody: HTMLElement | null, rowConfig: RowConfig) 
 
 	if (rowConfig.id)
 		tr.id = rowConfig.id;
+
+	if (rowConfig.classList)
+		tr.classList.add.apply(tr.classList, rowConfig.classList);
 
 	rowConfig.columns.forEach(column => {
 		const td = document.createElement('td');
