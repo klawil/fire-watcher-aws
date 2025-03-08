@@ -91,6 +91,12 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					Emergency: {
 						N: headInfo.Metadata?.emergency
 					},
+					Tone: {
+						BOOL: headInfo.Metadata?.tone === 'true'
+					},
+					Tower: {
+						S: headInfo.Metadata?.source
+					},
 					Sources: {
 						NS: sourceList
 					},
