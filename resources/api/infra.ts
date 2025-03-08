@@ -298,6 +298,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 			':sr': { BOOL: site.supports_registration },
 			':sa': { BOOL: site.supports_authentication },
 			':ut': { N: updateTime.toString() },
+			':ia': { S: 'y' }
 		};
 		const siteNames: aws.DynamoDB.ExpressionAttributeNameMap = {
 			'#sys': 'SysShortname',
@@ -313,6 +314,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 			'#sr': 'SupportReg',
 			'#sa': 'SupportAuth',
 			'#ut': 'UpdateTime',
+			'#ia': 'IsActive'
 		};
 		return dynamodb.updateItem({
 			TableName: siteTable,
@@ -323,7 +325,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 			},
 			ExpressionAttributeNames: siteNames,
 			ExpressionAttributeValues: siteValues,
-			UpdateExpression: 'SET #sys = :sys, #cc = :cc, #sf = :sf, #vi = :vi, #compc = :compc, #ac = :ac, #bc = :bc, #nsr = :nsr, #sd = :sd, #sv = :sv, #sr = :sr, #sa = :sa, #ut = :ut',
+			UpdateExpression: 'SET #sys = :sys, #cc = :cc, #sf = :sf, #vi = :vi, #compc = :compc, #ac = :ac, #bc = :bc, #nsr = :nsr, #sd = :sd, #sv = :sv, #sr = :sr, #sa = :sa, #ut = :ut, #ia = :ia',
 			ReturnValues: 'ALL_OLD'
 		}).promise()
 			.then(result => {
@@ -339,7 +341,7 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 					.map(k => siteNames[k.replace(':', '#')]);
 
 				if (changedKeys.length > 0) {
-					return sendAlertMessage(metricSource, `Update for site ${siteId} - ${changedKeys.join(', ')}`);
+					return sendAlertMessage(metricSource, `Update for site ${result.Attributes?.SiteName?.S || 'N/A'} (${siteId}) in ${result.Attributes?.SiteName?.S || 'N/A'} - ${changedKeys.join(', ')}`);
 				}
 
 				return;
