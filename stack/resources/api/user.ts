@@ -77,7 +77,7 @@ async function loginUser(user: InternalUserObject) {
 	
 	const userCookies: string[] = [
 		`${authUserCookie}=${user.phone}`,
-		`${authUserCookie}=${token}`,
+		`${authTokenCookie}=${token}`,
 		`cvfd-user-name=${user.fName}`,
 		`cvfd-user-admin=${user.isAdmin ? '1' : '0'}`,
 		`cvfd-user-super=${user.isDistrictAdmin ? '1' : '0'}`,
