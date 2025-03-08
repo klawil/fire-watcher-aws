@@ -22,6 +22,9 @@ fetch('/api?action=getUser')
 	.then(r => r.json())
 	.then(data => {
 		window.user = data;
+	})
+	.catch(console.error)
+	.finally(() => {
 		if (window.authConfig.requireAdmin) {
 			window.authConfig.requireUser = true;
 		}
@@ -46,5 +49,4 @@ fetch('/api?action=getUser')
 
 		window.afterAuth.forEach(fn => fn());
 		window.afterAuth.push = fn => fn();
-	})
-	.catch(console.error);
+	});
