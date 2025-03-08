@@ -1,4 +1,4 @@
-export type FireTypes = 'new' | 'ongoing' | 'rx' | 'team';
+export type FireTypes = 'new' | 'ongoing' | 'rx';
 
 export interface WeatherResultJson {
 	bans: string;

@@ -791,7 +791,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         S3_BUCKET: bucket.bucketName
       },
-      timeout: Duration.minutes(1)
+      timeout: Duration.minutes(5)
     });
 
     // Grant access for the status handler
@@ -800,7 +800,7 @@ export class FireWatcherAwsStack extends Stack {
     // Schedule the function for every 15 minutes
     const weatherEventRule = new events.Rule(this, '-rule', {
       schedule: events.Schedule.cron({
-        minute: '*'
+        minute: '*/15'
       })
     });
     weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));

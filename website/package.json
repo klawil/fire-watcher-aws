@@ -2,7 +2,7 @@
 	"name": "fire-watcher-aws-website",
 	"version": "1.0.0",
 	"scripts": {
-		"build": "npm run build-ts && npm run build-jekyll && npm run build-clean",
+		"build": "npm run build-ts && npm run build-jekyll",
 		"build-ts": "webpack -c webpack.conf.js",
 		"build-jekyll": "cd src && jekyll build",
 		"server":  "nodemon -w server.js -w webpack.conf.js server.js"
