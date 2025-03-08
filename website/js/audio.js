@@ -11,6 +11,10 @@ const autoPlayButtons = [
 	document.getElementById('autoplay-button-d'),
 	document.getElementById('autoplay-button-m')
 ];
+const downloadButtons = [
+	document.getElementById('download-button-d'),
+	document.getElementById('download-button-m')
+];
 
 // Control variables
 let playNewFiles = false;
@@ -345,6 +349,10 @@ function play(file) {
 
 	player.src = `https://fire.klawil.net/${data.Key}`;
 	player.play();
+	downloadButtons.forEach(btn => {
+		btn.setAttribute('href', player.src);
+		btn.setAttribute('download', file);
+	});
 
 	markRowAsPlaying(file);
 
