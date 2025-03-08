@@ -388,7 +388,7 @@ async function handleLogin(body: ActivateOrLoginBody) {
 		UpdateExpression: 'SET #c = :c, #ce = :ce'
 	}).promise();
 
-	await sendMessage(null, body.phone, `Your login code is ${code}. This code expires in 5 minutes.`);
+	await sendMessage(null, body.phone, `This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`);
 }
 
 async function testSystem() {
