@@ -108,6 +108,28 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'AddedIndex',
+      partitionKey: {
+        name: 'Emergency',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'Added',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
+    dtrTable.addGlobalSecondaryIndex({
+      indexName: 'AddedTgIndex',
+      partitionKey: {
+        name: 'Talkgroup',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      sortKey: {
+        name: 'Added',
+        type: dynamodb.AttributeType.NUMBER
+      }
+    });
 
     // Create the dead letter queue
     const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
