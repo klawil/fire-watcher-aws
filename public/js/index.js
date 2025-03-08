@@ -285,9 +285,9 @@ function addButtons(buttons) {
 
 window.afterAuth = window.afterAuth || [];
 window.afterAuth.push(() => {
-	if (window.user.admin) {
+	if (window.user.isAdmin) {
 		addButtons(adminButtons);
-	} else if (!window.user.loggedIn) {
+	} else if (!window.user.isUser) {
 		addButtons(loginButtons);
 	}
 });

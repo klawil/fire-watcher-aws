@@ -5,9 +5,9 @@ window.authConfig = window.authConfig || {
 window.afterAuth = window.afterAuth || [];
 
 window.user = {
-	loggedIn: false,
+	isUser: false,
 	user: null,
-	admin: false
+	isAdmin: false
 };
 
 function redirectToHome() {
