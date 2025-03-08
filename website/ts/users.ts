@@ -693,6 +693,23 @@ async function init() {
 							const container = document.createElement('div');
 							td.appendChild(container);
 							container.classList.add('container');
+							
+							if (user.isDistrictAdmin) {
+								const infoRow = document.createElement('div');
+								container.appendChild(infoRow);
+								infoRow.classList.add('row', 'text-center');
+
+								const lastLoginDiv = document.createElement('div');
+								infoRow.appendChild(lastLoginDiv);
+								lastLoginDiv.classList.add('col-md-6');
+								lastLoginDiv.innerHTML = `<b>Last Login:</b> ${typeof u.lastLogin === 'undefined' ? 'Never' : new Date(u.lastLogin)}`;
+
+								const validTokensDiv = document.createElement('div');
+								infoRow.appendChild(validTokensDiv);
+								validTokensDiv.classList.add('col-md-6');
+								validTokensDiv.innerHTML = `<b>Logged In Devices:</b> ${typeof u.loginTokens === 'undefined' ? '0' : u.loginTokens.filter(v => v.tokenExpiry > Date.now()).length}`;
+							}
+
 							const row = document.createElement('div');
 							container.appendChild(row);
 							row.classList.add('row');

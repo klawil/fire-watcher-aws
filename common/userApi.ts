@@ -8,6 +8,11 @@ export type UserObjectStrings = 'phone' | 'fName' | 'lName';
 interface UserObjectBase {
 	talkgroups: PagingTalkgroup[];
 	isMe?: boolean;
+	loginTokens?: {
+		token: string;
+		tokenExpiry: number;
+	}[];
+	lastLogin?: number;
 }
 type UserObjectBaseBooleans = {
 	[key in UserObjectBooleans]?: boolean;

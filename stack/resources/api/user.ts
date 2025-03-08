@@ -384,6 +384,7 @@ const districtAdminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
 	'#gva': 'getVhfAlerts',
 	'#gda': 'getDtrAlerts',
 	'#da': 'isDistrictAdmin',
+	'#lt': 'loginTokens',
 };
 
 async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
