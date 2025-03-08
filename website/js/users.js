@@ -1,4 +1,5 @@
 window.afterAuth = window.afterAuth || [];
+window.userQueue = window.userQueue || [];
 
 const possibleDepartments = [
 	'Crestone',
@@ -137,7 +138,7 @@ function getTalkgroupSelect(defaultValues) {
 		isInvalid = newIsInvalid;
 	}).observe(container, { attributes: true });
 	const randomness = Math.round(Math.random() * 100000).toString();
-	for (let key in pageNames) {
+	talkgroupOrder.forEach(key => {
 		const div = document.createElement('div');
 		div.classList.add('form-check', 'form-switch', 'text-start');
 		container.appendChild(div);
@@ -167,7 +168,7 @@ function getTalkgroupSelect(defaultValues) {
 		label.innerHTML = `${pageNames[key]}`;
 		label.setAttribute('for', input.id);
 		div.appendChild(label);
-	}
+	});
 
 	return container;
 }
@@ -526,7 +527,7 @@ function sortRows(keysString) {
 	rowsToKeep.forEach(row => tbody.appendChild(row));
 }
 
-window.afterAuth.push(init);
+window.afterAuth.push(() => window.userQueue.push(init));
 
 [ ...document.querySelectorAll('.sortLabel') ]
 	.forEach(label => label.addEventListener('click', () =>

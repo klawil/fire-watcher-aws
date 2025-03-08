@@ -349,7 +349,11 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	};
 
 	const user = await getLoggedInUser(event);
-	if (user === null) {
+	if (
+		user === null ||
+		!user.isActive?.BOOL ||
+		!user.isAdmin?.BOOL
+	) {
 		return unauthorizedResponse;
 	}
 

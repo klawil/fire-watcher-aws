@@ -6,6 +6,14 @@ const pageNames = {
 	'8198': 'NSCAD'
 };
 
+const talkgroupOrder = [
+	'8332',
+	'18332',
+	'18331',
+	'8198',
+	'8334'
+];
+
 const defaultTalkgroups = {
 	default: [ '8332' ],
 	Baca: [ '18331' ],
@@ -20,3 +28,7 @@ function formatPhone(phone) {
 
 	return `${first}-${middle}-${last}`;
 }
+
+window.userQueue = window.userQueue || []
+window.userQueue.forEach(f => f());
+window.userQueue.push = f => f();

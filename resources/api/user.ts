@@ -38,6 +38,7 @@ interface ApiResponse {
 
 interface CurrentUser {
 	isUser: boolean;
+	isActive?: boolean;
 	isAdmin?: boolean;
 	isDistrictAdmin?: boolean;
 	phone?: string;
@@ -60,6 +61,8 @@ interface UserObject {
 	pageOnly?: boolean;
 	getTranscript?: boolean;
 	getSystemAlerts?: boolean;
+
+	isMe?: boolean;
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -85,7 +88,7 @@ async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				phone: { N: body.phone }
 			}
 		}).promise();
-		if (!user.Item || !user.Item.isActive.BOOL) {
+		if (!user.Item) {
 			response.success = false;
 			response.errors.push('phone');
 		}
@@ -142,7 +145,7 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 			phone: { N: cookies[authUserCookie] }
 		}
 	}).promise();
-	if (!user.Item || !user.Item.isActive?.BOOL) {
+	if (!user.Item) {
 		response.success = false;
 		response.errors.push('phone');
 		return {
@@ -218,7 +221,8 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 
 	if (user !== null) {
 		response.isUser = true;
-		response.isAdmin = !!user.isAdmin?.BOOL;
+		response.isActive = !!user.isActive?.BOOL;
+		response.isAdmin = !!user.isAdmin?.BOOL && !!user.isActive?.BOOL;
 		response.isDistrictAdmin = !!user.isDistrictAdmin?.BOOL;
 		response.phone = user.phone?.N;
 		response.callSign = user.callSign?.N;
@@ -386,10 +390,17 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		success: true,
 		errors: []
 	};
+	if (body.isMe) {
+		user.isAdmin = { BOOL: false };
+		user.isDistrictAdmin = { BOOL: false };
+	}
 
 	// Validate the person has the right permissions
 	if (
-		!user.isAdmin?.BOOL &&
+		(
+			!user.isAdmin?.BOOL ||
+			!user.isActive?.BOOL
+		 ) &&
 		user.phone.N !== body.phone
 	) {
 		return unauthorizedResponse;
@@ -474,6 +485,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 
 	// Check to see if someone is trying to edit a person from another department
 	if (
+		!body.isMe &&
 		newPhone &&
 		!create &&
 		newPhone.Item &&
@@ -576,7 +588,8 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 	if (
 		user === null ||
-		!user.isAdmin?.BOOL
+		!user.isAdmin?.BOOL ||
+		!user.isActive?.BOOL
 	) {
 		return unauthorizedResponse;
 	}
