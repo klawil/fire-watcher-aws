@@ -80,6 +80,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					},
 					Sources: {
 						NS: sourceList
+					},
+					Talkgroup: {
+						N: headInfo.Metadata?.talkgroup_num
 					}
 				};
 			}
