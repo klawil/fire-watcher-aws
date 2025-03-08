@@ -1587,7 +1587,24 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	};
 }
 
-async function getSites(): Promise<APIGatewayProxyResult> {
+async function getSites(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+
+	const user = await getLoggedInUser(event);
+	if (
+		user === null ||
+		!user.isActive?.BOOL ||
+		!user.isAdmin?.BOOL
+	) {
+		return unauthorizedResponse;
+	}
+
 	const response: GenericApiResponse = {
 		success: true,
 		errors: [],
@@ -1632,7 +1649,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			case 'stats':
 				return await getStats(event);
 			case 'sites':
-				return await getSites();
+				return await getSites(event);
 		}
 
 		await incrementMetric('Error', {
