@@ -314,10 +314,8 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							keepingCurrentItem &&
 							itemsToDelete.reduce((agg, item) => agg || !!(item.PageSent?.BOOL), false)
 						) {
-							// Send a page as well as doing the transcript
+							// Update the current item to indicate a page will have been sent
 							doTranscriptOnly = false;
-						} else if (isPage && keepingCurrentItem) {
-							// Update the current item to indicate a page has already been sent
 							promises.push(dynamodb.updateItem({
 								TableName: dtrTable,
 								Key: {
@@ -345,6 +343,23 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							await Promise.all(promises);
 							return;
 						}
+					} else if (isPage) {
+						promises.push(dynamodb.updateItem({
+							TableName: dtrTable,
+							Key: {
+								Talkgroup: body.Item.Talkgroup,
+								Added: body.Item.Added,
+							},
+							ExpressionAttributeNames: {
+								'#ps': 'PageSent',
+							},
+							ExpressionAttributeValues: {
+								':ps': {
+									BOOL: true,
+								},
+							},
+							UpdateExpression: 'SET #ps = :ps',
+						}).promise());
 					}
 				} else if (shouldDoTranscript) {
 					logger.debug('body', body.Item);
