@@ -56,7 +56,7 @@ async function init() {
 		.then(r => r.json());
 
 	insertionPoints.readiness.innerHTML = `National... ${result.readiness.National} ... <a href="https://www.nifc.gov/nicc/sitreprt.pdf">National SitRep</a><br>`
-		+ `RM GACC ... ${result.readiness['RMA']} ... <a href="https://gacc.nifc.gov/rmcc/intell.php">RM GACC Intel</a>`;
+		+ `RM GACC ... ${result.readiness['RMA']} ... <a href="https://gacc.nifc.gov/rmcc/intelligence.php">RM GACC Intel</a>`;
 	
 	insertionPoints.fires.innerHTML = `<b>${padEndWithSpaces('Type', maxFireTypeLabelLen)} ... Saguache ... Colorado</b><br>`
 		+ (<FireTypes[]>Object.keys(result.stateFires))
