@@ -1174,6 +1174,28 @@ const statsMap: {
 		Label: 'Time To Deliver Texts',
 		Expression: 'twilio_delivered_time-twilio_sent_time'
 	},
+	'status-120-home': {
+		Label: 'Home VHF Heartbeats',
+		MetricStat: {
+			Metric: {
+				Namespace: 'VHF Metrics',
+				MetricName: '120-home',
+			},
+			Period: 60,
+			Stat: 'Sum',
+		},
+	},
+	'status-cvfd-station': {
+		Label: 'Home VHF Heartbeats',
+		MetricStat: {
+			Metric: {
+				Namespace: 'VHF Metrics',
+				MetricName: '120-home',
+			},
+			Period: 60,
+			Stat: 'Sum',
+		},
+	},
 };
 Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 	const baseId = lambdaFn.toLowerCase();
@@ -1318,7 +1340,7 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		request?: any;
 	} = {
 		success: true,
-		errors: []
+		errors: [],
 	};
 
 	event.queryStringParameters = event.queryStringParameters || {};

@@ -128,6 +128,7 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		});
 
 	if (!response.success) {
+		console.log(JSON.stringify(response));
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Invalid heartbeat'
@@ -175,6 +176,16 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	}).promise()
 		.then(data => data.Items || [])
 		.then(data => data.map(parseDynamoDbAttributeMap));
+
+	await cloudWatch.putMetricData({
+		Namespace: 'VHF Metrics',
+		MetricData: [{
+			MetricName: body.Server,
+			Timestamp: new Date(),
+			Unit: 'Count',
+			Value: 1,
+		}],
+	}).promise();
 
 	return {
 		statusCode: 200,

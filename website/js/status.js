@@ -109,6 +109,10 @@ const baseCharts = [
 		fill: true
 	},
 	{
+		id: 'vhf-heartbeat',
+		query: 'metrics=status-120-home,status-cvfd-station&period=300&timerange=86400000',
+	},
+	{
 		id: 'texts-count',
 		query: 'metrics=twilio-init,twilio-sent,twilio-delivered&period=86400&timerange=2419200000&live=y'
 	},
