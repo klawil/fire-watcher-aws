@@ -72,6 +72,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				Key
 			}).promise();
 
+			const addedTime = Date.now();
 			const body: AWS.DynamoDB.PutItemInput = {
 				TableName: dtrTable,
 				Item: {
@@ -79,7 +80,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						S: Key
 					},
 					Added: {
-						N: Date.now().toString()
+						N: addedTime.toString()
 					}
 				}
 			};
@@ -145,9 +146,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				if (sourceList.length === 0) {
 					delete body.Item.Sources;
 				}
-				await cloudwatch.putMetricData({
-					Namespace: 'DTR Metrics',
-					MetricData: [ {
+				
+				const towerUploadMetrics: aws.CloudWatch.MetricData = [
+					{
 						MetricName: 'Upload',
 						Dimensions: [ {
 							Name: 'Tower',
@@ -155,7 +156,23 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						} ],
 						Unit: 'Count',
 						Value: 1
-					} ]
+					},
+				];
+				if (!Number.isNaN(Number(headInfo.Metadata?.stop_time))) {
+					towerUploadMetrics.push({
+						MetricName: 'UploadTime',
+						Dimensions: [ {
+							Name: 'Tower',
+							Value: headInfo.Metadata?.source as string
+						} ],
+						Unit: 'Seconds',
+						Value: Math.round(addedTime / 1000) - Number(headInfo.Metadata?.stop_time),
+					});
+				}
+
+				await cloudwatch.putMetricData({
+					Namespace: 'DTR Metrics',
+					MetricData: towerUploadMetrics,
 				}).promise();
 			} else {
 				for (let vhfKey in vhfConfig) {
