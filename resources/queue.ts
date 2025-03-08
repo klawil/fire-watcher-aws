@@ -258,7 +258,7 @@ async function handleTwilio(body: TwilioBody) {
 		}));
 
 	// Build the message
-	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.name.S} (${sender.Item.callSign.N})`}: ${eventData.Body}`;
+	const messageBody = `${isFromPageNumber ? 'Announcement' : `${sender.Item.name.S} (${sender.Item.callSign.N})`}: ${eventData.Body}${isFromPageNumber ? ` - ${sender.Item.callSign.N}` : ''}`;
 	const mediaUrls: string[] = Object.keys(eventData)
 		.filter((key) => key.indexOf('MediaUrl') === 0)
 		.map((key) => eventData[key as keyof TwilioParams] as string);
