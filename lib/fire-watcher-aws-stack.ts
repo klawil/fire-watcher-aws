@@ -582,6 +582,7 @@ export class FireWatcherAwsStack extends Stack {
       bucket?: s3.IBucket;
       queue?: sqs.Queue;
       secret?: secretsManager.ISecret;
+      metrics?: boolean;
     }
 
     const cvfdApis: ApiDefinition[] = [
@@ -600,7 +601,8 @@ export class FireWatcherAwsStack extends Stack {
         ],
         readWrite: [
           textsTable
-        ]
+        ],
+        metrics: true
       },
       {
         name: 'infra',
@@ -658,7 +660,7 @@ export class FireWatcherAwsStack extends Stack {
         initialPolicy: [
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            actions: [ 'cloudwatch:PutMetricData' ],
+            actions: [ config.metrics ? 'cloudwatch:*' : 'cloudwatch:PutMetricData' ],
             resources: [ '*' ]
           })
         ],
