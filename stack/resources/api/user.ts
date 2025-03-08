@@ -442,10 +442,10 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	// Validate the person has the right permissions
 	if (
 		(
-			!user.isAdmin?.BOOL ||
-			!user.isActive?.BOOL
-		 ) &&
-		user.phone.N !== body.phone
+			!(user.isAdmin?.BOOL || user.isDistrictAdmin?.BOOL) &&
+			user.phone.N !== body.phone.toString()
+		) ||
+		!user.isActive?.BOOL
 	) {
 		return unauthorizedResponse;
 	}
