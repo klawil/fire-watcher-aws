@@ -288,6 +288,13 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create an API handler
     const apiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-lambda', {
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ 'cloudwatch:PutMetricData' ],
+          resources: [ '*' ]
+        })
+      ],
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: __dirname + '/../resources/api.ts',
       handler: 'main',
