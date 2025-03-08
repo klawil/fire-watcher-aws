@@ -87,20 +87,34 @@ export class FireWatcherAwsStack extends Stack {
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
+    const eventsS3BucketQueue = new sqs.Queue(this, 'cvfd-events-queue');
+    const eventsS3BucketQueueDestination = new s3Notifications.SqsDestination(eventsS3BucketQueue);
+    eventsS3Bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      eventsS3BucketQueueDestination,
+      { prefix: 'data/' }
+    );
+    eventsS3Bucket.addEventNotification(
+      s3.EventType.OBJECT_REMOVED,
+      eventsS3BucketQueueDestination,
+      { prefix: 'data/' }
+    );
 
     // Make the Glue table
     const glueCatalogId = '***REMOVED***'; // Account ID
+    const glueDatabaseName = 'cvfd-data-db';
+    const glueTableName = 'cvfd-radio-events';
     const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
       catalogId: glueCatalogId,
       databaseInput: {
-        name: 'cvfd-data-db'
+        name: glueDatabaseName
       }
     });
     const eventsGlueTable = new glue.CfnTable(this, 'cvfd-events-table', {
-      databaseName: 'cvfd-data-db',
+      databaseName: glueDatabaseName,
       catalogId: glueCatalogId,
       tableInput: {
-        name: 'cvfd-radio-events',
+        name: glueTableName,
         tableType: 'EXTERNAL_TABLE',
         partitionKeys: [
           { name: 'year', type: 'int' },
@@ -164,6 +178,48 @@ export class FireWatcherAwsStack extends Stack {
       actions: [ 'logs:CreateLogGroup', 'logs:PutLogEvents', 'logs:CreateLogStream' ]
     }));
 
+    // Make the glue crawler
+    const glueCrawlerRole = new iam.Role(this, 'cvfd-events-glue-role', {
+      assumedBy: new iam.ServicePrincipal('glue.amazonaws.com'),
+      inlinePolicies: {
+        all: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              resources: [ eventsS3BucketQueue.queueArn ],
+              actions: [ 'SQS:SetQueueAttributes' ]
+            }),
+          ]
+        })
+      },
+      managedPolicies: [
+        iam.ManagedPolicy.fromManagedPolicyArn(this, 'glue-managed-policy', 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole')
+      ]
+    });
+    new glue.CfnCrawler(this, 'cvfd-events-glue-crawler', {
+      role: glueCrawlerRole.roleArn,
+      targets: {
+        catalogTargets: [{
+          databaseName: glueDatabaseName,
+          tables: [ glueTableName ],
+          eventQueueArn: eventsS3BucketQueue.queueArn
+        }],
+      },
+      recrawlPolicy: {
+        recrawlBehavior: 'CRAWL_EVENT_MODE'
+      },
+      schemaChangePolicy: {
+        deleteBehavior: 'LOG',
+        updateBehavior: 'LOG'
+      },
+      schedule: {
+        scheduleExpression: 'cron(5,10,30 * * * ? *)'
+      }
+    });
+    eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
+    eventsS3Bucket.grantReadWrite(glueCrawlerRole);
+
+    // Make the kinesis firehose
     const eventsFirehose = new kinesisfirehose.CfnDeliveryStream(this, 'cvfd-events-firehose', {
       deliveryStreamName: 'cvfd-events-delivery-stream',
       extendedS3DestinationConfiguration: {
@@ -186,7 +242,7 @@ export class FireWatcherAwsStack extends Stack {
             catalogId: eventsGlueTable.catalogId,
             roleArn: eventsFirehoseRole.roleArn,
             databaseName: eventsGlueTable.databaseName,
-            tableName: 'cvfd-radio-events'
+            tableName: glueTableName
           }
         },
         processingConfiguration: {
