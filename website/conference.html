@@ -10,7 +10,7 @@ requireUser: true
 	}
 </style>
 
-<div class="d-grid">
+<div class="d-grid col-md-6 offset-md-3">
 	<button id="startButton" class="btn btn-block"></button>
 </div>
 
@@ -30,10 +30,14 @@ requireUser: true
 	</table>
 </div>
 <div id="participantsNone" hidden class="text-center mb-4">No one is on the call</div>
-<div id="participantsLoading" class="d-flex justify-content-center align-middle">
+<div id="participantsLoading" class="d-flex justify-content-center align-middle mb-4">
 	<div class="spinner-border" role="status">
 		<span class="visually-hidden">Loading...</span>
 	</div>
+</div>
+
+<div id="endButtonContainer" class="d-grid mb-4 col-md-6 offset-md-3 d-none">
+	<button id="endButton" class="btn btn-block btn-danger requireAdmin d-none"></button>
 </div>
 
 <div hidden id="addMembersContainer" class="table-responsive">

@@ -2,8 +2,79 @@ window.afterAuth = window.afterAuth || [];
 let device;
 let call;
 
-const logType = (type) => function() {
-	console.log(type, ...arguments);
+const buttonConfigs = {
+	joining: {
+		className: 'btn-secondary',
+		innerText: 'Joining...',
+		enabled: false,
+		spinner: true,
+	},
+	leaving: {
+		className: 'btn-secondary',
+		innerText: 'Leaving...',
+		enabled: false,
+		spinner: true,
+	},
+	join: {
+		className: 'btn-success',
+		innerText: 'Start or Join Call',
+		enabled: true,
+		spinner: false,
+	},
+	leave: {
+		className: 'btn-warning',
+		innerText: 'Leave Call',
+		enabled: true,
+		spinner: false,
+	},
+	on_call: {
+		className: 'btn-secondary',
+		innerText: 'Already In',
+		enabled: false,
+		spinner: false,
+	},
+	inviting: {
+		className: 'btn-secondary',
+		innerText: 'Calling...',
+		enabled: false,
+		spinner: true,
+	},
+	can_invite: {
+		className: 'btn-success',
+		innerText: 'Invite',
+		enabled: true,
+		spinner: false,
+	},
+	end: {
+		className: 'btn-danger',
+		innerText: 'End Call For All',
+		enabled: true,
+		spinner: false,
+	},
+	ending: {
+		className: 'btn-secondary',
+		innerText: 'Ending Call...',
+		enabled: false,
+		spinner: false,
+	},
+};
+function updateButton(btn, state) {
+	const { className, innerText, enabled, spinner } = buttonConfigs[state];
+	[ ...btn.classList ]
+		.filter(className => className.indexOf('btn-') !== -1 && className !== 'btn-block')
+		.forEach(className => btn.classList.remove(className));
+	btn.classList.add(className);
+	btn.innerHTML = '';
+	btn.disabled = !enabled;
+	btn.setAttribute('data-state', state);
+
+	if (spinner) {
+		const spinDiv = document.createElement('div');
+		spinDiv.classList.add('spinner-border', 'spinner-border-sm');
+		btn.appendChild(spinDiv);
+	}
+
+	btn.innerHTML += (spinner ? ' ' : '') + innerText;
 }
 
 async function updateAccessToken() {
@@ -71,9 +142,11 @@ function showParticipants(participants) {
 	if (participants.length === 0) {
 		participantsTable.hidden = true;
 		participantsNone.hidden = false;
+		endButtonContainer.classList.add('d-none');
 	} else {
 		participantsTable.hidden = false;
 		participantsNone.hidden = true;
+		endButtonContainer.classList.remove('d-none');
 
 		participants.forEach(user => {
 			validParticipants.push(user.CallSid);
@@ -131,12 +204,12 @@ function showParticipants(participants) {
 			!inMeetingCallsign.includes(callSign) &&
 			btn.getAttribute('data-state') === 'on_call'
 		) {
-			updateInviteButton(btn, 'can_invite');
+			updateButton(btn, 'can_invite');
 		} else if (
 			inMeetingCallsign.includes(callSign) &&
 			btn.getAttribute('data-state') !== 'on_call'
 		) {
-			updateInviteButton(btn, 'on_call');
+			updateButton(btn, 'on_call');
 		}
 	});
 }
@@ -155,67 +228,22 @@ async function loadParticipants() {
 			showParticipants(data.data);
 			if (
 				lastStartTime === localLastStartTime &&
-				myCallSid === '' &&
-				[ ...document.querySelectorAll('.invite-button:not([data-state="can_invite"])') ].length > 0
+				((
+					myCallSid === '' &&
+					[ ...document.querySelectorAll('.invite-button:not([data-state="can_invite"])') ].length > 0
+				) ||
+				lastParticipants.length > 0)
 			) {
 				setTimeout(loadParticipants, 5000);
 			}
 		});
 }
 
-let buttonMode = 'join';
-let joinOrLeaveInProgress = false;
 const startButton = document.getElementById('startButton');
-
-const buttonConfigs = {
-	joining: {
-		className: 'btn-secondary',
-		innerText: 'Joining...',
-		enabled: false,
-		spinner: true,
-	},
-	leaving: {
-		className: 'btn-secondary',
-		innerText: 'Leaving...',
-		enabled: false,
-		spinner: true,
-	},
-	join: {
-		className: 'btn-success',
-		innerText: 'Start or Join Call',
-		enabled: true,
-		spinner: false,
-	},
-	leave: {
-		className: 'btn-danger',
-		innerText: 'Leave Call',
-		enabled: true,
-		spinner: false,
-	},
-};
-function formatButton(mode) {
-	joinOrLeaveInProgress = [ 'leaving', 'joining' ].includes(mode);
-	buttonMode = mode;
-
-	const { className, innerText, enabled, spinner } = buttonConfigs[mode];
-
-	startButton.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
-	startButton.classList.add(className);
-	startButton.innerHTML = '';
-	startButton.disabled = !enabled;
-
-	if (spinner) {
-		const spinDiv = document.createElement('div');
-		spinDiv.classList.add('spinner-border', 'spinner-border-sm');
-		startButton.appendChild(spinDiv);
-	}
-
-	startButton.innerHTML += (spinner ? ' ' : '') + innerText;
-}
-formatButton('join');
+updateButton(startButton, 'join');
 
 async function joinCall() {
-	formatButton('joining');
+	updateButton(startButton, 'joining');
 
 	let wasSuccess = false;
 	let promiseResolved = false;
@@ -258,11 +286,11 @@ async function joinCall() {
 	}
 	promiseResolved = true;
 
-	formatButton(wasSuccess ? 'leave' : 'join');
+	updateButton(startButton, wasSuccess ? 'leave' : 'join');
 }
 
 async function leaveCall() {
-	formatButton('leaving');
+	updateButton(startButton, 'leaving');
 	let wasSuccess = false;
 	let promiseResolved = false;
 
@@ -290,13 +318,13 @@ async function leaveCall() {
 	}
 	promiseResolved = true;
 
-	formatButton(wasSuccess ? 'join' : 'leave');
+	updateButton(startButton, wasSuccess ? 'join' : 'leave');
 }
 
 startButton.addEventListener('click', async () => {
 	startButton.blur();
-	if (joinOrLeaveInProgress) return;
-	joinOrLeaveInProgress = true;
+	if (startButton.disabled) return;
+	const buttonMode = startButton.getAttribute('data-state');
 	if (buttonMode === 'join') {
 		joinCall();
 		return;
@@ -307,52 +335,25 @@ startButton.addEventListener('click', async () => {
 	console.error(`Invalid button mode: ${buttonMode}`);
 });
 
+const endButton = document.getElementById('endButton');
+const endButtonContainer = document.getElementById('endButtonContainer');
+endButton.addEventListener('click', async () => {
+	updateButton(endButton, 'ending');
+	await fetch(`${baseHost}/api/conference?action=end`)
+		.then(r => r.json());
+	updateButton(endButton, 'end');
+});
+updateButton(endButton, 'end');
+
 let invitableUsers = [];
 const invitableUsersContainer = document.getElementById('addMembersContainer');
 const invitableUsersTable = document.getElementById('invitableUsers');
-
-const inviteBtnConfig = {
-	'on_call': {
-		text: 'Already In',
-	},
-	'inviting': {
-		text: 'Calling...',
-		spinner: true,
-	},
-	'can_invite': {
-		text: 'Invite',
-		enabled: true,
-		className: 'btn-success',
-	},
-};
-function updateInviteButton(btn, state) {
-	const {
-		text,
-		enabled = false,
-		className = 'btn-secondary',
-		spinner = false,
-	} = inviteBtnConfig[state];
-
-	btn.classList.remove('btn-success', 'btn-danger', 'btn-secondary');
-	btn.classList.add(className);
-	btn.innerHTML = '';
-	btn.disabled = !enabled;
-	btn.setAttribute('data-state', state);
-
-	if (spinner) {
-		const spinDiv = document.createElement('div');
-		spinDiv.classList.add('spinner-border', 'spinner-border-sm');
-		btn.appendChild(spinDiv);
-	}
-
-	btn.innerHTML += (spinner ? ' ' : '') + text;
-}
 
 async function inviteButtonClick(btn) {
 	const mode = btn.getAttribute('data-state');
 	if (mode !== 'can_invite') return;
 
-	updateInviteButton(btn, 'inviting');
+	updateButton(btn, 'inviting');
 
 	let wasSuccess = false;
 	try {
@@ -363,7 +364,7 @@ async function inviteButtonClick(btn) {
 	} catch (e) {
 		console.error(e);
 	}
-	updateInviteButton(btn, wasSuccess ? 'inviting' : 'can_invite');
+	updateButton(btn, wasSuccess ? 'inviting' : 'can_invite');
 	const lastDateStart = Date.now().toString();
 	btn.setAttribute('data-starttime', lastDateStart);
 	setTimeout(loadParticipants, 3000);
@@ -372,7 +373,7 @@ async function inviteButtonClick(btn) {
 		if (lastDateStart !== dateStartAttr) return;
 
 		const btnState = btn.getAttribute('data-state');
-		if (btnState === 'inviting') updateInviteButton(btn, 'can_invite');
+		if (btnState === 'inviting') updateButton(btn, 'can_invite');
 	}, 60000);
 }
 
@@ -413,7 +414,7 @@ function showInvitableTable() {
 			inviteBtn.setAttribute('data-callsign', u.callSign);
 			inviteBtn.setAttribute('data-phone', u.phone);
 			inviteBtn.addEventListener('click', () => inviteButtonClick(inviteBtn));
-			updateInviteButton(inviteBtn, 'can_invite');
+			updateButton(inviteBtn, 'can_invite');
 
 			const btnTd = document.createElement('td');
 			btnTd.appendChild(inviteBtn);

@@ -362,6 +362,50 @@ async function getConference(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 	};
 }
 
+async function endConference(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const user = await getLoggedInUser(event);
+
+	const unauthorizedResponse = {
+		statusCode: 403,
+		body: JSON.stringify({
+			success: false,
+			message: 'You are not permitted to access this area'
+		})
+	};
+	if (
+		user === null ||
+		!user.isActive?.BOOL
+	) {
+		return unauthorizedResponse;
+	}
+
+	const activeUsers = await dynamodb.scan({
+		TableName: conferenceTable,
+		ExpressionAttributeNames: {
+			'#r': 'Room',
+		},
+		ExpressionAttributeValues: {
+			':r': { S: user.department?.S },
+		},
+		FilterExpression: '#r = :r',
+	}).promise();
+
+	const parsedActiveUser = activeUsers.Items?.filter(u => u.ConferenceSid?.S !== 'undefined') || [];
+	if (parsedActiveUser.length > 0) {
+		const twilioConf = await getTwilioSecret();
+		await require('twilio')(twilioConf.accountSid, twilioConf.authToken)
+			.conferences(parsedActiveUser[0].ConferenceSid.S)
+			.update({ status: 'completed' });
+	}
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify({
+			success: true,
+		}),
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 
@@ -381,6 +425,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleInvite(event);
 			case 'get':
 				return await getConference(event);
+			case 'end':
+				return await endConference(event);
 		}
 
 		console.error(`Invalid action - '${action}'`);
