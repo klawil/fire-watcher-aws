@@ -6,6 +6,7 @@ const metricSource = 'Infra';
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
+const cloudWatch = new aws.CloudWatch();
 
 const apiCode = process.env.SERVER_CODE as string;
 const s3Bucket = process.env.S3_BUCKET as string;
@@ -332,6 +333,77 @@ async function getTestTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	};
 }
 
+async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+	const date = new Date();
+	const response: GenericApiResponse = {
+		success: true,
+		errors: []
+	};
+
+	// Validate the code
+	event.queryStringParameters = event.queryStringParameters || {};
+	if (event.queryStringParameters.code !== apiCode) {
+		response.success = false;
+		response.errors.push('auth');
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	// Validate the body
+	validateBodyIsJson(event.body);
+
+	// Parse the body
+	const body = JSON.parse(event.body as string) as {
+		type: string;
+		data: {
+			id: string;
+			val: number;
+		}[];
+	};
+	
+	// Validate the body
+	if (!body.type || typeof body.type !== 'string') {
+		response.errors.push('type');
+	}
+	if (
+		!body.data ||
+		!Array.isArray(body.data) ||
+		body.data.filter(i => typeof i.id !== 'string' || typeof i.val !== 'number').length > 0
+	) {
+		response.errors.push('data');
+	}
+
+	if (response.errors.length > 0) {
+		response.success = false;
+		return {
+			statusCode: 400,
+			body: JSON.stringify(response)
+		};
+	}
+
+	const putConfig: aws.CloudWatch.PutMetricDataInput = {
+		Namespace: 'DTR Metrics',
+		MetricData: body.data.map(i => ({
+			MetricName: body.type,
+			Dimensions: [ {
+				Name: 'Tower',
+				Value: i.id
+			} ],
+			Timestamp: date,
+			Unit: 'Count',
+			Value: i.val
+		}))
+	};
+	await cloudWatch.putMetricData(putConfig).promise();
+
+	return {
+		statusCode: 200,
+		body: JSON.stringify(response)
+	};
+}
+
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	const action = event.queryStringParameters?.action || 'none';
 
@@ -355,6 +427,8 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 				return await handleTestState(event, false);
 			case 'getTexts':
 				return await getTestTexts(event);
+			case 'metric':
+				return await handleMetrics(event);
 		}
 
 		await incrementMetric('Error', {
