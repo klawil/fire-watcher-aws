@@ -4,7 +4,13 @@ window.talkgroupMap = window.talkgroupMap || {};
 const nextDataFields = {};
 
 let isUpdatingBefore = false;
-function updateData(direction = 'after') {
+function updateData(direction = 'after', restart = false) {
+	if (restart) {
+		delete nextDataFields.after;
+		delete nextDataFields.before;
+		delete nextDataFields.continue;
+	}
+
 	const host = window.location.origin.indexOf('localhost') !== -1
 		? 'http://localhost:8001'
 		: '';
@@ -18,6 +24,14 @@ function updateData(direction = 'after') {
 			apiUrl += `before=${nextDataFields.before}&continue=${encodeURIComponent(nextDataFields.continue)}`
 		}
 	}
+
+	const queryParams = Object.keys(urlFilters)
+		.filter((filterKey) => urlFilters[filterKey].get())
+		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl())}`);
+	if (queryParams.length > 0) {
+		apiUrl += `&${queryParams.join('&')}`;
+	}
+
 	fetch(apiUrl)
 		.then((r) => r.json())
 		.then((r) => {
@@ -59,7 +73,7 @@ function updateData(direction = 'after') {
 				];
 			}
 			files = filterData(files);
-			display(filterData(r.data), direction);
+			display(filterData(r.data), direction, restart);
 		})
 		.catch(console.error)
 		.then(() => {
@@ -88,8 +102,77 @@ window.addEventListener('scroll', () => {
 	}
 });
 
+class TalkgroupFilter {
+	allToggleId = 'all-tgs';
+	containerId = 'tg-selected-div';
+	selectId = 'tg-select';
+	selected = [];
+
+	constructor() {
+		this.allToggleEl = document.getElementById(this.allToggleId);
+		this.containerEl = document.getElementById(this.containerId);
+		this.selectEl = document.getElementById(this.selectId);
+
+		this.hideSelect();
+
+		this.allToggleEl.addEventListener('change', () => {
+			if (this.allToggleEl.checked) this.hideSelect();
+			else this.showSelect();
+		});
+	}
+
+	hideSelect() {
+		this.allToggleEl.checked = true;
+		this.containerEl.innerHTML = '';
+		this.selected = [];
+		this.selectEl.style.display = 'none';
+	}
+
+	showSelect() {
+		this.allToggleEl.checked = false;
+		this.containerEl.innerHTML = '';
+		this.selectEl.style.display = 'block';
+	}
+
+	get() {
+		this.selected = [ ...this.selectEl.selectedOptions ]
+			.map((elem) => elem.value)
+			.filter((val) => val !== 'ALL');
+		return this.allToggleEl.checked || this.selected.length === 0 ? undefined : this.selected;
+	}
+
+	set(urlValue) {
+		console.log(urlValue);
+		const values = urlValue.toString().split('|');
+		console.log(values);
+		if (values.length === 0) {
+			this.hideSelect();
+			return;
+		}
+
+		this.showSelect();
+		[ ...this.selectEl.options ]
+			.forEach((elem) => elem.selected = values.indexOf(elem.value) !== -1);
+	}
+
+	getUrl() {
+		const value = this.get();
+		if (typeof value === 'undefined') {
+			return;
+		}
+
+		return value.join('|');
+	}
+
+	isDefault() {
+		return this.allToggleEl.checked || this.selected.length === 0;
+	}
+}
+
 window.audioQ = window.audioQ || [];
-window.audioQ.push(() => {
+window.audioQ.push(() => {	
+	urlFilters.tg = new TalkgroupFilter();
+	
 	rowConfig = [
 		f => f.Len,
 		f => talkgroupMap[f.Talkgroup] || f.Talkgroup,
@@ -98,5 +181,5 @@ window.audioQ.push(() => {
 	];
 	defaultFunc = playLive;
 	
-	updateData();
+	init();
 });

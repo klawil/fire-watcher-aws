@@ -3,6 +3,7 @@ titleBarTitle: DTR
 layout: base
 centerAll: true
 isAudio: true
+hasFilter: true
 latestLabel: Live
 ---
 
@@ -20,6 +21,32 @@ latestLabel: Live
 		</thead>
 		<tbody id="files" class="align-middle"></tbody>
 	</table>
+</div>
+
+<div class="modal fade" id="filter-modal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="filterModalLabel">Filters</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<h5>Talkgroups</h5>
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" role="switch" id="all-tgs" checked>
+					<label class="form-check-label" for="all-tgs">Show All Talkgroups</label>
+				</div>
+				<div id="tg-selected-div"></div>
+				<select class="form-select" id="tg-select" style="display: none;">
+					<option selected value="ALL">All</option>
+					<option value="8198">Saguache EMS</option>
+				</select>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" id="filter-apply" data-bs-dismiss="modal" aria-label="Close">Apply</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 {% assign randomNumber = "now" | date: "%N" %}

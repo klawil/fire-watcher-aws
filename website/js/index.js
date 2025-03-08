@@ -12,7 +12,6 @@ function updateData(direction = 'after', restart = false) {
 		delete nextDataFields.after;
 		delete nextDataFields.before;
 		delete nextDataFields.continue;
-
 	}
 
 	const host = window.location.origin.indexOf('localhost') !== -1
