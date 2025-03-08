@@ -23,22 +23,24 @@ export function createTableRow(tbody: HTMLElement | null, rowConfig: RowConfig) 
 	if (rowConfig.classList)
 		tr.classList.add.apply(tr.classList, rowConfig.classList);
 
-	rowConfig.columns.forEach(column => {
-		const td = document.createElement('td');
-		tr.appendChild(td);
+	rowConfig.columns
+		.filter(column => typeof column.filter === 'undefined' || column.filter)
+		.forEach(column => {
+			const td = document.createElement('td');
+			tr.appendChild(td);
 
-		if (typeof column.id !== 'undefined')
-			td.id = column.id;
-		
-		td.classList.add('align-middle');
-		if (column.classList)
-			td.classList.add.apply(td.classList, column.classList);
+			if (typeof column.id !== 'undefined')
+				td.id = column.id;
+			
+			td.classList.add('align-middle');
+			if (column.classList)
+				td.classList.add.apply(td.classList, column.classList);
 
-		if (column.html)
-			td.innerHTML = column.html;
-		else if (column.create)
-			column.create(td);
-	});
+			if (column.html)
+				td.innerHTML = column.html;
+			else if (column.create)
+				column.create(td);
+		});
 
 	return tr;
 }

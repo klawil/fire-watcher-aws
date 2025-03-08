@@ -30,8 +30,21 @@ const modalItems = {
 	button: <HTMLButtonElement>document.getElementById('deleteConfirm'),
 };
 
+const defaultUserObject: UserObject = {
+	talkgroups: [],
+	phone: '',
+	fName: '',
+	lName: '',
+	callSign: '',
+	isActive: true,
+	isAdmin: false,
+	pageOnly: false,
+	getTranscript: false,
+};
+
 function getUserRowConfig(u: UserObject | null): RowConfig {
 	const newUserObj: UserObject = {
+		...defaultUserObject,
 		phone: u === null ? '' : u.phone.toString(),
 		fName: u === null ? '' : u.fName,
 		lName: u === null ? '' : u.lName,
@@ -151,14 +164,14 @@ function getUserRowConfig(u: UserObject | null): RowConfig {
 			},
 			{ // roles
 				create: td => {
-					const input = buildCheckboxes(newUser, userRoleCheckboxes);
+					const input = buildCheckboxes(newUser, userRoleCheckboxes, u);
 					td.appendChild(input);
 				}
 			},
 			{ // alerts
 				filter: !!user.isDistrictAdmin,
 				create: td => {
-					const input = buildCheckboxes(newUser, userAlertCheckboxes);
+					const input = buildCheckboxes(newUser, userAlertCheckboxes, u);
 					td.appendChild(input);
 				}
 			},
@@ -372,6 +385,7 @@ function buildTalkgroupCheckboxes(u: UserObject | null, newUser: UserObject) {
 function buildCheckboxes(
 	u: UserObject,
 	checkboxConfigs: CheckboxConfig[],
+	uOld: UserObject | null
 ) {
 	const container = document.createElement('div');
 
@@ -382,7 +396,10 @@ function buildCheckboxes(
 			container.appendChild(div);
 			div.classList.add('form-check', 'form-switch', 'text-start');
 
-			u[checkbox.name] = !!u[checkbox.name];
+			if (uOld === null)
+				u[checkbox.name] = !!defaultUserObject[checkbox.name];
+			else
+				u[checkbox.name] = !! uOld[checkbox.name];
 
 			const input = document.createElement('input');
 			div.appendChild(input);
