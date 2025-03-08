@@ -55,17 +55,6 @@ layout: base
 
 <div class="table-responsive">
 	<table class="table">
-		{% comment %} <thead>
-			<tr class="text-center">
-				<th class="sortLabel" data-keys="phone">Phone Number</th>
-				<th class="sortLabel" data-keys="fName,lName">First Name</th>
-				<th class="sortLabel" data-keys="lName,fName">Last Name</th>
-				<th>Roles</th>
-				<th>Alerts</th>
-				<th>Pages</th>
-				<th></th>
-			</tr>
-		</thead> {% endcomment %}
 		<tbody id="tbody"></tbody>
 	</table>
 </div>
@@ -78,7 +67,7 @@ layout: base
 				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 			</div>
 			<div class="modal-body">
-				Are you sure you want to delete <span id="deleteUser"></span>?
+				Are you sure you want to delete <span id="deleteUser"></span> (currently in <span id="deleteUserDepartment"></span>)?
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-primary" data-bs-dismiss="modal">No, do not delete</button>

@@ -923,7 +923,8 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 	if (
 		user === null ||
-		!user.isAdmin
+		!user.isDistrictAdmin ||
+		!user.isActive
 	) {
 		return unauthorizedResponse;
 	}

@@ -465,6 +465,12 @@ function buildUserEdit(u: UserObject, parent: HTMLElement) {
 		.forEach(dep => createTableRow(departmentTbody, getUserDepartmentRowConfig(u, dep)));
 }
 
+const modalItems = {
+	name: <HTMLSpanElement>document.getElementById('deleteUser'),
+	button: <HTMLButtonElement>document.getElementById('deleteConfirm'),
+	department: <HTMLSpanElement>document.getElementById('deleteUserDepartment'),
+};
+
 async function init() {
 	logger.trace('init', ...arguments);
 	if (user.isDistrictAdmin)
@@ -490,7 +496,7 @@ async function init() {
 			let editRow: HTMLTableRowElement;
 
 			// Create the main row
-			createTableRow(tbody, {
+			const mainRow = createTableRow(tbody, {
 				id: `user-${u.phone}`,
 				classList: [
 					...(doHighlight ? [ 'alternate' ] : []),
@@ -513,9 +519,9 @@ async function init() {
 					{
 						classList: [ 'text-center' ],
 						create: td => {
-							let editButton = document.createElement('button');
+							const editButton = document.createElement('button');
 							td.appendChild(editButton);
-							editButton.classList.add('btn');
+							editButton.classList.add('mx-1');
 							modifyButton(editButton, 'primary', 'Edit');
 
 							let editRowOpen = false;
@@ -528,6 +534,53 @@ async function init() {
 								}
 								editRowOpen = !editRowOpen;
 							});
+
+							if (user.isDistrictAdmin) {
+								const deleteButton = document.createElement('button');
+								td.appendChild(deleteButton);
+								deleteButton.classList.add('mx-1');
+								modifyButton(deleteButton, 'danger', 'Delete');
+								deleteButton.setAttribute('data-bs-toggle', 'modal');
+								deleteButton.setAttribute('data-bs-target', '#delete-modal');
+								deleteButton.addEventListener('click', () => {
+									deleteButton.blur();
+
+									modalItems.name.innerHTML = `${u.fName} ${u.lName}`
+									modalItems.department.innerHTML = validDepartments
+										.filter(dep => u[dep]?.active)
+										.join(', ');
+									if (modalItems.department.innerHTML === '') {
+										modalItems.department.innerHTML = 'no departments';
+									}
+
+									const newButton = <HTMLButtonElement>modalItems.button.cloneNode(true);
+									if (modalItems.button.parentElement !== null)
+										modalItems.button.parentElement.replaceChild(newButton, modalItems.button);
+									modalItems.button = newButton;
+
+									newButton.addEventListener('click', async () => {
+										modifyButton(deleteButton, 'secondary', 'Deleting', true, false);
+
+										const result = await fetch('/api/user?action=delete', {
+											method: 'POST',
+											body: JSON.stringify({
+												phone: u.phone.toString(),
+											}),
+										}).then(r => r.json());
+
+										if (result.success) {
+											if (mainRow.parentElement)
+												mainRow.parentElement.removeChild(mainRow);
+
+											if (editRow.parentElement)
+												editRow.parentElement.removeChild(editRow);
+										} else {
+											modifyButton(deleteButton, 'danger', 'Delete', false, true);
+											showAlert('danger', 'Failed to delete user');
+										}
+									});
+								});
+							}
 						},
 					},
 				],

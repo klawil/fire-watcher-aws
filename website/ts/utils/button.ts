@@ -45,6 +45,9 @@ export function modifyButton(
 	enabled: boolean | null = null
 ) {
 	logger.trace('modifyButton', ...arguments);
+	if (!btn.classList.contains('btn'))
+		btn.classList.add('btn');
+
 	if (color)
 		changeButtonColor(btn, color);
 
