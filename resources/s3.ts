@@ -100,6 +100,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				await dynamodb.putItem(body).promise();
 
 				const startTime: number = Number(headInfo.Metadata?.start_time);
+				const len: number = Number(headInfo.Metadata?.call_length);
 				const existingItems: AWS.DynamoDB.QueryOutput = await dynamodb.query({
 					TableName: dtrTable,
 					IndexName: 'StartTimeTgIndex',
@@ -116,7 +117,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 							N: (startTime - startTimeBuffer).toString()
 						},
 						':st2': {
-							N: (startTime + startTimeBuffer).toString()
+							N: (startTime + len).toString()
 						},
 						':e': {
 							N: headInfo.Metadata?.emergency
