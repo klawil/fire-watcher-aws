@@ -6,6 +6,12 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 
 const trafficTable = process.env.TABLE_TRAFFIC as string;
+const dtrTable = process.env.TABLE_DTR as string;
+
+interface SourceListItem {
+	pos: number;
+	src: number;
+}
 
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	try {
@@ -39,6 +45,45 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					}
 				}
 			};
+
+			if (Key.indexOf('/dtr') !== -1) {
+				console.log('New DTR');
+				const sourceList: string[] = [];
+				try {
+					if (typeof headInfo.Metadata?.source_list !== 'undefined') {
+						JSON.parse(headInfo.Metadata?.source_list)
+							.map((v: SourceListItem) => v.src)
+							.filter((v: number, i: number, a: number[]) => a.indexOf(v) === i)
+							.forEach((source: number) => sourceList.push(`${source}`));
+					}
+				} catch (e) {}
+
+				body.TableName = dtrTable;
+				body.Item = {
+					Key: {
+						S: Key
+					},
+					StartTime: {
+						N: headInfo.Metadata?.start_time
+					},
+					EndTime: {
+						N: headInfo.Metadata?.stop_time
+					},
+					Len: {
+						N: headInfo.Metadata?.call_length
+					},
+					Freq: {
+						N: headInfo.Metadata?.freq
+					},
+					Emergency: {
+						N: headInfo.Metadata?.emergency
+					},
+					Sources: {
+						NS: sourceList
+					}
+				};
+			}
+
 			console.log(`Create: ${JSON.stringify(body)}`)
 
 			await dynamodb.putItem(body).promise();
