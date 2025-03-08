@@ -106,6 +106,7 @@ async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 
 			return coll;
 		}, {}))
+			.sort((a, b) => a.Datetime > b.Datetime ? -1 : 1)
 	});
 
 	// Send for results
