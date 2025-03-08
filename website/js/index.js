@@ -29,11 +29,9 @@ function updateData(direction = 'after', restart = false, date = false) {
 	const host = window.location.origin.indexOf('localhost') !== -1
 		? 'http://localhost:8001'
 		: '';
-	let apiUrl = `${host}/api`;
-	let isAppended = false;
+	let apiUrl = `${host}/api/frontend?action=vhf`;
 	if (typeof nextDataFields.after !== 'undefined') {
-		isAppended = true;
-		apiUrl += '?'
+		apiUrl += '&'
 		if (direction === 'after') {
 			apiUrl += `after=${nextDataFields.after}`;
 		} else {
@@ -41,14 +39,14 @@ function updateData(direction = 'after', restart = false, date = false) {
 		}
 	} else if (date !== false) {
 		fromDate = true;
-		apiUrl += `?after=${date}`;
+		apiUrl += `&after=${date}`;
 	}
 
 	const queryParams = Object.keys(urlFilters)
 		.filter((filterKey) => urlFilters[filterKey].get())
 		.map((filterKey) => `${encodeURIComponent(filterKey)}=${encodeURIComponent(urlFilters[filterKey].getUrl())}`);
 	if (queryParams.length > 0) {
-		apiUrl += `${isAppended ? '&' : '?'}${queryParams.join('&')}`;
+		apiUrl += `&${queryParams.join('&')}`;
 	}
 
 	fetch(apiUrl)

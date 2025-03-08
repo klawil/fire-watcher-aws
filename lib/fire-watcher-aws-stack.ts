@@ -35,7 +35,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
-    const trafficTable = new dynamodb.Table(this, 'cvfd-traffic', {
+    const vhfTable = new dynamodb.Table(this, 'cvfd-traffic', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'Key',
@@ -57,7 +57,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
-    const messagesTable = new dynamodb.Table(this, 'cvfd-messages', {
+    const textsTable = new dynamodb.Table(this, 'cvfd-messages', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'datetime',
@@ -90,7 +90,7 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
-    trafficTable.addGlobalSecondaryIndex({
+    vhfTable.addGlobalSecondaryIndex({
       indexName: 'ToneIndex',
       partitionKey: {
         name: 'ToneIndex',
@@ -165,7 +165,7 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/s3.ts',
       handler: 'main',
       environment: {
-        TABLE_TRAFFIC: trafficTable.tableName,
+        TABLE_TRAFFIC: vhfTable.tableName,
         TABLE_DTR: dtrTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
         TABLE_DEVICE: deviceTable.tableName,
@@ -175,7 +175,7 @@ export class FireWatcherAwsStack extends Stack {
     
     // Grant access for the S3 handler
     bucket.grantRead(s3Handler);
-    trafficTable.grantReadWriteData(s3Handler);
+    vhfTable.grantReadWriteData(s3Handler);
     dtrTable.grantReadWriteData(s3Handler);
     talkgroupTable.grantReadWriteData(s3Handler);
     deviceTable.grantReadWriteData(s3Handler);
@@ -188,8 +188,8 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
-        TABLE_TRAFFIC: trafficTable.tableName,
-        TABLE_MESSAGES: messagesTable.tableName,
+        TABLE_TRAFFIC: vhfTable.tableName,
+        TABLE_MESSAGES: textsTable.tableName,
         TWILIO_SECRET: secretArn,
         SERVER_CODE: apiCode
       },
@@ -199,8 +199,8 @@ export class FireWatcherAwsStack extends Stack {
 
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
-    trafficTable.grantReadData(queueHandler);
-    messagesTable.grantReadWriteData(queueHandler);
+    vhfTable.grantReadData(queueHandler);
+    textsTable.grantReadWriteData(queueHandler);
     twilioSecret.grantRead(queueHandler);
 
     // Create the event trigger
@@ -269,10 +269,10 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       environment: {
         TABLE_PHONE: phoneNumberTable.tableName,
-        TABLE_TRAFFIC: trafficTable.tableName,
+        TABLE_TRAFFIC: vhfTable.tableName,
         TABLE_DTR: dtrTable.tableName,
         TABLE_TALKGROUP: talkgroupTable.tableName,
-        TABLE_MESSAGES: messagesTable.tableName,
+        TABLE_MESSAGES: textsTable.tableName,
         TABLE_STATUS: statusTable.tableName,
         SQS_QUEUE: queue.queueUrl,
         SERVER_CODE: apiCode,
@@ -283,10 +283,10 @@ export class FireWatcherAwsStack extends Stack {
 
     // Grant access for the API handler
     phoneNumberTable.grantReadWriteData(apiHandler);
-    trafficTable.grantReadData(apiHandler);
+    vhfTable.grantReadData(apiHandler);
     dtrTable.grantReadWriteData(apiHandler);
     talkgroupTable.grantReadData(apiHandler);
-    messagesTable.grantReadWriteData(apiHandler);
+    textsTable.grantReadWriteData(apiHandler);
     statusTable.grantReadWriteData(apiHandler);
     queue.grantSendMessages(apiHandler);
     bucket.grantRead(apiHandler);
@@ -303,8 +303,34 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
     const apiResource = api.root.addResource('api');
-    apiResource.addMethod('GET', apiIntegration)
-    apiResource.addMethod('POST', apiIntegration)
+    apiResource.addMethod('GET', apiIntegration);
+    apiResource.addMethod('POST', apiIntegration);
+
+    // Create the frontend API
+    const frontendApiHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-api-frontend-lambda', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      entry: __dirname + '/../resources/api/frontend.ts',
+      handler: 'main',
+      environment: {
+        TABLE_VHF: vhfTable.tableName,
+        TABLE_DTR: dtrTable.tableName,
+        TABLE_TALKGROUP: talkgroupTable.tableName,
+        TABLE_DEVICE: deviceTable.tableName,
+        TABLE_TEXTS: textsTable.tableName
+      }
+    });
+    vhfTable.grantReadData(frontendApiHandler);
+    dtrTable.grantReadData(frontendApiHandler);
+    talkgroupTable.grantReadData(frontendApiHandler);
+    deviceTable.grantReadData(frontendApiHandler);
+    textsTable.grantReadData(frontendApiHandler);
+    const frontendApiIntegration = new apigateway.LambdaIntegration(frontendApiHandler, {
+      requestTemplates: {
+        'application/json': '{"statusCode":"200"}'
+      }
+    });
+    const frontendApiResource = apiResource.addResource('frontend');
+    frontendApiResource.addMethod('GET', frontendApiIntegration);
 
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
@@ -357,6 +383,17 @@ export class FireWatcherAwsStack extends Stack {
           behaviors: [{
             allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
             pathPattern: 'api',
+            defaultTtl: Duration.seconds(0),
+            maxTtl: Duration.seconds(0),
+            forwardedValues: {
+              queryString: true,
+              cookies: {
+                forward: 'all'
+              }
+            }
+          },{
+            allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+            pathPattern: 'api/*',
             defaultTtl: Duration.seconds(0),
             maxTtl: Duration.seconds(0),
             forwardedValues: {
