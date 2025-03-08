@@ -188,3 +188,17 @@ export function validateBodyIsJson(body: string | null): true {
 
 	return true;
 }
+
+export function randomString(len: number, numeric = false): string {
+	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	if (numeric) {
+		chars = '0123456789';
+	}
+	let str: string[] = [];
+
+	for (let i = 0; i < len; i++) {
+		str[i] = chars[Math.floor(Math.random() * chars.length)];
+	}
+
+	return str.join('');
+}

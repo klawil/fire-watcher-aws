@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap } from '../utils';
+import { incrementMetric, parseDynamoDbAttributeMap } from '../utils/general';
 import { getLoggedInUser } from '../utils/auth';
 
 const metricSource = 'Frontend';

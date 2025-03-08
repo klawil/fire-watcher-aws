@@ -3,8 +3,8 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 
 const dynamodb = new aws.DynamoDB();
 
-const authUserCookie = 'cvfd-user';
-const authTokenCookie = 'cvfd-token';
+export const authUserCookie = 'cvfd-user';
+export const authTokenCookie = 'cvfd-token';
 
 const userTable = process.env.TABLE_USER as string;
 
@@ -12,7 +12,7 @@ interface Cookies {
 	[key: string]: string;
 }
 
-function getCookies(event: APIGatewayProxyEvent): Cookies {
+export function getCookies(event: APIGatewayProxyEvent): Cookies {
 	return (event.headers.Cookie || '')
 		.split('; ')
 		.reduce((agg: Cookies, val) => {

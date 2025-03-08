@@ -1,11 +1,9 @@
 import * as AWS from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { parseDynamoDbAttributeMap } from './utils';
+import { parseDynamoDbAttributeMap } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 const sqs = new AWS.SQS();
-
-const loginDuration = 60 * 60 * 24 * 7; // Logins last 7 days
 
 const phoneTable = process.env.TABLE_PHONE as string;
 const statusTable = process.env.TABLE_STATUS as string;
@@ -39,20 +37,6 @@ function getCookies(event: APIGatewayProxyEvent): Cookies {
 
 			return agg;
 		}, {});
-}
-
-function randomString(len: number, numeric = false): string {
-	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	if (numeric) {
-		chars = '0123456789';
-	}
-	let str: string[] = [];
-
-	for (let i = 0; i < len; i++) {
-		str[i] = chars[Math.floor(Math.random() * chars.length)];
-	}
-
-	return str.join('');
 }
 
 async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | AWS.DynamoDB.AttributeMap> {
@@ -161,163 +145,6 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	return {
 		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response)
-	};
-}
-
-async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	// Validate the body
-	validateBodyIsJson(event.body);
-
-	// Parse the body
-	const body = JSON.parse(event.body as string);
-	const response: ApiResponse = {
-		success: true,
-		errors: []
-	};
-
-	// Validate the phone number
-	let user: AWS.DynamoDB.GetItemOutput;
-	if (typeof body.phone === 'undefined') {
-		response.success = false;
-		response.errors.push('phone');
-	} else {
-		user = await dynamodb.getItem({
-			TableName: phoneTable,
-			Key: {
-				phone: {
-					N: body.phone
-				}
-			}
-		}).promise();
-		if (!user.Item || !user.Item.isActive.BOOL) {
-			response.success = false;
-			response.errors.push('phone');
-		}
-	}
-	if (!response.success) {
-		return {
-			statusCode: 400,
-			body: JSON.stringify(response)
-		};
-	}
-
-	await sqs.sendMessage({
-		MessageBody: JSON.stringify({
-			action: 'login',
-			phone: body.phone
-		}),
-		QueueUrl: queueUrl
-	}).promise();
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify(response),
-		headers: {
-			'Set-Cookie': `cvfd-user=${body.phone}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${loginDuration}`
-		}
-	};
-}
-
-async function handleAuthenticate(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	// Validate the body
-	validateBodyIsJson(event.body);
-
-	// Parse the body
-	const body = JSON.parse(event.body as string);
-	const response: ApiResponse = {
-		success: true,
-		errors: []
-	};
-
-	const cookies = getCookies(event);
-
-	// Validate the phone number
-	if (typeof cookies['cvfd-user'] === 'undefined') {
-		response.success = false;
-		response.errors.push('phone');
-		return {
-			statusCode: 400,
-			body: JSON.stringify(response)
-		};
-	}
-	let user: AWS.DynamoDB.GetItemOutput = await dynamodb.getItem({
-		TableName: phoneTable,
-		Key: {
-			phone: {
-				N: cookies['cvfd-user']
-			}
-		}
-	}).promise();
-	if (!user.Item || !user.Item.isActive.BOOL) {
-		response.success = false;
-		response.errors.push('phone');
-		return {
-			statusCode: 400,
-			body: JSON.stringify(response)
-		};
-	}
-
-	// Validate the code
-	if (
-		typeof body.code === 'undefined' ||
-		body.code !== user.Item.code?.S ||
-		Date.now() > parseInt(user.Item.codeExpiry?.N || '0')
-	) {
-		response.success = false;
-		response.errors.push('code');
-		return {
-			statusCode: 400,
-			body: JSON.stringify(response)
-		};
-	}
-
-	// Find previous tokens that should be deleted
-	const now = Date.now();
-	const validUserTokens = user.Item.loginTokens?.L
-		?.filter(token => parseInt(token.M?.tokenExpiry?.N || '0') > now) || [];
-
-	// Create a token and attach it
-	const token = randomString(32);
-	const tokenExpiry = Date.now() + (loginDuration * 1000);
-	validUserTokens.push({
-		M: {
-			token: {
-				S: token
-			},
-			tokenExpiry: {
-				N: tokenExpiry.toString()
-			}
-		}
-	});
-	await dynamodb.updateItem({
-		TableName: phoneTable,
-		Key: {
-			phone: {
-				N: cookies['cvfd-user']
-			}
-		},
-		ExpressionAttributeNames: {
-			'#c': 'code',
-			'#ce': 'codeExpiry',
-			'#t': 'loginTokens'
-		},
-		ExpressionAttributeValues: {
-			':t': {
-				L: validUserTokens
-			}
-		},
-		UpdateExpression: `REMOVE #c, #ce SET #t = :t`
-	}).promise();
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify(response),
-		multiValueHeaders: {
-			'Set-Cookie': [
-				`cvfd-user=${cookies['cvfd-user']}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`,
-				`cvfd-token=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`
-			]
-		}
 	};
 }
 
@@ -543,10 +370,6 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 		switch (action) {
 			case 'page':
 				return await handlePage(event);
-			case 'login':
-				return await handleLogin(event);
-			case 'auth':
-				return await handleAuthenticate(event);
 			case 'listUsers':
 				return await listUsers(event);
 			case 'allActivate':

@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils';
+import { incrementMetric, parseDynamoDbAttributeMap, validateBodyIsJson } from '../utils/general';
 
 const metricSource = 'Infra';
 

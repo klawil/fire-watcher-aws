@@ -1,5 +1,5 @@
 import * as AWS from 'aws-sdk';
-import { parseDynamoDbAttributeMap, sendMessage } from './utils';
+import { parseDynamoDbAttributeMap, sendMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 

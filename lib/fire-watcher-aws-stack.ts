@@ -412,10 +412,12 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/api/user.ts',
       handler: 'main',
       environment: {
+        QUEUE_URL: queue.queueUrl,
         TABLE_USER: phoneNumberTable.tableName
       },
       timeout: Duration.seconds(10)
     });
+    queue.grantSendMessages(userApiHandler);
     phoneNumberTable.grantReadWriteData(userApiHandler);
     const userApiIntegration = new apigateway.LambdaIntegration(userApiHandler, {
       requestTemplates: {
@@ -424,6 +426,7 @@ export class FireWatcherAwsStack extends Stack {
     });
     const userApiResource = apiResource.addResource('user');
     userApiResource.addMethod('GET', userApiIntegration);
+    userApiResource.addMethod('POST', userApiIntegration);
 
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');

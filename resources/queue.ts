@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
-import { getTwilioSecret, parsePhone, sendMessage } from './utils';
+import { getTwilioSecret, parsePhone, sendMessage } from './utils/general';
 
 const dynamodb = new AWS.DynamoDB();
 
