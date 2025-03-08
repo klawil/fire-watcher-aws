@@ -32,7 +32,7 @@ const config = {
       '.js'
     ]
   },
-  devtool: 'eval-source-map',
+  devtool: 'source-map',
 };
 
 module.exports = config;
