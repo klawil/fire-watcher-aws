@@ -23,6 +23,7 @@ export const defaultAudioState: AudioState = {
   filters: {
     showFilterModal: false,
   },
+  api: {},
 };
 
 export function audioReducer(state: AudioState, action: AudioAction): AudioState {
@@ -35,9 +36,9 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       return {
         ...state,
         files: [
-          ...(action.location === 'start' ? newFiles : []),
+          ...(action.location === 'before' ? newFiles : []),
           ...state.files,
-          ...(action.location === 'end' ? newFiles : []),
+          ...(action.location === 'after' ? newFiles : []),
         ],
       };
     }
@@ -45,6 +46,7 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       return {
         ...state,
         files: [],
+        api: {},
       };
     }
 
@@ -150,5 +152,28 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
         },
       };
     }
+
+    case 'SetApiKey': {
+      return {
+        ...state,
+        api: {
+          ...state.api,
+          [action.key]: action.value,
+        },
+      };
+    }
+    case 'SetApiLastCall': {
+      return {
+        ...state,
+        api: {
+          ...state.api,
+          [`${action.key}LastCall`]: action.value,
+        },
+      };
+    }
   }
+
+  return {
+    ...state
+  };
 }

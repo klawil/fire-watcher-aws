@@ -1,6 +1,7 @@
 import { AudioFileObject } from "$/audioApi";
 
 type PlayerState = 'playing' | 'paused' | 'finished';
+type FileAddDirection = 'before' | 'after';
 
 export interface AudioState {
   files: AudioFileObject[];
@@ -24,12 +25,17 @@ export interface AudioState {
     emergValue?: string;
     tab?: 'all' | 'presets' | 'talkgroups';
   };
+  api: {
+    [key in FileAddDirection]?: number;
+  } & {
+    [key in `${FileAddDirection}LastCall`]?: number;
+  };
 }
 
 interface AddAudioFileAction {
   action: 'AddAudioFile';
   files: AudioFileObject[];
-  location: 'start' | 'end';
+  location: FileAddDirection;
 }
 interface ClearAudioFilesAction {
   action: 'ClearAudioFiles';
@@ -76,4 +82,17 @@ interface SetFilterTabAction {
 }
 type FilterActions = SetFilterDisplayAction | SetFilterValueAction | SetFilterTabAction;
 
-export type AudioAction = AudioFileActions | AddTalkgroupsAction | PlayerActions | FilterActions;
+interface SetApiKeyAction {
+  action: 'SetApiKey';
+  key: FileAddDirection;
+  value: number;
+}
+interface SetApiLastCallAction {
+  action: 'SetApiLastCall';
+  key: FileAddDirection;
+  value: number;
+}
+type ApiActions = SetApiKeyAction | SetApiLastCallAction;
+
+export type AudioAction = AudioFileActions | AddTalkgroupsAction | PlayerActions | FilterActions
+  | ApiActions;
