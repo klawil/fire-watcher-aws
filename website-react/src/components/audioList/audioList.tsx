@@ -11,7 +11,7 @@ import styles from './audioList.module.css';
 import { useDarkMode } from "@/logic/clientHooks";
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 
 export default function AudioList() {
   const [state, dispatch] = useReducer<
@@ -54,7 +54,7 @@ export default function AudioList() {
       dispatch({
         action: 'AddAudioFile',
         files: fileData.files,
-        location: 'start',
+        location: 'before',
       });
     })();
   }, []);
@@ -105,7 +105,8 @@ export default function AudioList() {
   }
 
   return (<>
-    <Table
+    {state.files.length > 0
+    ? <Table
       responsive={true}
     >
       <thead>
@@ -162,6 +163,8 @@ export default function AudioList() {
         </React.Fragment>))}
       </tbody>
     </Table>
+    : <LoadingSpinner />
+    }
 
     <AudioPlayerBar
       state={state}
