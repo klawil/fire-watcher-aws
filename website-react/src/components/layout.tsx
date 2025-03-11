@@ -25,7 +25,10 @@ export default function CofrnLayout({
       />
 
       {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}
-      {children}
+
+      <Container className={pageConfig.centerAll ? 'text-center' : ''}>
+        {children}
+      </Container>
 
       <Navbar
         bg={modeName}

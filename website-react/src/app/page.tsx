@@ -1,3 +1,4 @@
+import AudioList from "@/components/audioList/audioList";
 import CofrnLayout from "@/components/layout";
 
 export const metadata = {
@@ -11,9 +12,10 @@ export default function Home() {
       pageConfig={{
         title: 'Radio Traffic',
         hasAudio: true,
+        centerAll: true,
       }}
     >
-      <></>
+      <AudioList />
     </CofrnLayout>
   );
 }
