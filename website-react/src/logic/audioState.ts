@@ -21,13 +21,17 @@ export const defaultAudioState: AudioState = {
   talkgroups: {},
   player: { state: 'finished', },
   filters: {
+    queryParsed: false,
     showFilterModal: false,
   },
-  api: {},
+  api: {
+    autoLoadAfter: false,
+  },
 };
 
 export function audioReducer(state: AudioState, action: AudioAction): AudioState {
   switch (action.action) {
+    // Files
     case 'AddAudioFile': {
       // Remove duplicate files
       const alreadyContainedIds = state.files.map(f => f.Key);
@@ -36,9 +40,9 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       return {
         ...state,
         files: [
-          ...(action.location === 'before' ? newFiles : []),
-          ...state.files,
           ...(action.location === 'after' ? newFiles : []),
+          ...state.files,
+          ...(action.location === 'before' ? newFiles : []),
         ],
       };
     }
@@ -46,10 +50,13 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       return {
         ...state,
         files: [],
-        api: {},
+        api: {
+          autoLoadAfter: state.api.autoLoadAfter,
+        },
       };
     }
 
+    // Talkgroups
     case 'AddTalkgroups': {
       return {
         ...state,
@@ -60,6 +67,7 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       };
     }
 
+    // Player
     case 'SetPlayerState': {
       return {
         ...state,
@@ -102,6 +110,7 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       };
     }
 
+    // Filter
     case 'SetFilterDisplay': {
       return {
         ...state,
@@ -126,7 +135,7 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
           action.value === `p${defaultFilterPreset}` ||
           action.value === ''
         ) {
-          newRawValue.tgRawValue = '';
+          newRawValue.tgRawValue = filterPresets[defaultFilterPreset].join('|');
           newRawValue.tgValue = '';
         } else {
           newRawValue.tgRawValue = filterPresets[action.value?.slice(1) || defaultFilterPreset]
@@ -152,7 +161,17 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
         },
       };
     }
+    case 'QueryParamsParsed': {
+      return {
+        ...state,
+        filters: {
+          ...state.filters,
+          queryParsed: true,
+        },
+      };
+    }
 
+    // API
     case 'SetApiKey': {
       return {
         ...state,

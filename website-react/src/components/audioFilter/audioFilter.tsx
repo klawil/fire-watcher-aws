@@ -22,19 +22,39 @@ export default function AudioFilter({
   useEffect(() => {
     if (state.filters.showFilterModal) return;
 
-    const tgFilterQuery = searchParams.get('tg') || '';
+    const tgFilterQuery = searchParams.get('tg') || `p${defaultFilterPreset}`;
     const emergFilterQuery = searchParams.get('emerg') || '';
+    const fFilterQuery = searchParams.get('f') || '';
 
-    const newParams = new URLSearchParams(searchParams.toString());
-    let hasNewParams = false;
-
-    if (typeof state.filters.tgValue === 'undefined') {
+    if (!state.filters.queryParsed) {
+      dispatch({
+        action: 'SetFilterValue',
+        filter: 'f',
+        value: fFilterQuery,
+      });
+      dispatch({
+        action: 'SetFilterValue',
+        filter: 'emerg',
+        value: emergFilterQuery,
+      });
       dispatch({
         action: 'SetFilterValue',
         filter: 'tg',
-        value: tgFilterQuery || '',
+        value: tgFilterQuery,
       });
-    } else if (state.filters.tgValue !== tgFilterQuery) {
+      console.log(tgFilterQuery);
+      dispatch({
+        action: 'QueryParamsParsed',
+      });
+      return;
+    }
+
+    const newParams = new URLSearchParams(searchParams.toString());
+    let hasNewParams = false;
+    if (
+      typeof state.filters.tgValue !== 'undefined' &&
+      state.filters.tgValue !== tgFilterQuery
+    ) {
       hasNewParams = true;
       if (state.filters.tgValue === '') {
         newParams.delete('tg');
@@ -43,15 +63,12 @@ export default function AudioFilter({
       }
     }
 
-    if (typeof state.filters.emergValue === 'undefined') {
-      dispatch({
-        action: 'SetFilterValue',
-        filter: 'tg',
-        value: tgFilterQuery,
-      });
-    } else if (state.filters.emergValue !== emergFilterQuery) {
+    if (
+      typeof state.filters.emergValue !== 'undefined' &&
+      state.filters.emergValue !== emergFilterQuery
+    ) {
       hasNewParams = true;
-      if (state.filters.tgValue === '') {
+      if (state.filters.emergValue === '') {
         newParams.delete('emerg');
       } else {
         newParams.set('emerg', state.filters.emergValue);

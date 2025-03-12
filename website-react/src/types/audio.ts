@@ -20,6 +20,8 @@ export interface AudioState {
   };
   filters: {
     showFilterModal: boolean;
+    queryParsed: boolean;
+    fValue?: string;
     tgValue?: string;
     tgRawValue?: string;
     emergValue?: string;
@@ -29,6 +31,9 @@ export interface AudioState {
     [key in FileAddDirection]?: number;
   } & {
     [key in `${FileAddDirection}LastCall`]?: number;
+  } & {
+    autoLoadAfter: boolean;
+    afterAdded?: number;
   };
 }
 
@@ -72,7 +77,7 @@ interface SetFilterDisplayAction {
 }
 interface SetFilterValueAction {
   action: 'SetFilterValue';
-  filter: 'tg' | 'emerg';
+  filter: 'tg' | 'emerg' |'f';
   value?: string;
   rawValue?: string;
 }
@@ -80,17 +85,21 @@ interface SetFilterTabAction {
   action: 'SetFilterTab';
   tab: AudioState['filters']['tab'];
 }
-type FilterActions = SetFilterDisplayAction | SetFilterValueAction | SetFilterTabAction;
+interface QueryParamsParsedAction {
+  action: 'QueryParamsParsed';
+}
+type FilterActions = SetFilterDisplayAction | SetFilterValueAction | SetFilterTabAction
+  | QueryParamsParsedAction;
 
 interface SetApiKeyAction {
   action: 'SetApiKey';
-  key: FileAddDirection;
+  key: FileAddDirection | 'afterAdded';
   value: number;
 }
 interface SetApiLastCallAction {
   action: 'SetApiLastCall';
   key: FileAddDirection;
-  value: number;
+  value?: number;
 }
 type ApiActions = SetApiKeyAction | SetApiLastCallAction;
 

@@ -2,7 +2,7 @@
 
 import Table from "react-bootstrap/Table";
 import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useEffect, useReducer } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr } from "@/logic/dateAndFile";
@@ -12,6 +12,184 @@ import { useDarkMode } from "@/logic/clientHooks";
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 import { useSearchParams } from "next/navigation";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
+
+function useRefIntersection(): [
+  // React.RefObject<HTMLTableRowElement | null>,
+  (node: HTMLTableRowElement | null) => void,
+  boolean,
+] {
+  const [node, setNode] = useState<HTMLTableRowElement | null>(null);
+
+  const [refIntersecting, setRefIntersecting] = useState(false);
+
+  const setRef = useCallback(
+    (node: HTMLTableRowElement | null) => setNode(node),
+    [],
+  );
+
+  useEffect(() => {
+    if (node === null) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setRefIntersecting(entry.isIntersecting),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [node]);
+
+  return [setRef, refIntersecting];
+}
+
+function useLoadFiles(
+  state: AudioState,
+  dispatch: React.ActionDispatch<[AudioAction]>,
+) {
+  const [afterRef, afterRefIntersecting] = useRefIntersection();
+  const [beforeRef, beforeRefIntersecting] = useRefIntersection();
+  const runIds = useRef<{
+    before?: number;
+    after?: number;
+  }>({})
+
+  useEffect(() => {
+    // Wait for the query to be parsed
+    if (!state.filters.queryParsed) return;
+
+    // Should we load files?
+    // - after or before ref are in view
+    // - number of files is 0 AND no lastCall for any value
+    if (
+      !afterRefIntersecting &&
+      !beforeRefIntersecting &&
+      !(
+        state.files.length === 0 &&
+        typeof runIds.current.after === 'undefined' &&
+        typeof runIds.current.before === 'undefined'
+      )
+    ) return;
+
+    // Check to make sure that we aren't re-running a request
+    if (
+      (
+        afterRefIntersecting &&
+        typeof runIds.current.after !== 'undefined'
+      ) ||
+      (
+        beforeRefIntersecting &&
+        typeof runIds.current.before !== 'undefined'
+      )
+    ) return;
+
+    (async () => {
+      const direction = beforeRefIntersecting
+        ? 'before'
+        : 'after';
+      const callId = Date.now();
+      runIds.current[direction] = callId;
+
+      let urlParams: URLSearchParams = new URLSearchParams();
+      urlParams.set('action', 'list');
+      if (
+        direction === 'before' &&
+        state.api.before
+      ) {
+        urlParams.set('before', state.api.before.toString());
+      } else if (
+        direction === 'after' &&
+        state.api.after
+      ) {
+        urlParams.set('after', state.api.after.toString());
+      } // @TODO - implement afterAdded
+
+      if (state.filters.tgRawValue) {
+        urlParams.set('tg', state.filters.tgRawValue);
+      }
+      if (state.filters.emergValue) {
+        urlParams.set('emerg', state.filters.emergValue);
+      }
+
+      const url = `/api/audio?${urlParams.toString()}`;
+      try {
+        const newData: ApiAudioListResponse = await fetch(url)
+          .then(r => r.json());
+
+        // Check for being the correct call ID
+        if (runIds.current[direction] !== callId)
+          throw new Error(`Not the current call - ${callId} - ${runIds.current[direction]}`);
+
+        // Check for API success
+        if (!newData.success)
+          throw new Error(JSON.stringify(newData));
+
+        // Set the new before/after/afterAdded values
+        if (
+          newData.before &&
+          (
+            !state.api.before ||
+            state.api.before > newData.before
+          )
+        ) {
+          dispatch({
+            action: 'SetApiKey',
+            key: 'before',
+            value: newData.before,
+          });
+        }
+        if (
+          newData.after &&
+          (
+            !state.api.after ||
+            state.api.after > newData.after
+          )
+        ) {
+          dispatch({
+            action: 'SetApiKey',
+            key: 'after',
+            value: newData.after,
+          });
+        }
+        if (
+          newData.afterAdded &&
+          (
+            !state.api.afterAdded ||
+            state.api.afterAdded > newData.afterAdded
+          )
+        ) {
+          dispatch({
+            action: 'SetApiKey',
+            key: 'afterAdded',
+            value: newData.afterAdded,
+          });
+        }
+
+        // Actually add the files to state
+        if (
+          newData.files &&
+          newData.files.length > 0
+        )
+          dispatch({
+            action: 'AddAudioFile',
+            files: newData.files,
+            location: direction,
+          });
+      } catch (e) {
+        console.error(`Error fetching data`, e, url);
+      }
+
+      delete runIds.current[direction];
+    })();
+  }, [
+    state.api,
+    state.filters,
+    afterRefIntersecting,
+    beforeRefIntersecting,
+  ]);
+
+  useEffect(() => console.log('after', afterRefIntersecting), [afterRefIntersecting]);
+  useEffect(() => console.log('before', beforeRefIntersecting), [beforeRefIntersecting]);
+
+  return [afterRef, beforeRef];
+}
 
 export default function AudioList() {
   const [state, dispatch] = useReducer<
@@ -40,21 +218,6 @@ export default function AudioList() {
 
           return agg;
         }, {}),
-      });
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const fileData: ApiAudioListResponse = await fetch(`/api/audio?action=list&tg=${encodeURIComponent('8332|8333|18332')}`)
-        .then(r => r.json());
-      
-      if (!fileData.success || typeof fileData.files === 'undefined') return;
-
-      dispatch({
-        action: 'AddAudioFile',
-        files: fileData.files,
-        location: 'before',
       });
     })();
   }, []);
@@ -104,6 +267,17 @@ export default function AudioList() {
     });
   }
 
+  const [
+    loadAfter,
+    loadBefore,
+  ] = useLoadFiles(state, dispatch);
+  const loadAfterIdx = state.files.length >= 5
+    ? 4
+    : 0;
+  const loadBeforeIdx = state.files.length >= 5
+    ? state.files.length - 5
+    : state.files.length;
+
   return (<>
     {state.files.length > 0
     ? <Table
@@ -119,8 +293,15 @@ export default function AudioList() {
         </tr>
       </thead>
       <tbody>
-        {state.files.map(file => (<React.Fragment key={file.Key}>
+        {state.files.map((file, idx) => (<React.Fragment key={file.Key}>
           <tr
+            {...(
+              idx === loadBeforeIdx
+                ? { ref: loadBefore }
+                : idx === loadAfterIdx
+                  ? { ref: loadAfter }
+                  : {}
+            )}
             className={
               [
                 file.Transcript && styles.noBottomBorder,
