@@ -21,6 +21,11 @@ interface UpdateUserAction {
   phone: string;
   user: Partial<UserObject>;
 }
+interface ReplaceUserAction {
+  action: 'ReplaceUser';
+  phone: string;
+  user: UserObject;
+}
 interface DeleteUserAction {
   action: 'DeleteUser';
   phone: string;
@@ -29,8 +34,8 @@ interface AddUserAction {
   action: 'AddUser';
   user: UserObject;
 }
-type UsersActions = SetUsersAction | SetUserEditRowAction | UpdateUserAction | DeleteUserAction
-  | AddUserAction;
+type UsersActions = SetUsersAction | SetUserEditRowAction | UpdateUserAction | ReplaceUserAction
+  | DeleteUserAction | AddUserAction;
 
 interface SetDeleteModalAction {
   action: 'SetDeleteModal';

@@ -51,7 +51,7 @@ export default function UserDepartmentRow({
 
       return newValue;
     })
-  }, [setChangesRaw]);
+  }, [dep, user]);
 
   const hasChanges = (Object.keys(changes || {}) as (keyof typeof changes)[])
     .filter(key => typeof changes?.[key] !== 'undefined' && changes[key] !== '')
@@ -77,16 +77,18 @@ export default function UserDepartmentRow({
       }).then(r => r.json());
 
       if (apiResult.success) {
-        dispatch({
-          action: 'UpdateUser',
-          phone: user.phone,
-          user: {
-            [dep]: {
-              ...(user[dep] || {}),
-              ...changes,
+        if (typeof apiResult.user !== 'undefined') {
+          dispatch({
+            action: 'UpdateUser',
+            phone: user.phone,
+            user: {
+              [dep]: {
+                ...(user[dep] || {}),
+                ...(apiResult.user[dep] || {}),
+              },
             },
-          },
-        });
+          });
+        }
         setChangesRaw({});
       } else if (apiResult.errors) {
         setErrorFields(apiResult.errors);

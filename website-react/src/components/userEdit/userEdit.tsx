@@ -1,10 +1,10 @@
-import { ApiUserUpdateBody, UserObject, UserObjectBooleans } from "$/userApi";
+import { ApiUserUpdateBody, ApiUserUpdateResponse, UserObject, UserObjectBooleans } from "$/userApi";
 import { useCallback, useContext, useState } from "react";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Col from "react-bootstrap/Col";
 import Row from 'react-bootstrap/Row';
-import { defaultDepartment, departmentConfig, pagingConfig, pagingTalkgroupOrder, validDepartments } from "$/userConstants";
+import { defaultDepartment, departmentConfig, pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
 import { LoggedInUserContext } from "@/logic/authContext";
 import Table from "react-bootstrap/Table";
@@ -50,17 +50,20 @@ function TextInput({
   userKey,
   value,
   placeholder,
+  invalidFields,
 }: Readonly<{
   setUpdateState: (userDelta: Partial<ApiUserUpdateBody>) => void;
   userKey: keyof UserObject;
   value: string;
   placeholder: string;
+  invalidFields: string[];
 }>) {
   return (<InputGroup className="p-2">
     <InputGroup.Text>{placeholder}</InputGroup.Text>
     <Form.Control
       type="text"
       value={value}
+      isInvalid={invalidFields.includes(userKey)}
       onChange={(e) => setUpdateState({
         [userKey]: e.target.value,
       })}
@@ -99,7 +102,7 @@ export default function UserEdit({
   }, [setUpdateStateRaw, user]);
   const changeStateTg = useCallback((conf: {
     add: boolean;
-    tg: number;
+    tg: PagingTalkgroup;
   }) => setUpdateStateRaw(state => {
     const newTalkgroups = [
       ...(
@@ -132,8 +135,6 @@ export default function UserEdit({
     };
   }), [ user, ]);
 
-  const [isSaving, setIsSaving] = useState(false);
-
   const userDepartments = validDepartments.filter(dep => user && user[dep]);
   const userDepartment = typeof updateState.department === 'undefined'
     ? userDepartments[0] || defaultDepartment
@@ -149,8 +150,48 @@ export default function UserEdit({
       .filter(key => typeof updateState[key] !== 'undefined')
       .length > 0;
 
-  function saveUser() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorFields, setErrorFields] = useState<string[]>([]);
+  async function saveUser() {
+    if (!hasChanges) return;
+    const phone = user === null ? updateState.phone : user.phone.toString();
+    if (typeof phone === 'undefined') {
+      setErrorFields([ 'phone' ]);
+      return;
+    }
 
+    setIsSaving(true);
+    setErrorFields([]);
+    const apiBody: ApiUserUpdateBody = {
+      phone,
+      ...updateState,
+    };
+    try {
+      const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=${user === null ? 'create' : 'update'}`, {
+        method: 'POST',
+        body: JSON.stringify(apiBody),
+      }).then(r => r.json());
+      if (apiResult.success) {
+        if (typeof apiResult.user !== 'undefined') {
+          dispatch(user === null ? {
+            action: 'AddUser',
+            user: {
+              ...apiResult.user,
+            },
+          } : {
+            action: 'ReplaceUser',
+            phone: user.phone,
+            user: {
+              ...apiResult.user,
+            },
+          });
+        }
+        setUpdateStateRaw({});
+      }
+    } catch (e) {
+      console.error(`Error saving changes to ${user}: ${updateState}`, e);
+    }
+    setIsSaving(false);
   }
 
   const classList = [ 'row', 'px-4' ];
@@ -161,18 +202,21 @@ export default function UserEdit({
     <Col xl={6} className="row px-4">
       <Col lg={{ span: 6, offset: 3 }} md={{ span: 8, offset: 2 }} xl={{ span: 8, offset: 2 }}>
         {user === null && <TextInput
+          invalidFields={errorFields}
           userKey="phone"
           placeholder="Phone Number"
           value={updateState.phone || ''}
           setUpdateState={setUpdateState}
         />}
         <TextInput
+          invalidFields={errorFields}
           userKey="fName"
           placeholder="First Name"
           value={updateState.fName || user?.fName || ''}
           setUpdateState={setUpdateState}
         />
         <TextInput
+          invalidFields={errorFields}
           userKey="lName"
           placeholder="Last Name"
           value={updateState.lName || user?.lName || ''}
@@ -180,6 +224,7 @@ export default function UserEdit({
         />
         {user === null && <>
             <Form.Select
+              isInvalid={errorFields.includes('department')}
               onChange={e => setUpdateState({
                 department: e.target.value as ApiUserUpdateBody['department'],
               })}
@@ -194,6 +239,7 @@ export default function UserEdit({
           <InputGroup className="p-2">
             <InputGroup.Text>Call Sign</InputGroup.Text>
             <Form.Control
+              isInvalid={errorFields.includes('callSign')}
               type="text"
               value={updateState.callSign || ''}
               onChange={(e) => setUpdateState({
@@ -208,6 +254,7 @@ export default function UserEdit({
           && <InputGroup className="p-2">
             <InputGroup.Text>Paging Phone</InputGroup.Text>
             <Form.Select
+              isInvalid={errorFields.includes('pagingPhone')}
               onChange={e => setUpdateState({
                 pagingPhone: e.target.value as ApiUserUpdateBody['pagingPhone'],
               })}
@@ -226,6 +273,7 @@ export default function UserEdit({
       <Col lg={3} md={4} sm={5} xl={6}>
         <h6>Pages</h6>
         {pagingTalkgroupOrder.map(tg => <Form.Check
+          isInvalid={errorFields.includes('tg')}
           key={tg}
           type="switch"
           checked={
@@ -248,6 +296,7 @@ export default function UserEdit({
           .filter(box => !box.districtAdmin || loggedInUser?.isDistrictAdmin)
           .map(checkbox => (<Form.Check
             key={checkbox.name}
+            isInvalid={errorFields.includes(checkbox.name)}
             type="switch"
             checked={
               typeof updateState[checkbox.name] !== 'undefined'
