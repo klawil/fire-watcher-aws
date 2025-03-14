@@ -28,18 +28,6 @@ export function usersStateReducer(
         users: sortUsers(action.users),
       };
     }
-    case 'SetUserEditRow': {
-      return {
-        ...state,
-        users: state.users.map(u => ({
-          ...u,
-          ...(u.phone === action.phone
-            ? { editRowOpen: action.editRowOpen }
-            : {}
-          ),
-        })),
-      };
-    }
     case 'UpdateUser': {
       return {
         ...state,
@@ -58,7 +46,6 @@ export function usersStateReducer(
         users: sortUsers(state.users.map(u => u.phone === action.phone
           ? {
             ...action.user,
-            editRowOpen: u.editRowOpen,
           }
           : u)),
       };

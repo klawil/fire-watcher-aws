@@ -1,20 +1,13 @@
 import { UserObject } from "$/userApi";
 
 export interface UsersState {
-  users: (UserObject & {
-    editRowOpen?: boolean;
-  })[];
+  users: UserObject[];
   deleteUserModal?: UserObject;
 }
 
 interface SetUsersAction {
   action: 'SetUsers';
   users: UsersState['users'];
-}
-interface SetUserEditRowAction {
-  action: 'SetUserEditRow';
-  phone: string;
-  editRowOpen: boolean;
 }
 interface UpdateUserAction {
   action: 'UpdateUser';
@@ -34,8 +27,8 @@ interface AddUserAction {
   action: 'AddUser';
   user: UserObject;
 }
-type UsersActions = SetUsersAction | SetUserEditRowAction | UpdateUserAction | ReplaceUserAction
-  | DeleteUserAction | AddUserAction;
+type UsersActions = SetUsersAction | UpdateUserAction | ReplaceUserAction | DeleteUserAction
+  | AddUserAction;
 
 interface SetDeleteModalAction {
   action: 'SetDeleteModal';

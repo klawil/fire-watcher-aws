@@ -7,8 +7,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { LoggedInUserContext } from "@/logic/authContext";
 import UserEdit from "../userEdit/userEdit";
-import { useContext } from "react";
-import { UsersDispatchContext } from "@/logic/usersState";
+import { useContext, useState } from "react";
 
 function formatPhone(phone: number | string): string {
 	const first = phone.toString().substring(0, 3);
@@ -22,18 +21,19 @@ export default function UserRow({
   user,
   idx,
 }: Readonly<{
-  user: UsersState['users'][number];
+  user: UsersState['users'][number] | null;
   idx: number;
 }>) {
   const loggedInUser = useContext(LoggedInUserContext);
-  const dispatch = useContext(UsersDispatchContext);
 
   const rowClasses = [ 'text-center', 'align-middle' ];
   if (idx % 2 === 0)
     rowClasses.push(styles.highlightRow);
 
+  const [editOpen, setEditOpen] = useState(false);
+
   return (<>
-    <tr className={rowClasses.join(' ')}>
+    {user !== null && <tr className={rowClasses.join(' ')}>
       <td>{formatPhone(user.phone)}</td>
       <td className="text-start">{user.lName}, {user.fName}</td>
       <td>{validDepartments
@@ -43,18 +43,23 @@ export default function UserRow({
       }</td>
       <td>
         <Button
-          onClick={() => dispatch({
-            action: 'SetUserEditRow',
-            phone: user.phone,
-            editRowOpen: !user.editRowOpen,
-          })}
-          variant={user.editRowOpen ? 'secondary' : 'primary'}
-        >{user.editRowOpen ? 'Close' : 'Edit'}</Button>
+          onClick={() => setEditOpen(!editOpen)}
+          variant={editOpen ? 'secondary' : 'primary'}
+        >{editOpen ? 'Close' : 'Edit'}</Button>
       </td>
-    </tr>
-    {user.editRowOpen && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}><td colSpan={4}>
+    </tr>}
+    {user === null && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}>
+      <td className="align-middle text-center" colSpan={3}>Create a New User</td>
+      <td className="align-middle text-center">
+        <Button
+          variant={editOpen ? 'secondary' : 'primary'}
+          onClick={() => setEditOpen(!editOpen)}
+        >{editOpen ? 'Close' : 'Open'}</Button>
+      </td>
+    </tr>}
+    {editOpen && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}><td colSpan={4}>
       <Container>
-        {loggedInUser?.isDistrictAdmin && <Row className="text-center">
+        {(user !== null && loggedInUser?.isDistrictAdmin) && <Row className="text-center">
           <Col md={6}><b>Last Login:</b> {
             typeof user.lastLogin === 'undefined'
               ? 'Never'

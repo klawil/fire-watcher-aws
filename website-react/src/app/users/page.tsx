@@ -40,6 +40,10 @@ export default function Page() {
                   user={user}
                   idx={idx}
                 />))}
+              <UserRow
+                user={null}
+                idx={state.users.length}
+              />
             </tbody>
           </Table>
         </UsersDispatchContext.Provider>}

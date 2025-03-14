@@ -199,7 +199,10 @@ export default function UserEdit({
     classList.push('offset-xl-3');
 
   return (<Row>
-    <Col xl={6} className="row px-4">
+    <Col xl={user === null ? {
+      span: 6,
+      offset: 3,
+    } : 6} className="row px-4">
       <Col lg={{ span: 6, offset: 3 }} md={{ span: 8, offset: 2 }} xl={{ span: 8, offset: 2 }}>
         {user === null && <TextInput
           invalidFields={errorFields}
