@@ -13,7 +13,7 @@ interface UserObjectBase {
 		tokenExpiry: number;
 	}[];
 	lastLogin?: number;
-	pagingPhone?: UserDepartment;
+	pagingPhone?: UserDepartment | null;
 }
 type UserObjectBaseBooleans = {
 	[key in UserObjectBooleans]?: boolean;
@@ -57,7 +57,7 @@ export interface ApiUserAuthBody {
 export interface ApiUserUpdateBody {
 	isMe?: boolean;
 	phone: string;
-	talkgroups?: number[];
+	talkgroups?: PagingTalkgroup[];
 	fName?: string;
 	lName?: string;
 	getTranscript?: boolean;
@@ -119,6 +119,7 @@ export interface ApiUserGetUserResponse extends ApiResponseBase, Partial<UserObj
 }
 export interface ApiUserUpdateResponse extends ApiResponseBase {
 	errors: string[];
+	user?: UserObject;
 }
 export interface ApiUserFidoGetAuthResponse extends ApiResponseBase {
 	challenge: string; // Baes64 Buffer

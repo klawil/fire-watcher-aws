@@ -6,7 +6,7 @@ import { parseDynamoDbAttributeMap, parseDynamoDbAttributeValue } from '../utils
 import { getCookies, getLoggedInUser } from '../utils/auth';
 import { allUserCookies, authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
-import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, InternalUserObject, UserObject } from '../../../common/userApi';
+import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, InternalUserObject, UserObject } from '../../../common/userApi';
 import { unauthorizedApiResponse } from '../types/api';
 import { PagingTalkgroup, pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { ActivateBody, LoginBody } from '../types/queue';
@@ -445,6 +445,23 @@ async function handleList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 	};
 }
 
+function attributeMapToSafeUser(
+	userValues: aws.DynamoDB.AttributeMap,
+	loggedInUser: InternalUserObject,
+): UserObject {
+	const queryKeysToGet = loggedInUser.isDistrictAdmin ? districtAdminUserKeys : adminUserKeys;
+	const keysToGet = (Object.keys(queryKeysToGet) as (keyof typeof queryKeysToGet)[])
+		.map(key => queryKeysToGet[key]);
+	const fullUser = parseDynamoDbAttributeMap(userValues) as unknown as UserObject;
+	(Object.keys(fullUser) as (keyof typeof fullUser)[]).forEach(key => {
+		if (!keysToGet.includes(key)) {
+			delete fullUser[key];
+		}
+	});
+
+	return fullUser;
+}
+
 interface EditKeyConfig {
 	required?: boolean;
 	name: keyof ApiUserUpdateBody;
@@ -533,9 +550,9 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 	// Validate and parse the body
 	validateBodyIsJson(event.body);
 	const body = JSON.parse(event.body as string) as ApiUserUpdateBody;
-	const response: ApiResponse = {
+	const response: ApiUserUpdateResponse = {
 		success: true,
-		errors: []
+		errors: [],
 	};
 	if (body.isMe) {
 		user.isAdmin = false;
@@ -672,7 +689,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		},
 		ExpressionAttributeNames: {},
 		UpdateExpression: '',
-		ReturnValues: 'UPDATED_NEW'
+		ReturnValues: 'ALL_NEW'
 	};
 	keysToSet.forEach(item => {
 		// Exit early for items that are a part of the department but not the department name
@@ -747,7 +764,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 		updateConfig.UpdateExpression += `REMOVE ${deleteExpressions.join(', ')}`;
 	}
 
-	await dynamodb.updateItem(updateConfig).promise();
+	const updateResult = await dynamodb.updateItem(updateConfig).promise();
 	if (create) {
 		const queueMessage: ActivateBody = {
 			action: 'activate',
@@ -758,6 +775,9 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 			MessageBody: JSON.stringify(queueMessage),
 			QueueUrl: queueUrl
 		}).promise();
+	}
+	if (updateResult.Attributes) {
+		response.user = attributeMapToSafeUser(updateResult.Attributes, user);
 	}
 
 	return {
@@ -783,7 +803,7 @@ async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayP
 	// Validate and parse the body
 	validateBodyIsJson(event.body);
 	const body = JSON.parse(event.body as string) as ApiUserUpdateGroupBody;
-	const response: ApiResponse = {
+	const response: ApiUserUpdateResponse = {
 		success: true,
 		errors: [],
 	};
@@ -892,7 +912,7 @@ async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		},
 		ExpressionAttributeValues: {},
 		UpdateExpression: '',
-		ReturnValues: 'UPDATED_NEW',
+		ReturnValues: 'ALL_NEW',
 	};
 	if (typeof phoneUser[body.department] === 'undefined') {
 		updateConfig.ExpressionAttributeValues[':dep'] = {
@@ -939,6 +959,7 @@ async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayP
 			MessageBody: JSON.stringify(queueMessage),
 			QueueUrl: queueUrl
 		}).promise();
+		response.user = attributeMapToSafeUser(result.Attributes, user);
 	}
 
 	return {
