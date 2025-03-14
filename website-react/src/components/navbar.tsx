@@ -5,8 +5,9 @@ import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import { useLocation } from "@/logic/clientHooks";
-import { useUser } from '@/logic/auth';
 import { PageConfig } from '@/types/page';
+import { useContext } from 'react';
+import { LoggedInUserContext } from '@/logic/authContext';
 
 export default function CofrnNavbar({
   pageConfig,
@@ -20,8 +21,8 @@ export default function CofrnNavbar({
   const loginLink = `/login?redirectTo=${redirectTo}`;
   const logoutLink = `/api/user?action=logout&redirectTo=${redirectTo}`;
 
-  const user = useUser();
-  if (typeof user === 'undefined') return null;
+  const user = useContext(LoggedInUserContext);
+  if (user === null) return null;
 
   return (
     <Navbar

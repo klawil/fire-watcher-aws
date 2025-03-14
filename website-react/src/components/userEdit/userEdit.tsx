@@ -1,13 +1,13 @@
 import { ApiUserUpdateBody, UserObject, UserObjectBooleans } from "$/userApi";
-import { useUser } from "@/logic/auth";
 import { UserActions } from "@/types/users";
-import { useCallback, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Col from "react-bootstrap/Col";
 import Row from 'react-bootstrap/Row';
 import { defaultDepartment, departmentConfig, pagingConfig, pagingTalkgroupOrder, validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
+import { LoggedInUserContext } from "@/logic/authContext";
 
 interface CheckboxConfig {
 	name: UserObjectBooleans & keyof ApiUserUpdateBody;
@@ -72,6 +72,8 @@ export default function UserEdit({
   user: UserObject | null;
   dispatch: React.ActionDispatch<[action: UserActions]>;
 }>) {
+  const loggedInUser = useContext(LoggedInUserContext);
+
   const [updateState, setUpdateStateRaw] = useState<Partial<ApiUserUpdateBody>>({});
   const setUpdateState = useCallback((userDelta: Partial<ApiUserUpdateBody>) => {
     (Object.keys(userDelta) as (keyof ApiUserUpdateBody)[]).forEach(key => {
@@ -137,7 +139,6 @@ export default function UserEdit({
     ? userDepartments[0] || defaultDepartment
     : updateState.department;
 
-  const loggedInUser = useUser();
   const loggedInUserDepartments = validDepartments
     .filter(dep => loggedInUser?.isDistrictAdmin
       || (loggedInUser && loggedInUser[dep]?.active && loggedInUser[dep]?.admin)

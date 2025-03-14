@@ -5,10 +5,9 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { useCallback, useState } from "react";
-import { UserObject } from "$/userApi";
-import { useUser } from "@/logic/auth";
+import { LoggedInUserContext } from "@/logic/authContext";
 import UserEdit from "../userEdit/userEdit";
+import { useContext } from "react";
 
 function formatPhone(phone: number | string): string {
 	const first = phone.toString().substring(0, 3);
@@ -27,11 +26,11 @@ export default function UserRow({
   idx: number;
   dispatch: React.ActionDispatch<[action: UserActions]>;
 }>) {
+  const loggedInUser = useContext(LoggedInUserContext);
+
   const rowClasses = [ 'text-center', 'align-middle' ];
   if (idx % 2 === 0)
     rowClasses.push(styles.highlightRow);
-
-  const loggedInUser = useUser();
 
   return (<>
     <tr className={rowClasses.join(' ')}>
