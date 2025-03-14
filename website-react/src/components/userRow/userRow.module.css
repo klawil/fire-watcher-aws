@@ -1,0 +1,3 @@
+.highlightRow > td {
+  background-color: var(--bs-table-striped-bg);
+}

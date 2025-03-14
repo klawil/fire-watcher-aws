@@ -8,6 +8,8 @@ export function useUser() {
   const [user, setUser] = useState<ApiUserGetUserResponse>();
 
   useEffect(() => {
+    if (user?.success) return;
+
     // Parse information out of the cookies
     const cookies: {
       [key: string]: string | null;
@@ -52,7 +54,7 @@ export function useUser() {
     setUser(initUser);
 
     // Make the API call to get the most updated user
-    if (initUser.isActive) {
+    if (initUser.isActive && !initUser.success) {
       fetch(`/api/user?action=getUser`)
         .then(r => r.json())
         .then(data => {
