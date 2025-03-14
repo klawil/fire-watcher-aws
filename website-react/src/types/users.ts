@@ -19,7 +19,7 @@ interface SetUserEditRowAction {
 interface UpdateUserAction {
   action: 'UpdateUser';
   phone: string;
-  user: UserObject;
+  user: Partial<UserObject>;
 }
 interface DeleteUserAction {
   action: 'DeleteUser';

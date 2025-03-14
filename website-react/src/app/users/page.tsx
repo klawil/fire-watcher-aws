@@ -5,7 +5,7 @@ import CofrnLayout from "@/components/layout";
 import React, { useEffect, useReducer } from "react";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import Table from "react-bootstrap/Table";
-import { defaultUsersState, usersStateReducer } from "@/logic/usersState";
+import { defaultUsersState, UsersDispatchContext, usersStateReducer } from "@/logic/usersState";
 import UserRow from "@/components/userRow/userRow";
 
 export default function Page() {
@@ -31,7 +31,7 @@ export default function Page() {
     }}>
       {!state.users || state.users.length === 0
         ? <LoadingSpinner></LoadingSpinner>
-        : <>
+        : <UsersDispatchContext.Provider value={dispatch}>
           <Table responsive={true}>
             <tbody>
               {state.users
@@ -39,11 +39,10 @@ export default function Page() {
                   key={user.phone}
                   user={user}
                   idx={idx}
-                  dispatch={dispatch}
                 />))}
             </tbody>
           </Table>
-        </>}
+        </UsersDispatchContext.Provider>}
     </CofrnLayout>
   )
 }

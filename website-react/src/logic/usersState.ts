@@ -1,5 +1,8 @@
 import { UserObject } from "$/userApi";
 import { UserActions, UsersState } from "@/types/users";
+import { createContext } from "react";
+
+export const UsersDispatchContext = createContext<React.ActionDispatch<[action: UserActions]>>(() => {});
 
 export const defaultUsersState: UsersState = {
   users: [],

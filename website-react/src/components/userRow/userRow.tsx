@@ -8,6 +8,7 @@ import Col from "react-bootstrap/Col";
 import { LoggedInUserContext } from "@/logic/authContext";
 import UserEdit from "../userEdit/userEdit";
 import { useContext } from "react";
+import { UsersDispatchContext } from "@/logic/usersState";
 
 function formatPhone(phone: number | string): string {
 	const first = phone.toString().substring(0, 3);
@@ -20,13 +21,12 @@ function formatPhone(phone: number | string): string {
 export default function UserRow({
   user,
   idx,
-  dispatch,
 }: Readonly<{
   user: UsersState['users'][number];
   idx: number;
-  dispatch: React.ActionDispatch<[action: UserActions]>;
 }>) {
   const loggedInUser = useContext(LoggedInUserContext);
+  const dispatch = useContext(UsersDispatchContext);
 
   const rowClasses = [ 'text-center', 'align-middle' ];
   if (idx % 2 === 0)
@@ -62,7 +62,7 @@ export default function UserRow({
           }</Col>
           <Col md={6}><b>Logged In Devices:</b> {user.loginTokens?.length || 0}</Col>
         </Row>}
-        <UserEdit user={user} dispatch={dispatch} />
+        <UserEdit user={user} />
       </Container>
     </td></tr>}
   </>)

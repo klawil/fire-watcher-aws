@@ -8,6 +8,10 @@ import Row from 'react-bootstrap/Row';
 import { defaultDepartment, departmentConfig, pagingConfig, pagingTalkgroupOrder, validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
 import { LoggedInUserContext } from "@/logic/authContext";
+import Table from "react-bootstrap/Table";
+import styles from './userEdit.module.css';
+import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
+import { UsersDispatchContext } from "@/logic/usersState";
 
 interface CheckboxConfig {
 	name: UserObjectBooleans & keyof ApiUserUpdateBody;
@@ -67,12 +71,11 @@ function TextInput({
 
 export default function UserEdit({
   user,
-  dispatch,
 }: Readonly<{
   user: UserObject | null;
-  dispatch: React.ActionDispatch<[action: UserActions]>;
 }>) {
   const loggedInUser = useContext(LoggedInUserContext);
+  const dispatch = useContext(UsersDispatchContext);
 
   const [updateState, setUpdateStateRaw] = useState<Partial<ApiUserUpdateBody>>({});
   const setUpdateState = useCallback((userDelta: Partial<ApiUserUpdateBody>) => {
@@ -144,7 +147,6 @@ export default function UserEdit({
       || (loggedInUser && loggedInUser[dep]?.active && loggedInUser[dep]?.admin)
     );
 
-  console.log(updateState);
   const hasChanges = user === null ||
     (Object.keys(updateState) as (keyof typeof updateState)[])
       .filter(key => typeof updateState[key] !== 'undefined')
@@ -273,5 +275,29 @@ export default function UserEdit({
         onClick={saveUser}
       >{isSaving ? 'Saving...' : user === null ? 'Create' : 'Save'}</Button></Col>
     </Col>
+    {user !== null && <Col
+      xl={{span: 6, offset: 0}}
+      lg={{span: 10, offset: 1}}
+      className="table-responsive"
+    >
+      <Table className={`mb-0 text-center ${styles.noBg}`}>
+        <thead><tr>
+          <th>Department</th>
+          <th>Call Sign</th>
+          <th>Admin</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          {validDepartments
+            .filter(dep => loggedInUserDepartments.includes(dep) || user[dep])
+            .map(dep => (<UserDepartmentRow
+              key={dep}
+              user={user}
+              dep={dep}
+              loggedInUserDepartments={loggedInUserDepartments}
+            />))}
+        </tbody>
+      </Table>
+    </Col>}
   </Row>);
 }
