@@ -36,9 +36,3 @@ export function useLocation() {
 
   return loc;
 }
-
-interface PageInfo {
-  title?: string;
-  navTitle: string;
-  hasAudio?: boolean;
-}

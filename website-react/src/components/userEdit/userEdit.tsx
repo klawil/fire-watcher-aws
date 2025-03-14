@@ -1,5 +1,4 @@
 import { ApiUserUpdateBody, UserObject, UserObjectBooleans } from "$/userApi";
-import { UserActions } from "@/types/users";
 import { useCallback, useContext, useState } from "react";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -114,7 +113,8 @@ export default function UserEdit({
     // Figure out if we have any changes
     let hasChanges = true;
     if (user !== null) {
-      const newTgs = newTalkgroups.filter(tg => !(user.talkgroups || []).includes(tg as any));
+      const newTgs = newTalkgroups.filter(tg => !(user.talkgroups || [])
+        .includes(tg as typeof user.talkgroups[number]));
       const removedTgs = (user.talkgroups || []).filter(tg => !newTalkgroups.includes(tg));
       hasChanges = newTgs.length > 0 || removedTgs.length > 0;
     }
@@ -130,10 +130,7 @@ export default function UserEdit({
       ...state,
       talkgroups: newTalkgroups,
     };
-  }), [
-    user,
-    setUpdateState,
-  ]);
+  }), [ user, ]);
 
   const [isSaving, setIsSaving] = useState(false);
 

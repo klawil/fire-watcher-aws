@@ -1,4 +1,4 @@
-import { UserActions, UsersState } from "@/types/users";
+import { UsersState } from "@/types/users";
 import styles from './userRow.module.css';
 import { validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";

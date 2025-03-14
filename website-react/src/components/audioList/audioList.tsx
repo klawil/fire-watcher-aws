@@ -2,11 +2,11 @@
 
 import Table from "react-bootstrap/Table";
 import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr } from "@/logic/dateAndFile";
-import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject } from "$/audioApi";
+import { ApiAudioListResponse, ApiAudioTalkgroupsResponse } from "$/audioApi";
 import styles from './audioList.module.css';
 import { useDarkMode } from "@/logic/clientHooks";
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
@@ -87,7 +87,7 @@ function useLoadFiles(
       const callId = Date.now();
       runIds.current[direction] = callId;
 
-      let urlParams: URLSearchParams = new URLSearchParams();
+      const urlParams: URLSearchParams = new URLSearchParams();
       urlParams.set('action', 'list');
       if (
         direction === 'before' &&

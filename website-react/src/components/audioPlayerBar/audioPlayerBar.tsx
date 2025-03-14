@@ -38,8 +38,6 @@ export default function AudioPlayerBar({
   const audioRef = useRef(new Audio());
   useEffect(() => {
     // Duration
-    const audio = audioRef.current;
-
     audioRef.current.addEventListener('timeupdate', () => dispatch({
       action: 'SetPlayerTimestamp',
       timestamp: audioRef.current.currentTime,
