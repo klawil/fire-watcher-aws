@@ -959,6 +959,9 @@ async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayP
 			MessageBody: JSON.stringify(queueMessage),
 			QueueUrl: queueUrl
 		}).promise();
+	}
+
+	if (result.Attributes) {
 		response.user = attributeMapToSafeUser(result.Attributes, user);
 	}
 
