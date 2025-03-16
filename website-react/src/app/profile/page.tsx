@@ -108,7 +108,7 @@ export default function Page() {
     }}
   >
     {user === null && <LoadingSpinner />}
-    {user !== null && <>
+    {user !== null && user.isActive && <>
       <h2 className="text-center">Information Only an Admin Can Edit:</h2>
       <Row className="justify-content-center my-3">
         <Col md={6}><InputGroup>
@@ -186,5 +186,8 @@ export default function Page() {
         >{isSaving ? (<><Spinner size="sm" /> Saving</>) : 'Save Changes'}</Button>
       </Col></Row>
     </>}
+    {user !== null && !user.isActive && <h1 className="text-center">
+      You must be logged in to access this page
+    </h1>}
   </CofrnLayout>);
 }
