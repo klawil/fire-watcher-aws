@@ -1,14 +1,14 @@
 import * as aws from 'aws-sdk';
 
-export const authUserCookie = 'cvfd-user';
-export const authTokenCookie = 'cvfd-token';
+export const authUserCookie = 'cofrn-user';
+export const authTokenCookie = 'cofrn-token';
 
 export const allUserCookies = [
 	authUserCookie,
 	authTokenCookie,
-	'cvfd-user-name',
-	'cvfd-user-admin',
-	'cvfd-user-super',
+	'cofrn-user-name',
+	'cofrn-user-admin',
+	'cofrn-user-super',
 ];
 
 export function isUserActive(user: aws.DynamoDB.AttributeMap): boolean {

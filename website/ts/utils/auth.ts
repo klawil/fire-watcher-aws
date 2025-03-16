@@ -1,7 +1,7 @@
 import { ApiUserFidoAuthBody, ApiUserFidoAuthResponse, ApiUserFidoGetAuthResponse, ApiUserGetUserResponse } from '../../../common/userApi';
 import { showAlert } from './alerts';
 import { getLogger } from '../../../stack/resources/utils/logger';
-import { validDepartments } from '../../../common/userConstants';
+import { UserDepartment, validDepartments } from '../../../common/userConstants';
 
 const logger = getLogger('auth');
 
@@ -62,14 +62,14 @@ export async function useFidoKey(keyIds: string[], isTest: boolean): Promise<boo
 
 export const afterAuthUpdate: Function[] = [];
 
-const fNameCookie = document.cookie.split('cvfd-user-name=')[1];
+const fNameCookie = document.cookie.split('cofrn-user-name=')[1];
 export let user: ApiUserGetUserResponse = {
 	success: false,
-	isActive: document.cookie.indexOf('cvfd-token') !== -1,
-	isUser: document.cookie.indexOf('cvfd-token') !== -1,
-	isAdmin: document.cookie.indexOf('cvfd-user-admin=1') !== -1,
-	isDistrictAdmin: document.cookie.indexOf('cvfd-user-super=1') !== -1,
-	fName: typeof fNameCookie !== 'undefined' ? fNameCookie.split(';')[0] : undefined,
+	isActive: document.cookie.indexOf('cofrn-token') !== -1,
+	isUser: document.cookie.indexOf('cofrn-token') !== -1,
+	isAdmin: document.cookie.indexOf('cofrn-user-admin=1') !== -1,
+	isDistrictAdmin: document.cookie.indexOf('cofrn-user-super=1') !== -1,
+	fName: typeof fNameCookie !== 'undefined' ? decodeURIComponent(fNameCookie.split(';')[0]) : undefined,
 };
 const cookies: {
 	[key: string]: string | null;
@@ -83,8 +83,18 @@ document.cookie.split('; ').forEach(cookie => {
 
 	cookies[cookie.slice(0, eqSign)] = cookie.slice(eqSign + 1);
 });
+const departmentCookie = cookies['cofrn-user-departments'];
+if (departmentCookie) {
+	const departments: {
+		[key in UserDepartment]?: ApiUserGetUserResponse[UserDepartment];
+	} = JSON.parse(decodeURIComponent(departmentCookie));
+	validDepartments.forEach(dep => {
+		if (typeof departments[dep] === 'undefined') return;
+		user[dep] = departments[dep];
+	});
+}
 validDepartments.forEach(dep => {
-	const cookieName = `cvfd-user-${dep}`;
+	const cookieName = `cofrn-user-${dep}`;
 	if (typeof cookies[cookieName] === 'string') {
 		try {
 			user[dep] = JSON.parse(cookies[cookieName] as string);
@@ -121,7 +131,7 @@ if (user.isDistrictAdmin) {
 		.forEach(elem => elem.classList.remove('d-none'));
 }
 
-if (document.cookie.indexOf('cvfd-token') !== -1) {
+if (document.cookie.indexOf('cofrn-token') !== -1) {
 	logger.debug('Fetching updated user data');
 	fetch(`/api/user?action=getUser`)
 		.then(r => r.json())
