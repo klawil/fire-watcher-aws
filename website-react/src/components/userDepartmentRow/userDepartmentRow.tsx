@@ -2,8 +2,10 @@ import { ApiUserUpdateGroupBody, ApiUserUpdateResponse, UserObject } from "$/use
 import { UserDepartment } from "$/userConstants";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { useCallback, useContext, useState } from "react";
+import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import { BsArrowCounterclockwise, BsSave, BsTrash } from "react-icons/bs";
 
 const baseCallSign: {
   [key in UserDepartment]: string;
@@ -183,13 +185,18 @@ export default function UserDepartmentRow({
         className="m-1"
         disabled={!hasChanges || isSaving}
         onClick={saveChanges}
-      >{isSaving ? 'Saving...' : 'Save'}</Button>
+      >{isSaving ? (<Spinner size="sm" />) : (<BsSave />)}</Button>
       {typeof user[dep] !== 'undefined' && <Button
         variant="danger"
         className="m-1"
         disabled={!loggedInUserDepartments.includes(dep)}
         onClick={deleteDepartment}
-      >{isDeleting ? 'Deleting' : 'Delete'}</Button>}
+      >{isDeleting ? (<Spinner size="sm" />) : (<BsTrash />)}</Button>}
+      {hasChanges && <Button
+        variant="warning"
+        className="m-1"
+        onClick={() => setChangesRaw({})}
+      ><BsArrowCounterclockwise /></Button>}
     </td>
   </tr>);
 }

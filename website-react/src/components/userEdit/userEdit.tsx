@@ -198,6 +198,15 @@ export default function UserEdit({
   if (user === null)
     classList.push('offset-xl-3');
 
+  let checkedTalkgroups: PagingTalkgroup[] = [];
+  if (typeof updateState.talkgroups !== 'undefined') {
+    checkedTalkgroups = updateState.talkgroups;
+  } else if (user !== null) {
+    checkedTalkgroups = user.talkgroups || [];
+  } else {
+    checkedTalkgroups = departmentConfig[userDepartment]?.defaultTalkgroups || [];
+  }
+
   return (<Row>
     <Col xl={user === null ? {
       span: 6,
@@ -279,13 +288,7 @@ export default function UserEdit({
           isInvalid={errorFields.includes('tg')}
           key={tg}
           type="switch"
-          checked={
-            typeof updateState.talkgroups !== 'undefined'
-              ? updateState.talkgroups.includes(tg)
-              : user && typeof user.talkgroups !== 'undefined'
-                ? user.talkgroups.includes(tg)
-                : departmentConfig[userDepartment]?.defaultTalkgroups.includes(tg)
-          }
+          checked={checkedTalkgroups.includes(tg)}
           onChange={event => changeStateTg({
             add: event.target.checked,
             tg,
@@ -317,12 +320,19 @@ export default function UserEdit({
       <Col
         lg={{span: 6, offset: 3}}
         md={{span: 8, offset: 2}}
-        className="d-grid p-2"
-      ><Button
-        variant="success"
-        disabled={!hasChanges || isSaving}
-        onClick={saveUser}
-      >{isSaving ? 'Saving...' : user === null ? 'Create' : 'Save'}</Button></Col>
+        className="p-2 row"
+      >
+        <Col sm={6}><Button
+          variant="success"
+          disabled={!hasChanges || isSaving}
+          onClick={saveUser}
+        >{isSaving ? 'Saving...' : user === null ? 'Create' : 'Save'}</Button></Col>
+        <Col sm={6}><Button
+          variant="warning"
+          onClick={() => setUpdateStateRaw({})}
+          disabled={!hasChanges}
+        >Reset</Button></Col>
+      </Col>
     </Col>
     {user !== null && <Col
       xl={{span: 6, offset: 0}}
