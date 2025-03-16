@@ -962,6 +962,10 @@ async function updateUserGroup(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		response.user = attributeMapToSafeUser(result.Attributes, user);
 	}
 
+	if (result.Attributes) {
+		response.user = attributeMapToSafeUser(result.Attributes, user);
+	}
+
 	return {
 		statusCode: response.success ? 200 : 400,
 		body: JSON.stringify(response),
