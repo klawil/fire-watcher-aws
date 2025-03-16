@@ -10,14 +10,7 @@ import UserEdit from "../userEdit/userEdit";
 import { useContext, useState } from "react";
 import { BsTrash } from "react-icons/bs";
 import { UsersDispatchContext } from "@/logic/usersState";
-
-function formatPhone(phone: number | string): string {
-	const first = phone.toString().substring(0, 3);
-	const middle = phone.toString().substring(3, 6);
-	const last = phone.toString().substring(6, 10);
-
-	return `${first}-${middle}-${last}`;
-}
+import { formatPhone } from "$/stringManipulation";
 
 export default function UserRow({
   user,

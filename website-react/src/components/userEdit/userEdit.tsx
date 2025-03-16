@@ -11,6 +11,7 @@ import Table from "react-bootstrap/Table";
 import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
 import { UsersDispatchContext } from "@/logic/usersState";
+import { formatPhone } from "$/stringManipulation";
 
 interface CheckboxConfig {
 	name: UserObjectBooleans & keyof ApiUserUpdateBody;
@@ -94,6 +95,9 @@ export default function UserEdit({
         return;
       }
 
+      if (key === 'phone') {
+        userDelta[key] = userDelta[key].replace(/[^0-9]/g, '');
+      }
       setUpdateStateRaw((before) => ({
         ...before,
         [key]: userDelta[key],
@@ -217,7 +221,7 @@ export default function UserEdit({
           invalidFields={errorFields}
           userKey="phone"
           placeholder="Phone Number"
-          value={updateState.phone || ''}
+          value={formatPhone(updateState.phone || '')}
           setUpdateState={setUpdateState}
         />}
         <TextInput
