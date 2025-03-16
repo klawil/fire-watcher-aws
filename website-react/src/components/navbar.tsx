@@ -24,6 +24,8 @@ export default function CofrnNavbar({
   const user = useContext(LoggedInUserContext);
   if (user === null) return null;
 
+  console.log(loc?.pathname);
+
   return (
     <Navbar
       fixed="top"
@@ -45,11 +47,11 @@ export default function CofrnNavbar({
           <Nav className="ms-auto mb-2 mb-lg-0" activeKey={loc?.pathname || '/'}>
             {!user.isUser && <Nav.Link href={loginLink}>Login</Nav.Link>}
             {user.isUser && <NavDropdown align="end" title={user.fName} id="nav-dropdown">
-              <NavDropdown.Item href={logoutLink}>Logout</NavDropdown.Item>
-              <NavDropdown.Item href="/profile">Edit Profile</NavDropdown.Item>
-              {user.isAdmin && <NavDropdown.Item href="/users">Manage Users</NavDropdown.Item>}
-              {user.isAdmin && <NavDropdown.Item href="/texts">View Texts</NavDropdown.Item>}
-              {user.isAdmin && <NavDropdown.Item href="/status">System Status</NavDropdown.Item>}
+              <NavDropdown.Item as={Nav.Link} href={logoutLink}>Logout</NavDropdown.Item>
+              <NavDropdown.Item as={Nav.Link} href="/profile">Edit Profile</NavDropdown.Item>
+              {user.isAdmin && <NavDropdown.Item as={Nav.Link} href="/users">Manage Users</NavDropdown.Item>}
+              {user.isAdmin && <NavDropdown.Item as={Nav.Link} href="/texts">View Texts</NavDropdown.Item>}
+              {user.isAdmin && <NavDropdown.Item as={Nav.Link} href="/status">System Status</NavDropdown.Item>}
             </NavDropdown>}
           </Nav>
         </Navbar.Collapse>
