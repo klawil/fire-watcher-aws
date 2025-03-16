@@ -3,7 +3,7 @@
 import { ApiUserGetUserResponse, ApiUserUpdateBody, ApiUserUpdateResponse } from '../../common/userApi';
 import { afterAuthUpdate, user } from './utils/auth';
 import { PagingTalkgroup, pagingConfig, pagingTalkgroupOrder, validDepartments } from '../../common/userConstants';
-import { formatPhone } from './utils/userConstants';
+import { formatPhone } from "../../common/stringManipulation";
 import { doneLoading } from './utils/loading';
 import { showAlert } from './utils/alerts';
 import { createTableRow } from './utils/table';
@@ -79,7 +79,7 @@ async function updateUser() {
 		lName: (<HTMLInputElement>document.getElementById('lName')).value,
 		talkgroups: Array.from(<NodeListOf<HTMLInputElement>>document.querySelectorAll('.talkgroup'))
 			.filter(v => v.checked)
-			.map(v => parseInt(v.value, 10)),
+			.map(v => parseInt(v.value, 10) as PagingTalkgroup),
 	};
 
 	const result: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {

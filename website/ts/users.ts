@@ -5,7 +5,7 @@ import { user } from "./utils/auth";
 import { modifyButton } from "./utils/button";
 import { doneLoading } from "./utils/loading";
 import { RowConfig, createTableRow } from "./utils/table";
-import { formatPhone } from "./utils/userConstants";
+import { formatPhone } from "../../common/stringManipulation";
 import { getLogger } from "../../stack/resources/utils/logger";
 
 const logger = getLogger('users');

@@ -3,7 +3,7 @@ import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneCategories, twilioPhoneNumbers } from './utils/general';
 import { PagingTalkgroup, PhoneNumberTypes, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
-import { fNameToDate } from '../../common/file';
+import { fNameToDate, formatPhone } from '../../common/stringManipulation';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
 
@@ -70,16 +70,6 @@ function randomString(len: number, numeric = false): string {
 	}
 
 	return str.join('');
-}
-
-function formatPhone(phone: number | string): string {
-	logger.trace('formatPhone', ...arguments);
-
-	const first = phone.toString().substring(0, 3);
-	const middle = phone.toString().substring(3, 6);
-	const last = phone.toString().substring(6, 10);
-
-	return `${first}-${middle}-${last}`;
 }
 
 function createPageMessage(

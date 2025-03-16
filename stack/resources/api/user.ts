@@ -494,6 +494,7 @@ const allowedToEditAdmin: EditKeyConfig[] = [
 	{
 		name: 'getTranscript',
 		type: 'boolean',
+		required: false,
 	},
 ];
 const allowedToEditDistrictAdmin: EditKeyConfig[] = [
@@ -501,18 +502,22 @@ const allowedToEditDistrictAdmin: EditKeyConfig[] = [
 	{
 		name: 'getApiAlerts',
 		type: 'boolean',
+		required: false,
 	},
 	{
 		name: 'getVhfAlerts',
 		type: 'boolean',
+		required: false,
 	},
 	{
 		name: 'getDtrAlerts',
 		type: 'boolean',
+		required: false,
 	},
 	{
 		name: 'isDistrictAdmin',
 		type: 'boolean',
+		required: false,
 	},
 	{
 		name: 'pagingPhone',

@@ -13,3 +13,17 @@ export function fNameToDate(fName: string): Date {
 
 	return new Date(0);
 }
+
+export function formatPhone(phone: number | string): string {
+	const first = phone.toString().substring(0, 3);
+	const middle = phone.toString().substring(3, 6);
+	const last = phone.toString().substring(6, 10);
+
+	if (last !== '') {
+		return `${first}-${middle}-${last}`;
+	}
+	if (middle !== '') {
+		return `${first}-${middle}`;
+	}
+	return first;
+}

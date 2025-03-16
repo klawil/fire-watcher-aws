@@ -6,7 +6,7 @@ import { ColumnConfig, createTableRow } from './utils/table';
 import { changeUrlParams, deleteUrlParams, getUrlParams } from './utils/url';
 import { AudioFilter, TalkgroupFilter, ToggleFilter } from './utils/filter';
 import { authInit } from './utils/auth';
-import { fNameToDate } from '../../common/file';
+import { fNameToDate } from '../../common/stringManipulation';
 import { getLogger } from '../../stack/resources/utils/logger';
 
 const logger = getLogger('audio');

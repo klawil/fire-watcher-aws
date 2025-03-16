@@ -4,7 +4,7 @@ import { showAlert } from './utils/alerts';
 import { afterAuthUpdate, user } from './utils/auth';
 import * as twilio from '@twilio/voice-sdk';
 import { ApiUserListResponse, UserObject } from '../../common/userApi';
-import { formatPhone } from './utils/userConstants';
+import { formatPhone } from "../../common/stringManipulation";
 import { createTableRow } from './utils/table';
 import { getLogger } from '../../stack/resources/utils/logger';
 
