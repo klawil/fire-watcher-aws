@@ -8,6 +8,8 @@ import Col from "react-bootstrap/Col";
 import { LoggedInUserContext } from "@/logic/authContext";
 import UserEdit from "../userEdit/userEdit";
 import { useContext, useState } from "react";
+import { BsTrash } from "react-icons/bs";
+import { UsersDispatchContext } from "@/logic/usersState";
 
 function formatPhone(phone: number | string): string {
 	const first = phone.toString().substring(0, 3);
@@ -24,6 +26,7 @@ export default function UserRow({
   user: UsersState['users'][number] | null;
   idx: number;
 }>) {
+  const dispatch = useContext(UsersDispatchContext);
   const loggedInUser = useContext(LoggedInUserContext);
 
   const rowClasses = [ 'text-center', 'align-middle' ];
@@ -31,6 +34,14 @@ export default function UserRow({
     rowClasses.push(styles.highlightRow);
 
   const [editOpen, setEditOpen] = useState(false);
+
+  async function deleteUser() {
+    if (user === null) return;
+    dispatch({
+      action: 'SetDeleteModal',
+      user,
+    });
+  }
 
   return (<>
     {user !== null && <tr className={rowClasses.join(' ')}>
@@ -45,7 +56,13 @@ export default function UserRow({
         <Button
           onClick={() => setEditOpen(!editOpen)}
           variant={editOpen ? 'secondary' : 'primary'}
+          className="mx-1"
         >{editOpen ? 'Close' : 'Edit'}</Button>
+        {loggedInUser?.isDistrictAdmin && <Button
+          variant="danger"
+          className="mx-1"
+          onClick={() => deleteUser()}
+        ><BsTrash /></Button>}
       </td>
     </tr>}
     {user === null && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}>
@@ -55,7 +72,6 @@ export default function UserRow({
           variant={editOpen ? 'secondary' : 'primary'}
           onClick={() => setEditOpen(!editOpen)}
         >{editOpen ? 'Close' : 'Open'}</Button>
-        {/* @TODO - Implement delete button */}
       </td>
     </tr>}
     {editOpen && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}><td colSpan={4}>
