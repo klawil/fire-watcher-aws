@@ -55,6 +55,7 @@ export default function UserRow({
           variant={editOpen ? 'secondary' : 'primary'}
           onClick={() => setEditOpen(!editOpen)}
         >{editOpen ? 'Close' : 'Open'}</Button>
+        {/* @TODO - Implement delete button */}
       </td>
     </tr>}
     {editOpen && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}><td colSpan={4}>

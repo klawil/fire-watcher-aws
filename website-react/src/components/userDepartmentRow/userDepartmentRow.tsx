@@ -51,6 +51,15 @@ export default function UserDepartmentRow({
         }
       });
 
+      if (
+        typeof newValue.callSign !== 'undefined' &&
+        newValue.callSign !== '' &&
+        !user[dep]?.active &&
+        !newValue.active
+      ) {
+        newValue.active = true;
+      }
+
       return newValue;
     })
   }, [dep, user]);
