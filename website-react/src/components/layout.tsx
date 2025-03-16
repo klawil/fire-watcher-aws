@@ -82,10 +82,13 @@ export default function CofrnLayout({
 
   const user = useUser();
 
-  if (colorModeName === null) return (<></>);
+  if (colorModeName === null) return (<>
+    <title>{pageConfig.title}</title>
+  </>);
 
   return (
     <LoggedInUserContext.Provider value={user}>
+      <title>{pageConfig.title}</title>
       <CofrnNavbar pageConfig={pageConfig} />
 
       {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}

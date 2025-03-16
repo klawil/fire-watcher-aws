@@ -24,8 +24,6 @@ export default function CofrnNavbar({
   const user = useContext(LoggedInUserContext);
   if (user === null || colorModeName === null) return null;
 
-  console.log(loc?.pathname);
-
   return (
     <Navbar
       fixed="top"
