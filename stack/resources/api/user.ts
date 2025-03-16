@@ -45,19 +45,19 @@ const userCookieConfigs: {
 	value: (user: InternalUserObject) => string;
 }[] = [
 	{
-		name: 'cvfd-user-name',
+		name: 'cofrn-user-name',
 		value: u => u.fName,
 	},
 	{
-		name: 'cvfd-user-admin',
+		name: 'cofrn-user-admin',
 		value: u => u.isAdmin ? '1' : '0',
 	},
 	{
-		name: 'cvfd-user-super',
+		name: 'cofrn-user-super',
 		value: u => u.isDistrictAdmin ? '1' : '0',
 	},
 	{
-		name: 'cvfd-user-departments',
+		name: 'cofrn-user-departments',
 		value: u => JSON.stringify(validDepartments
 			.reduce((agg: {
 				[key in UserDepartment]?: InternalUserObject[UserDepartment];
@@ -79,16 +79,16 @@ function getUserCookieHeaders(
 ): {
 	'Set-Cookie': string[],
 } {
-	const setUserCookies: string[] = [];
+	const cookieSetStrings: string[] = [];
+	const cookiesToSet: string[] = [];
 
 	// Set the user cookies to what they should be
-	const cookiesToSet: string[] = [];
 	const cookies = getCookies(event);
 	if (user !== null) {
 		userCookieConfigs.forEach(config => {
 			const cookieValue = config.value(user);
 			if (cookieValue !== cookies[config.name]) {
-				setUserCookies.push(`${config.name}=${encodeURIComponent(config.value(user))}`);
+				cookieSetStrings.push(`${config.name}=${encodeURIComponent(config.value(user))}`);
 			}
 			cookiesToSet.push(config.name);
 		});
@@ -96,13 +96,14 @@ function getUserCookieHeaders(
 
 	// Determine which cookies to delete
 	const cookiesToDelete: string[] = Object.keys(cookies)
-		.filter(cookie => cookie.startsWith('cvfd-user')
+		.filter(cookie => cookie.startsWith('cofrn-user')
+			&& cookie !== authUserCookie
 			&& !cookiesToSet.some(setCookie => setCookie === cookie));
 
 	return {
 		'Set-Cookie': [
-			...cookiesToSet.map(v => `${v}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
-			...cookiesToDelete.map(v => `${v}==; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`),
+			...cookieSetStrings.map(v => `${v}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
+			...cookiesToDelete.map(v => `${v}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`),
 			...extraCookies.map(v => `${v}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
 		],
 	};
@@ -363,7 +364,7 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 
 	const cookies = getCookies(event);
 	const cookiesToDelete = Object.keys(cookies)
-		.filter(cookie => cookie.startsWith('cvfd-'));
+		.filter(cookie => cookie.startsWith('cofrn-'));
 	const response: APIGatewayProxyResult = {
 		statusCode: 302,
 		body: 'Logged Out',

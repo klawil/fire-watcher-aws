@@ -671,7 +671,7 @@ export class FireWatcherAwsStack extends Stack {
       if (alarmConfig.okayAction !== false)
         alarm.addOkAction(alarmAction);
       
-      Tags.of(alarm).add('cvfd-alarm-type', alarmConfig.tag);
+      Tags.of(alarm).add('cofrn-alarm-type', alarmConfig.tag);
     });
 
     // Create the event trigger
@@ -812,7 +812,7 @@ export class FireWatcherAwsStack extends Stack {
       WEATHER_LAMBDA: weatherUpdater.functionName,
     };
 
-    const cvfdApis: ApiDefinition[] = [
+    const cofrnApis: ApiDefinition[] = [
       {
         name: 'infra',
         env: {
@@ -927,7 +927,7 @@ export class FireWatcherAwsStack extends Stack {
       },
     ];
 
-    cvfdApis.forEach(config => {
+    cofrnApis.forEach(config => {
       const apiHandler = new lambdanodejs.NodejsFunction(this, `cvfd-api-${config.name}-lambda`, {
         initialPolicy: [
           new iam.PolicyStatement({

@@ -56,8 +56,8 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 	const nowTime = Date.now();
 
 	if (event.source !== 'aws.events') {
-		const tags: { 'cvfd-alarm-type': AlertType, [key: string]: string } = {
-			'cvfd-alarm-type': 'Api',
+		const tags: { 'cofrn-alarm-type': AlertType, [key: string]: string } = {
+			'cofrn-alarm-type': 'Api',
 		};
 		try {
 			const alarmInfo = await cloudWatch.listTagsForResource({
@@ -79,7 +79,7 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 			name: alarmData.alarmName,
 			newState: alarmData.state.value,
 			reason: alertMessage,
-			type: tags['cvfd-alarm-type'],
+			type: tags['cofrn-alarm-type'],
 		};
 	}
 
