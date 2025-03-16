@@ -70,7 +70,7 @@ export default function Page() {
       title: 'User Management',
     }}>
       {!state.users || state.users.length === 0
-        ? <LoadingSpinner></LoadingSpinner>
+        ? <LoadingSpinner />
         : <UsersDispatchContext.Provider value={dispatch}>
           <Table responsive={true}>
             <tbody>
