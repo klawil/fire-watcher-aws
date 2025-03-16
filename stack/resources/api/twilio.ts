@@ -356,7 +356,7 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 					if (
 						result.Attributes?.lastStatus?.S === 'undelivered' &&
 						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) > 0 &&
-						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) % 5 === 0
+						parseInt(result.Attributes?.lastStatusCount?.N || '0', 10) % 10 === 0
 					) {
 						const queueMessage: TwilioErrorBody = {
 							action: 'twilio_error',
