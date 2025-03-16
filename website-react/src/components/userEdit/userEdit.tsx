@@ -1,5 +1,5 @@
 import { ApiUserUpdateBody, ApiUserUpdateResponse, UserObject, UserObjectBooleans } from "$/userApi";
-import { useCallback, useContext, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useContext, useState } from "react";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Col from "react-bootstrap/Col";
@@ -74,8 +74,10 @@ function TextInput({
 
 export default function UserEdit({
   user,
+  setEditOpen,
 }: Readonly<{
   user: UserObject | null;
+  setEditOpen: Dispatch<SetStateAction<boolean>>;
 }>) {
   const loggedInUser = useContext(LoggedInUserContext);
   const dispatch = useContext(UsersDispatchContext);
@@ -191,6 +193,9 @@ export default function UserEdit({
           });
         }
         setUpdateStateRaw({});
+        if (user === null) {
+          setEditOpen(false);
+        }
       }
     } catch (e) {
       console.error(`Error saving changes to ${user}: ${updateState}`, e);

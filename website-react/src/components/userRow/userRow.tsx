@@ -77,7 +77,7 @@ export default function UserRow({
           }</Col>
           <Col md={6}><b>Logged In Devices:</b> {user.loginTokens?.length || 0}</Col>
         </Row>}
-        <UserEdit user={user} />
+        <UserEdit setEditOpen={setEditOpen} user={user} />
       </Container>
     </td></tr>}
   </>)
