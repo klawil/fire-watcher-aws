@@ -93,8 +93,8 @@ export default function Page() {
       }).then(r => r.json());
 
       if (apiResponse.success) {
+        await reCheckUser();
         setUserEditInfo({});
-        reCheckUser();
       }
     } catch (e) {
       console.error(`Error updating user ${user} with ${userEditInfo}`, e);
@@ -151,7 +151,7 @@ export default function Page() {
               type="text"
               value={typeof userEditInfo[field.key] !== 'undefined'
                 ? userEditInfo[field.key]
-                : user[field.key]
+                : user[field.key] || ''
               }
               onChange={e => setUserEditInfo(current => ({
                 ...current,

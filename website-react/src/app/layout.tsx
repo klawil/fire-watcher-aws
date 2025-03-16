@@ -5,7 +5,7 @@ import './globals.css';
 import { useEffect, useState } from 'react';
 import { DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/logic/clientContexts';
 import { ApiUserGetUserResponse } from "$/userApi";
-import { validDepartments } from "$/userConstants";
+import { UserDepartment } from "$/userConstants";
 
 function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>();
@@ -44,13 +44,11 @@ function useLocation() {
 
 function useUser(): [
   ApiUserGetUserResponse | null,
-  () => void,
+  () => Promise<void>,
 ] {
   const [user, setUser] = useState<ApiUserGetUserResponse | null>(null);
 
-  async function getUserFromApi(waitForApi: boolean = false) {
-    if (waitForApi) setUser(null);
-
+  async function getUserFromApi() {
     try {
       const apiResult: ApiUserGetUserResponse = await fetch('/api/user?action=getUser')
         .then(r => r.json());
@@ -75,34 +73,25 @@ function useUser(): [
         return;
       }
 
-      cookies[cookie.slice(0, eqSign)] = cookie.slice(eqSign + 1);
+      cookies[cookie.slice(0, eqSign)] = decodeURIComponent(cookie.slice(eqSign + 1));
     });
+    let departments: {
+      [key in UserDepartment]?: ApiUserGetUserResponse[UserDepartment];
+    } = {};
+    if (typeof cookies['cofrn-user-departments'] === 'string') {
+      departments = JSON.parse(cookies['cofrn-user-departments']);
+    }
 
     const initUser: ApiUserGetUserResponse = {
       ...(user || {}),
       success: false,
-      isActive: document.cookie.includes('cvfd-token'),
-      isUser: document.cookie.includes('cvfd-token'),
-      isAdmin: document.cookie.includes('cvfd-user-admin=1'),
-      isDistrictAdmin: document.cookie.includes('cvfd-user-super=1'),
-      fName: cookies['cvfd-user-name'] || undefined,
+      isActive: document.cookie.includes('cofrn-token'),
+      isUser: document.cookie.includes('cofrn-token'),
+      isAdmin: document.cookie.includes('cofrn-user-admin=1'),
+      isDistrictAdmin: document.cookie.includes('cofrn-user-super=1'),
+      fName: cookies['cofrn-user-name'] || undefined,
+      ...departments,
     };
-    validDepartments.forEach(dep => {
-      const cookieName = `cvfd-user-${dep}`;
-      if (typeof cookies[cookieName] === 'string') {
-        try {
-          initUser[dep] = JSON.parse(cookies[cookieName] as string);
-        } catch (e) {
-          console.error(`Error parsing cookie ${cookieName}`, e);
-        }
-      } else {
-        initUser[dep] = {
-          active: false,
-          callSign: '',
-          admin: false,
-        };
-      }
-    });
 
     console.log('Initial User:', initUser);
     setUser(initUser);
