@@ -389,12 +389,14 @@ async function handleTwilio(body: TwilioBody) {
 
 	await Promise.all(recipients
 		.filter(number => typeof number.phone.N !== 'undefined')
-		.map((number) =>  sendMessage(
+		.map(async (number) =>  sendMessage(
 			metricSource,
 			isAnnouncement ? 'departmentAnnounce' : 'department',
 			messageId,
 			number.phone.N as string,
-			depConf[`${isAnnouncement ? 'page' : 'text'}Phone`] || depConf.pagePhone,
+			isAnnouncement
+				? await getPageNumber(number)
+				: depConf.textPhone || depConf.pagePhone,
 			messageBody,
 			mediaUrls
 				.map(s => s.replace(/https:\/\//, `https://${twilioConf.accountSid}:${twilioConf.authToken}@`))
