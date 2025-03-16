@@ -2,16 +2,16 @@
 
 import Table from "react-bootstrap/Table";
 import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr } from "@/logic/dateAndFile";
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse } from "$/audioApi";
 import styles from './audioList.module.css';
-import { useDarkMode } from "@/logic/clientHooks";
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 import { useSearchParams } from "next/navigation";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
+import { DarkModeContext } from "@/logic/clientContexts";
 
 function useRefIntersection(): [
   // React.RefObject<HTMLTableRowElement | null>,
@@ -196,7 +196,7 @@ export default function AudioList() {
     AudioState,
     [ AudioAction ]
   >(audioReducer, defaultAudioState);
-  const darkMode = useDarkMode();
+  const colorModeName = useContext(DarkModeContext);
 
   useEffect(() => {
     (async () => {
@@ -305,7 +305,7 @@ export default function AudioList() {
             className={
               [
                 file.Transcript && styles.noBottomBorder,
-                state.player.file === file.Key && styles[`fileRowActive-${darkMode ? 'dark' : 'light'}`],
+                state.player.file === file.Key && styles[`fileRowActive-${colorModeName ? 'dark' : 'light'}`],
                 styles.fileRow,
               ].join(' ')
             }
@@ -328,7 +328,7 @@ export default function AudioList() {
           {file.Transcript && <tr
             className={
               [
-                state.player.file === file.Key && styles[`fileRowActive-${darkMode ? 'dark' : 'light'}`],
+                state.player.file === file.Key && styles[`fileRowActive-${colorModeName ? 'dark' : 'light'}`],
                 styles.fileRow,
               ].join(' ')
             }

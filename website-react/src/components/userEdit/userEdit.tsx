@@ -6,7 +6,7 @@ import Col from "react-bootstrap/Col";
 import Row from 'react-bootstrap/Row';
 import { defaultDepartment, departmentConfig, pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
-import { LoggedInUserContext } from "@/logic/authContext";
+import { LoggedInUserContext } from "@/logic/clientContexts";
 import Table from "react-bootstrap/Table";
 import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";

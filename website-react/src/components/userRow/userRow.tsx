@@ -5,7 +5,7 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { LoggedInUserContext } from "@/logic/authContext";
+import { LoggedInUserContext } from "@/logic/clientContexts";
 import UserEdit from "../userEdit/userEdit";
 import { useContext, useState } from "react";
 import { BsTrash } from "react-icons/bs";

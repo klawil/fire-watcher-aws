@@ -1,12 +1,11 @@
 'use client';
 
-import { useDarkMode } from "@/logic/clientHooks";
 import { PageConfig } from "@/types/page";
 import CofrnNavbar from "./navbar";
 import { Container, Nav, Navbar } from "react-bootstrap";
-import { LoggedInUserContext } from "@/logic/authContext";
+import { LoggedInUserContext, DarkModeContext } from "@/logic/clientContexts";
 import { ApiUserGetUserResponse } from "$/userApi";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { validDepartments } from "$/userConstants";
 
 function useUser() {
@@ -79,20 +78,15 @@ export default function CofrnLayout({
   children: React.ReactNode;
   pageConfig: PageConfig;
 }>) {
-  const isDarkMode = useDarkMode();
+  const colorModeName = useContext(DarkModeContext);
 
   const user = useUser();
 
-  if (typeof isDarkMode === 'undefined') return (<></>);
-
-  const modeName = isDarkMode ? 'dark' : 'light';
+  if (colorModeName === null) return (<></>);
 
   return (
     <LoggedInUserContext.Provider value={user}>
-      <CofrnNavbar
-        pageConfig={pageConfig}
-        modeName={modeName}
-      />
+      <CofrnNavbar pageConfig={pageConfig} />
 
       {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}
 
@@ -101,7 +95,7 @@ export default function CofrnLayout({
       </Container>
 
       <Navbar
-        bg={modeName}
+        bg={colorModeName}
         className="mt-4"
       >
         <Container
@@ -116,7 +110,7 @@ export default function CofrnLayout({
               className="d-inline-block align-top"
               alt="COFRN"
               style={{
-                filter: `invert(${modeName === 'dark' ? 1 : 0})`,
+                filter: `invert(${colorModeName === 'dark' ? 1 : 0})`,
               }}
             />
           </Navbar.Brand>

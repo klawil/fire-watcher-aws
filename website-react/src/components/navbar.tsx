@@ -4,25 +4,25 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
-import { useLocation } from "@/logic/clientHooks";
 import { PageConfig } from '@/types/page';
 import { useContext } from 'react';
-import { LoggedInUserContext } from '@/logic/authContext';
+import { LoggedInUserContext } from '@/logic/clientContexts';
+import { DarkModeContext, LocationContext } from '@/logic/clientContexts';
 
 export default function CofrnNavbar({
   pageConfig,
-  modeName,
 }: Readonly<{
   pageConfig: PageConfig;
-  modeName: 'dark' | 'light';
 }>) {
-  const loc = useLocation();
+  const colorModeName = useContext(DarkModeContext);
+
+  const loc = useContext(LocationContext);
   const redirectTo = encodeURIComponent(loc ? `${loc?.pathname}${loc?.search}` : '')
   const loginLink = `/login?redirectTo=${redirectTo}`;
   const logoutLink = `/api/user?action=logout&redirectTo=${redirectTo}`;
 
   const user = useContext(LoggedInUserContext);
-  if (user === null) return null;
+  if (user === null || colorModeName === null) return null;
 
   console.log(loc?.pathname);
 
@@ -30,7 +30,7 @@ export default function CofrnNavbar({
     <Navbar
       fixed="top"
       expand="lg"
-      bg={modeName}
+      bg={colorModeName}
     >
       <Container
         fluid={true}
