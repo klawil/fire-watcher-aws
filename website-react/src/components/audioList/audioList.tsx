@@ -12,33 +12,7 @@ import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 import { useSearchParams } from "next/navigation";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 import { DarkModeContext } from "@/logic/clientContexts";
-
-function useRefIntersection(): [
-  // React.RefObject<HTMLTableRowElement | null>,
-  (node: HTMLTableRowElement | null) => void,
-  boolean,
-] {
-  const [node, setNode] = useState<HTMLTableRowElement | null>(null);
-
-  const [refIntersecting, setRefIntersecting] = useState(false);
-
-  const setRef = useCallback(
-    (node: HTMLTableRowElement | null) => setNode(node),
-    [],
-  );
-
-  useEffect(() => {
-    if (node === null) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setRefIntersecting(entry.isIntersecting),
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [node]);
-
-  return [setRef, refIntersecting];
-}
+import { useRefIntersection } from "@/logic/uiUtils";
 
 function useLoadFiles(
   state: AudioState,
