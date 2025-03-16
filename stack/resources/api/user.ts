@@ -4,7 +4,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { incrementMetric, randomString, validateBodyIsJson } from '../utils/general';
 import { parseDynamoDbAttributeMap, parseDynamoDbAttributeValue } from '../utils/dynamodb';
 import { getCookies, getLoggedInUser } from '../utils/auth';
-import { allUserCookies, authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
+import { authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
 import { Fido2Lib, ExpectedAssertionResult } from 'fido2-lib';
 import { ApiUserAuthResponse, ApiUserFidoAuthBody, ApiUserFidoChallengeResponse, ApiUserFidoGetAuthResponse, ApiUserFidoRegisterBody, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, InternalUserObject, UserObject } from '../../../common/userApi';
 import { unauthorizedApiResponse } from '../types/api';
@@ -40,7 +40,75 @@ interface FidoKeys {
 	[key: string]: FidoKey;
 };
 
-async function loginUser(user: InternalUserObject) {
+const userCookieConfigs: {
+	name: string;
+	value: (user: InternalUserObject) => string;
+}[] = [
+	{
+		name: 'cvfd-user-name',
+		value: u => u.fName,
+	},
+	{
+		name: 'cvfd-user-admin',
+		value: u => u.isAdmin ? '1' : '0',
+	},
+	{
+		name: 'cvfd-user-super',
+		value: u => u.isDistrictAdmin ? '1' : '0',
+	},
+	{
+		name: 'cvfd-user-departments',
+		value: u => JSON.stringify(validDepartments
+			.reduce((agg: {
+				[key in UserDepartment]?: InternalUserObject[UserDepartment];
+			}, dep) => {
+				if (typeof u[dep] !== 'undefined') {
+					agg[dep] = u[dep];
+				}
+
+				return agg;
+			}, {})
+		),
+	},
+];
+
+function getUserCookieHeaders(
+	event: APIGatewayProxyEvent,
+	user: InternalUserObject | null,
+	extraCookies: string[] = [],
+): {
+	'Set-Cookie': string[],
+} {
+	const setUserCookies: string[] = [];
+
+	// Set the user cookies to what they should be
+	const cookiesToSet: string[] = [];
+	const cookies = getCookies(event);
+	if (user !== null) {
+		userCookieConfigs.forEach(config => {
+			const cookieValue = config.value(user);
+			if (cookieValue !== cookies[config.name]) {
+				setUserCookies.push(`${config.name}=${encodeURIComponent(config.value(user))}`);
+			}
+			cookiesToSet.push(config.name);
+		});
+	}
+
+	// Determine which cookies to delete
+	const cookiesToDelete: string[] = Object.keys(cookies)
+		.filter(cookie => cookie.startsWith('cvfd-user')
+			&& !cookiesToSet.some(setCookie => setCookie === cookie));
+
+	return {
+		'Set-Cookie': [
+			...cookiesToSet.map(v => `${v}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
+			...cookiesToDelete.map(v => `${v}==; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`),
+			...extraCookies.map(v => `${v}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
+		],
+	};
+}
+
+async function loginUser(event: APIGatewayProxyEvent, user: InternalUserObject) {
 	logger.trace('loginUser', ...arguments);
 	// Find the previous tokens that should be deleted
 	const now = Date.now();
@@ -74,24 +142,15 @@ async function loginUser(user: InternalUserObject) {
 		},
 		UpdateExpression: 'REMOVE #c, #ce SET #t = :t'
 	}).promise();
-	
-	const userCookies: string[] = [
-		`${authUserCookie}=${user.phone}`,
-		`${authTokenCookie}=${token}`,
-		`cvfd-user-name=${user.fName}`,
-		`cvfd-user-admin=${user.isAdmin ? '1' : '0'}`,
-		`cvfd-user-super=${user.isDistrictAdmin ? '1' : '0'}`,
-	];
-	validDepartments.map(dep => {
-		if (typeof user[dep] === 'undefined') return;
 
-		const value = JSON.stringify(user[dep] || {});
-		userCookies.push(`cvfd-user-${dep}=${value}`);
-	});
-
-	return {
-		'Set-Cookie': userCookies.map(c => `${c}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`),
-	};
+	return getUserCookieHeaders(
+		event,
+		user,
+		[
+			`${authUserCookie}=${user.phone}`,
+			`${authTokenCookie}=${encodeURIComponent(token)}`,
+		],
+	);
 }
 
 async function handleLogin(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -211,7 +270,10 @@ async function handleAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		};
 	}
 
-	const headers = await loginUser(parseDynamoDbAttributeMap(user.Item) as unknown as InternalUserObject);
+	const headers = await loginUser(
+		event,
+		parseDynamoDbAttributeMap(user.Item) as unknown as InternalUserObject
+	);
 	logger.debug('Auth headers', headers);
 	logger.debug('Auth body', response);
 	return {
@@ -260,28 +322,12 @@ async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResu
 		}
 
 		// Get the request cookies
-		const cookies = getCookies(event);
-		const cookieMap: { [key: string]: string } = {
-			'cvfd-user-name': response.fName as string,
-			'cvfd-user-admin': response.isAdmin ? '1' : '0',
-			'cvfd-user-super': response.isDistrictAdmin ? '1' : '0',
-		};
-		validDepartments.forEach(dep => {
-			if (typeof response[dep] === 'undefined') return;
-			cookieMap[`cvfd-user-${dep}`] = JSON.stringify(response[dep]);
-		});
-		const cookieValues: string[] = [];
-		Object.keys(cookieMap).forEach(cookie => {
-			if (
-				typeof cookies[cookie] === 'undefined' ||
-				cookies[cookie] !== cookieMap[cookie]
-			)
-				cookieValues.push(`${cookie}=${cookieMap[cookie]}; Secure; SameSite=None; Path=/; Max-Age=${loginDuration}`);
-		});
-		if (cookieValues.length > 0) {
-			httpResponse.multiValueHeaders = {
-				'Set-Cookie': cookieValues,
-			};
+		const setCookiesHeader = getUserCookieHeaders(
+			event,
+			user,
+		);
+		if (setCookiesHeader['Set-Cookie'].length > 0) {
+			httpResponse.multiValueHeaders = setCookiesHeader;
 		}
 
 		// Save now as the last login time
@@ -315,11 +361,14 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 		redirectLocation = event.queryStringParameters.redirectTo;
 	}
 
+	const cookies = getCookies(event);
+	const cookiesToDelete = Object.keys(cookies)
+		.filter(cookie => cookie.startsWith('cvfd-'));
 	const response: APIGatewayProxyResult = {
 		statusCode: 302,
 		body: 'Logged Out',
 		multiValueHeaders: {
-			'Set-Cookie': allUserCookies.map(v => `${v}=; Path=/; Max-Age=0`),
+			'Set-Cookie': cookiesToDelete.map(v => `${v}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`),
 		},
 		headers: {
 			Location: redirectLocation
@@ -1323,7 +1372,7 @@ async function fidoAuth(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		};
 	}
 
-	const headers = await loginUser(user);
+	const headers = await loginUser(event, user);
 	return {
 		statusCode: 200,
 		body: JSON.stringify({ success: true }),
