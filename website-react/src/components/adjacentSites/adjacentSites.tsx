@@ -164,9 +164,7 @@ export default function AdjacentSites() {
         <th>Seen By</th>
         <th>Updated</th>
       </tr></thead>
-      <tbody style={{
-        fontFamily: 'monospace',
-      }}>{sites
+      <tbody className="font-monospace">{sites
         .filter(site => typeof site.UpdateTime !== 'undefined' && typeof site.SiteFailed !== 'undefined')
         .sort((a, b) => a.SiteId > b.SiteId ? 1 : -1)
         .map(site => <tr key={site.SiteId}>
