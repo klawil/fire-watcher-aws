@@ -4,7 +4,7 @@ import { PageConfig } from "@/types/page";
 import CofrnNavbar from "./navbar";
 import { Container, Nav, Navbar } from "react-bootstrap";
 import { LoggedInUserContext, DarkModeContext } from "@/logic/clientContexts";
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 
 export default function CofrnLayout({
   children,
@@ -16,17 +16,10 @@ export default function CofrnLayout({
   const colorModeName = useContext(DarkModeContext);
   const user = useContext(LoggedInUserContext);
 
-  useEffect(() => {
-    document.title = `${pageConfig.title || pageConfig.navTitle || ''} - COFRN`;
-  }, [pageConfig]);
-
-  if (colorModeName === null) return (<>
-    <title>{pageConfig.title || pageConfig.navTitle} - COFRN</title>
-  </>);
+  if (colorModeName === null) return (<></>);
 
   return (
     <LoggedInUserContext.Provider value={user}>
-      <title>{pageConfig.title || pageConfig.navTitle} - COFRN</title>
       <CofrnNavbar pageConfig={pageConfig} />
 
       {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}
