@@ -13,7 +13,11 @@ const nextConfig: NextConfig = {
           source: '/api/:path*',
           destination: 'https://cofrn.org/api/:path*',
         },
-      ]
+        {
+          source: '/weather.json',
+          destination: 'https://cofrn.org/weather.json',
+        },
+      ],
     };
   },
 };
