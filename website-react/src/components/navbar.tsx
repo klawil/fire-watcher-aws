@@ -33,7 +33,7 @@ export default function CofrnNavbar({
       <Container
         fluid={true}
       >
-        <Navbar.Brand>COFRN {pageConfig?.navTitle || pageConfig?.title || ''}</Navbar.Brand>
+        <Navbar.Brand className='flex-grow-1'>COFRN {pageConfig?.navTitle || pageConfig?.title || ''}</Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
         <Navbar.Collapse id="basic-navbar-nav">
