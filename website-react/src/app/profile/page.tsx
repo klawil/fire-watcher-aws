@@ -107,8 +107,8 @@ export default function Page() {
       title: 'Profile',
     }}
   >
-    {user === null && <LoadingSpinner />}
-    {user !== null && user.isActive && <>
+    {(user === null || !user.success) && <LoadingSpinner />}
+    {user !== null && user.success && <>
       <h2 className="text-center">Information Only an Admin Can Edit:</h2>
       <Row className="justify-content-center my-3">
         <Col md={6}><InputGroup>
