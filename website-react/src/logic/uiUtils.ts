@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+export function isElemInView(elem: HTMLElement) {
+  const { top, left, bottom, right } = elem.getBoundingClientRect();
+  return top >= 0 && left >= 0 && bottom <= innerHeight && right <= innerWidth;
+}
+
 export function useRefIntersection(): [
   (node: HTMLElement | null) => void,
   boolean,
@@ -11,8 +16,14 @@ export function useRefIntersection(): [
   const [refIntersecting, setRefIntersecting] = useState(false);
 
   const setRef = useCallback(
-    (node: HTMLElement | null) => setNode(node),
-    [],
+    (newNode: HTMLElement | null) => {
+      // @TODO - fix this, we want the node to be able to be set to null
+      if (newNode !== null && newNode !== node) {
+        setRefIntersecting(false);
+        setNode(newNode);
+      }
+    },
+    [node],
   );
 
   useEffect(() => {

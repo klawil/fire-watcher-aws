@@ -71,6 +71,7 @@ export const filterPresets: {
 
 export interface AudioState {
   filterModalOpen: boolean;
+  calendarModalOpen: boolean;
   queryParsed: boolean;
   filter: {
     f?: string;
@@ -184,5 +185,14 @@ interface ClearPlayer {
 }
 type PlayerActions = SetPlayerStateAction | SetPlayerFileAction | SetPlayerTimesAction | ClearPlayer;
 
+interface OpenCloseCalendarModalAction {
+  action: 'OpenCalendarModal' | 'CloseCalendarModal';
+}
+interface JumpToTimeAction {
+  action: 'JumpToTime';
+  f: string;
+}
+type CalendarActions = OpenCloseCalendarModalAction | JumpToTimeAction;
+
 export type AudioAction = AudioFileActions | AddTalkgroupsAction | PlayerActions | FilterActions
-  | ApiActions;
+  | ApiActions | CalendarActions;

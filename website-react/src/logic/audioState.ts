@@ -4,6 +4,7 @@ export const defaultFilterPreset = 'NSCFPD';
 
 export const defaultAudioState: AudioState = {
   filterModalOpen: false,
+  calendarModalOpen: false,
   queryParsed: false,
   filter: {},
   api: {},
@@ -42,14 +43,19 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
         filterModalOpen: action.action === 'OpenFilterModal',
       };
     }
-    case 'SetNewFilters': {
+    case 'SetNewFilters':
+    case 'JumpToTime': {
       const { action: _, ...data } = action;
       return {
         ...state,
         files: [],
         api: {},
-        filter: data,
+        filter: {
+          ...(_ === 'SetNewFilters' ? {} : state.filter),
+          ...data,
+        },
         filterModalOpen: false,
+        calendarModalOpen: false,
         player: { state: 'ended' },
       };
     }
@@ -170,6 +176,15 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       return {
         ...state,
         player: { state: 'ended' },
+      };
+    }
+
+    // Calendar Modal
+    case 'CloseCalendarModal':
+    case 'OpenCalendarModal': {
+      return {
+        ...state,
+        calendarModalOpen: action.action === 'OpenCalendarModal',
       };
     }
   }

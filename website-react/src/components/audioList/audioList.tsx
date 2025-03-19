@@ -2,24 +2,26 @@
 
 import Table from "react-bootstrap/Table";
 import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
-import { dateToStr } from "@/logic/dateAndFile";
+import { dateToStr, findClosestFileIdx } from "@/logic/dateAndFile";
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse } from "$/audioApi";
 import styles from './audioList.module.css';
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
-// import { useSearchParams } from "next/navigation";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
-import { useRefIntersection } from "@/logic/uiUtils";
+import { isElemInView, useRefIntersection } from "@/logic/uiUtils";
 import AudioFilter from "../audioFilter/audioFilter";
 import { fNameToDate } from "$/stringManipulation";
+import CalendarModal from "../calendarModal/calendarModal";
 
 const loadAfterAddedMinWait = 10000;
 
 function useLoadFiles(
   state: AudioState,
   dispatch: React.ActionDispatch<[AudioAction]>,
+  beforeRenderRows: (adding: number) => void,
+  scrollTop: number,
 ) {
   const [afterRef, afterRefIntersecting] = useRefIntersection();
   const [beforeRef, beforeRefIntersecting] = useRefIntersection();
@@ -86,10 +88,32 @@ function useLoadFiles(
 
     // Add the files
     if (responseToParse.files.length > 0) {
+      if (state.files.length === 0 && state.filter.f) {
+        const closestIdx = findClosestFileIdx(
+          responseToParse.files,
+          state.filter.f,
+        );
+        beforeRenderRows(closestIdx);
+      } else if (responseToParse.direction === 'after') {
+        beforeRenderRows(responseToParse.files.length);
+      } else {
+        beforeRenderRows(0);
+      }
       dispatch({
         action: 'AddAudioFile',
         files: responseToParse.files,
         location: responseToParse.direction,
+      });
+    } else if (
+      responseToParse.files.length === 0 &&
+      state.files.length === 0 &&
+      state.filter.f
+    ) {
+      // Delete the file to start with if no results were returned
+      dispatch({
+        action: 'SetNewFilters',
+        ...state.filter,
+        f: undefined,
       });
     }
 
@@ -97,20 +121,30 @@ function useLoadFiles(
       action: 'ClearApiResponse',
       direction: responseToParse.direction,
     });
-  }, [state.apiResponse, state.api, dispatch]);
+  }, [state.apiResponse, state.filter, state.api, state.files.length, state.filter.f, dispatch, beforeRenderRows]);
 
   const afterAddedTimeout = useRef<NodeJS.Timeout | null>(null);
   const [afterAddedLastCall, setAfterAddedLastCall] = useState<number | null>(0);
   const [afterAddedTrigger, setAfterAddedTrigger] = useState(false);
 
   useEffect(() => {
+    // @TODO - handle cases where no files are loaded using after the start date so we need to switch to before
+
     // Wait for the query to be parsed
-    if (!state.queryParsed) return;
+    if (!state.queryParsed || scrollTop !== -1) {
+      return;
+    }
 
     // If the API keys are not set then load files
     let shouldLoadFiles = false;
-    let loadFilesDirection: 'before' | 'after' = 'after';
-    if (Object.keys(state.api).length === 0) {
+    let loadFilesDirection: 'before' | 'after' | 'init' = 'after';
+    const apiVals = state.api;
+    if (
+      (Object.keys(apiVals) as (keyof typeof apiVals)[])
+        .filter(key => typeof apiVals[key] !== 'undefined')
+        .length === 0
+    ) {
+      loadFilesDirection = 'init';
       shouldLoadFiles = true;
     } else if (
       afterRefIntersecting && typeof state.api.afterLastCall === 'undefined'
@@ -173,7 +207,7 @@ function useLoadFiles(
       ) {
         urlParams.set('afterAdded', state.api.afterAdded.toString());
       } else if (
-        loadFilesDirection === 'after' &&
+        loadFilesDirection === 'init' &&
         typeof state.filter.f !== 'undefined'
       ) {
         // Load after a specific URL file
@@ -206,7 +240,7 @@ function useLoadFiles(
       const callId = Date.now();
       dispatch({
         action: 'SetApiLastCall',
-        key: loadFilesDirection,
+        key: loadFilesDirection === 'init' ? 'after' : loadFilesDirection,
         value: callId,
       });
       const url = `/api/audio?${urlParams.toString()}`;
@@ -225,13 +259,11 @@ function useLoadFiles(
         // Check for any errors
         if (!newData.success) throw newData;
 
-        // Make sure we aren't overwriting a response (super hacky...)
-
         dispatch({
           action: 'AddApiResponse',
           ...newData,
           callId,
-          direction: loadFilesDirection,
+          direction: loadFilesDirection === 'init' ? 'after' : loadFilesDirection,
         });
       } catch (e) {
         console.error(`Failed to fetch audio files ${urlParams.toString()}`, e);
@@ -246,6 +278,7 @@ function useLoadFiles(
     dispatch,
     afterAddedLastCall,
     afterAddedTrigger,
+    scrollTop,
   ]);
 
   return [afterRef, beforeRef];
@@ -288,22 +321,50 @@ export default function AudioList() {
     });
   }
 
+  const [scrollTop, setScrollTop] = useState<number>(-1);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const beforeRenderRows = (num: number) => {
+    if (tableRef.current) {
+      const firstVisibleRow = [ ...tableRef.current.querySelectorAll('tr') ]
+        .findIndex(isElemInView);
+      if (firstVisibleRow !== -1) {
+        setScrollTop(firstVisibleRow + num);
+      }
+    } else {
+      setScrollTop(num);
+    }
+  }
+
   const [
     loadAfter,
     loadBefore,
-  ] = useLoadFiles(state, dispatch);
-  const loadAfterIdx = state.files.length >= 5
-    ? 4
-    : 0;
-  const loadBeforeIdx = state.files.length >= 5
-    ? state.files.length - 5
-    : state.files.length - 1;
+  ] = useLoadFiles(state, dispatch, beforeRenderRows, scrollTop);
+  const loadAfterIdx = 0;
+  const loadBeforeIdx = state.files.length - 1;
   const currentRef = useRef<HTMLElement | null>(null);
 
+  const scrollToRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (
+      scrollToRef.current
+      && !isElemInView(scrollToRef.current)
+      && scrollTop !== -1
+    ) {
+      addEventListener(
+        "scrollend",
+        () => setScrollTop(-1),
+        { once: true }
+      );
+      scrollToRef.current.scrollIntoView({ block: 'center' });
+    } else if (scrollTop !== -1) {
+      setScrollTop(-1);
+    }
+  }, [scrollTop]);
+
   return (<>
-    {state.files.length > 0
-    ? <Table
+    {state.files.length > 0 && <Table
       responsive={true}
+      ref={tableRef}
     >
       <thead>
         <tr>
@@ -324,7 +385,10 @@ export default function AudioList() {
             refs.push(loadAfter);
           }
           if (file.Key === state.player.fileUrl) {
-            refs.push((node) => currentRef.current = node);
+            refs.push(node => currentRef.current = node);
+          }
+          if (idx === scrollTop) {
+            refs.push(node => scrollToRef.current = node);
           }
           const params: {
             ref?: (node: HTMLTableRowElement) => void;
@@ -384,11 +448,15 @@ export default function AudioList() {
           </React.Fragment>)
       })}
       </tbody>
-    </Table>
-    : <LoadingSpinner />
-    }
+    </Table>}
+    {state.files.length === 0 && <LoadingSpinner />}
 
     <AudioFilter
+      state={state}
+      dispatch={dispatch}
+    />
+
+    <CalendarModal
       state={state}
       dispatch={dispatch}
     />

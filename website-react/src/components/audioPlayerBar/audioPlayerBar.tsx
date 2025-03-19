@@ -7,6 +7,7 @@ import styles from './audioPlayerBar.module.css';
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Button from "react-bootstrap/Button";
+import { findClosestFileIdx } from "@/logic/dateAndFile";
 
 function timeToStr(timestamp?: number, duration?: number) {
   if (
@@ -124,12 +125,16 @@ export default function AudioPlayerBar({
       !state.player.fileUrl &&
       state.files.length > 0
     ) {
-      const file = typeof state.filter.f !== 'undefined'
-        ? state.files.find(f => f.Key.endsWith(state.filter.f || 'NONE')) || state.files[0]
-        : state.files[0];
+      let closestIdx = 0;
+      if (state.filter.f) {
+        closestIdx = findClosestFileIdx(
+          state.files,
+          state.filter.f,
+        );
+      }
       dispatch({
         action: 'SetPlayerFile',
-        file: file.Key,
+        file: state.files[closestIdx].Key,
       });
       return;
     } else if (!state.player.fileUrl) {
@@ -149,7 +154,7 @@ export default function AudioPlayerBar({
     ) {
       audioRef.current.play()
         .catch(e => {
-          console.error(`Failed to play file`, e);
+          console.log(`Failed to play file`, e);
           dispatch({
             action: 'SetPlayerState',
             state: 'paused',
@@ -274,7 +279,12 @@ export default function AudioPlayerBar({
                 action: state.filterModalOpen ? 'CloseFilterModal' : 'OpenFilterModal',
               })}
             ><BsFilter /> Filter Files</Nav.Link>
-            <Nav.Link><BsCalendar /> Jump to Date</Nav.Link> {/* @TODO - implement this */}
+            <Nav.Link
+              active={state.calendarModalOpen}
+              onClick={() => dispatch({
+                action: state.calendarModalOpen ? 'CloseCalendarModal' : 'OpenCalendarModal',
+              })}
+            ><BsCalendar /> Jump to Time</Nav.Link>
           </Nav>
         </Navbar.Collapse>
       </Container>
