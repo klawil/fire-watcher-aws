@@ -10,12 +10,12 @@
   transition: background-color 0.2s linear;
 }
 
-.fileRowActive-light td {
-  background-color: #cff4fc;
+[data-bs-theme=dark] .fileRowActive td {
+  background-color: #300b03;
 }
 
-.fileRowActive-dark td {
-  background-color: #300b03;
+.fileRowActive td {
+  background-color: #cff4fc;
 }
 
 @media (max-width: 991px) {

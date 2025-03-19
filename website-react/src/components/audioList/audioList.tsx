@@ -2,7 +2,7 @@
 
 import Table from "react-bootstrap/Table";
 import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useContext, useEffect, useReducer, useRef, useState } from "react";
+import React, { useEffect, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr } from "@/logic/dateAndFile";
@@ -11,7 +11,6 @@ import styles from './audioList.module.css';
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 // import { useSearchParams } from "next/navigation";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
-import { DarkModeContext } from "@/logic/clientContexts";
 import { useRefIntersection } from "@/logic/uiUtils";
 import AudioFilter from "../audioFilter/audioFilter";
 import { fNameToDate } from "$/stringManipulation";
@@ -257,8 +256,6 @@ export default function AudioList() {
     AudioState,
     [ AudioAction ]
   >(audioReducer, defaultAudioState);
-  const colorModeName = useContext(DarkModeContext);
-
   // Fetch the talkgroup information
   useEffect(() => {
     (async () => {
@@ -348,7 +345,7 @@ export default function AudioList() {
               className={
                 [
                   file.Transcript && styles.noBottomBorder,
-                  state.player.fileUrl === file.Key && styles[`fileRowActive-${colorModeName ? 'dark' : 'light'}`],
+                  state.player.fileUrl === file.Key ? styles.fileRowActive : '',
                   styles.fileRow,
                 ].join(' ')
               }
@@ -371,7 +368,7 @@ export default function AudioList() {
             {file.Transcript && <tr
               className={
                 [
-                  state.player.fileUrl === file.Key && styles[`fileRowActive-${colorModeName ? 'dark' : 'light'}`],
+                  state.player.fileUrl === file.Key ? styles.fileRowActive : '',
                   styles.fileRow,
                 ].join(' ')
               }

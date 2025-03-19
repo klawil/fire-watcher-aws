@@ -6,6 +6,7 @@ import { BsArrowBarUp, BsCalendar, BsDownload, BsFilter, BsPauseFill, BsPlayFill
 import styles from './audioPlayerBar.module.css';
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Button from "react-bootstrap/Button";
 
 function timeToStr(timestamp?: number, duration?: number) {
   if (
@@ -146,7 +147,14 @@ export default function AudioPlayerBar({
       state.player.state === 'playing' &&
       audioRef.current.paused
     ) {
-      audioRef.current.play();
+      audioRef.current.play()
+        .catch(e => {
+          console.error(`Failed to play file`, e);
+          dispatch({
+            action: 'SetPlayerState',
+            state: 'paused',
+          });
+        });
     } else if (
       audioRef.current.src.includes('audio') &&
       (state.player.state === 'paused' || state.player.state === 'ended') &&
@@ -206,14 +214,18 @@ export default function AudioPlayerBar({
       }}
     >
       <Container fluid={true}>
-        <Navbar.Toggle
+        <Button
+          variant={autoPlay ? 'outline-primary' : 'outline-secondary'}
+          className="d-flex justify-content-center d-lg-none"
+          disabled={!state.player.fileUrl}
           onClick={() => setAutoPlay(!autoPlay)}
-          className={autoPlay ? styles.playerButtonActive : ''}
-        ><BsArrowBarUp /></Navbar.Toggle>
-        <Navbar.Toggle onClick={playPauseButtonPress}>
-          {state.player.state === 'playing' ? <BsPauseFill /> : <BsPlayFill />}
-        </Navbar.Toggle>
-        <Navbar.Toggle><BsDownload /></Navbar.Toggle>
+        ><BsArrowBarUp /></Button>
+        <Button
+          onClick={playPauseButtonPress}
+          variant={state.player.state === 'playing' ? 'outline-secondary' : 'outline-success'}
+          className="d-flex justify-content-center d-lg-none"
+          disabled={!state.player.fileUrl}
+        >{state.player.state !== 'playing' ? <BsPlayFill /> : <BsPauseFill />}</Button>
 
         <Nav className="mb-2 mb-lg-0 justify-content-start d-none d-lg-flex">
           <Nav.Item
@@ -246,7 +258,7 @@ export default function AudioPlayerBar({
             ></div>
           </div>
         </Navbar.Text>
-        <Navbar.Text className="ms-2 mt-1">{playerDuration}</Navbar.Text>
+        <Navbar.Text className="ms-2 mt-1 d-none d-sm-block">{playerDuration}</Navbar.Text>
 
         <Navbar.Toggle aria-controls="audio-navbar-collapse" />
         <Navbar.Collapse id="audio-navbar-collapse">
