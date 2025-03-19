@@ -128,8 +128,6 @@ function useLoadFiles(
   const [afterAddedTrigger, setAfterAddedTrigger] = useState(false);
 
   useEffect(() => {
-    // @TODO - handle cases where no files are loaded using after the start date so we need to switch to before
-
     // Wait for the query to be parsed
     if (!state.queryParsed || scrollTop !== -1) {
       return;

@@ -27,6 +27,8 @@ export default function AudioFilter({
     // Pull in the raw values from search params on the first run
     if (!state.queryParsed) {
       // @TODO - implement callsign listening to page logic
+      // @TODO - implement the nostart logic
+      // @TODO - implement add to home screen?
       dispatch({
         action: 'QueryParamsParsed',
         ...searchParamValues,
