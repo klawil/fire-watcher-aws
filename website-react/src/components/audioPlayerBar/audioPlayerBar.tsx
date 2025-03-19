@@ -182,6 +182,7 @@ export default function AudioPlayerBar({
   // Auto play the next file
   useEffect(() => {
     if (
+      !autoPlay ||
       state.player.state !== 'ended' ||
       state.files.length === 0
     ) return;
@@ -193,7 +194,7 @@ export default function AudioPlayerBar({
       action: 'SetPlayerFile',
       file: state.files[currentFileIndex - 1].Key,
     });
-  }, [dispatch, state.files, state.player.fileUrl, state.player.state]);
+  }, [autoPlay, dispatch, state.files, state.player.fileUrl, state.player.state]);
 
   return (<>
     <Navbar
@@ -261,7 +262,7 @@ export default function AudioPlayerBar({
                 action: state.filterModalOpen ? 'CloseFilterModal' : 'OpenFilterModal',
               })}
             ><BsFilter /> Filter Files</Nav.Link>
-            <Nav.Link><BsCalendar /> Jump to Date</Nav.Link>
+            <Nav.Link><BsCalendar /> Jump to Date</Nav.Link> {/* @TODO - implement this */}
           </Nav>
         </Navbar.Collapse>
       </Container>
