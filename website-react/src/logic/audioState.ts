@@ -1,36 +1,70 @@
 import { AudioAction, AudioState } from "@/types/audio";
 
-export const filterPresets: {
-  [key: string]: string[];
-} = {
-  'NSCAD': [ '8198' ],
-  'NSCFPD': [ '8332', '8333', '18332' ],
-  'Sag Mac': [ '8330' ],
-  'BGFD/BGEMS': [ '8090', '8331', '18331' ],
-  'SC Sheriff': [ '8335', '8336' ],
-  'NSCAD and NSCFPD': [ '8198', '8330', '8332', '8333', '18332' ],
-  'SC All': [ '8090', '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
-  'SC All (no ARCC 5)': [ '8198', '8330', '8331', '8332', '8333', '8335', '8336', '18331', '18332' ],
-  'ACFE': [ '8181' ],
-  'Hospitals': [ '8150', '8151', '124', '8138' ],
-};
 export const defaultFilterPreset = 'NSCFPD';
 
 export const defaultAudioState: AudioState = {
-  files: [],
+  filterModalOpen: false,
+  queryParsed: false,
+  filter: {},
+  api: {},
+  apiResponse: [],
   talkgroups: {},
-  player: { state: 'finished', },
-  filters: {
-    queryParsed: false,
-    showFilterModal: false,
-  },
-  api: {
-    autoLoadAfter: false,
-  },
+  files: [],
+
+  player: { state: 'ended', },
 };
 
 export function audioReducer(state: AudioState, action: AudioAction): AudioState {
   switch (action.action) {
+    // Filter
+    case 'QueryParamsParsed': {
+      const { action: _, ...data } = action;
+      return {
+        ...state,
+        queryParsed: true,
+        filter: data,
+      };
+    }
+    case 'SetFilterValue': {
+      const { action: _, ...data } = action;
+      return {
+        ...state,
+        filter: {
+          ...state.filter,
+          ...data,
+        },
+      };
+    }
+    case 'CloseFilterModal':
+    case 'OpenFilterModal': {
+      return {
+        ...state,
+        filterModalOpen: action.action === 'OpenFilterModal',
+      };
+    }
+    case 'SetNewFilters': {
+      const { action: _, ...data } = action;
+      return {
+        ...state,
+        files: [],
+        api: {},
+        filter: data,
+        filterModalOpen: false,
+        player: { state: 'ended' },
+      };
+    }
+
+    // Talkgroups
+    case 'AddTalkgroups': {
+      return {
+        ...state,
+        talkgroups: {
+          ...state.talkgroups,
+          ...action.talkgroups,
+        },
+      };
+    }
+
     // Files
     case 'AddAudioFile': {
       // Remove duplicate files
@@ -46,23 +80,56 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
         ],
       };
     }
-    case 'ClearAudioFiles': {
+
+    // API
+    case 'SetApiKeys': {
+      const { action: _, ...data } = action;
       return {
         ...state,
-        files: [],
         api: {
-          autoLoadAfter: state.api.autoLoadAfter,
+          ...state.api,
+          ...data,
         },
       };
     }
-
-    // Talkgroups
-    case 'AddTalkgroups': {
+    case 'SetApiLastCall': {
       return {
         ...state,
-        talkgroups: {
-          ...state.talkgroups,
-          ...action.talkgroups,
+        api: {
+          ...state.api,
+          [`${action.key}LastCall`]: action.value,
+        },
+      };
+    }
+    case 'ApiLoadAfterAdded': {
+      return {
+        ...state,
+        api: {
+          ...state.api,
+          loadAfterAdded: true,
+        },
+      };
+    }
+    case 'AddApiResponse': {
+      const { action: _, ...data } = action;
+      return {
+        ...state,
+        apiResponse: [
+          ...state.apiResponse,
+          { ...data },
+        ]
+      };
+    }
+    case 'ClearApiResponse': {
+      const [ _, ...rest ] = state.apiResponse;
+      return {
+        ...state,
+        apiResponse: rest,
+        api: {
+          ...state.api,
+          ...(action.direction ? {
+            [`${action.direction}LastCall`]: undefined,
+          } : {}),
         },
       };
     }
@@ -82,15 +149,14 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
         ...state,
         player: {
           ...state.player,
-          file: action.file,
+          fileUrl: action.file,
           state: 'playing',
           duration: 0,
           timestamp: 0,
         },
       };
     }
-    case 'SetPlayerDuration':
-    case 'SetPlayerTimestamp': {
+    case 'SetPlayerTimes': {
       return {
         ...state,
         player: {
@@ -100,94 +166,10 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
         },
       };
     }
-    case 'TogglePlayerAutoplay': {
+    case 'ClearPlayer': {
       return {
         ...state,
-        player: {
-          ...state.player,
-          autoPlay: !state.player.autoPlay,
-        },
-      };
-    }
-
-    // Filter
-    case 'SetFilterDisplay': {
-      return {
-        ...state,
-        filters: {
-          ...state.filters,
-          showFilterModal: action.state,
-        },
-      };
-    }
-    case 'SetFilterValue': {
-      const newRawValue: Partial<AudioState['filters']> = {};
-      if (
-        action.filter === 'tg' &&
-        (
-          typeof action.value === 'undefined' ||
-          action.value?.startsWith('p') ||
-          action.value === ''
-        )
-      ) {
-        if (
-          typeof action.value === 'undefined' ||
-          action.value === `p${defaultFilterPreset}` ||
-          action.value === ''
-        ) {
-          newRawValue.tgRawValue = filterPresets[defaultFilterPreset].join('|');
-          newRawValue.tgValue = '';
-        } else {
-          newRawValue.tgRawValue = filterPresets[action.value?.slice(1) || defaultFilterPreset]
-            .join('|');
-        }
-      }
-
-      return {
-        ...state,
-        filters: {
-          ...state.filters,
-          [`${action.filter}Value`]: action.value,
-          ...newRawValue,
-        },
-      };
-    }
-    case 'SetFilterTab': {
-      return {
-        ...state,
-        filters: {
-          ...state.filters,
-          tab: action.tab,
-        },
-      };
-    }
-    case 'QueryParamsParsed': {
-      return {
-        ...state,
-        filters: {
-          ...state.filters,
-          queryParsed: true,
-        },
-      };
-    }
-
-    // API
-    case 'SetApiKey': {
-      return {
-        ...state,
-        api: {
-          ...state.api,
-          [action.key]: action.value,
-        },
-      };
-    }
-    case 'SetApiLastCall': {
-      return {
-        ...state,
-        api: {
-          ...state.api,
-          [`${action.key}LastCall`]: action.value,
-        },
+        player: { state: 'ended' },
       };
     }
   }

@@ -1,12 +1,13 @@
-import { AudioAction, AudioState } from "@/types/audio";
+import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams, filterPresetValues } from "@/types/audio";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import Tabs from "react-bootstrap/Tabs";
 import Tab from "react-bootstrap/Tab";
 import Form from "react-bootstrap/Form";
-import { defaultFilterPreset, filterPresets } from "@/logic/audioState";
+import { defaultFilterPreset } from "@/logic/audioState";
+
 
 export default function AudioFilter({
   state,
@@ -16,103 +17,165 @@ export default function AudioFilter({
   dispatch: React.ActionDispatch<[AudioAction]>;
 }>) {
   const searchParams = useSearchParams();
-
-  // On the first run, make the filters match the search params
-  // On subsequent runs, make the search params match the filters
   useEffect(() => {
-    if (state.filters.showFilterModal) return;
+    const searchParamValues = {
+      tg: searchParams.get('tg') || `p${defaultFilterPreset}`,
+      emerg: searchParams.get('emerg') || undefined,
+      f: searchParams.get('f') || undefined,
+    };
 
-    const tgFilterQuery = searchParams.get('tg') || `p${defaultFilterPreset}`;
-    const emergFilterQuery = searchParams.get('emerg') || '';
-    const fFilterQuery = searchParams.get('f') || '';
-
-    if (!state.filters.queryParsed) {
-      dispatch({
-        action: 'SetFilterValue',
-        filter: 'f',
-        value: fFilterQuery,
-      });
-      dispatch({
-        action: 'SetFilterValue',
-        filter: 'emerg',
-        value: emergFilterQuery,
-      });
-      dispatch({
-        action: 'SetFilterValue',
-        filter: 'tg',
-        value: tgFilterQuery,
-      });
-      console.log(tgFilterQuery);
+    // Pull in the raw values from search params on the first run
+    if (!state.queryParsed) {
       dispatch({
         action: 'QueryParamsParsed',
+        ...searchParamValues,
       });
       return;
     }
 
-    const newParams = new URLSearchParams(searchParams.toString());
-    let hasNewParams = false;
-    if (
-      typeof state.filters.tgValue !== 'undefined' &&
-      state.filters.tgValue !== tgFilterQuery
-    ) {
-      hasNewParams = true;
-      if (state.filters.tgValue === '') {
-        newParams.delete('tg');
-      } else {
-        newParams.set('tg', state.filters.tgValue);
-      }
+    // Check to see if the params have changed
+    let wasChange = false;
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    (Object.keys(searchParamValues) as (keyof typeof searchParamValues)[])
+      .forEach(key => {
+        if (key === 'f') return;
+
+        if (typeof state.filter[key] === 'undefined') {
+          newSearchParams.delete(key);
+        } else if (newSearchParams.get(key) !== state.filter[key]) {
+          newSearchParams.set(key, state.filter[key]);
+          wasChange = true;
+        }
+      });
+    if (wasChange) {
+      window.history.pushState(null, '', `?${newSearchParams.toString()}`);
+    }
+  }, [searchParams, state.filter, state.queryParsed, dispatch]);
+
+  const [filterChanges, setFilterChangesRaw] = useState<Partial<
+    Pick<AudioState['filter'], 'tg'> &
+    Pick<AudioState['filter'], 'emerg'>
+  >>({});
+  const setFilterChanges = useCallback((changes: typeof filterChanges) =>
+      setFilterChangesRaw(current => {
+        const newValues = {
+          ...current,
+          ...changes,
+        };
+
+        (Object.keys(newValues) as (keyof typeof newValues)[])
+          .forEach((key) => {
+            if (typeof newValues[key] === 'undefined') {
+              delete newValues[key];
+              return;
+            }
+
+            if (newValues[key] === state.filter[key]) {
+              delete newValues[key];
+            }
+          });
+        if (
+          typeof newValues.emerg !== 'undefined' &&
+          newValues.tg !== 'all'
+        ) {
+          delete newValues.emerg;
+        }
+
+        return newValues;
+      }), [state.filter]);
+
+  const setCurrentTab = useCallback((tab: string) => {
+    if (tab === 'all') {
+      setFilterChanges({
+        tg: 'all',
+      });
+    } else if (tab === 'presets') {
+      setFilterChanges({
+        tg: `p${defaultFilterPreset}`,
+      });
+    } else if (tab === 'talkgroups') {
+      setFilterChanges({
+        tg: `tg8198`,
+      });
+    }
+  }, [setFilterChanges]);
+
+  const hasChanges = (Object.keys(filterChanges) as (keyof typeof filterChanges)[])
+    .filter(key => typeof filterChanges[key] !== 'undefined')
+    .length > 0;
+
+  const closeFilter = useCallback((apply: boolean, jumpToPresent: boolean) => {
+    // Set the state to show the modal is closed
+    dispatch({
+      action: 'CloseFilterModal',
+    });
+
+    // Just straight close the filter and don't save changes
+    if (!apply) {
+      setFilterChangesRaw({});
+      return;
     }
 
-    if (
-      typeof state.filters.emergValue !== 'undefined' &&
-      state.filters.emergValue !== emergFilterQuery
-    ) {
-      hasNewParams = true;
-      if (state.filters.emergValue === '') {
-        newParams.delete('emerg');
-      } else {
-        newParams.set('emerg', state.filters.emergValue);
-      }
-    }
+    // Save the changes and reset the files to trigger a loading event
+    dispatch({
+      action: 'SetNewFilters',
+      ...filterChanges,
+      f: !jumpToPresent
+        ? searchParams.get('f') || undefined
+        : undefined,
+    });
+  }, [dispatch, filterChanges, searchParams]);
 
-    if (hasNewParams) {
-      newParams.delete('f');
-      window.history.pushState(null, '', `?${newParams.toString()}`);
-    }
-  }, [
-    state.filters.emergValue,
-    state.filters.tgValue,
-    state.filters.showFilterModal,
-  ]);
+  // Exit early if we haven't parsed the search string yet
+  if (!state.queryParsed) return <></>;
 
-  let currentTab: AudioState['filters']['tab'] = 'presets';
-  if (typeof state.filters.tab !== 'undefined') {
-    currentTab = state.filters.tab;
-  } else if (typeof state.filters.tgValue !== 'undefined') {
-    currentTab = state.filters.tgValue.startsWith('p')
-      ? 'presets'
-      : state.filters.tgValue.startsWith('tg')
-        ? 'talkgroups'
-        : 'all';
+  let tgValueParsed: {
+    type: 'presets';
+    value: FilterPresetUrlParams;
+  } | {
+    type: 'talkgroup';
+    value: number[];
+  } | {
+    type: 'all';
+  } = {
+    type: 'presets',
+    value: defaultFilterPreset,
+  };
+  const presetValue = typeof filterChanges.tg !== 'undefined'
+    ? filterChanges.tg
+    : state.filter.tg || '';
+  if (
+    presetValue === '' ||
+    presetValue.startsWith('p')
+  ) {
+    const presetName = presetValue.slice(1);
+    if (filterPresetValues.includes(presetName as FilterPresetUrlParams)) {
+      tgValueParsed = {
+        type: 'presets',
+        value: presetName as FilterPresetUrlParams,
+      };
+    }
+  } else if (/^tg([0-9]+,?)+$/.test(presetValue)) {
+    tgValueParsed = {
+      type: 'talkgroup',
+      value: presetValue.slice(2).split('|')
+        .map(s => Number(s)),
+    };
+  } else if (presetValue === 'all') {
+    tgValueParsed = { type: 'all' };
   }
 
   return (<Modal
-    show={state.filters.showFilterModal}
-    onHide={() => dispatch({
-      action: 'SetFilterDisplay',
-      state: false,
-    })}
+    show={state.filterModalOpen}
+    onHide={() => closeFilter(false, false)}
     size="lg"
   >
     <Modal.Header closeButton>Filters</Modal.Header>
 
     <Modal.Body>
       <Tabs
-        activeKey={currentTab}
-        onSelect={k => dispatch({
-          action: 'SetFilterTab',
-          tab: (k || 'presets') as AudioState['filters']['tab'],
-        })}
+        activeKey={tgValueParsed.type}
+        onSelect={k => setCurrentTab(k || 'presets')}
         className="mb-3"
       >
         <Tab title="All" eventKey="all">
@@ -120,33 +183,29 @@ export default function AudioFilter({
 
           <Form.Check
             type="switch"
-            checked={state.filters.emergValue === 'y'}
-            onChange={event => dispatch({
-              action: 'SetFilterValue',
-              filter: 'emerg',
-              value: event.target.checked ? 'y' : '',
+            checked={state.filter.emerg === 'y'}
+            onChange={e => setFilterChanges({
+              emerg: e.target.checked ? 'y' : undefined,
             })}
             label="Only show emergency traffic"
           />
         </Tab>
         <Tab title="Presets" eventKey="presets">
           <Form.Select
-            onChange={event => dispatch({
-              action: 'SetFilterValue',
-              filter: 'tg',
-              value: `p${event.target.value}`,
+            onChange={e => setFilterChanges({
+              tg: `p${e.target.value}`,
             })}
-            value={typeof state.filters.tgValue === 'undefined'
-              || state.filters.tgValue === ''
-              || !state.filters.tgValue.startsWith('p')
-              ? defaultFilterPreset
-              : state.filters.tgValue.slice(1)
+            value={tgValueParsed.type === 'presets'
+              ? tgValueParsed.value
+              : defaultFilterPreset
             }
           >
-            {Object.keys(filterPresets).map(preset => (<option
-              key={preset}
-              value={preset}
-            >{preset}</option>))}
+            {filterPresetValues
+              .filter(preset => !filterPresets[preset].hide)
+              .map(preset => (<option
+                key={preset}
+                value={preset}
+              >{filterPresets[preset].label || preset}</option>))}
           </Form.Select>
         </Tab>
       </Tabs>
@@ -157,17 +216,13 @@ export default function AudioFilter({
     >
       <Button
         variant="success"
-        onClick={() => dispatch({
-          action: 'SetFilterDisplay',
-          state: false,
-        })}
+        onClick={() => closeFilter(true, false)}
+        disabled={!hasChanges}
       >Apply</Button>
-      <Button // @TODO - implement this
+      <Button
         variant="warning"
-        onClick={() => dispatch({
-          action: 'SetFilterDisplay',
-          state: false,
-        })}
+        onClick={() => closeFilter(true, true)}
+        disabled={!hasChanges}
       >Apply and Jump to Present</Button>
     </Modal.Footer>
   </Modal>);
