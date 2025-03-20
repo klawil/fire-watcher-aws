@@ -5,4 +5,5 @@ export interface PageConfig {
   centerAll?: boolean;
   requireAuth?: boolean;
   requireAdmin?: boolean;
+  fluid?: boolean;
 }

@@ -17,9 +17,3 @@
 .fileRowActive td {
   background-color: #cff4fc;
 }
-
-@media (max-width: 991px) {
-  .hideSmall {
-    display: none;
-  }
-}

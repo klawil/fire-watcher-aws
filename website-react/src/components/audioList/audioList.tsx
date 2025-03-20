@@ -359,6 +359,15 @@ export default function AudioList() {
     }
   }, [scrollTop]);
 
+  const [winWidth, setWinWidth] = useState<null | number>(null);
+  useEffect(() => {
+    const resizeListen = () => setWinWidth(window.document.documentElement.clientWidth);
+    window.addEventListener('resize', resizeListen);
+    resizeListen();
+    return () => window.removeEventListener('resize', resizeListen);
+  }, []);
+  const hideTower = winWidth && winWidth < 576;
+
   return (<>
     {state.files.length > 0 && <Table
       responsive={true}
@@ -369,7 +378,7 @@ export default function AudioList() {
           <th>Len</th>
           <th>Talkgroup</th>
           <th>Date</th>
-          <th className={styles.hideSmall}>Tower</th>
+          <th className="d-none d-sm-table-cell">Tower</th>
           <th><BsStarFill /></th>
         </tr>
       </thead>
@@ -409,6 +418,7 @@ export default function AudioList() {
                   file.Transcript && styles.noBottomBorder,
                   state.player.fileUrl === file.Key ? styles.fileRowActive : '',
                   styles.fileRow,
+                  'align-middle',
                 ].join(' ')
               }
               onClick={setFilePlaying(file.Key)}
@@ -416,7 +426,7 @@ export default function AudioList() {
               <td>{file.Len}</td>
               <td className="text-start">{state.talkgroups[file.Talkgroup]?.name || file.Talkgroup}</td>
               <td>{dateToStr(new Date(file.StartTime * 1000))}</td>
-              <td className={styles.hideSmall}>{file.Tower === 'vhf'
+              <td className="d-none d-sm-table-cell">{file.Tower === 'vhf'
                 ? 'VHF'
                 : file.Tower || 'N/A'
               }</td>
@@ -439,7 +449,7 @@ export default function AudioList() {
               <td></td>
               <td
                 className="text-start"
-                colSpan={3}
+                colSpan={hideTower ? 2 : 3}
               ><b>Approximate Transcript:</b> {file.Transcript}</td>
               <td></td>
             </tr>}

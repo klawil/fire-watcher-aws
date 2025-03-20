@@ -46,7 +46,10 @@ export default function CofrnLayout({
 
       {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}
 
-      <Container className={pageConfig.centerAll ? 'text-center' : ''}>
+      <Container
+        className={pageConfig.centerAll ? 'text-center' : ''}
+        fluid={!!pageConfig.fluid}
+      >
         {children}
       </Container>
 

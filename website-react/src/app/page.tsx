@@ -13,6 +13,7 @@ export default function Home() {
         title: 'Radio Traffic',
         hasAudio: true,
         centerAll: true,
+        fluid: true,
       }}
     >
       <AudioList />
