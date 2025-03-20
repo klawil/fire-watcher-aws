@@ -1,8 +1,9 @@
 'use client';
 
 import { ApiFrontendStatsResponse } from "$/frontendApi";
+import { AddAlertContext } from "@/logic/clientContexts";
 import { ChartDataset } from "chart.js";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useContext, useEffect, useState } from "react";
 
 type TimeFormatFn = (a: Date) => string;
 const formatDayHour: TimeFormatFn = date => {
@@ -54,6 +55,7 @@ export function useChartData(
     labels: string[];
     datasets: ChartDataset<"line", number[]>[];
   } | null | undefined>(undefined);
+  const addAlert = useContext(AddAlertContext);
 
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
@@ -117,11 +119,12 @@ export function useChartData(
         if (!newData.success) throw newData;
       } catch (e) {
         console.error(`Failed to load chart (${dataUrl})`, e);
+        addAlert('danger', `Failed to load data for a chart`);
       }
       setChartLoaded(v => v + 1);
       setIsLoading(false);
     })();
-  }, [shouldLoad, data, isLoading, dataUrl, setChartLoaded, convertValue]);
+  }, [shouldLoad, data, isLoading, dataUrl, setChartLoaded, convertValue, addAlert]);
 
   return data;
 }

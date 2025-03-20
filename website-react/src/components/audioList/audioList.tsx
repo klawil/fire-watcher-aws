@@ -2,7 +2,7 @@
 
 import Table from "react-bootstrap/Table";
 import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import React, { useContext, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr, findClosestFileIdx } from "@/logic/dateAndFile";
@@ -14,6 +14,7 @@ import { isElemInView, useRefIntersection } from "@/logic/uiUtils";
 import AudioFilter from "../audioFilter/audioFilter";
 import { fNameToDate } from "$/stringManipulation";
 import CalendarModal from "../calendarModal/calendarModal";
+import { AddAlertContext } from "@/logic/clientContexts";
 
 const loadAfterAddedMinWait = 10000;
 
@@ -25,6 +26,7 @@ function useLoadFiles(
 ) {
   const [afterRef, afterRefIntersecting] = useRefIntersection();
   const [beforeRef, beforeRefIntersecting] = useRefIntersection();
+  const addAlert = useContext(AddAlertContext);
 
   useEffect(() => {
     if (state.apiResponse.length === 0) return;
@@ -264,6 +266,7 @@ function useLoadFiles(
           direction: loadFilesDirection === 'init' ? 'after' : loadFilesDirection,
         });
       } catch (e) {
+        addAlert('danger', 'Failed to update the list of audio files');
         console.error(`Failed to fetch audio files ${urlParams.toString()}`, e);
       }
     })();
@@ -277,6 +280,7 @@ function useLoadFiles(
     afterAddedLastCall,
     afterAddedTrigger,
     scrollTop,
+    addAlert,
   ]);
 
   return [afterRef, beforeRef];

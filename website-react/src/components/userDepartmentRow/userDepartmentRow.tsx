@@ -6,6 +6,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { BsArrowCounterclockwise, BsSave, BsTrash } from "react-icons/bs";
+import { AddAlertContext } from "@/logic/clientContexts";
 
 const baseCallSign: {
   [key in UserDepartment]: string;
@@ -63,6 +64,7 @@ export default function UserDepartmentRow({
       return newValue;
     })
   }, [dep, user]);
+  const addAlert = useContext(AddAlertContext);
 
   const hasChanges = (Object.keys(changes || {}) as (keyof typeof changes)[])
     .filter(key => typeof changes?.[key] !== 'undefined' && changes[key] !== '')
@@ -105,6 +107,7 @@ export default function UserDepartmentRow({
         setErrorFields(apiResult.errors);
       }
     } catch (e) {
+      addAlert('danger', `Error saving department ${dep} for ${user.fName} ${user.lName}`);
       console.error(`Error saving department ${dep} for ${user} (${changes})`, e);
     }
     setIsSaving(false);
@@ -137,6 +140,7 @@ export default function UserDepartmentRow({
         throw apiResult;
       }
     } catch (e) {
+      addAlert('danger', `Error deleting department ${dep} for ${user.fName} ${user.lName}`);
       console.error(`Error deleting department ${dep} for ${user}`, e);
     }
     setIsDeleting(false);

@@ -6,7 +6,7 @@ import Col from "react-bootstrap/Col";
 import Row from 'react-bootstrap/Row';
 import { defaultDepartment, departmentConfig, pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
-import { LoggedInUserContext } from "@/logic/clientContexts";
+import { AddAlertContext, LoggedInUserContext } from "@/logic/clientContexts";
 import Table from "react-bootstrap/Table";
 import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
@@ -81,6 +81,7 @@ export default function UserEdit({
 }>) {
   const loggedInUser = useContext(LoggedInUserContext);
   const dispatch = useContext(UsersDispatchContext);
+  const addAlert = useContext(AddAlertContext);
 
   const [updateState, setUpdateStateRaw] = useState<Partial<ApiUserUpdateBody>>({});
   const setUpdateState = useCallback((userDelta: Partial<ApiUserUpdateBody>) => {
@@ -198,6 +199,11 @@ export default function UserEdit({
         }
       }
     } catch (e) {
+      if (user === null) {
+        addAlert('danger', `Error creating user`);
+      } else {
+        addAlert('danger', `Error saving changes to ${user.fName} ${user.lName}`);
+      }
       console.error(`Error saving changes to ${user}: ${updateState}`, e);
     }
     setIsSaving(false);

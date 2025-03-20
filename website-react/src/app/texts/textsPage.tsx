@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { ApiFrontendListTextsResponse, TextObject } from "$/frontendApi";
 import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
@@ -9,6 +9,8 @@ import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import { fNameToDate } from "$/stringManipulation";
 import { dateTimeToTimeStr, secondsToTime } from "@/logic/dateAndFile";
 import { useRefIntersection } from "@/logic/uiUtils";
+import { AddAlertContext } from "@/logic/clientContexts";
+import { Variant } from "react-bootstrap/esm/types";
 
 function makePercentString(numerator: number, denominator: number) {
 	if (denominator === 0) return '';
@@ -31,7 +33,11 @@ function getPercentile(values: number[], percentile: number) {
 	return secondsToTime(valueSeconds);
 }
 
-async function getTexts(isPage: boolean, loadBefore: number | null) {
+async function getTexts(
+  isPage: boolean,
+  loadBefore: number | null,
+  addAlert: (type: Variant, message: string) => void
+) {
   try {
     const apiResult: ApiFrontendListTextsResponse = await fetch(
       `/api/frontend?action=listTexts${isPage ? '&page=y' : ''}${loadBefore !== null ? `&before=${loadBefore}` : ''}`
@@ -56,6 +62,7 @@ async function getTexts(isPage: boolean, loadBefore: number | null) {
         return text;
       });
   } catch (e) {
+    addAlert('danger', `Failed to get ${isPage ? 'paging' : 'non paging'} texts`);
     console.error(`Failed to get texts (page: ${isPage})`, e);
   }
   return [];
@@ -73,6 +80,7 @@ function TextsTable({
   const [loadMoreRef, loadMoreRefInView] = useRefIntersection();
   const [scrollIdx, setScrollIdx] = useState(0);
   const scrollRef = useRef<HTMLTableRowElement | null>(null);
+  const addAlert = useContext(AddAlertContext);
 
   useEffect(() => {
     if (
@@ -84,11 +92,11 @@ function TextsTable({
     setIsLoading(true);
     setScrollIdx(texts.length - 1);
     (async () => {
-      setTexts(await getTexts(isPage, texts[texts.length - 1]?.datetime || null));
+      setTexts(await getTexts(isPage, texts[texts.length - 1]?.datetime || null, addAlert));
       setLastLoad(Date.now());
       setIsLoading(false);
     })();
-  }, [texts, isLoading, loadMoreRefInView, isPage, lastLoad]);
+  }, [texts, isLoading, loadMoreRefInView, isPage, lastLoad, addAlert]);
 
   const loadNextBatchRefIdx = texts.length - 1;
 

@@ -9,9 +9,10 @@ import { Circle, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import styles from "./adjacentSites.module.css";
 import "leaflet/dist/leaflet.css";
 import { ApiFrontendSitesResponse, SeenByRecorderKeys, SiteObject } from "$/frontendApi";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 import L from 'leaflet';
+import { AddAlertContext } from "@/logic/clientContexts";
 
 const fadeSiteTime = 1000 * 60 * 15; // 15 minutes
 const localeTimeOptions: Intl.DateTimeFormatOptions = {
@@ -94,6 +95,7 @@ function SiteMapMarker({
 
 export default function AdjacentSites() {
   const [sites, setSites] = useState<SiteObject[]>([]);
+  const addAlert = useContext(AddAlertContext);
   
   const [isLoading, setIsLoading] = useState(false);
   const updateSites = useCallback(async () => {
@@ -109,9 +111,10 @@ export default function AdjacentSites() {
       setSites(siteData.data);
     } catch (e) {
       console.error(`Failed to get site data`, e);
+      addAlert('danger', 'Failed to retrieve DTR site data');
     }
     setIsLoading(false);
-  }, [isLoading]);
+  }, [isLoading, addAlert]);
   useEffect(() => {
     if (sites.length === 0) {
       updateSites();

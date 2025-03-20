@@ -2,7 +2,7 @@
 
 import { formatPhone } from "$/stringManipulation";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
+import { AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
 import { useCallback, useContext, useState } from "react";
 import Table from "react-bootstrap/Table";
 import Col from "react-bootstrap/Col";
@@ -32,6 +32,7 @@ const userEditableFields: {
 export default function ProfilePage() {
   const user = useContext(LoggedInUserContext);
   const reCheckUser = useContext(RefreshLoggedInUserContext);
+  const addAlert = useContext(AddAlertContext);
 
   const [userEditInfo, setUserEditInfo] = useState<Partial<
     Pick<UserObject, 'fName'> & Pick<UserObject, 'lName'> & Pick<UserObject, 'talkgroups'>
@@ -97,6 +98,7 @@ export default function ProfilePage() {
         setUserEditInfo({});
       }
     } catch (e) {
+      addAlert('danger', 'Failed to update user information');
       console.error(`Error updating user ${user} with ${userEditInfo}`, e);
     }
     setIsSaving(false);

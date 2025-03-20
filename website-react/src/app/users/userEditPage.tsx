@@ -1,7 +1,7 @@
 'use client';
 
 import { ApiUserListResponse, ApiUserUpdateBody } from "$/userApi";
-import React, { useCallback, useEffect, useReducer, useState } from "react";
+import React, { useCallback, useContext, useEffect, useReducer, useState } from "react";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import Table from "react-bootstrap/Table";
 import { defaultUsersState, UsersDispatchContext, usersStateReducer } from "@/logic/usersState";
@@ -11,9 +11,11 @@ import { validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { ApiResponseBase } from "$/common";
+import { AddAlertContext } from "@/logic/clientContexts";
 
 export default function UserEditPage() {
   const [ state, dispatch ] = useReducer(usersStateReducer, defaultUsersState);
+  const addAlert = useContext(AddAlertContext);
 
   useEffect(() => {
     (async () => {
@@ -57,8 +59,9 @@ export default function UserEditPage() {
       }
     } catch (e) {
       console.error(`Failed to delete user ${state.deleteUserModal}`, e);
+      addAlert('danger', `Failed to delete ${state.deleteUserModal.fName} ${state.deleteUserModal.lName}`);
     }
-  }, [state.deleteUserModal]);
+  }, [state.deleteUserModal, addAlert]);
 
   const deleteModalDeps = validDepartments
     .filter(dep => state.deleteUserModal?.[dep]?.active)

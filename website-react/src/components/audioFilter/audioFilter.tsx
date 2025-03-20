@@ -208,7 +208,6 @@ export default function AudioFilter({
         .filter(s => s !== '')
         .map(s => Number(s)),
     };
-    console.log(tgValueParsed);
   } else if (presetValue === 'all') {
     tgValueParsed = { type: 'all' };
   }

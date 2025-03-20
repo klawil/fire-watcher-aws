@@ -1,7 +1,7 @@
 'use client';
 
 import { formatPhone } from "$/stringManipulation";
-import { LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
+import { AddAlertContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
 import { useCallback, useContext, useEffect, useState } from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const user = useContext(LoggedInUserContext);
   const loc = useContext(LocationContext);
   const reCheckUser = useContext(RefreshLoggedInUserContext);
+  const addAlert = useContext(AddAlertContext);
 
   const [loginState, setLoginState] = useState<{
     phone?: string;
@@ -67,10 +68,11 @@ export default function LoginPage() {
       }));
     } catch (e) {
       console.error(`Failed to get code for ${loginState}`, e);
+      addAlert('danger', 'Failed to get a code for this user');
       setErrorFields([ 'phone' ]);
     }
     setIsCodeLoading(false);
-  }, [loginState]);
+  }, [loginState, addAlert]);
 
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const submitCode = useCallback(async () => {
@@ -105,10 +107,11 @@ export default function LoginPage() {
       handleRedirectAction();
     } catch (e) {
       console.error(`Failed to login with ${loginState}`, e);
+      addAlert('danger', 'Authentication failed');
       setErrorFields([ 'code' ]);
     }
     setIsLoginLoading(false);
-  }, [loginState, handleRedirectAction]);
+  }, [loginState, handleRedirectAction, addAlert]);
 
   useEffect(() => {
     if (user && user.isActive) {

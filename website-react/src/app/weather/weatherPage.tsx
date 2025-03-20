@@ -1,13 +1,15 @@
 'use client';
 
 import { WeatherResultJson } from '$/weather';
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import styles from "./weather.module.css";
 import { Col, Image, Row } from "react-bootstrap";
 import Link from "next/link";
+import { AddAlertContext } from '@/logic/clientContexts';
 
 export default function WeatherPage() {
+  const addAlert = useContext(AddAlertContext);
   const [weatherData, setWeatherData] = useState<WeatherResultJson | null | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
@@ -22,11 +24,12 @@ export default function WeatherPage() {
         setWeatherData(result);
       } catch (e) {
         console.error(`Failed to get weather information`, e);
+        addAlert('danger', 'Failed to load weather information');
         setWeatherData(null);
       }
       setIsLoading(false);
     })();
-  }, [isLoading, weatherData]);
+  }, [isLoading, weatherData, addAlert]);
 
   const [imgNode, setImgNode] = useState<null | HTMLElement>(null);
   const [imgNodeHeight, setImgNodeHeight] = useState(555);

@@ -2,9 +2,11 @@
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
-import { useEffect, useState } from 'react';
-import { DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/logic/clientContexts';
+import { useCallback, useEffect, useState } from 'react';
+import { AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/logic/clientContexts';
 import { ApiUserGetUserResponse } from "$/userApi";
+import { Alert, Container } from 'react-bootstrap';
+import { Variant } from 'react-bootstrap/esm/types';
 
 function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>();
@@ -43,7 +45,7 @@ function useLocation() {
 
 const localStorageUserKey = 'cofrn-user';
 
-function useUser(): [
+function useUser(addAlert: (type: Variant, message: string) => void): [
   ApiUserGetUserResponse | null,
   () => Promise<void>,
 ] {
@@ -57,6 +59,7 @@ function useUser(): [
       localStorage.setItem(localStorageUserKey, JSON.stringify(apiResult));
       setUser(apiResult);
     } catch (e) {
+      addAlert('danger', 'Failed to update the current user\'s information');
       console.error(`Failed to fetch current user`, e);
     }
   }
@@ -111,6 +114,7 @@ function useUser(): [
       console.log('Initial User:', initUser);
       setUser(initUser);
     } catch (e) {
+      addAlert('danger', 'Invalid user information was found, attempting to refresh the user');
       console.error(`Failed to parse localStorage user`, e);
       localStorage.removeItem(localStorageUserKey);
     }
@@ -119,14 +123,43 @@ function useUser(): [
   return [user, getUserFromApi];
 }
 
+function randomKey() {
+  const vals = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const key = Array.from(Array(10), () => vals[Math.floor(Math.random() * vals.length)])
+    .join('');
+
+  return key;
+}
+
+interface AlertConfig {
+  type: Variant;
+  message: string;
+  id: string;
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const [alerts, setAlerts] = useState<AlertConfig[]>([]);
+  const addAlert = useCallback((type: Variant, message: string) => {
+    const id = randomKey();
+    setAlerts((cur) => [
+      ...cur,
+      {
+        type,
+        message,
+        id,
+      },
+    ]);
+
+    setTimeout(() => setAlerts(cur => cur.filter(a => a.id !== id)), 5000);
+  }, []);
+
   const isDarkMode = useDarkMode();
   const loc = useLocation();
-  const [user, refreshUser] = useUser();
+  const [user, refreshUser] = useUser(addAlert);
 
   if (
     typeof isDarkMode === 'undefined' ||
@@ -138,11 +171,31 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body data-bs-theme={modeName}>
+        {alerts.length > 0 && <Container
+          style={{
+            position: 'fixed',
+            top: '60px',
+            left: '50%',
+            transform: 'translate(-50%, 0%)',
+            zIndex: 1000,
+          }}
+        >
+          {alerts.map((alertConf) => <Alert
+            dismissible
+            key={alertConf.id}
+            className='alert-fixed'
+            variant={alertConf.type}
+            onClose={() => setAlerts(cur => cur.filter((a) => a.id !== alertConf.id))}
+          >{alertConf.message}</Alert>)}
+        </Container>}
+
         <DarkModeContext.Provider value={modeName}>
           <LocationContext.Provider value={loc}>
             <LoggedInUserContext.Provider value={user}>
               <RefreshLoggedInUserContext.Provider value={refreshUser}>
-                {children}
+                <AddAlertContext.Provider value={addAlert}>
+                  {children}
+                </AddAlertContext.Provider>
               </RefreshLoggedInUserContext.Provider>
             </LoggedInUserContext.Provider>
           </LocationContext.Provider>
