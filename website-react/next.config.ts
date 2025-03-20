@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export',
+  exportTrailingSlash: true,
   async rewrites() {
     return {
       fallback: [
