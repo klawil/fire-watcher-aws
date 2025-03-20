@@ -10,6 +10,7 @@ export default function Page() {
   return (<CofrnLayout pageConfig={{
     title: 'System Status',
     requireAdmin: true,
+    fluid: true,
   }}>
     <StatusPage />
   </CofrnLayout>)

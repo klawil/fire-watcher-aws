@@ -11,6 +11,7 @@ export default function Page() {
     pageConfig={{
       title: 'Texts',
       requireAdmin: true,
+      fluid: true,
     }}
   >
     <TextsPage />

@@ -11,6 +11,8 @@ export default function Page() {
     pageConfig={{
       title: 'User Management',
       requireAdmin: true,
+      fluid: true,
+      containerClass: 'container-md',
     }}>
       <UserEditPage />
     </CofrnLayout>

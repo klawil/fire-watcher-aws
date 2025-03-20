@@ -7,3 +7,9 @@ body {
 body {
   padding-top: 60px;
 }
+
+thead.floatHead th {
+  position: sticky;
+  top: 0px;
+  background-color: var(--bs-body-bg);
+}

@@ -153,7 +153,7 @@ export default function AdjacentSites() {
       >{isLoading && <Spinner size="sm" />} Update</Button>
     </Col></Row>
 
-    {sites.length > 0 && <Table striped>
+    {sites.length > 0 && <Table responsive striped>
       <thead><tr className="text-center">
         <th>Site</th>
         <th>Name</th>

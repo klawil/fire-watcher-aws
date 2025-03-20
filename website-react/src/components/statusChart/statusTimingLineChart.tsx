@@ -5,7 +5,7 @@ import Col from "react-bootstrap/Col";
 import { Dispatch, SetStateAction } from "react";
 import { Chart, registerables } from "chart.js";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
-import { useChartData } from "./common";
+import { useChartData, usePageWidth } from "./common";
 import { Line } from "react-chartjs-2";
 
 Chart.register(...registerables);
@@ -30,6 +30,8 @@ export default function StatusTimingLineChart({
     convertValue,
   );
 
+  const pageWidth = usePageWidth();
+
   return (<>
     <h3 className="text-center mt-5">{title}</h3>
     <Row><Col>
@@ -52,7 +54,7 @@ export default function StatusTimingLineChart({
           },
           plugins: {
             legend: {
-              position: 'right',
+              position: pageWidth && pageWidth >= 992 ? 'right' : 'bottom',
             },
           },
         }}

@@ -125,3 +125,16 @@ export function useChartData(
 
   return data;
 }
+
+export function usePageWidth() {
+  const [winWidth, setWinWidth] = useState<null | number>(null);
+
+  useEffect(() => {
+    const resizeListen = () => setWinWidth(window.document.documentElement.clientWidth);
+    window.addEventListener('resize', resizeListen);
+    resizeListen();
+    return () => window.removeEventListener('resize', resizeListen);
+  }, []);
+
+  return winWidth;
+}

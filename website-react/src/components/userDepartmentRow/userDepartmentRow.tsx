@@ -171,7 +171,7 @@ export default function UserDepartmentRow({
         placeholder={baseCallSign[dep]}
         disabled={!loggedInUserDepartments.includes(dep)}
         style={{
-          maxWidth: '85px',
+          width: '85px',
         }}
       />
     </td>

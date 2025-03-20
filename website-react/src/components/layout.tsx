@@ -40,6 +40,20 @@ export default function CofrnLayout({
 
   if (colorModeName === null) return (<></>);
 
+  const containerClasses: string[] = [];
+  if (pageConfig.centerAll) {
+    containerClasses.push('text-center');
+  }
+  if (pageConfig.containerClass) {
+    containerClasses.push(pageConfig.containerClass);
+  }
+  const containerParams: {
+    className?: string;
+  } = {};
+  if (containerClasses.length > 0) {
+    containerParams.className = containerClasses.join(' ');
+  }
+
   return (
     <LoggedInUserContext.Provider value={user}>
       <CofrnNavbar pageConfig={pageConfig} />
@@ -47,7 +61,7 @@ export default function CofrnLayout({
       {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}
 
       <Container
-        className={pageConfig.centerAll ? 'text-center' : ''}
+        {...containerParams}
         fluid={!!pageConfig.fluid}
       >
         {children}

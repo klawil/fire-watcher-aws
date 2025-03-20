@@ -5,7 +5,7 @@ import Col from "react-bootstrap/Col";
 import { Dispatch, SetStateAction } from "react";
 import { Chart, registerables } from "chart.js";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
-import { useChartData } from "./common";
+import { useChartData, usePageWidth } from "./common";
 import { Line } from "react-chartjs-2";
 
 Chart.register(...registerables);
@@ -23,14 +23,14 @@ export default function StatusMetricLineChart({
   setChartLoaded: Dispatch<SetStateAction<number>>;
   convertValue?: (a: number) => number;
 }>) {
-  // const darkMode = useContext(DarkModeContext);
-
   const data = useChartData(
     dataUrl,
     shouldFetchData,
     setChartLoaded,
     convertValue,
   );
+
+  const pageWidth = usePageWidth();
 
   return (<>
     <h3 className="text-center mt-5">{title}</h3>
@@ -53,7 +53,7 @@ export default function StatusMetricLineChart({
           },
           plugins: {
             legend: {
-              position: 'right',
+              position: pageWidth && pageWidth >= 992 ? 'right' : 'bottom',
             },
           },
         }}

@@ -20,11 +20,11 @@ interface ColorConfig {
 
 const color1: ColorConfig = {
 	backgroundColor: 'rgba(54, 162, 235, 0.5)',
-	borderColor: 'rgb(54, 162, 235)'
+	borderColor: 'rgba(54, 162, 235, 0.5)'
 };
 const color2: ColorConfig = {
 	backgroundColor: 'rgba(255, 99, 132, 0.5)',
-	borderColor: 'rgb(255, 99, 132)'
+	borderColor: 'rgba(255, 99, 132, 0.5)'
 };
 
 export default function StatusTowerLineChart({
@@ -139,7 +139,7 @@ export default function StatusTowerLineChart({
                   },
                   yMin: 30,
                   yMax: 30,
-                  borderColor: 'rgb(255,99,132)',
+                  borderColor: color2.borderColor,
                   borderWidth: 2,
                 },
                 line2: {

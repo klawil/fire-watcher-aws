@@ -14,6 +14,7 @@ export default function Home() {
         hasAudio: true,
         centerAll: true,
         fluid: true,
+        containerClass: 'container-md',
       }}
     >
       <AudioList />

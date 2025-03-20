@@ -95,9 +95,9 @@ function TextsTable({
   return (<>
     <h2 className="text-center">{isPage ? 'Paging' : 'Other'} Texts</h2>
 
-    <Container>
+    <Container fluid>
       {texts.length > 0 && <Table striped className={`align-middle ${styles.tableScrollY}`}>
-        <thead><tr className="text-center">
+        <thead className="floatHead"><tr className="text-center">
           <th>{isPage && 'Page '}Time</th>
           <th>Message</th>
           {!isPage && <th>Media</th>}

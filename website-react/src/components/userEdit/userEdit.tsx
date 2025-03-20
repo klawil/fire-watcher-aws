@@ -329,18 +329,20 @@ export default function UserEdit({
       <Col
         lg={{span: 6, offset: 3}}
         md={{span: 8, offset: 2}}
-        className="p-2 row"
+        className="p-2"
       >
-        <Col sm={6}><Button
-          variant="success"
-          disabled={!hasChanges || isSaving}
-          onClick={saveUser}
-        >{isSaving ? 'Saving...' : user === null ? 'Create' : 'Save'}</Button></Col>
-        <Col sm={6}><Button
-          variant="warning"
-          onClick={() => setUpdateStateRaw({})}
-          disabled={!hasChanges}
-        >Reset</Button></Col>
+        <Row>
+          <Col xs={6} className="d-grid"><Button
+            variant="success"
+            disabled={!hasChanges || isSaving}
+            onClick={saveUser}
+          >{isSaving ? 'Saving...' : user === null ? 'Create' : 'Save'}</Button></Col>
+          <Col xs={6} className="d-grid"><Button
+            variant="warning"
+            onClick={() => setUpdateStateRaw({})}
+            disabled={!hasChanges}
+          >Reset</Button></Col>
+        </Row>
       </Col>
     </Col>
     {user !== null && <Col

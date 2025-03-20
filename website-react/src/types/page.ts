@@ -6,4 +6,5 @@ export interface PageConfig {
   requireAuth?: boolean;
   requireAdmin?: boolean;
   fluid?: boolean;
+  containerClass?: string;
 }

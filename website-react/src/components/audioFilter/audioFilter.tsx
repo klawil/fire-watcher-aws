@@ -265,6 +265,7 @@ export default function AudioFilter({
           >
             {filterPresetValues
               .filter(preset => !filterPresets[preset].hide)
+              .sort((a, b) => a.localeCompare(b))
               .map(preset => (<option
                 key={preset}
                 value={preset}
@@ -304,7 +305,11 @@ export default function AudioFilter({
                         key={tg}
                         onClick={() => addTg(tg)}
                       >
-                        <td>{state.talkgroups[tg].selectName}</td>
+                        <td
+                          style={{
+                            cursor: 'pointer',
+                          }}
+                        >{state.talkgroups[tg].selectName}</td>
                       </tr>)}
                   </tbody>
                 </Table>
@@ -326,7 +331,11 @@ export default function AudioFilter({
                         key={tg}
                         onClick={() => rmTg(tg)}
                       >
-                        <td>{state.talkgroups[tg].selectName}</td>
+                        <td
+                          style={{
+                            cursor: 'pointer',
+                          }}
+                        >{state.talkgroups[tg].selectName}</td>
                       </tr>)}
                   </tbody>
                 </Table>
