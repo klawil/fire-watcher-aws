@@ -11,6 +11,7 @@ import { useContext, useState } from "react";
 import { BsTrash } from "react-icons/bs";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { formatPhone } from "$/stringManipulation";
+import Link from "next/link";
 
 export default function UserRow({
   user,
@@ -38,7 +39,7 @@ export default function UserRow({
 
   return (<>
     {user !== null && <tr className={rowClasses.join(' ')}>
-      <td>{formatPhone(user.phone)}</td>
+      <td><Link href={`tel:+1${user.phone}`}>{formatPhone(user.phone)}</Link></td>
       <td className="text-start">{user.lName}, {user.fName}</td>
       <td>{validDepartments
         .filter(dep => user[dep]?.active)
