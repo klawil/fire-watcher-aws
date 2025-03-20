@@ -17,7 +17,49 @@ export default function AudioFilter({
   dispatch: React.ActionDispatch<[AudioAction]>;
 }>) {
   const searchParams = useSearchParams();
+  const [noStart, setNoStart] = useState(false);
   useEffect(() => {
+    // If `nostart` is present in the URL, don't load any data. This is to allow a link to the
+    // specific filter set that automatically jumps to the present to be saved on a mobile device
+    if (
+      !noStart &&
+      searchParams.get('nostart') !== null
+    ) {
+      setNoStart(true);
+      return;
+    }
+    if (noStart) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      if (newParams.get('nostart') !== null) {
+        newParams.keys()
+          .filter(key => key !== 'tg')
+          .forEach(key => newParams.delete(key));
+        window.history.replaceState(null, '', `?${newParams.toString()}`);
+      }
+      return;
+    }
+
+    // Check for a link from a paging message
+    if (
+      !state.queryParsed &&
+      searchParams.get('cs') !== null &&
+      searchParams.get('f') !== null
+    ) {
+      fetch(`/api/frontend?action=pageView`, {
+        method: 'POST',
+        body: JSON.stringify({
+          cs: searchParams.get('cs'),
+          f: searchParams.get('f'),
+        })
+      }).then(r => r.json())
+        .catch(e => console.log(`Failed to log page`, e));
+      
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete('cs');
+      window.history.replaceState(null, '', `?${newParams.toString()}`);
+      return;
+    }
+
     const searchParamValues = {
       tg: searchParams.get('tg') || `p${defaultFilterPreset}`,
       emerg: searchParams.get('emerg') || undefined,
@@ -26,9 +68,7 @@ export default function AudioFilter({
 
     // Pull in the raw values from search params on the first run
     if (!state.queryParsed) {
-      // @TODO - implement callsign listening to page logic
-      // @TODO - implement the nostart logic
-      // @TODO - implement add to home screen?
+
       dispatch({
         action: 'QueryParamsParsed',
         ...searchParamValues,
@@ -53,7 +93,7 @@ export default function AudioFilter({
     if (wasChange) {
       window.history.pushState(null, '', `?${newSearchParams.toString()}`);
     }
-  }, [searchParams, state.filter, state.queryParsed, dispatch]);
+  }, [noStart, searchParams, state.filter, state.queryParsed, dispatch]);
 
   const [filterChanges, setFilterChangesRaw] = useState<Partial<
     Pick<AudioState['filter'], 'tg'> &
