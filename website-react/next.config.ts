@@ -23,4 +23,8 @@ const nextConfig: NextConfig = {
   },
 };
 
+if (process.env.PROD_BUILD) {
+  nextConfig.distDir = 'build';
+}
+
 export default nextConfig;
