@@ -434,7 +434,6 @@ const districtAdminUserKeys: aws.DynamoDB.ExpressionAttributeNameMap = {
 	'#gva': 'getVhfAlerts',
 	'#gda': 'getDtrAlerts',
 	'#da': 'isDistrictAdmin',
-	'#lt': 'loginTokens',
 	'#pgp': 'pagingPhone',
 };
 
