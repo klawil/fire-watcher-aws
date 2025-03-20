@@ -7,6 +7,7 @@ import Tabs from "react-bootstrap/Tabs";
 import Tab from "react-bootstrap/Tab";
 import Form from "react-bootstrap/Form";
 import { defaultFilterPreset } from "@/logic/audioState";
+import { Col, Container, Row, Table } from "react-bootstrap";
 
 
 export default function AudioFilter({
@@ -136,9 +137,9 @@ export default function AudioFilter({
       setFilterChanges({
         tg: `p${defaultFilterPreset}`,
       });
-    } else if (tab === 'talkgroups') {
+    } else if (tab === 'talkgroup') {
       setFilterChanges({
-        tg: `tg8198`,
+        tg: `tg`,
       });
     }
   }, [setFilterChanges]);
@@ -169,6 +170,8 @@ export default function AudioFilter({
     });
   }, [dispatch, filterChanges, searchParams]);
 
+  const [tgFilter, setTgFilter] = useState('');
+
   // Exit early if we haven't parsed the search string yet
   if (!state.queryParsed) return <></>;
 
@@ -198,14 +201,31 @@ export default function AudioFilter({
         value: presetName as FilterPresetUrlParams,
       };
     }
-  } else if (/^tg([0-9]+,?)+$/.test(presetValue)) {
+  } else if (presetValue.startsWith('tg')) {
     tgValueParsed = {
       type: 'talkgroup',
       value: presetValue.slice(2).split('|')
+        .filter(s => s !== '')
         .map(s => Number(s)),
     };
+    console.log(tgValueParsed);
   } else if (presetValue === 'all') {
     tgValueParsed = { type: 'all' };
+  }
+
+  const addTg = (tg: string) => {
+    if (tgValueParsed.type !== 'talkgroup') return;
+
+    setFilterChanges({
+      tg: `tg${[ ...tgValueParsed.value, tg ].join('|')}`,
+    });
+  }
+  const rmTg = (tg: string) => {
+    if (tgValueParsed.type !== 'talkgroup') return;
+
+    setFilterChanges({
+      tg: `tg${tgValueParsed.value.filter(v => v.toString() !== tg).join('|')}`,
+    });
   }
 
   return (<Modal
@@ -250,6 +270,69 @@ export default function AudioFilter({
                 value={preset}
               >{filterPresets[preset].label || preset}</option>))}
           </Form.Select>
+        </Tab>
+        <Tab as={Container} title="Talkgroups" eventKey="talkgroup">
+          {tgValueParsed.type === 'talkgroup' && <Row>
+            <Col md={6} xs={12}>
+              <h5 className="text-center">Talkgroups</h5>
+              <Form.Control
+                type="text"
+                value={tgFilter}
+                onChange={e => setTgFilter(e.target.value)}
+                placeholder="Filter Talkgroups"
+              />
+              <div style={{
+                height: '200px',
+                overflowY: 'scroll',
+              }}>
+                <Table>
+                  <tbody>
+                    {Object.keys(state.talkgroups)
+                      .filter(tg => {
+                        if (tgValueParsed.value.includes(Number(tg))) return false;
+
+                        if (
+                          tgFilter !== '' &&
+                          !state.talkgroups[tg].selectName.toLowerCase().includes(tgFilter.toLowerCase())
+                        ) return false;
+
+                        return true;
+                      })
+                      .sort((a, b) =>
+                        state.talkgroups[a].selectName.localeCompare(state.talkgroups[b].selectName))
+                      .map(tg => <tr
+                        key={tg}
+                        onClick={() => addTg(tg)}
+                      >
+                        <td>{state.talkgroups[tg].selectName}</td>
+                      </tr>)}
+                  </tbody>
+                </Table>
+              </div>
+            </Col>
+            <Col md={6} xs={12}>
+              <h5 className="text-center">Selected</h5>
+              <div style={{
+                height: '200px',
+                overflowY: 'scroll',
+              }}>
+                <Table>
+                  <tbody>
+                    {Object.keys(state.talkgroups)
+                      .filter(tg => tgValueParsed.value.includes(Number(tg)))
+                      .sort((a, b) =>
+                        state.talkgroups[a].selectName.localeCompare(state.talkgroups[b].selectName))
+                      .map(tg => <tr
+                        key={tg}
+                        onClick={() => rmTg(tg)}
+                      >
+                        <td>{state.talkgroups[tg].selectName}</td>
+                      </tr>)}
+                  </tbody>
+                </Table>
+              </div>
+            </Col>
+          </Row>}
         </Tab>
         {/* @TODO - implement talkgroups tab */}
       </Tabs>
