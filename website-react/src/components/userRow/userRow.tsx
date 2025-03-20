@@ -71,12 +71,11 @@ export default function UserRow({
     {editOpen && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}><td colSpan={4}>
       <Container>
         {(user !== null && loggedInUser?.isDistrictAdmin) && <Row className="text-center">
-          <Col md={6}><b>Last Login:</b> {
+          <Col xs={12}><b>Last Login:</b> {
             typeof user.lastLogin === 'undefined'
               ? 'Never'
               : new Date(user.lastLogin).toLocaleString()
           }</Col>
-          <Col md={6}><b>Logged In Devices:</b> {user.loginTokens?.length || 0}</Col>
         </Row>}
         <UserEdit setEditOpen={setEditOpen} user={user} />
       </Container>

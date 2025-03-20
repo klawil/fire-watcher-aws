@@ -1,7 +1,7 @@
 'use client';
 
 import { formatPhone } from "$/stringManipulation";
-import { LocationContext, LoggedInUserContext } from "@/logic/clientContexts";
+import { LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
 import { useCallback, useContext, useEffect, useState } from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -14,6 +14,7 @@ import { ApiUserAuthBody, ApiUserAuthResponse, ApiUserLoginBody, ApiUserLoginRes
 export default function LoginPage() {
   const user = useContext(LoggedInUserContext);
   const loc = useContext(LocationContext);
+  const reCheckUser = useContext(RefreshLoggedInUserContext);
 
   const [loginState, setLoginState] = useState<{
     phone?: string;
@@ -25,14 +26,17 @@ export default function LoginPage() {
 
   const [errorFields, setErrorFields] = useState<string[]>([]);
 
-  const handleRedirectAction = useCallback(() => {
+  const handleRedirectAction = useCallback(async () => {
     if (loc === null) return;
+
+    // Refresh the user
+    await reCheckUser();
 
     // Check for the query string
     const urlParams = new URLSearchParams(loc.search);
     const destination = urlParams.get('redirectTo') || '/';
     window.location.assign(destination);
-  }, [loc]);
+  }, [loc, reCheckUser]);
 
   const [isCodeLoading, setIsCodeLoading] = useState(false);
   const getCode = useCallback(async () => {
