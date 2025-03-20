@@ -5,7 +5,6 @@ import './globals.css';
 import { useEffect, useState } from 'react';
 import { DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/logic/clientContexts';
 import { ApiUserGetUserResponse } from "$/userApi";
-import { UserDepartment } from "$/userConstants";
 
 function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>();
@@ -42,6 +41,8 @@ function useLocation() {
   return loc;
 }
 
+const localStorageUserKey = 'cofrn-user';
+
 function useUser(): [
   ApiUserGetUserResponse | null,
   () => Promise<void>,
@@ -53,6 +54,7 @@ function useUser(): [
       const apiResult: ApiUserGetUserResponse = await fetch('/api/user?action=getUser')
         .then(r => r.json());
 
+      localStorage.setItem(localStorageUserKey, JSON.stringify(apiResult));
       setUser(apiResult);
     } catch (e) {
       console.error(`Failed to fetch current user`, e);
@@ -75,30 +77,42 @@ function useUser(): [
 
       cookies[cookie.slice(0, eqSign)] = decodeURIComponent(cookie.slice(eqSign + 1));
     });
-    let departments: {
-      [key in UserDepartment]?: ApiUserGetUserResponse[UserDepartment];
-    } = {};
-    if (typeof cookies['cofrn-user-departments'] === 'string') {
-      departments = JSON.parse(cookies['cofrn-user-departments']);
+
+    // Check the cookies for an active user
+    if (
+      !cookies['cofrn-token'] ||
+      !cookies['cofrn-user']
+    ) {
+      localStorage.removeItem(localStorageUserKey);
+      setUser({
+        success: true,
+        isUser: false,
+        isDistrictAdmin: false,
+      });
+      return;
     }
 
-    const initUser: ApiUserGetUserResponse = {
-      ...(user || {}),
-      success: false,
-      isActive: document.cookie.includes('cofrn-token'),
-      isUser: document.cookie.includes('cofrn-token'),
-      isAdmin: document.cookie.includes('cofrn-user-admin=1'),
-      isDistrictAdmin: document.cookie.includes('cofrn-user-super=1'),
-      fName: cookies['cofrn-user-name'] || undefined,
-      ...departments,
-    };
+    // Start the process of fetching the user info from the API
+    getUserFromApi();
 
-    console.log('Initial User:', initUser);
-    setUser(initUser);
+    // Check localStorage for a user
+    const lsUserStr = localStorage.getItem(localStorageUserKey);
+    if (lsUserStr === null) {
+      setUser({
+        success: false,
+        isUser: false,
+        isDistrictAdmin: false,
+      });
+      return;
+    }
 
-    // Make the API call to get the most updated user
-    if (initUser.isActive && !initUser.success) {
-      getUserFromApi();
+    try {
+      const initUser: ApiUserGetUserResponse = JSON.parse(lsUserStr);
+      console.log('Initial User:', initUser);
+      setUser(initUser);
+    } catch (e) {
+      console.error(`Failed to parse localStorage user`, e);
+      localStorage.removeItem(localStorageUserKey);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

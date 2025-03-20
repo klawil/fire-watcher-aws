@@ -10,6 +10,7 @@ export default function Page() {
   return (<CofrnLayout
     pageConfig={{
       title: 'Texts',
+      requireAdmin: true,
     }}
   >
     <TextsPage />

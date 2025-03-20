@@ -4,7 +4,7 @@ import { PageConfig } from "@/types/page";
 import CofrnNavbar from "./navbar";
 import { Container, Nav, Navbar } from "react-bootstrap";
 import { LoggedInUserContext, DarkModeContext } from "@/logic/clientContexts";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 
 export default function CofrnLayout({
   children,
@@ -15,6 +15,28 @@ export default function CofrnLayout({
 }>) {
   const colorModeName = useContext(DarkModeContext);
   const user = useContext(LoggedInUserContext);
+
+  useEffect(() => {
+    if (
+      user === null ||
+      !user.success ||
+      (
+        !pageConfig.requireAuth &&
+        !pageConfig.requireAdmin
+      )
+    ) return;
+
+    if (!user.isUser) {
+      window.location.replace(`/login?redirectTo=${
+        encodeURIComponent(`${window.location.pathname}${window.location.search}`)
+      }`);
+      return;
+    }
+
+    if (pageConfig.requireAdmin && !user.isAdmin) {
+      window.location.replace('/');
+    }
+  }, [user, pageConfig.requireAdmin, pageConfig.requireAuth]);
 
   if (colorModeName === null) return (<></>);
 

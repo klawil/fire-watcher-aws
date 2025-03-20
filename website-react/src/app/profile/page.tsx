@@ -10,6 +10,7 @@ export default function Page() {
   return (<CofrnLayout
     pageConfig={{
       title: 'Profile',
+      requireAuth: true,
     }}
   >
     <ProfilePage />

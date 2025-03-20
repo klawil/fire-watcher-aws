@@ -10,6 +10,7 @@ export default function Page() {
   return (<CofrnLayout
     pageConfig={{
       title: 'User Management',
+      requireAdmin: true,
     }}>
       <UserEditPage />
     </CofrnLayout>

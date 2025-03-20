@@ -3,4 +3,6 @@ export interface PageConfig {
   navTitle?: string;
   hasAudio?: boolean;
   centerAll?: boolean;
+  requireAuth?: boolean;
+  requireAdmin?: boolean;
 }
