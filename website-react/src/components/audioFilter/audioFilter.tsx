@@ -334,7 +334,6 @@ export default function AudioFilter({
             </Col>
           </Row>}
         </Tab>
-        {/* @TODO - implement talkgroups tab */}
       </Tabs>
     </Modal.Body>
 
