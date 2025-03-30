@@ -125,11 +125,17 @@ interface FilterModalDisplayAction {
 interface SetNewFiltersAction {
   action: 'SetNewFilters';
   tg?: string;
-  emerg?: string;
+  emerg?: 'y' | 'n';
+  f?: string;
+}
+interface SetSomeNewFiltersAction {
+  action: 'SetSomeNewFilters';
+  tg?: string;
+  emerg?: 'y' | 'n';
   f?: string;
 }
 type FilterActions = SetFilterValueAction | QueryParamsParsedAction | FilterModalDisplayAction
-  | SetNewFiltersAction;
+  | SetNewFiltersAction | SetSomeNewFiltersAction;
 
 type SetApiKeyAction = {
   action: 'SetApiKeys';

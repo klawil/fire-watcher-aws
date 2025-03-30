@@ -84,7 +84,7 @@ function TextsTable({
 
   useEffect(() => {
     if (
-      (texts.length > 0 && !loadMoreRefInView) ||
+      (texts.length > 0 && loadMoreRefInView === false) ||
       isLoading ||
       Date.now() - lastLoad <= 2000
     ) return;

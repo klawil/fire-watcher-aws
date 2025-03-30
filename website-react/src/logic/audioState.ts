@@ -44,6 +44,7 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       };
     }
     case 'SetNewFilters':
+    case 'SetSomeNewFilters':
     case 'JumpToTime': {
       const { action: _, ...data } = action;
       return {

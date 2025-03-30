@@ -9,17 +9,17 @@ export function isElemInView(elem: HTMLElement) {
 
 export function useRefIntersection(): [
   (node: HTMLElement | null) => void,
-  boolean,
+  boolean | null,
 ] {
   const [node, setNode] = useState<HTMLElement | null>(null);
 
-  const [refIntersecting, setRefIntersecting] = useState(false);
+  const [refIntersecting, setRefIntersecting] = useState<boolean | null>(null);
 
   const setRef = useCallback(
     (newNode: HTMLElement | null) => {
       // @TODO - fix this, we want the node to be able to be set to null
       if (newNode !== null && newNode !== node) {
-        setRefIntersecting(false);
+        setRefIntersecting(null);
         setNode(newNode);
       }
     },

@@ -96,10 +96,13 @@ function useLoadFiles(
           state.filter.f,
         );
         beforeRenderRows(closestIdx);
-      } else if (responseToParse.direction === 'after') {
-        beforeRenderRows(responseToParse.files.length);
-      } else {
+      } else if (
+        responseToParse.direction !== 'after' ||
+        state.files.length === 0
+      ) {
         beforeRenderRows(0);
+      } else {
+        beforeRenderRows(responseToParse.files.length);
       }
       dispatch({
         action: 'AddAudioFile',
@@ -113,8 +116,7 @@ function useLoadFiles(
     ) {
       // Delete the file to start with if no results were returned
       dispatch({
-        action: 'SetNewFilters',
-        ...state.filter,
+        action: 'SetSomeNewFilters',
         f: undefined,
       });
     }
@@ -123,7 +125,7 @@ function useLoadFiles(
       action: 'ClearApiResponse',
       direction: responseToParse.direction,
     });
-  }, [state.apiResponse, state.filter, state.api, state.files.length, state.filter.f, dispatch, beforeRenderRows]);
+  }, [state.apiResponse, state.api, state.files.length, state.filter.f, dispatch, beforeRenderRows]);
 
   const afterAddedTimeout = useRef<NodeJS.Timeout | null>(null);
   const [afterAddedLastCall, setAfterAddedLastCall] = useState<number | null>(0);
@@ -147,12 +149,14 @@ function useLoadFiles(
       loadFilesDirection = 'init';
       shouldLoadFiles = true;
     } else if (
-      afterRefIntersecting && typeof state.api.afterLastCall === 'undefined'
+      afterRefIntersecting === true &&
+      typeof state.api.afterLastCall === 'undefined'
     ) {
       shouldLoadFiles = true;
       loadFilesDirection = 'after';
     } else if (
-      beforeRefIntersecting && typeof state.api.beforeLastCall === 'undefined'
+      beforeRefIntersecting === true &&
+      typeof state.api.beforeLastCall === 'undefined'
     ) {
       shouldLoadFiles = true;
       loadFilesDirection = 'before';
@@ -314,7 +318,7 @@ export default function AudioList() {
         }, {}),
       });
     })();
-  }, []);
+  }, [addAlert]);
 
   const setFilePlaying = (file: string) => () => {
     dispatch({
