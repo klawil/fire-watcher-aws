@@ -1,8 +1,9 @@
 'use client';
 
 import Table from "react-bootstrap/Table";
-import { BsStar, BsStarFill } from "react-icons/bs";
-import React, { useContext, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import Button from "react-bootstrap/Button";
+import { BsChevronDown, BsChevronUp, BsStar, BsStarFill } from "react-icons/bs";
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr, findClosestFileIdx } from "@/logic/dateAndFile";
@@ -347,7 +348,40 @@ export default function AudioList() {
   ] = useLoadFiles(state, dispatch, beforeRenderRows, scrollTop);
   const loadAfterIdx = 0;
   const loadBeforeIdx = state.files.length - 1;
-  const currentRef = useRef<HTMLElement | null>(null);
+  const [
+    currentRef,
+    currentRefInView,
+    currentRefValue,
+  ] = useRefIntersection();
+  const [showUpArrow, setShowUpArrow] = useState(false);
+  const [showDownArrow, setShowDownArrow] = useState(false);
+  useEffect(() => {
+    // Exit early for null
+    if (currentRefInView === null || currentRefValue === null)
+      return;
+
+    // If the row is in view, don't show arrows
+    if (currentRefInView) {
+      setShowUpArrow(false);
+      setShowDownArrow(false);
+      return;
+    }
+
+    // Show the arrows if the ref is not in view
+    const { top } = currentRefValue.getBoundingClientRect();
+    if (top < 0) {
+      setShowUpArrow(true);
+      setShowDownArrow(false);
+    } else {
+      setShowUpArrow(false);
+      setShowDownArrow(true);
+    }
+  }, [currentRefInView, currentRefValue]);
+  const scrollCurrentIntoView = useCallback(() => {
+    if (currentRefValue === null) return;
+
+    currentRefValue.scrollIntoView({ block: 'center' });
+  }, [currentRefValue]);
 
   const scrollToRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
@@ -377,6 +411,15 @@ export default function AudioList() {
   const hideTower = winWidth && winWidth < 576;
 
   return (<>
+    {showUpArrow && <Button
+      className={styles.upArrowButton}
+      onClick={scrollCurrentIntoView}
+    ><BsChevronUp /></Button>}
+    {showDownArrow && <Button
+      className={styles.downArrowButton}
+      onClick={scrollCurrentIntoView}
+    ><BsChevronDown /></Button>}
+
     {state.files.length > 0 && <Table
       responsive={true}
       ref={tableRef}
@@ -400,7 +443,7 @@ export default function AudioList() {
             refs.push(loadAfter);
           }
           if (file.Key === state.player.fileUrl) {
-            refs.push(node => currentRef.current = node);
+            refs.push(currentRef);
           }
           if (idx === scrollTop) {
             refs.push(node => scrollToRef.current = node);

@@ -17,3 +17,26 @@
 .fileRowActive td {
   background-color: #cff4fc;
 }
+
+.upArrowButton {
+  position: fixed;
+  top: 65px;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.downArrowButton {
+  position: fixed;
+  bottom: 65px;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.upArrowButton svg, .downArrowButton svg {
+  display: block;
+  margin: auto;
+}
