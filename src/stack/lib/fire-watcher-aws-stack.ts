@@ -21,6 +21,7 @@ import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
 import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
@@ -1197,7 +1198,8 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the cloudfront distribution
     const cfDistro = new cloudfront.Distribution(this, 'cofrn-cloudfront', {
-      // certificate: acm.Certificate.fromCertificateArn(certArn),
+      certificate: acm.Certificate.fromCertificateArn(this, 'cofrn-cert', certArn),
+      domainNames: [ 'new.cofrn.org' ],
       defaultBehavior: {
         origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(reactBucket),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
