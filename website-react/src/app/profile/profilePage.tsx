@@ -11,9 +11,10 @@ import { pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, validDepartments }
 import { BsCheckCircleFill, BsXCircleFill } from "react-icons/bs";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { ApiUserUpdateBody, ApiUserUpdateResponse, UserObject } from "$/userApi";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
+import { UpdateUserApi } from "$/apiv2/users";
+import { typeFetch } from "@/logic/typeFetch";
 
 const userEditableFields: {
   key: 'fName' | 'lName';
@@ -34,14 +35,12 @@ export default function ProfilePage() {
   const reCheckUser = useContext(RefreshLoggedInUserContext);
   const addAlert = useContext(AddAlertContext);
 
-  const [userEditInfo, setUserEditInfo] = useState<Partial<
-    Pick<UserObject, 'fName'> & Pick<UserObject, 'lName'> & Pick<UserObject, 'talkgroups'>
-  >>({});
+  const [userEditInfo, setUserEditInfo] = useState<UpdateUserApi['body']>({});
   const setUserTg = useCallback((tg: PagingTalkgroup, add: boolean) => setUserEditInfo(state => {
     const newTalkgroups = [
       ...(
         typeof state !== 'undefined' && typeof state.talkgroups !== 'undefined'
-          ? state.talkgroups
+          ? state.talkgroups || []
           : (user?.talkgroups || [])
       ).filter(tgCheck => tgCheck !== tg),
       ...(add ? [ tg ] : []),
@@ -65,7 +64,7 @@ export default function ProfilePage() {
 
     return {
       ...state,
-      talkgroups: newTalkgroups,
+      talkgroups: newTalkgroups.length === 0 ? null : newTalkgroups,
     };
   }), [setUserEditInfo, user]);
 
@@ -78,25 +77,32 @@ export default function ProfilePage() {
     if (
       !hasChanges ||
       user === null ||
-      !user.isActive
+      !user.isUser
     ) return;
     setIsSaving(true);
 
-    const apiBody: ApiUserUpdateBody = {
-      isMe: true,
-      phone: (user.phone as string).toString(),
+    const apiParams: UpdateUserApi['params'] = {
+      id: 'current',
+    };
+    const apiBody: UpdateUserApi['body'] = {
       ...userEditInfo,
     };
     try {
-      const apiResponse: ApiUserUpdateResponse = await fetch(`/api/user?action=update`, {
-        method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
+      const [ code, apiResponse ] = await typeFetch<UpdateUserApi>({
+        path: '/api/v2/users/{id}/',
+        method: 'PATCH',
+        params: apiParams,
+        body: apiBody,
+      });
 
-      if (apiResponse.success) {
-        await reCheckUser();
-        setUserEditInfo({});
-      }
+      if (
+        code !== 200 ||
+        apiResponse === null ||
+        'message' in apiResponse
+      ) throw { code, apiResponse };
+
+      await reCheckUser();
+      setUserEditInfo({});
     } catch (e) {
       addAlert('danger', 'Failed to update user information');
       console.error(`Error updating user ${user} with ${userEditInfo}`, e);
@@ -105,8 +111,8 @@ export default function ProfilePage() {
   }
 
   return (<>
-    {(user === null || !user.success) && <LoadingSpinner />}
-    {user !== null && user.success && <>
+    {(user === null || !user.fromApi) && <LoadingSpinner />}
+    {user !== null && user.fromApi && <>
       <h2 className="text-center">Information Only an Admin Can Edit:</h2>
       <Row className="justify-content-center my-3">
         <Col md={6}><InputGroup>
@@ -148,7 +154,7 @@ export default function ProfilePage() {
             <Form.Control
               type="text"
               value={typeof userEditInfo[field.key] !== 'undefined'
-                ? userEditInfo[field.key]
+                ? userEditInfo[field.key] || ''
                 : user[field.key] || ''
               }
               onChange={e => setUserEditInfo(current => ({
@@ -167,7 +173,7 @@ export default function ProfilePage() {
           key={tg}
           type="switch"
           checked={typeof userEditInfo.talkgroups !== 'undefined'
-            ? userEditInfo.talkgroups.includes(tg)
+            ? userEditInfo.talkgroups?.includes(tg)
             : (user.talkgroups || []).includes(tg)
           }
           label={pagingConfig[tg].partyBeingPaged}
@@ -184,7 +190,7 @@ export default function ProfilePage() {
         >{isSaving ? (<><Spinner size="sm" /> Saving</>) : 'Save Changes'}</Button>
       </Col></Row>
     </>}
-    {user !== null && !user.isActive && <h1 className="text-center">
+    {user !== null && !user.isUser && <h1 className="text-center">
       You must be logged in to access this page
     </h1>}
   </>);

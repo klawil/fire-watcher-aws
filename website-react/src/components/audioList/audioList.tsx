@@ -7,7 +7,6 @@ import React, { useCallback, useContext, useEffect, useLayoutEffect, useReducer,
 import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr, findClosestFileIdx } from "@/logic/dateAndFile";
-import { ApiAudioListResponse, ApiAudioTalkgroupsResponse } from "$/audioApi";
 import styles from './audioList.module.css';
 import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
@@ -16,6 +15,9 @@ import AudioFilter from "../audioFilter/audioFilter";
 import { fNameToDate } from "$/stringManipulation";
 import CalendarModal from "../calendarModal/calendarModal";
 import { AddAlertContext } from "@/logic/clientContexts";
+import { typeFetch } from "@/logic/typeFetch";
+import { GetAllTalkgroupsApi } from "$/apiv2/talkgroups";
+import { GetAllFilesApi } from "$/apiv2/files";
 
 const loadAfterAddedMinWait = 10000;
 
@@ -190,39 +192,38 @@ function useLoadFiles(
     }
 
     (async () => {
-      const urlParams: URLSearchParams = new URLSearchParams();
-      urlParams.set('action', 'list');
+      const urlParams: GetAllFilesApi['query'] = {};
 
       // Build out the request with the times to load before/after
       if (
         loadFilesDirection === 'before' &&
         typeof state.api.before !== 'undefined'
       ) {
-        urlParams.set('before', state.api.before.toString());
+        urlParams.before = state.api.before;
       } else if (
         loadFilesDirection === 'after' &&
         !state.api.loadAfterAdded &&
         typeof state.api.after !== 'undefined'
       ) {
-        urlParams.set('after', state.api.after.toString());
+        urlParams.after = state.api.after;
       } else if (
         loadFilesDirection === 'after' &&
         state.api.loadAfterAdded &&
         typeof state.api.afterAdded !== 'undefined'
       ) {
-        urlParams.set('afterAdded', state.api.afterAdded.toString());
+        urlParams.afterAdded = state.api.afterAdded;
       } else if (
         loadFilesDirection === 'init' &&
         typeof state.filter.f !== 'undefined'
       ) {
         // Load after a specific URL file
         const startDate = fNameToDate(state.filter.f);
-        urlParams.set('after', Math.floor((startDate.getTime() - 1000) / 1000).toString());
+        urlParams.after = Math.floor((startDate.getTime() - 1000) / 1000);
       }
 
       // Build out the filter values
       if (typeof state.filter.emerg !== 'undefined') {
-        urlParams.set('emerg', state.filter.emerg);
+        urlParams.emerg = state.filter.emerg;
       }
       if (typeof state.filter.tg !== 'undefined') {
         // Get the URL value
@@ -236,11 +237,9 @@ function useLoadFiles(
         }
 
         if (tgUrlValue !== '') {
-          urlParams.set('tg', tgUrlValue);
+          urlParams.tg = tgUrlValue;
         }
       }
-
-      console.log(urlParams.toString());
 
       const callId = Date.now();
       dispatch({
@@ -248,10 +247,12 @@ function useLoadFiles(
         key: loadFilesDirection === 'init' ? 'after' : loadFilesDirection,
         value: callId,
       });
-      const url = `/api/audio?${urlParams.toString()}`;
       try {
-        const newData: ApiAudioListResponse = await fetch(url)
-          .then(r => r.json());
+        const [ code, newData ] = await typeFetch<GetAllFilesApi>({
+          path: '/api/v2/files/',
+          method: 'GET',
+          query: urlParams,
+        });
     
         // Save the after added timestamp
         if (
@@ -262,7 +263,11 @@ function useLoadFiles(
         }
 
         // Check for any errors
-        if (!newData.success) throw newData;
+        if (
+          code !== 200 ||
+          newData === null ||
+          'message' in newData
+        ) throw new Error('Failed to get file information');
 
         dispatch({
           action: 'AddApiResponse',
@@ -296,13 +301,24 @@ export default function AudioList() {
     AudioState,
     [ AudioAction ]
   >(audioReducer, defaultAudioState);
+  const addAlert = useContext(AddAlertContext);
   // Fetch the talkgroup information
   useEffect(() => {
     (async () => {
-      const tgData: ApiAudioTalkgroupsResponse = await fetch(`/api/audio?action=talkgroups`)
-        .then(r => r.json());
+      const [ code, tgData ] = await typeFetch<GetAllTalkgroupsApi>({
+        path: '/api/v2/talkgroups/',
+        method: 'GET',
+      });
 
-      if (!tgData.success || typeof tgData.talkgroups === 'undefined') return;
+      if (
+        code !== 200 ||
+        tgData === null ||
+        'message' in tgData
+      ) {
+        console.error('Failed to load talkgroup information', code, tgData);
+        addAlert('danger', 'Failed to load talkgroup information');
+        return;
+      }
 
       dispatch({
         action: 'AddTalkgroups',
@@ -472,11 +488,11 @@ export default function AudioList() {
                   'align-middle',
                 ].join(' ')
               }
-              onClick={setFilePlaying(file.Key)}
+              onClick={setFilePlaying(file.Key || '')}
             >
               <td>{file.Len}</td>
               <td className="text-start">{state.talkgroups[file.Talkgroup]?.name || file.Talkgroup}</td>
-              <td>{dateToStr(new Date(file.StartTime * 1000))}</td>
+              <td>{dateToStr(new Date((file.StartTime || 0) * 1000))}</td>
               <td className="d-none d-sm-table-cell">{file.Tower === 'vhf'
                 ? 'VHF'
                 : file.Tower || 'N/A'
@@ -495,7 +511,7 @@ export default function AudioList() {
                   styles.fileRow,
                 ].join(' ')
               }
-              onClick={setFilePlaying(file.Key)}
+              onClick={setFilePlaying(file.Key || '')}
             >
               <td></td>
               <td

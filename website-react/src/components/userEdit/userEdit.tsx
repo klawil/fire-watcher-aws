@@ -1,4 +1,3 @@
-import { ApiUserUpdateBody, ApiUserUpdateResponse, UserObject, UserObjectBooleans } from "$/userApi";
 import { Dispatch, SetStateAction, useCallback, useContext, useState } from "react";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -12,9 +11,11 @@ import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { formatPhone } from "$/stringManipulation";
+import { CreateUserApi, FrontendUserObject, UpdateUserApi } from "$/apiv2/users";
+import { typeFetch } from "@/logic/typeFetch";
 
 interface CheckboxConfig {
-	name: UserObjectBooleans & keyof ApiUserUpdateBody;
+	name: 'getTranscript' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';
 	label: string;
 	districtAdmin?: boolean;
 }
@@ -46,6 +47,11 @@ const userRoleCheckboxes: CheckboxConfig[] = [
 	},
 ];
 
+type UpdateState = Partial<
+  UpdateUserApi['body'] |
+  CreateUserApi['body']
+>;
+
 function TextInput({
   setUpdateState,
   userKey,
@@ -53,8 +59,8 @@ function TextInput({
   placeholder,
   invalidFields,
 }: Readonly<{
-  setUpdateState: (userDelta: Partial<ApiUserUpdateBody>) => void;
-  userKey: keyof UserObject;
+  setUpdateState: (userDelta: Partial<UpdateState>) => void;
+  userKey: keyof FrontendUserObject;
   value: string;
   placeholder: string;
   invalidFields: string[];
@@ -76,20 +82,20 @@ export default function UserEdit({
   user,
   setEditOpen,
 }: Readonly<{
-  user: UserObject | null;
+  user: FrontendUserObject | null;
   setEditOpen: Dispatch<SetStateAction<boolean>>;
 }>) {
   const loggedInUser = useContext(LoggedInUserContext);
   const dispatch = useContext(UsersDispatchContext);
   const addAlert = useContext(AddAlertContext);
 
-  const [updateState, setUpdateStateRaw] = useState<Partial<ApiUserUpdateBody>>({});
-  const setUpdateState = useCallback((userDelta: Partial<ApiUserUpdateBody>) => {
-    (Object.keys(userDelta) as (keyof ApiUserUpdateBody)[]).forEach(key => {
+  const [updateState, setUpdateStateRaw] = useState<UpdateState>({});
+  const setUpdateState = useCallback((userDelta: Partial<UpdateState>) => {
+    (Object.keys(userDelta) as (keyof UpdateState)[]).forEach(key => {
       if (
         typeof userDelta[key] === 'undefined' ||
-        userDelta[key] === user?.[key as keyof UserObject] ||
-        (user && userDelta[key] === false && typeof user?.[key as keyof UserObject] === 'undefined')
+        userDelta[key] === user?.[key as keyof FrontendUserObject] ||
+        (user && userDelta[key] === false && typeof user?.[key as keyof FrontendUserObject] === 'undefined')
       ) {
         setUpdateStateRaw((before) => ({
           ...before,
@@ -98,12 +104,12 @@ export default function UserEdit({
         return;
       }
 
-      if (key === 'phone') {
-        userDelta[key] = userDelta[key].replace(/[^0-9]/g, '');
-      }
+      // if (key === 'phone') {
+      //   userDelta[key] = userDelta[key].replace(/[^0-9]/g, '');
+      // }
       setUpdateStateRaw((before) => ({
         ...before,
-        [key]: userDelta[key],
+        [key]: userDelta[key] === false ? null : userDelta[key],
       }));
     });
   }, [setUpdateStateRaw, user]);
@@ -114,7 +120,7 @@ export default function UserEdit({
     const newTalkgroups = [
       ...(
         typeof state !== 'undefined' && typeof state.talkgroups !== 'undefined'
-          ? state.talkgroups
+          ? state.talkgroups || []
           : (user?.talkgroups || [])
       ).filter(tg => tg !== conf.tg),
       ...(conf.add ? [ conf.tg ] : []),
@@ -124,7 +130,7 @@ export default function UserEdit({
     let hasChanges = true;
     if (user !== null) {
       const newTgs = newTalkgroups.filter(tg => !(user.talkgroups || [])
-        .includes(tg as typeof user.talkgroups[number]));
+        .includes(tg as PagingTalkgroup));
       const removedTgs = (user.talkgroups || []).filter(tg => !newTalkgroups.includes(tg));
       hasChanges = newTgs.length > 0 || removedTgs.length > 0;
     }
@@ -138,14 +144,14 @@ export default function UserEdit({
 
     return {
       ...state,
-      talkgroups: newTalkgroups,
+      talkgroups: newTalkgroups.length === 0 ? null : newTalkgroups,
     };
   }), [ user, ]);
 
   const userDepartments = validDepartments.filter(dep => user && user[dep]);
-  const userDepartment = typeof updateState.department === 'undefined'
-    ? userDepartments[0] || defaultDepartment
-    : updateState.department;
+  const userDepartment = 'department' in updateState
+    ? updateState.department || defaultDepartment
+    : userDepartments[0] || defaultDepartment;
 
   const loggedInUserDepartments = validDepartments
     .filter(dep => loggedInUser?.isDistrictAdmin
@@ -159,44 +165,73 @@ export default function UserEdit({
 
   const [isSaving, setIsSaving] = useState(false);
   const [errorFields, setErrorFields] = useState<string[]>([]);
+  async function createUserApi(updates: CreateUserApi['body']): ReturnType<typeof typeFetch<CreateUserApi>> {
+    if (user !== null) throw new Error(`Tried to create existing user`);
+
+    const [ code, result ] = await typeFetch<CreateUserApi>({
+      path: '/api/v2/users/',
+      method: 'POST',
+      body: updates,
+    });
+
+    return [ code, result ];
+  }
+  async function saveUserApi(updates: UpdateUserApi['body']): ReturnType<typeof typeFetch<UpdateUserApi>> {
+    if (user === null) throw new Error(`Tried to update new user`);
+
+    const [ code, result ] = await typeFetch<UpdateUserApi>({
+      path: '/api/v2/users/{id}/',
+      method: 'PATCH',
+      params: {
+        id: user.phone,
+      },
+      body: updates,
+    });
+
+    return [ code, result ];
+  }
+
   async function saveUser() {
     if (!hasChanges) return;
-    const phone = user === null ? updateState.phone : user.phone.toString();
-    if (typeof phone === 'undefined') {
+    const phone = user === null ? ('phone' in updateState && updateState.phone) : user.phone;
+    if (!phone) {
       setErrorFields([ 'phone' ]);
       return;
     }
 
     setIsSaving(true);
     setErrorFields([]);
-    const apiBody: ApiUserUpdateBody = {
-      phone,
-      ...updateState,
-    };
     try {
-      const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=${user === null ? 'create' : 'update'}`, {
-        method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
-      if (apiResult.success) {
-        if (typeof apiResult.user !== 'undefined') {
-          dispatch(user === null ? {
-            action: 'AddUser',
-            user: {
-              ...apiResult.user,
-            },
-          } : {
-            action: 'ReplaceUser',
-            phone: user.phone,
-            user: {
-              ...apiResult.user,
-            },
-          });
-        }
-        setUpdateStateRaw({});
-        if (user === null) {
-          setEditOpen(false);
-        }
+      let code: keyof CreateUserApi['responses'] | keyof UpdateUserApi['responses'];
+      let apiResult;
+      if (user === null) {
+        [ code, apiResult ] = await createUserApi(updateState as CreateUserApi['body']);
+      } else {
+        [ code, apiResult ] = await saveUserApi(updateState);
+      }
+      setUpdateStateRaw({});
+      if (
+        code !== 200 ||
+        apiResult === null ||
+        'message' in apiResult
+      ) {
+        console.error(code, apiResult, updateState);
+        throw new Error(`Failed to create or save user`);
+      }
+      dispatch(user === null ? {
+        action: 'AddUser',
+        user: {
+          ...apiResult,
+        },
+      } : {
+        action: 'ReplaceUser',
+        phone: user.phone,
+        user: {
+          ...apiResult,
+        },
+      });
+      if (user === null) {
+        setEditOpen(false);
       }
     } catch (e) {
       if (user === null) {
@@ -215,7 +250,7 @@ export default function UserEdit({
 
   let checkedTalkgroups: PagingTalkgroup[] = [];
   if (typeof updateState.talkgroups !== 'undefined') {
-    checkedTalkgroups = updateState.talkgroups;
+    checkedTalkgroups = updateState.talkgroups || [];
   } else if (user !== null) {
     checkedTalkgroups = user.talkgroups || [];
   } else {
@@ -232,7 +267,7 @@ export default function UserEdit({
           invalidFields={errorFields}
           userKey="phone"
           placeholder="Phone Number"
-          value={formatPhone(updateState.phone || '')}
+          value={formatPhone(('phone' in updateState && updateState.phone) || '')}
           setUpdateState={setUpdateState}
         />}
         <TextInput
@@ -253,9 +288,9 @@ export default function UserEdit({
             <Form.Select
               isInvalid={errorFields.includes('department')}
               onChange={e => setUpdateState({
-                department: e.target.value as ApiUserUpdateBody['department'],
+                department: e.target.value as CreateUserApi['body']['department'],
               })}
-              value={updateState.department || ''}
+              value={'department' in updateState ? updateState.department : ''}
               className="p-2"
             >
               {loggedInUserDepartments.map(dep => (<option
@@ -268,7 +303,7 @@ export default function UserEdit({
             <Form.Control
               isInvalid={errorFields.includes('callSign')}
               type="text"
-              value={updateState.callSign || ''}
+              value={'callSign' in updateState ? updateState.callSign : ''}
               onChange={(e) => setUpdateState({
                 callSign: e.target.value,
               })}
@@ -283,9 +318,9 @@ export default function UserEdit({
             <Form.Select
               isInvalid={errorFields.includes('pagingPhone')}
               onChange={e => setUpdateState({
-                pagingPhone: e.target.value as ApiUserUpdateBody['pagingPhone'],
+                pagingPhone: e.target.value as FrontendUserObject['pagingPhone'],
               })}
-              value={updateState.pagingPhone || user.pagingPhone || userDepartments[0] || ''}
+              value={('pagingPhone' in updateState && updateState.pagingPhone) || user.pagingPhone || userDepartments[0] || ''}
             >
               {userDepartments.map(dep => (<option
                 key={dep}
@@ -321,7 +356,7 @@ export default function UserEdit({
             type="switch"
             checked={
               typeof updateState[checkbox.name] !== 'undefined'
-                ? updateState[checkbox.name]
+                ? !!updateState[checkbox.name]
                 : user
                   ? !!user[checkbox.name]
                   : false

@@ -19,7 +19,7 @@ export default function CofrnLayout({
   useEffect(() => {
     if (
       user === null ||
-      !user.success ||
+      !user.fromApi ||
       (
         !pageConfig.requireAuth &&
         !pageConfig.requireAdmin
@@ -76,7 +76,7 @@ export default function CofrnLayout({
           className="justify-content-center"
         >
           <Navbar.Brand href="#">
-            <img
+            <img // eslint-disable-line @next/next/no-img-element
               src="/favicon.png"
               width="30"
               height="24"

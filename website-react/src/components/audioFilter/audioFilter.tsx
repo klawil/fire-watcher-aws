@@ -63,13 +63,12 @@ export default function AudioFilter({
 
     const searchParamValues = {
       tg: searchParams.get('tg') || `p${defaultFilterPreset}`,
-      emerg: searchParams.get('emerg') || undefined,
+      emerg: (searchParams.get('emerg') || undefined) as 'y' | 'n' | undefined,
       f: searchParams.get('f') || undefined,
     };
 
     // Pull in the raw values from search params on the first run
     if (!state.queryParsed) {
-
       dispatch({
         action: 'QueryParamsParsed',
         ...searchParamValues,

@@ -1,8 +1,8 @@
-import { UserObject } from "$/userApi";
+import { FrontendUserObject } from "$/apiv2/users";
 
 export interface UsersState {
-  users: UserObject[];
-  deleteUserModal?: UserObject;
+  users: FrontendUserObject[];
+  deleteUserModal?: FrontendUserObject;
 }
 
 interface SetUsersAction {
@@ -11,21 +11,21 @@ interface SetUsersAction {
 }
 interface UpdateUserAction {
   action: 'UpdateUser';
-  phone: string;
-  user: Partial<UserObject>;
+  phone: number;
+  user: Partial<FrontendUserObject>;
 }
 interface ReplaceUserAction {
   action: 'ReplaceUser';
-  phone: string;
-  user: UserObject;
+  phone: number;
+  user: FrontendUserObject;
 }
 interface DeleteUserAction {
   action: 'DeleteUser';
-  phone: string;
+  phone: number;
 }
 interface AddUserAction {
   action: 'AddUser';
-  user: UserObject;
+  user: FrontendUserObject;
 }
 type UsersActions = SetUsersAction | UpdateUserAction | ReplaceUserAction | DeleteUserAction
   | AddUserAction;

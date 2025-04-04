@@ -94,6 +94,9 @@ function createPageMessage(
 	if (number !== null) {
 		pageStr += `&cs=${number}`;
 	}
+	if (number === '***REMOVED***') {
+		pageStr = pageStr.replace(/cofrn\.org/g, 'dgd294eqayesh.cloudfront.net');
+	}
 	return pageStr;
 }
 

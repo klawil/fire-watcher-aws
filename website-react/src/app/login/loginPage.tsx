@@ -9,7 +9,8 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { ApiUserAuthBody, ApiUserAuthResponse, ApiUserLoginBody, ApiUserLoginResult } from "$/userApi";
+import { GetLoginCodeApi, SubmitLoginCodeApi } from "$/apiv2/login";
+import { typeFetch } from "@/logic/typeFetch";
 
 export default function LoginPage() {
   const user = useContext(LoggedInUserContext);
@@ -42,7 +43,10 @@ export default function LoginPage() {
   const [isCodeLoading, setIsCodeLoading] = useState(false);
   const getCode = useCallback(async () => {
     // Check for a valid phone number
-    if (!loginState.phone || loginState.phone.length !== 10) {
+    if (
+      !loginState.phone ||
+      !/^[0-9]{10}$/.test(loginState.phone)
+    ) {
       setErrorFields([ 'phone' ]);
       return;
     }
@@ -50,16 +54,23 @@ export default function LoginPage() {
     setErrorFields([]);
     setIsCodeLoading(true);
     try {
-      const apiBody: ApiUserLoginBody = {
-        phone: loginState.phone,
+      const apiParams: GetLoginCodeApi['params'] = {
+        id: Number(loginState.phone),
       };
-      const apiResult: ApiUserLoginResult = await fetch(`/api/user?action=login`, {
-        method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
-
-      if (!apiResult.success) {
-        throw apiResult;
+      const [ code, apiResult ] = await typeFetch<GetLoginCodeApi>({
+        path: '/api/v2/login/{id}/',
+        method: 'GET',
+        params: apiParams,
+      });
+      if (
+        code !== 200 ||
+        apiResult === null ||
+        (
+          'message' in apiResult &&
+          apiResult.message !== 'Success'
+        )
+      ) {
+        throw { code, apiResult };
       }
 
       setLoginState(state => ({
@@ -92,16 +103,24 @@ export default function LoginPage() {
     setErrorFields([]);
     setIsLoginLoading(true);
     try {
-      const apiBody: ApiUserAuthBody = {
+      const apiParams: SubmitLoginCodeApi['params'] = {
+        id: Number(loginState.phone),
+      };
+      const body: SubmitLoginCodeApi['body'] = {
         code: loginState.authCode || '',
       };
-      const apiResult: ApiUserAuthResponse = await fetch(`/api/user?action=auth`, {
+      const [ code, apiResult ] = await typeFetch<SubmitLoginCodeApi>({
+        path: '/api/v2/login/{id}/',
         method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
-
-      if (!apiResult.success) {
-        throw apiResult;
+        params: apiParams,
+        body,
+      });
+      if (
+        code !== 200 ||
+        apiResult === null ||
+        'message' in apiResult
+      ) {
+        throw { code, apiResult };
       }
 
       handleRedirectAction();
@@ -114,14 +133,14 @@ export default function LoginPage() {
   }, [loginState, handleRedirectAction, addAlert]);
 
   useEffect(() => {
-    if (user && user.isActive) {
+    if (user && user.isUser) {
       handleRedirectAction();
     }
   }, [user, handleRedirectAction]);
 
   return (<>
-    {user && user.isActive && <h1 className="text-center">You are already logged in</h1>}
-    {user && !user.isActive && loc && <>
+    {user && user.isUser && <h1 className="text-center">You are already logged in</h1>}
+    {user && !user.isUser && loc && <>
       <Row className="justify-content-center my-3">
         <Col md={6}><InputGroup>
           <InputGroup.Text>Phone Number</InputGroup.Text>

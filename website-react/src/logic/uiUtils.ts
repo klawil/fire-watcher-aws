@@ -10,6 +10,7 @@ export function isElemInView(elem: HTMLElement) {
 export function useRefIntersection(): [
   (node: HTMLElement | null) => void,
   boolean | null,
+  HTMLElement | null,
 ] {
   const [node, setNode] = useState<HTMLElement | null>(null);
 
@@ -36,5 +37,5 @@ export function useRefIntersection(): [
     return () => observer.disconnect();
   }, [node]);
 
-  return [setRef, refIntersecting];
+  return [setRef, refIntersecting, node];
 }

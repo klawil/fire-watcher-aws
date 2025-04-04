@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { ApiFrontendListTextsResponse, TextObject } from "$/frontendApi";
 import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import styles from "./textsPage.module.css";
@@ -11,6 +10,12 @@ import { dateTimeToTimeStr, secondsToTime } from "@/logic/dateAndFile";
 import { useRefIntersection } from "@/logic/uiUtils";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { Variant } from "react-bootstrap/esm/types";
+import { typeFetch } from "@/logic/typeFetch";
+import { FrontendTextObject, GetAllTextsApi } from "$/apiv2/texts";
+
+interface TextObject extends FrontendTextObject {
+  pageTime?: number;
+}
 
 function makePercentString(numerator: number, denominator: number) {
 	if (denominator === 0) return '';
@@ -39,17 +44,25 @@ async function getTexts(
   addAlert: (type: Variant, message: string) => void
 ) {
   try {
-    const apiResult: ApiFrontendListTextsResponse = await fetch(
-      `/api/frontend?action=listTexts${isPage ? '&page=y' : ''}${loadBefore !== null ? `&before=${loadBefore}` : ''}`
-    )
-      .then(r => r.json());
+    const [ code, apiResult ] = await typeFetch<GetAllTextsApi>({
+      path: '/api/v2/texts/',
+      method: 'GET',
+      params: {
+        page: isPage ? 'y' : 'n',
+        before: loadBefore === null ? undefined : loadBefore,
+      },
+    });
 
-    if (!apiResult.success) throw apiResult;
+    if (
+      code !== 200 ||
+      apiResult === null ||
+      'message' in apiResult
+    ) throw { code, apiResult };
 
-    return (apiResult.data || [])
+    return (apiResult.texts as TextObject[])
       .map(text => {
         if (text.isPage)
-          text.pageTime = fNameToDate(text.body).getTime();
+          text.pageTime = fNameToDate(text.body || '').getTime();
       
         const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;
       
@@ -129,16 +142,16 @@ function TextsTable({
                   : {})}
           >
             <td>{dateTimeToTimeStr(text.datetime)}</td>
-            <td>{text.body.split(/\n/g).map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}</td>
+            <td>{text.body?.split(/\n/g).map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}</td>
             {!isPage && <td>{text.mediaUrls?.split(',')
               .filter(s => s !== '')
               .map((v, i) => <a key={i} href={v}>{i + 1}</a>)
               .join(', ')}</td>}
             <td className="text-center">{text.recipients}</td>
-            <td className="text-center">{makePercentString((text.sent || []).length, text.recipients)}</td>
-            <td className="text-center">{makePercentString((text.delivered || []).length, text.recipients)}</td>
-            <td className="text-center">{makePercentString((text.undelivered || []).length, text.recipients)}</td>
-            {isPage && <td className="text-center">{makePercentString((text.csLooked || []).length, text.recipients)}</td>}
+            <td className="text-center">{makePercentString((text.sent || []).length, text.recipients || 0)}</td>
+            <td className="text-center">{makePercentString((text.delivered || []).length, text.recipients || 0)}</td>
+            <td className="text-center">{makePercentString((text.undelivered || []).length, text.recipients || 0)}</td>
+            {isPage && <td className="text-center">{makePercentString((text.csLookedTime || []).length, text.recipients || 0)}</td>}
             {isPage && <td className="text-center">{secondsToTime(Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000))}</td>}
             <td className="text-center">
               {getPercentile(text.sent || [], 50)}<br />

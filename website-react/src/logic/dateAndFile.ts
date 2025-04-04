@@ -1,4 +1,4 @@
-import { AudioFileObject } from "$/audioApi";
+import { FullFileObject } from "$/apiv2/files";
 import { fNameToDate } from "$/stringManipulation";
 
 export function dateToStr(d: Date) {
@@ -38,12 +38,12 @@ export function secondsToTime(valueSeconds: number) {
 	return timeStr;
 }
 
-export function findClosestFileIdx(files: AudioFileObject[], name: string) {
+export function findClosestFileIdx(files: FullFileObject[], name: string) {
 	const targetDate = Math.round(fNameToDate(name).getTime() / 1000);
 	let closestVal: null | number = null;
 	let closestIdx: number = 0;
 	files.forEach((f, idx) => {
-		const delta = Math.abs(f.StartTime - targetDate);
+		const delta = Math.abs((f.StartTime || 0) - targetDate);
 		if (closestVal === null || delta < closestVal) {
 			closestVal = delta;
 			closestIdx = idx;

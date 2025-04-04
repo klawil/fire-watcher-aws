@@ -4,9 +4,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { useCallback, useEffect, useState } from 'react';
 import { AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/logic/clientContexts';
-import { ApiUserGetUserResponse } from "$/userApi";
 import { Alert, Container } from 'react-bootstrap';
 import { Variant } from 'react-bootstrap/esm/types';
+import { typeFetch } from '@/logic/typeFetch';
+import { FrontendUserObject, FrontendUserState, GetUserApi } from '$/apiv2/users';
+import { validDepartments } from '$/userConstants';
 
 function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>();
@@ -46,18 +48,37 @@ function useLocation() {
 const localStorageUserKey = 'cofrn-user';
 
 function useUser(addAlert: (type: Variant, message: string) => void): [
-  ApiUserGetUserResponse | null,
+  FrontendUserState | null,
   () => Promise<void>,
 ] {
-  const [user, setUser] = useState<ApiUserGetUserResponse | null>(null);
+  const [user, setUser] = useState<FrontendUserState | null>(null);
 
   async function getUserFromApi() {
     try {
-      const apiResult: ApiUserGetUserResponse = await fetch('/api/user?action=getUser')
-        .then(r => r.json());
+      const [ code, apiResult ] = await typeFetch<GetUserApi>({
+        path: '/api/v2/users/{id}/',
+        method: 'GET',
+        params: {
+          id: 'current',
+        },
+      });
+
+      if (
+        code !== 200 ||
+        apiResult === null ||
+        'message' in apiResult
+      ) {
+        throw { code, apiResult };
+      }
 
       localStorage.setItem(localStorageUserKey, JSON.stringify(apiResult));
-      setUser(apiResult);
+      setUser({
+        fromApi: true,
+        isUser: true,
+        isDistrictAdmin: false,
+        isAdmin: validDepartments.some(dep => apiResult[dep]?.active && apiResult[dep].admin),
+        ...apiResult
+      });
     } catch (e) {
       addAlert('danger', 'Failed to update the current user\'s information');
       console.error(`Failed to fetch current user`, e);
@@ -65,7 +86,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
   }
 
   useEffect(() => {
-    if (user?.success) return;
+    if (user?.fromApi) return;
 
     // Parse information out of the cookies
     const cookies: {
@@ -88,8 +109,9 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
     ) {
       localStorage.removeItem(localStorageUserKey);
       setUser({
-        success: true,
+        fromApi: false,
         isUser: false,
+        isAdmin: false,
         isDistrictAdmin: false,
       });
       return;
@@ -102,17 +124,24 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
     const lsUserStr = localStorage.getItem(localStorageUserKey);
     if (lsUserStr === null) {
       setUser({
-        success: false,
+        fromApi: false,
         isUser: false,
+        isAdmin: false,
         isDistrictAdmin: false,
       });
       return;
     }
 
     try {
-      const initUser: ApiUserGetUserResponse = JSON.parse(lsUserStr);
+      const initUser: FrontendUserObject = JSON.parse(lsUserStr);
       console.log('Initial User:', initUser);
-      setUser(initUser);
+      setUser({
+        fromApi: false,
+        isUser: true,
+        isDistrictAdmin: true,
+        isAdmin: validDepartments.some(dep => initUser[dep]?.active && initUser[dep].admin),
+        ...initUser,
+      });
     } catch (e) {
       addAlert('danger', 'Invalid user information was found, attempting to refresh the user');
       console.error(`Failed to parse localStorage user`, e);

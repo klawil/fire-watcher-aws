@@ -21,7 +21,10 @@
     "strictPropertyInitialization": false,
     "typeRoots": [
       "./node_modules/@types"
-    ]
+    ],
+    "paths": {
+      "$/*": ["../common/*"]
+    }
   },
   "exclude": [
     "node_modules",

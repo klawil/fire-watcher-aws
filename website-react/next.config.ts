@@ -2,8 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export',
-  exportTrailingSlash: true,
-  async rewrites() {
+  trailingSlash: true,
+};
+
+if (process.env.PROD_BUILD) {
+  nextConfig.distDir = 'build';
+} else {
+  nextConfig.rewrites = async () => {
     return {
       fallback: [
         {
@@ -20,11 +25,7 @@ const nextConfig: NextConfig = {
         },
       ],
     };
-  },
-};
-
-if (process.env.PROD_BUILD) {
-  nextConfig.distDir = 'build';
+  };
 }
 
 export default nextConfig;

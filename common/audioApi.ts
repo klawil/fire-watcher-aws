@@ -5,6 +5,7 @@ export interface AudioFileObject {
 	Key: string;
 	Len: number;
 	StartTime: number;
+	Added: number;
 	Tone: boolean;
 	Emergency?: 0 | 1;
 	Tower?: string;
@@ -14,6 +15,7 @@ export interface TalkgroupObject {
 	ID: number;
 	Name?: string;
 	InUse?: 'Y' | 'N';
+	Count?: number;
 }
 
 export interface ApiAudioListResponse extends ApiResponseBase {
@@ -23,5 +25,7 @@ export interface ApiAudioListResponse extends ApiResponseBase {
 	files: AudioFileObject[];
 }
 export interface ApiAudioTalkgroupsResponse extends ApiResponseBase {
-	talkgroups?: TalkgroupObject[];
+	talkgroups: TalkgroupObject[];
+	count: number;
+	loadedAll: boolean;
 }

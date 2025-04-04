@@ -1,4 +1,4 @@
-import { ApiAudioListResponse, AudioFileObject } from "$/audioApi";
+import { FullFileObject, GetAllFilesApi } from "$/apiv2/files";
 
 type PlayerState = 'playing' | 'paused' | 'ended';
 type FileAddDirection = 'before' | 'after';
@@ -76,7 +76,7 @@ export interface AudioState {
   filter: {
     f?: string;
     tg?: string;
-    emerg?: string;
+    emerg?: 'y' | 'n';
   };
   api: {
     [key in FileAddDirection]?: number;
@@ -87,11 +87,11 @@ export interface AudioState {
     loadAfterAdded?: boolean;
   };
 
-  apiResponse: (ApiAudioListResponse & {
+  apiResponse: (GetAllFilesApi['responses'][200] & {
     callId: number;
     direction: FileAddDirection;
   })[];
-  files: AudioFileObject[];
+  files: FullFileObject[];
   talkgroups: {
     [key: string]: {
       name: string;
@@ -110,13 +110,13 @@ export interface AudioState {
 interface QueryParamsParsedAction {
   action: 'QueryParamsParsed';
   tg?: string;
-  emerg?: string;
+  emerg?: 'y' | 'n';
   f?: string;
 }
 interface SetFilterValueAction {
   action: 'SetFilterValue';
   tg?: string;
-  emerg?: string;
+  emerg?: 'y' | 'n';
   f?: string;
 }
 interface FilterModalDisplayAction {
@@ -163,7 +163,7 @@ type ApiActions = SetApiKeyAction | SetApiLastCallAction | AddApiResponseAction
 
 interface AddAudioFileAction {
   action: 'AddAudioFile';
-  files: AudioFileObject[];
+  files: FullFileObject[];
   location: FileAddDirection;
 }
 type AudioFileActions = AddAudioFileAction;

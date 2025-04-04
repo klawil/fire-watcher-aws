@@ -1,4 +1,4 @@
-import { Stack, StackProps, Duration, Tags } from 'aws-cdk-lib';
+import { Stack, StackProps, Duration, Tags, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -13,14 +13,17 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as cloudfrontOrigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as eventbridge from 'aws-cdk-lib/aws-events';
 import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
+import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
 import * as dotenv from 'dotenv';
+import { HTTPMethod } from 'ts-oas';
 
 dotenv.config({ path: `${__dirname}/../../.env` });
 
@@ -550,26 +553,26 @@ export class FireWatcherAwsStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.BREACHING
     };
     const alarms: CvfdAlarm[] = [
-      {
-        tag: 'Api',
-        codeName: 'lambda-errors',
-        okayAction: false,
-        alarm: {
-          evaluationPeriods: 1,
-          datapointsToAlarm: 1,
-          metric: new cloudwatch.Metric({
-            metricName: 'Errors',
-            namespace: 'AWS/Lambda',
-            period: Duration.minutes(30),
-            statistic: cloudwatch.Stats.SUM,
-          }),
-          threshold: 0,
-          alarmDescription: 'One or more lambda functions is throwing uncaught errors which mean the the lambda task is not being completed',
-          alarmName: 'Lambda Function Errors',
-          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-          treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-        }
-      },
+      // {
+      //   tag: 'Api',
+      //   codeName: 'lambda-errors',
+      //   okayAction: false,
+      //   alarm: {
+      //     evaluationPeriods: 1,
+      //     datapointsToAlarm: 1,
+      //     metric: new cloudwatch.Metric({
+      //       metricName: 'Errors',
+      //       namespace: 'AWS/Lambda',
+      //       period: Duration.minutes(30),
+      //       statistic: cloudwatch.Stats.SUM,
+      //     }),
+      //     threshold: 0,
+      //     alarmDescription: 'One or more lambda functions is throwing uncaught errors which mean the the lambda task is not being completed',
+      //     alarmName: 'Lambda Function Errors',
+      //     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      //     treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+      //   }
+      // },
       {
         tag: 'Dtr',
         codeName: 'saguache-tower',
@@ -1002,6 +1005,194 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    // Add the v2 APIs
+    const tableMap = {
+      FILE: dtrTable,
+      USER: phoneNumberTable,
+      TEXT: textsTable,
+      SITE: siteTable,
+      TALKGROUP: talkgroupTable,
+    } as const;
+    const apiV2 = apiResource.addResource('v2');
+    interface V2ApiConfigBase {
+      pathPart: string;
+      authRequired?: true;
+      sqsQueue?: true;
+      tables?: {
+        table: keyof typeof tableMap;
+        readOnly?: true;
+      }[];
+      next?: V2ApiConfig[];
+    }
+    interface V2ApiConfigHandler extends V2ApiConfigBase {
+      fileName: string;
+      methods: (keyof typeof HTTPMethod)[];
+    }
+    type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
+    const v2Apis: V2ApiConfig[] = [
+      {
+        pathPart: 'files',
+        fileName: 'files',
+        methods: [ 'GET' ],
+        tables: [{
+          table: 'FILE',
+          readOnly: true,
+        }],
+        next: [{
+          pathPart: '{id}',
+          fileName: 'file',
+          methods: [ 'GET' ],
+          authRequired: true,
+          tables: [{
+            table: 'FILE',
+            readOnly: true,
+          }],
+        }]
+      },
+      {
+        pathPart: 'talkgroups',
+        fileName: 'talkgroups',
+        methods: [ 'GET' ],
+        tables: [{
+          table: 'TALKGROUP',
+          readOnly: true,
+        }],
+        next: [{
+          pathPart: '{id}',
+          fileName: 'talkgroup',
+          methods: [ 'GET', 'PATCH', ],
+          authRequired: true,
+          tables: [{
+            table: 'TALKGROUP',
+          }],
+        }],
+      },
+      {
+        pathPart: 'users',
+        fileName: 'users',
+        methods: [ 'GET', 'POST', ],
+        authRequired: true,
+        sqsQueue: true,
+        tables: [{
+          table: 'USER',
+        }],
+        next: [{
+          pathPart: '{id}',
+          fileName: 'user',
+          methods: [ 'GET', 'PATCH', 'DELETE', ],
+          authRequired: true,
+          sqsQueue: true,
+          tables: [{
+            table: 'USER',
+          }],
+          next: [{
+            pathPart: '{department}',
+            fileName: 'userDepartment',
+            methods: [ 'POST', 'PATCH', 'DELETE', ],
+            authRequired: true,
+            sqsQueue: true,
+            tables: [{
+              table: 'USER',
+            }],
+          }]
+        }],
+      },
+      {
+        pathPart: 'texts',
+        fileName: 'texts',
+        methods: [ 'GET', ],
+        authRequired: true,
+        tables: [{
+          table: 'TEXT',
+          readOnly: true,
+        }],
+        // next: [{
+        //   pathPart: '{id}',
+        //   fileName: 'text',
+        //   methods: [ 'GET' ],
+        //   authRequired: true,
+        //   tables: [{
+        //     table: 'TEXT',
+        //     readOnly: true,
+        //   }],
+        // }],
+      },
+      {
+        pathPart: 'login',
+        next: [{
+          pathPart: '{id}',
+          fileName: 'login',
+          methods: [ 'GET', 'POST' ],
+          sqsQueue: true,
+          tables: [{
+            table: 'USER',
+          }],
+        }],
+      }
+    ];
+    const createApi = (
+      baseResource: apigateway.Resource,
+      config: V2ApiConfig,
+    ) => {
+      let resourceIntegration: apigateway.Integration | undefined = undefined;
+      if ('fileName' in config) {
+        const resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
+          runtime: lambda.Runtime.NODEJS_20_X,
+          entry: `${__dirname}/../resources/api/v2/${config.fileName}.ts`,
+          handler: 'main',
+          timeout: Duration.seconds(10),
+        });
+        resourceIntegration = new apigateway.LambdaIntegration(resourceHandler, {
+          requestTemplates: {
+            'application/json': '{"statusCode":"200"}',
+          },
+        });
+
+        // Add read ability to the users table if the API will need authentication
+        if (
+          config.authRequired &&
+          !config.tables?.some(v => v.table === 'USER')
+        ) {
+          config.tables = config.tables || [];
+          config.tables.push({
+            table: 'USER',
+            readOnly: true,
+          });
+        }
+
+        // Add the table permissions
+        config.tables?.forEach(table => {
+          resourceHandler.addEnvironment(
+            `TABLE_${table.table}`,
+            tableMap[table.table].tableName,
+          );
+          if (table.readOnly) {
+            tableMap[table.table].grantReadData(resourceHandler);
+          } else {
+            tableMap[table.table].grantReadWriteData(resourceHandler);
+          }
+        });
+        
+        // Grant access to the SQS queue if needed
+        if (config.sqsQueue) {
+          resourceHandler.addEnvironment(
+            'QUEUE_URL',
+            queue.queueUrl,
+          );
+          queue.grantSendMessages(resourceHandler);
+        }
+      }
+
+      // Add the resource
+      const apiResource = baseResource.addResource(config.pathPart);
+      if ('fileName' in config && resourceIntegration)
+        config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
+
+      // Handle the child APIs
+      config.next?.forEach(conf => createApi(apiResource, conf));
+    }
+    v2Apis.forEach(conf => createApi(apiV2, conf));
+
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');
 
@@ -1049,7 +1240,61 @@ export class FireWatcherAwsStack extends Stack {
       new iam.ServicePrincipal('edgelambda.amazonaws.com')
     ));
 
+    // Create a function that handles redirecting and index.html
+    const redirectCfFunction = new cloudfront.Function(this, 'cofrn-cloudfront-redirect', {
+      code: cloudfront.FunctionCode.fromFile({
+        filePath: __dirname + `/../resources/redirect_function.js`,
+      }),
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+    });
+
+    // Create S3 bucket for react website
+    const reactBucket = new s3.Bucket(this, 'cofrn-website');
+
     // Create the cloudfront distribution
+    const cfDistro = new cloudfront.Distribution(this, 'cofrn-cloudfront', {
+      // certificate: acm.Certificate.fromCertificateArn(certArn),
+      defaultBehavior: {
+        origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(reactBucket),
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        functionAssociations: [
+          {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          },
+        ],
+      },
+      additionalBehaviors: {
+        '/audio/*': {
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
+          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        },
+        '/api/*': {
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          origin: new cloudfrontOrigins.HttpOrigin(
+            `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
+            {
+              originPath: `/${api.deploymentStage.stageName}`,
+            },
+          ),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        },
+      },
+    });
+    // Export the CF url
+    new CfnOutput(this, 'cf-url', {
+      value: cfDistro.domainName,
+    });
+    new s3Deploy.BucketDeployment(this, 'deploy-website', {
+      sources: [s3Deploy.Source.asset(`${__dirname}/../../website-react/build`)],
+      destinationBucket: reactBucket,
+      distribution: cfDistro,
+    });
+
     new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
       viewerCertificate: {
         aliases: [ 'fire.klawil.net', 'cofrn.org', 'www.cofrn.org' ],

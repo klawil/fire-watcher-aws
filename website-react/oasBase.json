@@ -1,0 +1,14 @@
+{
+  "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "description": "JWT passed as a cookie",
+        "name": "cofrn-token",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

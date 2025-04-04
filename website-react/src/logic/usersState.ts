@@ -1,4 +1,4 @@
-import { UserObject } from "$/userApi";
+import { FrontendUserObject } from "$/apiv2/users";
 import { UserActions, UsersState } from "@/types/users";
 import { createContext } from "react";
 
@@ -8,12 +8,12 @@ export const defaultUsersState: UsersState = {
   users: [],
 };
 
-function sortUsers(users: UserObject[]): UserObject[] {
+function sortUsers(users: FrontendUserObject[]): FrontendUserObject[] {
   return users.sort((a, b) => {
     if (a.lName === b.lName)
-      return a.fName > b.fName ? 1 : -1;
+      return (a.fName || '') > (b.fName || '') ? 1 : -1;
 
-    return a.lName > b.lName ? 1 : -1;
+    return (a.lName || '') > (b.lName || '') ? 1 : -1;
   });
 }
 

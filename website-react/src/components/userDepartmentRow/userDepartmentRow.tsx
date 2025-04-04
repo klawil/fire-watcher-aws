@@ -1,4 +1,3 @@
-import { ApiUserUpdateGroupBody, ApiUserUpdateResponse, UserObject } from "$/userApi";
 import { UserDepartment } from "$/userConstants";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { useCallback, useContext, useState } from "react";
@@ -7,6 +6,8 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { BsArrowCounterclockwise, BsSave, BsTrash } from "react-icons/bs";
 import { AddAlertContext } from "@/logic/clientContexts";
+import { CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi } from "$/apiv2/users";
+import { typeFetch } from "@/logic/typeFetch";
 
 const baseCallSign: {
   [key in UserDepartment]: string;
@@ -23,13 +24,13 @@ export default function UserDepartmentRow({
   dep,
   loggedInUserDepartments,
 }: Readonly<{
-  user: UserObject;
+  user: FrontendUserObject;
   dep: UserDepartment;
   loggedInUserDepartments: UserDepartment[];
 }>) {
   const dispatch = useContext(UsersDispatchContext);
-  const [changes, setChangesRaw] = useState<Partial<UserObject[UserDepartment]>>({});
-  const setChanges = useCallback((vals: Partial<UserObject[UserDepartment]>) => {
+  const [changes, setChangesRaw] = useState<UpdateUserDepartmentApi['body']>({});
+  const setChanges = useCallback((vals: UpdateUserDepartmentApi['body']) => {
     setChangesRaw(oldValue => {
       const newValue = {
         ...oldValue,
@@ -49,6 +50,10 @@ export default function UserDepartmentRow({
 
         if (typeof user[dep]?.[key] === 'undefined' && newValue[key] === false) {
           delete newValue[key];
+        }
+
+        if (newValue[key] === false) {
+          newValue[key as 'admin' | 'active'] = null;
         }
       });
 
@@ -75,36 +80,54 @@ export default function UserDepartmentRow({
   async function saveChanges() {
     if (!hasChanges) return;
 
-    const apiBody: ApiUserUpdateGroupBody = {
-      phone: user.phone.toString(),
+    const apiParams: UpdateUserDepartmentApi['params'] = {
+      id: user.phone,
       department: dep,
+    };
+    const apiBody: UpdateUserDepartmentApi['body'] = {
       ...changes,
     };
 
     setIsSaving(true);
     setErrorFields([]);
     try {
-      const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=updateGroup`, {
-        method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
-
-      if (apiResult.success) {
-        if (typeof apiResult.user !== 'undefined') {
-          dispatch({
-            action: 'UpdateUser',
-            phone: user.phone,
-            user: {
-              [dep]: {
-                ...(user[dep] || {}),
-                ...(apiResult.user[dep] || {}),
-              },
-            },
-          });
-        }
-        setChangesRaw({});
-      } else if (apiResult.errors) {
+      let code;
+      let apiResult;
+      if (!user[dep]) {
+        [ code, apiResult ] = await typeFetch<CreateUserDepartmentApi>({
+          path: '/api/v2/users/{id}/{department}/',
+          method: 'POST',
+          params: apiParams,
+          body: apiBody,
+        });
+      } else {
+        [ code, apiResult ] = await typeFetch<UpdateUserDepartmentApi>({
+          path: '/api/v2/users/{id}/{department}/',
+          method: 'PATCH',
+          params: apiParams,
+          body: apiBody,
+        });
+      }
+      if (
+        code !== 200 ||
+        apiResult === null
+      ) throw { code, apiResult };
+      if ('errors' in apiResult) {
         setErrorFields(apiResult.errors);
+        throw { code, apiResult };
+      } else if ('message' in apiResult) {
+        throw { code, apiResult };
+      } else {
+        dispatch({
+          action: 'UpdateUser',
+          phone: user.phone,
+          user: {
+            [dep]: {
+              ...(apiResult[dep] || {}),
+            },
+          },
+        });
+        setChangesRaw({});
       }
     } catch (e) {
       addAlert('danger', `Error saving department ${dep} for ${user.fName} ${user.lName}`);
@@ -119,26 +142,28 @@ export default function UserDepartmentRow({
 
     setIsDeleting(true);
     try {
-      const apiBody: ApiUserUpdateGroupBody = {
-        phone: user.phone.toString(),
+      const apiParams: DeleteUserDepartmentApi['params'] = {
+        id: user.phone,
         department: dep,
       };
+      const [ code, apiResult ] = await typeFetch<DeleteUserDepartmentApi>({
+        path: '/api/v2/users/{id}/{department}/',
+        method: 'DELETE',
+        params: apiParams,
+      });
+      if (
+        code !== 200 ||
+        apiResult === null ||
+        'message' in apiResult
+      ) throw { code, apiResult };
 
-      const apiResult: ApiUserUpdateResponse = await fetch(`/api/user?action=delete`, {
-        method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
-      if (apiResult.success) {
-        dispatch({
-          action: 'UpdateUser',
-          phone: user.phone,
-          user: {
-            [dep]: undefined,
-          },
-        });
-      } else {
-        throw apiResult;
-      }
+      dispatch({
+        action: 'UpdateUser',
+        phone: user.phone,
+        user: {
+          [dep]: undefined,
+        },
+      });
     } catch (e) {
       addAlert('danger', `Error deleting department ${dep} for ${user.fName} ${user.lName}`);
       console.error(`Error deleting department ${dep} for ${user}`, e);
@@ -152,7 +177,7 @@ export default function UserDepartmentRow({
       isInvalid={errorFields.includes('active')}
       checked={
         typeof changes?.active !== 'undefined'
-          ? changes.active
+          ? changes.active || false
           : !!user[dep]?.active
       }
       label={dep}
@@ -183,7 +208,7 @@ export default function UserDepartmentRow({
       type="switch"
       checked={
         typeof changes?.admin !== 'undefined'
-          ? changes.admin
+          ? changes.admin || false
           : !!user[dep]?.admin
       }
       onChange={e => setChanges({

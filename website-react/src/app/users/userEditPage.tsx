@@ -1,6 +1,5 @@
 'use client';
 
-import { ApiUserListResponse, ApiUserUpdateBody } from "$/userApi";
 import React, { useCallback, useContext, useEffect, useReducer, useState } from "react";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import Table from "react-bootstrap/Table";
@@ -10,8 +9,9 @@ import Modal from "react-bootstrap/Modal";
 import { validDepartments } from "$/userConstants";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { ApiResponseBase } from "$/common";
 import { AddAlertContext } from "@/logic/clientContexts";
+import { typeFetch } from "@/logic/typeFetch";
+import { DeleteUserApi, GetAllUsersApi } from "$/apiv2/users";
 
 export default function UserEditPage() {
   const [ state, dispatch ] = useReducer(usersStateReducer, defaultUsersState);
@@ -19,14 +19,23 @@ export default function UserEditPage() {
 
   useEffect(() => {
     (async () => {
-      const apiResult: ApiUserListResponse = await fetch('/api/user?action=list')
-        .then(r => r.json());
+      const [ code, apiResult ] = await typeFetch<GetAllUsersApi>({
+        path: '/api/v2/users/',
+        method: 'GET',
+      });
 
-      if (!apiResult.success) return;
+      if (
+        code !== 200 ||
+        apiResult === null ||
+        'message' in apiResult
+      ) {
+        console.error(`Failed to get users`, code, apiResult);
+        return;
+      }
 
       dispatch({
         action: 'SetUsers',
-        users: apiResult.users,
+        users: apiResult,
       });
     })();
   }, []);
@@ -36,27 +45,35 @@ export default function UserEditPage() {
     if (!state.deleteUserModal) return;
     setIsDeleting(true);
 
-    const apiBody: ApiUserUpdateBody = {
-      phone: state.deleteUserModal.phone.toString(),
+    const apiBody: DeleteUserApi['params'] = {
+      id: state.deleteUserModal.phone,
     };
     try {
-      const apiResponse: ApiResponseBase = await fetch(`/api/user?action=delete`, {
-        method: 'POST',
-        body: JSON.stringify(apiBody),
-      }).then(r => r.json());
+      const [ code, apiResponse ] = await typeFetch<DeleteUserApi>({
+        path: '/api/v2/users/{id}/',
+        method: 'DELETE',
+        params: apiBody,
+      });
 
-      if (apiResponse.success) {
-        dispatch({
-          action: 'DeleteUser',
-          phone: state.deleteUserModal.phone,
-        });
-
-        dispatch({
-          action: 'ClearDeleteModal',
-        });
-      } else {
-        throw(apiResponse);
+      if (
+        code !== 200 ||
+        apiResponse === null ||
+        (
+          'message' in apiResponse &&
+          apiResponse.message !== 'Success'
+        )
+      ) {
+        throw { code, apiResponse };
       }
+
+      dispatch({
+        action: 'DeleteUser',
+        phone: state.deleteUserModal.phone,
+      });
+
+      dispatch({
+        action: 'ClearDeleteModal',
+      });
     } catch (e) {
       console.error(`Failed to delete user ${state.deleteUserModal}`, e);
       addAlert('danger', `Failed to delete ${state.deleteUserModal.fName} ${state.deleteUserModal.lName}`);
