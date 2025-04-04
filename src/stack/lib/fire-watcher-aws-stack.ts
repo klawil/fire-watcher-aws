@@ -434,7 +434,8 @@ export class FireWatcherAwsStack extends Stack {
         TABLE_MESSAGES: textsTable.tableName,
         TABLE_DTR: dtrTable.tableName,
         TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
-        TWILIO_SECRET: secretArn
+        TWILIO_SECRET: secretArn,
+        TESTING_USER: process.env.TESTING_USER as string,
       },
       timeout: Duration.minutes(1)
     });

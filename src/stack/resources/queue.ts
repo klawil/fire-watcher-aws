@@ -15,6 +15,7 @@ const cloudWatch = new AWS.CloudWatch();
 const phoneTable = process.env.TABLE_USER as string;
 const dtrTable = process.env.TABLE_DTR as string;
 const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
+const testingUser = process.env.TESTING_USER as string;
 
 const metricSource = 'Queue';
 
@@ -94,7 +95,7 @@ function createPageMessage(
 	if (number !== null) {
 		pageStr += `&cs=${number}`;
 	}
-	if (number === '***REMOVED***') {
+	if (number === testingUser) {
 		pageStr = pageStr.replace(/cofrn\.org/g, 'new.cofrn.org');
 	}
 	return pageStr;
