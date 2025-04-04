@@ -141,7 +141,7 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 		.filter(dep => user[dep]?.active && user[dep]?.admin);
 
 	// Filter out the texts the person does not have access to
-	const data = ((result.Items?.map(parseDynamoDbAttributeMap) || []) as any[] as TextObject[])
+	const data = ((result.Items?.map(parseDynamoDbAttributeMap) || []) as unknown[] as TextObject[])
 		.filter(text => {
 			if (text.type === 'account') return false;
 
@@ -281,7 +281,7 @@ interface GenericApiResponse {
 	success: boolean;
 	errors: string[];
 	message?: string;
-	data?: any[] | any;
+	data?: unknown[] | unknown;
 }
 
 async function handlePageView(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {

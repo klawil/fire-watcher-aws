@@ -25,7 +25,7 @@ export async function handleResourceApi(
   handlers: {
     [key in Api['method']]?: (event: APIGatewayProxyEvent) => Promise<[
       number,
-      any,
+      unknown,
       APIGatewayProxyResult['multiValueHeaders']?,
     ]>;
   },
@@ -354,7 +354,7 @@ export function parseJsonBody<T extends object>(
 }
 
 export function checkObject<T extends object>(
-  obj: any,
+  obj: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   validator: Validator<T>
 ): [T | null, (keyof T)[] ] {
   const newObj: Partial<T> = {};

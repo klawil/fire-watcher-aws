@@ -230,8 +230,8 @@ async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
     const _pageData = JSON.parse(eval(json[1]));
 
     return _pageData[1][6][0][12][0][13][0]
-      .filter((f: any) => f[5][0][1][0] === 'Saguache')
-      .map((f: any) => f[5][3][0][1][0])
+      .filter((f: any) => f[5][0][1][0] === 'Saguache') // eslint-disable-line @typescript-eslint/no-explicit-any
+      .map((f: any) => f[5][3][0][1][0]) // eslint-disable-line @typescript-eslint/no-explicit-any
       .join('\n\n\n')
       .replace(/\n/g, '<br>')
   } catch (e) {

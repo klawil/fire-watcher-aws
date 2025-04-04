@@ -8,7 +8,7 @@ import 'swagger-themes/themes/dark.css';
 export default function ApiDocPage({
   spec,
 }: {
-  spec: { [propName: string]: any };
+  spec: { [propName: string]: unknown };
 }) {
   useLayoutEffect(() => {
     console.log(SwaggerUIBundle.presets);

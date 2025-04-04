@@ -249,7 +249,7 @@ export async function saveMessageData(
 	isTest: boolean = false
 ) {
 	logger.trace('saveMessageData', ...arguments);
-	const promises: Promise<any>[] = [];
+	const promises: Promise<unknown>[] = [];
 	if (departmentRequired.includes(messageType) && department === null) {
 		department = 'PageOnly';
 	}
@@ -400,7 +400,7 @@ export async function sendMessage(
 	}
 	const numberConfig = resolvedTwilioPhoneCategories[sendNumberCategory];
 
-	let saveMessageDataPromise: Promise<any> = new Promise(res => res(null));
+	let saveMessageDataPromise: Promise<unknown> = new Promise(res => res(null));
 	if (messageId === null) {
 		messageId = Date.now().toString();
 		saveMessageDataPromise = saveMessageData(
@@ -448,7 +448,7 @@ export async function sendMessage(
 			.messages.create(messageConfig),
 		saveMessageDataPromise
 	])
-		.catch((e: any) => {
+		.catch((e: unknown) => {
 			logger.error('sendMessage', e);
 		});
 }
@@ -497,25 +497,25 @@ export async function incrementMetric(
 	metricData: ErrorMetric,
 	sendLessSpecific?: boolean,
 	sendMoreSpecific?: boolean
-): Promise<any>
+): Promise<unknown>
 export async function incrementMetric(
 	name: 'Call',
 	metricData: CallMetric,
 	sendLessSpecific?: boolean,
 	sendMoreSpecific?: boolean
-): Promise<any>
+): Promise<unknown>
 export async function incrementMetric(
 	name: 'Event',
 	metricData: EventMetric,
 	sendLessSpecific?: boolean,
 	sendMoreSpecific?: boolean
-): Promise<any>
+): Promise<unknown>
 export async function incrementMetric(
 	name: string,
 	metricData: ErrorMetric | CallMetric | EventMetric,
 	sendLessSpecific: boolean = true,
 	sendMoreSpecific: boolean = true
-): Promise<any> {
+): Promise<unknown> {
 	logger.trace('incrementMetric', ...arguments);
 	const putConfig: aws.CloudWatch.PutMetricDataInput = {
 		Namespace: `CVFD API`,
@@ -555,6 +555,7 @@ export async function incrementMetric(
 	}
 
 	await cloudWatch.putMetricData(putConfig).promise();
+	return;
 }
 
 export function validateBodyIsJson(body: string | null): true {

@@ -271,7 +271,7 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 				[curr[0]]: curr[1] || ''
 			}), {}) as TwilioStatusEvent;
 
-		const promises: Promise<any>[] = [];
+		const promises: Promise<unknown>[] = [];
 		promises.push(dynamodb.updateItem({
 			TableName: textTable,
 			Key: {
@@ -603,7 +603,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 				includeSubaccounts: true,
 				startDate: dateToString(startDate),
 				endDate: dateToString(endDateTwilio),
-			}, (err: any, items: TwilioUsageItem[]) => err ? res([]) : res(items));
+			}, (err: unknown, items: TwilioUsageItem[]) => err ? res([]) : res(items));
 	});
 	const awsData = await awsDataPromise;
 

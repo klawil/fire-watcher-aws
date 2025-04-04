@@ -25,7 +25,7 @@ interface ApiResponse {
 	success: boolean;
 	errors: string[];
 	message?: string;
-	data?: any[];
+	data?: unknown[];
 }
 
 interface FidoKey {
@@ -779,7 +779,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 				setValue = { S: body[item.name] as string };
 				break;
 			case 'talkgroups':
-				if ((body[item.name] as any[]).length > 0) {
+				if ((body[item.name] as unknown[]).length > 0) {
 					setValue = {
 						NS: (body[item.name] as number[]).map(v => v.toString())
 					};

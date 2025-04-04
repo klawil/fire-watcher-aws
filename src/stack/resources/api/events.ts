@@ -23,7 +23,7 @@ interface GenericApiResponse {
 	success: boolean;
 	errors: string[];
 	message?: string;
-	data?: any[];
+	data?: unknown[];
 }
 
 function validateEventBody(body: EventBody, index: number, response: GenericApiResponse): boolean {

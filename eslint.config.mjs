@@ -21,7 +21,6 @@ const eslintConfig = [
         },
       ],
       'prefer-rest-params': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
     }
   }),
 ];

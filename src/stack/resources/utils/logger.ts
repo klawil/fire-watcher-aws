@@ -11,7 +11,7 @@ export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'erro
 
 let globalLogLevel: LogLevel = LogLevel.Error;
 let isNodeEnv: boolean = false;
-declare const window: any;
+declare const window: undefined | Window;
 if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
   if (window.location.search.indexOf('debug=') !== -1) {
     const level = parseInt(window.location.search.split('debug=')[1].split('&')[0], 10);
@@ -22,7 +22,7 @@ if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
     globalLogLevel = LogLevel.Debug;
   }
 }
-declare const process: any;
+declare const process: undefined | NodeJS.Process;
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
   isNodeEnv = true;
   globalLogLevel = LogLevel.Error;
@@ -58,7 +58,7 @@ const levelStyles: string[] = [
 
 let maxLoggerNameLen: number = 0;
 
-type logArguments = [ string, ...any ];
+type logArguments = [ string, ...unknown[] ];
 
 class Logger {
   name: string;
@@ -111,7 +111,7 @@ class Logger {
     // Build the argument array
     const consoleArgs: [
       string,
-      ...any
+      ...unknown[],
     ] = [
       logPrefix,
       ...styles,

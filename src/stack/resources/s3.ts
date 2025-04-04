@@ -69,7 +69,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 		const Key = record.s3.object.key;
 
 		if (record.eventName.indexOf('ObjectCreated') === 0) {
-			const promises: Promise<any>[] = [];
+			const promises: Promise<unknown>[] = [];
 
 			const metric = incrementMetric('Call', {
 				source: metricSource,
@@ -469,7 +469,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			}
 
-			const talkgroupCreate: Promise<any> = (async () => {
+			const talkgroupCreate: Promise<unknown> = (async () => {
 				const item = await dynamodb.query({
 					TableName: talkgroupTable,
 					ExpressionAttributeNames: {
@@ -542,7 +542,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					TableName: dtrTable
 				};
 				logger.info('parseRecord', 'delete', body);
-				const promises: Promise<any>[] = [];
+				const promises: Promise<unknown>[] = [];
 				promises.push(dynamodb.deleteItem(body).promise());
 			
 				await Promise.all(promises);

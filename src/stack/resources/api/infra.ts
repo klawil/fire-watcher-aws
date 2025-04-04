@@ -27,7 +27,7 @@ interface GenericApiResponse {
 	success: boolean;
 	errors: string[];
 	message?: string;
-	data?: any[];
+	data?: unknown[];
 }
 
 interface HeartbeatBody {

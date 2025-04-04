@@ -70,20 +70,10 @@ type SpecificTypeValidations<V> = Pick<
     string: string extends V ? 'string' : never;
     number: V extends number ? 'number' : never;
     boolean: V extends boolean ? 'boolean' : never;
-    array: Array<any> extends V ? 'array' : never;
+    array: Array<unknown> extends V ? 'array' : never;
     null: V extends null ? 'null' : never;
   }[keyof TypeValidations]
 > & Partial<TypeValidations>;
-// export type Validator<T> = {
-//   [key in keyof T]: undefined extends T[key] ? {
-//     parse?: (v: string) => T[key];
-//     types: SpecificTypeValidations<T[key]>;
-//   } : {
-//     required: true;
-//     parse?: (v: string) => T[key];
-//     types: SpecificTypeValidations<T[key]>;
-//   };
-// };
 export type Validator<T> = {
   [key in keyof T]: {
     required: undefined extends T[key] ? false : true;

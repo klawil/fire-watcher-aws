@@ -103,7 +103,7 @@ function createPageMessage(
 
 async function handleActivation(body: ActivateBody) {
 	logger.trace('handleActivation', ...arguments);
-	const promises: Promise<any>[] = [];
+	const promises: Promise<unknown>[] = [];
 
 	// Update the user to active in the table
 	const updateResult = await dynamodb.updateItem({
@@ -515,7 +515,7 @@ async function handlePage(body: PageBody) {
 
 	body.len = body.len || 0;
 
-	let metricPromise: Promise<any> = new Promise(res => res(null));
+	let metricPromise: Promise<unknown> = new Promise(res => res(null));
 	const pageTime = fNameToDate(body.key);
 	const lenMs = body.len * 1000;
 	if (body.isTest) {
@@ -718,7 +718,7 @@ async function handleTranscribe(body: TranscribeBody) {
 
 	// Build the message
 	let messageBody: string;
-	let promise: Promise<any> = new Promise(res => res(null));
+	let promise: Promise<unknown> = new Promise(res => res(null));
 	let tg: PagingTalkgroup;
 	const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || []).reduce((agg: { [key: string]: string; }, value) => {
 		agg[value.Key] = value.Value;
