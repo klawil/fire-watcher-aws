@@ -1,7 +1,0 @@
-node_modules
-*.js
-!redirect_function.js
-
-# CDK directories
-.cdk.staging
-cdk.out
