@@ -11,8 +11,6 @@ export default function ApiDocPage({
   spec: { [propName: string]: unknown };
 }) {
   useLayoutEffect(() => {
-    console.log(SwaggerUIBundle.presets);
-    console.log(SwaggerUIBundle.SwaggerUIStandalonePreset);
     SwaggerUIBundle({
       spec,
       dom_id: '#myDomId',
