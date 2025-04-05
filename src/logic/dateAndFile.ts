@@ -1,4 +1,4 @@
-import { FullFileObject } from "@/common/apiv2/files";
+import { FullFileObject } from "@/types/api/apiv2/files";
 import { fNameToDate } from "@/common/stringManipulation";
 
 export function dateToStr(d: Date) {

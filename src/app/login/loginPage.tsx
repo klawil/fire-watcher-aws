@@ -9,7 +9,7 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { GetLoginCodeApi, SubmitLoginCodeApi } from "@/common/apiv2/login";
+import { GetLoginCodeApi, SubmitLoginCodeApi } from "@/types/api/apiv2/login";
 import { typeFetch } from "@/logic/typeFetch";
 
 export default function LoginPage() {

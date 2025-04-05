@@ -1,5 +1,5 @@
 import { getLogger } from '../../utils/logger';
-import { FullFileObject, GetAllFilesApi } from '@/common/apiv2/files';
+import { FullFileObject, GetAllFilesApi } from '@/types/api/apiv2/files';
 import { handleResourceApi, LambdaApiFunction, TABLE_FILE, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
 
 const logger = getLogger('files');

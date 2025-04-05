@@ -13,7 +13,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { UpdateUserApi } from "@/common/apiv2/users";
+import { UpdateUserApi } from "@/types/api/apiv2/users";
 import { typeFetch } from "@/logic/typeFetch";
 
 const userEditableFields: {

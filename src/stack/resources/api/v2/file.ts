@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
-import { api404Body } from '@/common/apiv2/_shared';
-import { GetFileApi } from '@/common/apiv2/files';
+import { api404Body } from '@/types/api/apiv2/_shared';
+import { GetFileApi } from '@/types/api/apiv2/files';
 import { handleResourceApi, LambdaApiFunction, TABLE_FILE } from './_base';
 
 const logger = getLogger('file');

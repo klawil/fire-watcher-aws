@@ -11,7 +11,7 @@ import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { formatPhone } from "@/common/stringManipulation";
-import { CreateUserApi, FrontendUserObject, UpdateUserApi } from "@/common/apiv2/users";
+import { CreateUserApi, FrontendUserObject, UpdateUserApi } from "@/types/api/apiv2/users";
 import { typeFetch } from "@/logic/typeFetch";
 
 interface CheckboxConfig {

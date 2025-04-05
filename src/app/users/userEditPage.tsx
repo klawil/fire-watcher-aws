@@ -11,7 +11,7 @@ import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { typeFetch } from "@/logic/typeFetch";
-import { DeleteUserApi, GetAllUsersApi } from "@/common/apiv2/users";
+import { DeleteUserApi, GetAllUsersApi } from "@/types/api/apiv2/users";
 
 export default function UserEditPage() {
   const [ state, dispatch ] = useReducer(usersStateReducer, defaultUsersState);

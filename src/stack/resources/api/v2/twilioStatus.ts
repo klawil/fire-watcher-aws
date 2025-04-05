@@ -1,11 +1,11 @@
 import * as AWS from 'aws-sdk';
-import { generateApi400Body } from '@/common/apiv2/_shared';
+import { generateApi400Body } from '@/types/api/apiv2/_shared';
 import { getLogger } from '../../utils/logger';
 import { handleResourceApi, LambdaApiFunction, TABLE_TEXT, TABLE_USER, validateRequest } from './_base';
-import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator } from '@/common/apiv2/twilio';
+import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator } from '@/types/api/apiv2/twilio';
 import { validateTwilioRequest } from './_twilio';
 import { getTwilioSecret, parsePhone, twilioPhoneNumbers } from '../../utils/general';
-import { FullUserObject, validDepartments } from '@/common/apiv2/users';
+import { FullUserObject, validDepartments } from '@/types/api/apiv2/users';
 import { TwilioErrorBody } from '../../types/queue';
 
 const logger = getLogger('twilioStatus');

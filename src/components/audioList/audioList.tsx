@@ -16,8 +16,8 @@ import { fNameToDate } from "@/common/stringManipulation";
 import CalendarModal from "../calendarModal/calendarModal";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { typeFetch } from "@/logic/typeFetch";
-import { GetAllTalkgroupsApi } from "@/common/apiv2/talkgroups";
-import { GetAllFilesApi } from "@/common/apiv2/files";
+import { GetAllTalkgroupsApi } from "@/types/api/apiv2/talkgroups";
+import { GetAllFilesApi } from "@/types/api/apiv2/files";
 
 const loadAfterAddedMinWait = 10000;
 

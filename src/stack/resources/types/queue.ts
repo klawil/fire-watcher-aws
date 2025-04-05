@@ -1,6 +1,6 @@
-import { CreateTextApi } from "@/common/apiv2/twilio";
+import { CreateTextApi } from "@/types/api/apiv2/twilio";
 import { PagingTalkgroup, UserDepartment } from "../../../common/userConstants";
-import { FullUserObject } from "@/common/apiv2/users";
+import { FullUserObject } from "@/types/api/apiv2/users";
 
 export interface ActivateBody {
 	action: 'activate';

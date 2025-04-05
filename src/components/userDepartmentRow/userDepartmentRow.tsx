@@ -6,7 +6,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { BsArrowCounterclockwise, BsSave, BsTrash } from "react-icons/bs";
 import { AddAlertContext } from "@/logic/clientContexts";
-import { CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi } from "@/common/apiv2/users";
+import { CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi } from "@/types/api/apiv2/users";
 import { typeFetch } from "@/logic/typeFetch";
 
 const baseCallSign: {

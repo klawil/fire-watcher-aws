@@ -1,8 +1,8 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
 import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, TABLE_USER, validateRequest } from './_base';
-import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiParamsValidator, validDepartments } from '@/common/apiv2/users';
-import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/common/apiv2/_shared';
+import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiParamsValidator, validDepartments } from '@/types/api/apiv2/users';
+import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/apiv2/_shared';
 
 const logger = getLogger('users');
 const docClient = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });

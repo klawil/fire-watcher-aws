@@ -1,4 +1,4 @@
-import { FullFileObject, GetAllFilesApi } from "@/common/apiv2/files";
+import { FullFileObject, GetAllFilesApi } from "@/types/api/apiv2/files";
 
 type PlayerState = 'playing' | 'paused' | 'ended';
 type FileAddDirection = 'before' | 'after';

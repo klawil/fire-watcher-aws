@@ -1,4 +1,4 @@
-import { FrontendUserObject } from "@/common/apiv2/users";
+import { FrontendUserObject } from "@/types/api/apiv2/users";
 import { UserActions, UsersState } from "@/types/users";
 import { createContext } from "react";
 

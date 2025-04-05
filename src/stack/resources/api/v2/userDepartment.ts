@@ -1,8 +1,8 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
 import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, TABLE_USER, validateRequest } from './_base';
-import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/common/apiv2/users';
-import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/common/apiv2/_shared';
+import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/types/api/apiv2/users';
+import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/types/api/apiv2/_shared';
 import { ActivateBody } from '../../types/queue';
 
 const logger = getLogger('userDepartment');

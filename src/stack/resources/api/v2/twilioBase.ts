@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
-import { CreateTextApi, createTextBodyValidator, createTextQueryValidator } from "@/common/apiv2/twilio";
+import { CreateTextApi, createTextBodyValidator, createTextQueryValidator } from "@/types/api/apiv2/twilio";
 import { getTwilioSecret, twilioPhoneNumbers } from '../../utils/general';
-import { FullUserObject } from '@/common/apiv2/users';
+import { FullUserObject } from '@/types/api/apiv2/users';
 import { TwilioTextQueueItem } from '../../types/queue';
 import { validateTwilioRequest } from './_twilio';
 import { checkObject, handleResourceApi, LambdaApiFunction, TABLE_USER } from './_base';

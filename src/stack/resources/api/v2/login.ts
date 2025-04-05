@@ -1,9 +1,9 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
 import { checkObject, getCurrentUser, getFrontendUserObj, getSetCookieHeader, getUserPermissions, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
-import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/common/apiv2/login';
-import { api200Body, generateApi400Body } from '@/common/apiv2/_shared';
-import { FullUserObject } from '@/common/apiv2/users';
+import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/apiv2/login';
+import { api200Body, generateApi400Body } from '@/types/api/apiv2/_shared';
+import { FullUserObject } from '@/types/api/apiv2/users';
 import { LoginBody } from '../../types/queue';
 import { randomString } from '../../utils/general';
 

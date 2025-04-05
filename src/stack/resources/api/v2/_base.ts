@@ -1,9 +1,9 @@
-import { api403Response, Validator } from "@/common/apiv2/_shared";
+import { api403Response, Validator } from "@/types/api/apiv2/_shared";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "ts-oas";
 import * as AWS from 'aws-sdk';
 import { getLogger } from "../../utils/logger";
-import { districtAdminUserKeys, FrontendUserObject, FullUserObject, UserDepartment, validDepartments } from "@/common/apiv2/users";
+import { districtAdminUserKeys, FrontendUserObject, FullUserObject, UserDepartment, validDepartments } from "@/types/api/apiv2/users";
 
 const logger = getLogger('api/v2/_base');
 

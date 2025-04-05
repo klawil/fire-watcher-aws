@@ -11,7 +11,7 @@ import { useRefIntersection } from "@/logic/uiUtils";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { Variant } from "react-bootstrap/esm/types";
 import { typeFetch } from "@/logic/typeFetch";
-import { FrontendTextObject, GetAllTextsApi } from "@/common/apiv2/texts";
+import { FrontendTextObject, GetAllTextsApi } from "@/types/api/apiv2/texts";
 
 interface TextObject extends FrontendTextObject {
   pageTime?: number;
