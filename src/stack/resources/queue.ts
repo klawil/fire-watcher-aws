@@ -4,9 +4,10 @@ import * as https from 'https';
 import { getPageNumber, getRecipients, getTwilioSecret, incrementMetric, parsePhone, saveMessageData, sendMessage, twilioPhoneCategories, twilioPhoneNumbers } from './utils/general';
 import { PagingTalkgroup, PhoneNumberTypes, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { fNameToDate, formatPhone } from '../../common/stringManipulation';
-import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody, TwilioTextQueueItem } from './types/queue';
+import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from './utils/logger';
 import { getUserPermissions } from './api/v2/_base';
+import { TwilioTextQueueItem } from '@/types/queue';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
@@ -437,115 +438,6 @@ async function handleTwilioError(body: TwilioErrorBody) {
 	await insertMessage;
 }
 
-const applePrefixes = [
-  'Liked',
-  'Loved',
-  'Disliked',
-  'Laughed at',
-  'Questioned',
-];
-const emojiRegex = / to “/;
-
-async function handleTwilioText(body: TwilioTextQueueItem) {
-	logger.trace('handleTwilioText', ...arguments);
-
-	// Pull out the phone number config
-	const phoneNumberConfigs = await twilioPhoneNumbers();
-	const phoneNumberConfig = phoneNumberConfigs[body.body.To];
-	if (typeof phoneNumberConfig === 'undefined') {
-		throw new Error(`Unable to find config for phone number - ${body.body.To}`);
-	}
-	if (typeof phoneNumberConfig.department === 'undefined') {
-		throw new Error(`Text to number not associated with any department`);
-	}
-	const depConfig = departmentConfig[phoneNumberConfig.department];
-
-	// Check for messages that should not be sent to the group
-	const msgBody = body.body.Body;
-	const doNotSend = (
-		msgBody.includes(`I'm Driving`) && msgBody.includes('Sent from My Car')
-	)
-		|| applePrefixes.some(prefix => msgBody.startsWith(prefix))
-		|| emojiRegex.test(msgBody);
-
-	// Get the sending user's permissions
-	const userPerms = getUserPermissions(body.user);
-
-	// Determine if this is an announcement or not
-	let isAnnouncement: boolean = false;
-	let includeSender: boolean = false;
-	if (phoneNumberConfig.type === 'page') {
-		includeSender = true;
-		isAnnouncement = userPerms.adminDepartments.includes(phoneNumberConfig.department);
-	}
-	if (!isAnnouncement && typeof depConfig.textPhone === 'undefined') {
-		throw new Error(`Tried to send group text on department where that is not available`);
-	}
-
-	// Determine if this is a test or not
-	const isTest = !!body.user.isTest;
-
-	// Get the recipients
-	const recipients = (await getRecipients(phoneNumberConfig.department, null, isTest))
-		.filter(number => {
-			if (doNotSend) return false;
-
-			if (isTest) return true;
-
-			return includeSender ||
-				Number(number.phone.N) !== body.user.phone;
-		});
-
-	// Build the message
-	const sendingUserCallsign = body.user[phoneNumberConfig.department]?.callSign || null;
-	const sendingUserInfo = `${body.user.fName} ${body.user.lName}${sendingUserCallsign !== null ? ` (${sendingUserCallsign})` : ''}`;
-	const messageBody = `${isAnnouncement ? `${depConfig.shortName} Announcement` : sendingUserInfo}: ${body.body.Body}${isAnnouncement ? ` - ${sendingUserInfo}` : ''}`;
-	const mediaUrls: string[] = Object.keys(body.body)
-		.filter(key => key.indexOf('MediaUrl') === 0)
-		.map(key => body.body[key as keyof TwilioTextQueueItem['body']] as string);
-	let storedMediaUrls: string[] = [];
-	const messageId = Date.now().toString();
-
-	// Add auth information to the media URLs
-	if (mediaUrls.length > 0) {
-		const twilioConf = await getTwilioSecret();
-		storedMediaUrls = mediaUrls.map(url => url.replace(
-			/https:\/\//,
-			`https://${twilioConf.accountSid}:${twilioConf.authToken}`,
-		));
-	}
-
-	// Save the message data
-	const insertMessage = saveMessageData(
-		isAnnouncement ? 'departmentAnnounce' : 'department',
-		messageId,
-		recipients.length,
-		messageBody,
-		storedMediaUrls,
-		null,
-		null,
-		phoneNumberConfig.department,
-		isTest,
-	);
-
-	// Send the text to everyone
-	await Promise.all(recipients
-		.filter(number => typeof number.phone.N !== 'undefined')
-		.map(async (number) => sendMessage(
-			metricSource,
-			isAnnouncement ? 'departmentAnnounce' : 'department',
-			messageId,
-			number.phone.N as string,
-			isAnnouncement
-				? await getPageNumber(number)
-				: depConfig.textPhone || depConfig.pagePhone,
-			messageBody,
-			mediaUrls,
-		))
-	);
-	await insertMessage;
-}
-
 async function handleAnnounce(body: AnnounceBody) {
 	logger.trace('handleAnnounce', ...arguments);
 	const recipients = await getRecipients(
@@ -921,6 +813,115 @@ async function handleTranscribe(body: TranscribeBody) {
 	await promise;
 }
 
+const applePrefixes = [
+  'Liked',
+  'Loved',
+  'Disliked',
+  'Laughed at',
+  'Questioned',
+];
+const emojiRegex = / to “/;
+
+async function handleTwilioText(body: TwilioTextQueueItem) {
+	logger.trace('handleTwilioText', ...arguments);
+
+	// Pull out the phone number config
+	const phoneNumberConfigs = await twilioPhoneNumbers();
+	const phoneNumberConfig = phoneNumberConfigs[body.body.To];
+	if (typeof phoneNumberConfig === 'undefined') {
+		throw new Error(`Unable to find config for phone number - ${body.body.To}`);
+	}
+	if (typeof phoneNumberConfig.department === 'undefined') {
+		throw new Error(`Text to number not associated with any department`);
+	}
+	const depConfig = departmentConfig[phoneNumberConfig.department];
+
+	// Check for messages that should not be sent to the group
+	const msgBody = body.body.Body;
+	const doNotSend = (
+		msgBody.includes(`I'm Driving`) && msgBody.includes('Sent from My Car')
+	)
+		|| applePrefixes.some(prefix => msgBody.startsWith(prefix))
+		|| emojiRegex.test(msgBody);
+
+	// Get the sending user's permissions
+	const userPerms = getUserPermissions(body.user);
+
+	// Determine if this is an announcement or not
+	let isAnnouncement: boolean = false;
+	let includeSender: boolean = false;
+	if (phoneNumberConfig.type === 'page') {
+		includeSender = true;
+		isAnnouncement = userPerms.adminDepartments.includes(phoneNumberConfig.department);
+	}
+	if (!isAnnouncement && typeof depConfig.textPhone === 'undefined') {
+		throw new Error(`Tried to send group text on department where that is not available`);
+	}
+
+	// Determine if this is a test or not
+	const isTest = !!body.user.isTest;
+
+	// Get the recipients
+	const recipients = (await getRecipients(phoneNumberConfig.department, null, isTest))
+		.filter(number => {
+			if (doNotSend) return false;
+
+			if (isTest) return true;
+
+			return includeSender ||
+				Number(number.phone.N) !== body.user.phone;
+		});
+
+	// Build the message
+	const sendingUserCallsign = body.user[phoneNumberConfig.department]?.callSign || null;
+	const sendingUserInfo = `${body.user.fName} ${body.user.lName}${sendingUserCallsign !== null ? ` (${sendingUserCallsign})` : ''}`;
+	const messageBody = `${isAnnouncement ? `${depConfig.shortName} Announcement` : sendingUserInfo}: ${body.body.Body}${isAnnouncement ? ` - ${sendingUserInfo}` : ''}`;
+	const mediaUrls: string[] = Object.keys(body.body)
+		.filter(key => key.indexOf('MediaUrl') === 0)
+		.map(key => body.body[key as keyof TwilioTextQueueItem['body']] as string);
+	let storedMediaUrls: string[] = [];
+	const messageId = Date.now().toString();
+
+	// Add auth information to the media URLs
+	if (mediaUrls.length > 0) {
+		const twilioConf = await getTwilioSecret();
+		storedMediaUrls = mediaUrls.map(url => url.replace(
+			/https:\/\//,
+			`https://${twilioConf.accountSid}:${twilioConf.authToken}`,
+		));
+	}
+
+	// Save the message data
+	const insertMessage = saveMessageData(
+		isAnnouncement ? 'departmentAnnounce' : 'department',
+		messageId,
+		recipients.length,
+		messageBody,
+		storedMediaUrls,
+		null,
+		null,
+		phoneNumberConfig.department,
+		isTest,
+	);
+
+	// Send the text to everyone
+	await Promise.all(recipients
+		.filter(number => typeof number.phone.N !== 'undefined')
+		.map(async (number) => sendMessage(
+			metricSource,
+			isAnnouncement ? 'departmentAnnounce' : 'department',
+			messageId,
+			number.phone.N as string,
+			isAnnouncement
+				? await getPageNumber(number)
+				: depConfig.textPhone || depConfig.pagePhone,
+			messageBody,
+			mediaUrls,
+		))
+	);
+	await insertMessage;
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	logger.debug('parseRecord', ...arguments);
 	const body = JSON.parse(event.body);
@@ -939,9 +940,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 			case 'twilio_error':
 				response = await handleTwilioError(body);
 				break;
-			case 'twilio-text':
-				response = await handleTwilioText(body);
-				break;
 			case 'announce':
 				response = await handleAnnounce(body);
 				break;
@@ -953,6 +951,11 @@ async function parseRecord(event: lambda.SQSRecord) {
 				break;
 			case 'transcribe':
 				response = await handleTranscribe(body);
+				break;
+
+			// v2 functions
+			case 'twilio-text':
+				response = await handleTwilioText(body);
 				break;
 			default:
 				await incrementMetric('Error', {
