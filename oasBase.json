@@ -10,5 +10,35 @@
         "bearerFormat": "JWT"
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "APIs for Authentication"
+    },
+    {
+      "name": "Files",
+      "description": "Read only access to information about the audio files"
+    },
+    {
+      "name": "Talkgroups",
+      "description": "Information about talkgroups recognized by the system"
+    },
+    {
+      "name": "Texts",
+      "description": "Information about texts sent using the system"
+    },
+    {
+      "name": "Twilio",
+      "description": "APIs used as Twilio webhooks"
+    },
+    {
+      "name": "Users",
+      "description": "Access or modify User resources"
+    },
+    {
+      "name": "Users/Department",
+      "description": "Modify User assocations with Departments"
+    }
+  ]
 }
