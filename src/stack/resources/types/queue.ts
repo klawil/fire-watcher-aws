@@ -1,4 +1,6 @@
+import { CreateTextApi } from "@/common/apiv2/twilio";
 import { PagingTalkgroup, UserDepartment } from "../../../common/userConstants";
+import { FullUserObject } from "@/common/apiv2/users";
 
 export interface ActivateBody {
 	action: 'activate';
@@ -10,6 +12,12 @@ export interface TwilioBody {
 	action: 'twilio';
 	body: string;
 }
+
+export interface TwilioTextQueueItem {
+	action: 'twilio-text';
+	body: CreateTextApi['body'];
+	user: FullUserObject;
+};
 
 export interface TwilioErrorBody {
 	action: 'twilio_error';

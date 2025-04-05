@@ -1,4 +1,4 @@
-// const targetDomain = 'cofrn.org';
+const targetDomain = 'cofrn.org';
 
 function getURLSearchParamsString(querystring) {
   var str = [];
@@ -24,15 +24,20 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   let hasRedirect = false;
   let redirectUriBase = `https://cofrn.org`;
 
-  // // Redirect fire.klawil.net and www.cofrn.org
-  // if (
-  //   typeof request.headers !== 'undefined' &&
-  //   typeof request.headers.host !== 'undefined' &&
-  //   typeof request.headers.host.value !== 'undefined' &&
-  //   request.headers.host.value !== targetDomain
-  // ) {
-  //   hasRedirect = true;
-  // }
+  // Redirect fire.klawil.net and www.cofrn.org
+  if (
+    typeof request.headers !== 'undefined' &&
+    typeof request.headers.host !== 'undefined' &&
+    typeof request.headers.host.value !== 'undefined'
+  ) {
+    const reqHost = request.headers.host.value;
+    request.headers['x-forwarded-host'] = { value: reqHost };
+    if (reqHost === 'new.cofrn.org') {
+      redirectUriBase = `https://${reqHost}`;
+    } else if (reqHost !== targetDomain) {
+      hasRedirect = true;
+    }
+  }
 
   // Make sure that index.html is not used
   if (request.uri.includes('index.html')) {
@@ -65,10 +70,12 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   }
 
   const uri = request.uri;
-  if (uri.endsWith('/')) {
-    request.uri += 'index.html';
-  } else if (!uri.includes('.')) {
-    request.uri += '/index.html';
+  if (!uri.includes('/api/')) {
+    if (uri.endsWith('/')) {
+      request.uri += 'index.html';
+    } else if (!uri.includes('.')) {
+      request.uri += '/index.html';
+    }
   }
   return request;
 }

@@ -84,7 +84,7 @@ type AccountSidKey = `accountSid${ValidTwilioAccounts}`;
 type AuthTokenKey = `authToken${ValidTwilioAccounts}`;
 type PhoneNumberKey = `phoneNumber${ValidTwilioAccounts}${ValidTwilioNumberTypes}`;
 
-type TwilioConfig = {
+export type TwilioConfig = {
 	[key in AccountSidKey]: string;
 } & {
 	[key in AuthTokenKey]: string;
@@ -99,7 +99,7 @@ type TwilioConfig = {
 	voiceApiSecret: string;
 }
 
-interface PhoneNumberConfig {
+export interface PhoneNumberConfig {
 	name?: string;
 	number: string;
 	numberKey: PhoneNumberKey;
@@ -130,6 +130,7 @@ export const twilioPhoneCategories: () => Promise<TwilioPhoneCategories> = async
 					numberKey: 'phoneNumberCrestonepage',
 					type: 'page',
 					account: 'Crestone',
+					department: 'Crestone',
 				},
 				alert: {
 					number: '',

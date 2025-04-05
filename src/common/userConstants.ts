@@ -49,13 +49,10 @@ interface PageConfig {
 export const defaultDepartment = 'Crestone';
 
 type DepartmentConfigBaseType = {
-	[key in UserDepartment]?: DepartmentConfig;
-}
-type DepartmentConfigBaseType2 = {
-	[defaultDepartment]: DepartmentConfig;
+	[key in UserDepartment]: DepartmentConfig;
 }
 
-export const departmentConfig: DepartmentConfigBaseType & DepartmentConfigBaseType2 = {
+export const departmentConfig: DepartmentConfigBaseType = {
 	Crestone: {
 		name: 'Crestone Volunteer Fire Department',
 		shortName: 'Crestone',

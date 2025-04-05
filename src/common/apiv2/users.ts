@@ -34,6 +34,7 @@ export type FullUserObject = {
   getDtrAlerts?: boolean;
   getVhfAlerts?: boolean;
   isDistrictAdmin?: boolean;
+  isTest?: boolean;
 
   lastLogin?: number;
   /**

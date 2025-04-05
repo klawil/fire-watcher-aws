@@ -989,6 +989,8 @@ export class FireWatcherAwsStack extends Stack {
       pathPart: string;
       authRequired?: true;
       sqsQueue?: true;
+      twilioSecret?: true;
+      sendsMetrics?: true;
       tables?: {
         table: keyof typeof tableMap;
         readOnly?: true;
@@ -1071,22 +1073,36 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'texts',
         fileName: 'texts',
-        methods: [ 'GET', ],
+        methods: [ 'GET', 'POST', ],
         authRequired: true,
         tables: [{
           table: 'TEXT',
           readOnly: true,
         }],
-        // next: [{
-        //   pathPart: '{id}',
-        //   fileName: 'text',
-        //   methods: [ 'GET' ],
-        //   authRequired: true,
-        //   tables: [{
-        //     table: 'TEXT',
-        //     readOnly: true,
-        //   }],
-        // }],
+      },
+      {
+        pathPart: 'twilio',
+        fileName: 'twilioBase',
+        methods: [ 'POST', ],
+        twilioSecret: true,
+        sqsQueue: true,
+        tables: [{
+          table: 'USER',
+          readOnly: true,
+        }],
+        next: [{
+          pathPart: '{id}',
+          fileName: 'twilioStatus',
+          methods: [ 'POST' ],
+          sqsQueue: true,
+          twilioSecret: true,
+          sendsMetrics: true,
+          tables: [{
+            table: 'TEXT',
+          }, {
+            table: 'USER',
+          }],
+        }],
       },
       {
         pathPart: 'login',
@@ -1107,11 +1123,21 @@ export class FireWatcherAwsStack extends Stack {
     ) => {
       let resourceIntegration: apigateway.Integration | undefined = undefined;
       if ('fileName' in config) {
+        const initialPolicy: iam.PolicyStatement[] = [];
+        if (config.sendsMetrics) {
+          initialPolicy.push(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [ 'cloudwatch:PutMetricData' ],
+            resources: [ '*' ],
+          }));
+        }
+
         const resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
           runtime: lambda.Runtime.NODEJS_20_X,
           entry: `${__dirname}/../resources/api/v2/${config.fileName}.ts`,
           handler: 'main',
           timeout: Duration.seconds(10),
+          initialPolicy,
         });
         resourceIntegration = new apigateway.LambdaIntegration(resourceHandler, {
           requestTemplates: {
@@ -1151,6 +1177,15 @@ export class FireWatcherAwsStack extends Stack {
             queue.queueUrl,
           );
           queue.grantSendMessages(resourceHandler);
+        }
+
+        // Grant access to the Twilio secret if needed
+        if (config.twilioSecret) {
+          resourceHandler.addEnvironment(
+            'TWILIO_SECRET',
+            secretArn,
+          );
+          twilioSecret.grantRead(resourceHandler);
         }
       }
 
@@ -1216,6 +1251,12 @@ export class FireWatcherAwsStack extends Stack {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          functionAssociations: [
+            {
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              function: redirectCfFunction,
+            },
+          ],
         },
         '/api/*': {
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
@@ -1228,6 +1269,12 @@ export class FireWatcherAwsStack extends Stack {
           ),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          functionAssociations: [
+            {
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              function: redirectCfFunction,
+            },
+          ],
         },
       },
     });
