@@ -1,7 +1,8 @@
 import * as aws from 'aws-sdk';
-import { PhoneNumberAccount, PhoneNumberTypes, UserDepartment, validDepartments, ValidTwilioAccounts, ValidTwilioNumberTypes } from '../../../common/userConstants';
-import { getLogger } from './logger';
-import { MessageType } from '../../../common/frontendApi';
+import { PhoneNumberAccount, PhoneNumberTypes, UserDepartment, validDepartments, ValidTwilioAccounts, ValidTwilioNumberTypes } from '../../common/userConstants';
+import { getLogger } from '../../logic/logger';
+import { MessageType } from '../../common/frontendApi';
+import { parsePhone } from '@/logic/strings';
 
 const logger = getLogger('u-gen');
 const twilio = require('twilio'); // eslint-disable-line @typescript-eslint/no-require-imports
@@ -13,20 +14,9 @@ const secretManager = new aws.SecretsManager();
 const cloudWatch = new aws.CloudWatch();
 const dynamodb = new aws.DynamoDB();
 
-export function parsePhone(num: string, toHuman: boolean = false): string {
-	logger.trace('parsePhone', ...arguments);
-	if (!toHuman) {
-		return num.replace(/[^0-9]/g, '');
-	}
-
-	const matches = parsePhone(num)
-		.match(/([0-9]{3})([0-9]{3})([0-9]{4})/) as string[];
-
-	return matches
-		.slice(1)
-		.join('-');
-}
-
+/**
+ * @deprecated The method should not be used
+ */
 export async function getRecipients(
 	department: string,
 	pageTg: number | null,
@@ -238,6 +228,9 @@ const departmentRequired: MessageType[] = [
 	'departmentAlert',
 ];
 
+/**
+ * @deprecated The method should not be used
+ */
 export async function saveMessageData(
 	messageType: MessageType,
 	messageId: string,
@@ -337,6 +330,9 @@ export async function saveMessageData(
 }
 
 const DEFAULT_PAGE_NUMBER = 'page';
+/**
+ * @deprecated The method should not be used
+ */
 export async function getPageNumber(user: AWS.DynamoDB.AttributeMap): Promise<PhoneNumberTypes> {
 	// Loop over the departments the person is a member of and look for paging groups
 	const possibleDepartments: UserDepartment[] = [];
@@ -379,6 +375,9 @@ interface TwilioMessageConfig {
 	statusCallback?: string;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export async function sendMessage(
 	metricSource: string,
 	messageType: MessageType,
@@ -454,8 +453,14 @@ export async function sendMessage(
 		});
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export type AlertType = 'Api' | 'Dtr' | 'Vhf';
 
+/**
+ * @deprecated The method should not be used
+ */
 export async function sendAlertMessage(metricSource: string, alertType: AlertType, body: string) {
 	logger.trace('sendAlertMessage', ...arguments);
 	const messageId = Date.now().toString();
@@ -493,24 +498,36 @@ interface EventMetric {
 	event: string;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export async function incrementMetric(
 	name: 'Error',
 	metricData: ErrorMetric,
 	sendLessSpecific?: boolean,
 	sendMoreSpecific?: boolean
 ): Promise<unknown>
+/**
+ * @deprecated The method should not be used
+ */
 export async function incrementMetric(
 	name: 'Call',
 	metricData: CallMetric,
 	sendLessSpecific?: boolean,
 	sendMoreSpecific?: boolean
 ): Promise<unknown>
+/**
+ * @deprecated The method should not be used
+ */
 export async function incrementMetric(
 	name: 'Event',
 	metricData: EventMetric,
 	sendLessSpecific?: boolean,
 	sendMoreSpecific?: boolean
 ): Promise<unknown>
+/**
+ * @deprecated The method should not be used
+ */
 export async function incrementMetric(
 	name: string,
 	metricData: ErrorMetric | CallMetric | EventMetric,
@@ -559,6 +576,9 @@ export async function incrementMetric(
 	return;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export function validateBodyIsJson(body: string | null): true {
 	logger.trace('validateBodyIsJson', ...arguments);
 	if (body === null) {
@@ -568,19 +588,4 @@ export function validateBodyIsJson(body: string | null): true {
 	JSON.parse(body);
 
 	return true;
-}
-
-export function randomString(len: number, numeric = false): string {
-	logger.trace('randomString', ...arguments);
-	let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	if (numeric) {
-		chars = '0123456789';
-	}
-	const str: string[] = [];
-
-	for (let i = 0; i < len; i++) {
-		str[i] = chars[Math.floor(Math.random() * chars.length)];
-	}
-
-	return str.join('');
 }

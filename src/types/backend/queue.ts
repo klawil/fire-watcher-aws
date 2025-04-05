@@ -1,5 +1,5 @@
-import { CreateTextApi } from "./api/apiv2/twilio";
-import { FullUserObject, PagingTalkgroup, UserDepartment } from "./api/apiv2/users";
+import { CreateTextApi } from "@/types/api/twilio";
+import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
 
 export interface ActivateUserQueueItem {
   action: 'activate-user';

@@ -1,8 +1,8 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '../../utils/logger';
+import { getLogger } from '../../../../logic/logger';
 import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
-import { CreateUserApi, createUserApiBodyValidator, FullUserObject, GetAllUsersApi } from '@/types/api/apiv2/users';
-import { api401Body, api403Body, generateApi400Body } from '@/types/api/apiv2/_shared';
+import { CreateUserApi, createUserApiBodyValidator, FullUserObject, GetAllUsersApi } from '@/types/api/users';
+import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
 import { ActivateBody } from '../../types/queue';
 
 const logger = getLogger('users');

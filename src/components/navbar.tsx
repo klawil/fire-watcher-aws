@@ -4,7 +4,7 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
-import { PageConfig } from '@/types/page';
+import { PageConfig } from '@/types/frontend/page';
 import { useContext } from 'react';
 import { LoggedInUserContext } from '@/logic/clientContexts';
 import { DarkModeContext, LocationContext } from '@/logic/clientContexts';

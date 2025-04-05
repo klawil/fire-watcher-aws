@@ -1,8 +1,14 @@
 import { ApiResponseBase } from "./common";
 import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
+/**
+ * @deprecated The method should not be used
+ */
 export type MessageType = 'page' | 'transcript' | 'department' | 'departmentAnnounce' | 'pageAnnounce' | 'account' | 'alert' | 'departmentAlert';
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface TextObject {
 	datetime: number;
 
@@ -33,12 +39,18 @@ export interface TextObject {
 interface SeenByRecorder {
 	[key: string]: boolean;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export type SeenByRecorderKeys = 'SupportData' | 'SupportReg' | 'SupportVoice' | 'SiteFailed'
 	| 'ValidInfo' | 'CompositeCtrl' | 'NoServReq' | 'BackupCtrl' | 'SupportAuth' | 'ActiveConn'
 	| 'ConvChannel';
 type BaseSiteObject = {
 	[key in SeenByRecorderKeys]?: SeenByRecorder;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface SiteObject extends BaseSiteObject {
 	SiteId: string;
 	SiteName: string;
@@ -52,6 +64,9 @@ export interface SiteObject extends BaseSiteObject {
 	};
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface AnnouncementApiBody {
 	body: string;
 	test?: boolean;
@@ -59,6 +74,9 @@ export interface AnnouncementApiBody {
 	talkgroup?: PagingTalkgroup;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiFrontendListTextsResponse extends ApiResponseBase {
 	count?: number;
 	scanned?: number;
@@ -84,11 +102,17 @@ interface ApiFrontendStatsResponseSuccess {
 		}[];
 	};
 }
+/**
+ * @deprecated The method should not be used
+ */
 export type ApiFrontendStatsResponse = ApiFrontendStatsResponseSuccess | {
 	success: false;
 	errors: string[];
 	message: string;
 };
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiFrontendSitesResponse extends ApiResponseBase {
 	data: SiteObject[];
 }

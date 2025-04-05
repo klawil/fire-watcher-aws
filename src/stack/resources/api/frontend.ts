@@ -1,10 +1,10 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, validateBodyIsJson } from '../utils/general';
-import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
-import { getLoggedInUser } from '../utils/auth';
+import { incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
+import { getLoggedInUser } from '../../utils/auth';
 import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, AnnouncementApiBody, TextObject } from '../../../common/frontendApi';
-import { getLogger } from '../utils/logger';
+import { getLogger } from '../../../logic/logger';
 import { pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { AnnounceBody } from '../types/queue';
 

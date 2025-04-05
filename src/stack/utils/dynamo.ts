@@ -1,5 +1,5 @@
 import * as aws from 'aws-sdk';
-import { getLogger } from './logger';
+import { getLogger } from '../../logic/logger';
 
 const logger = getLogger('dynamo');
 
@@ -15,6 +15,9 @@ interface DynamoListOutput extends aws.DynamoDB.QueryOutput {
 
 const dynamodb = new aws.DynamoDB();
 
+/**
+ * @deprecated The method should not be used
+ */
 export async function mergeDynamoQueries(
 	queryConfigs: aws.DynamoDB.QueryInput[],
 	sortKey: string,

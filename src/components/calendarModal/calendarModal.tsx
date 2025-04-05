@@ -1,7 +1,7 @@
 'use client';
 
-import { fNameToDate } from "@/common/stringManipulation";
-import { AudioAction, AudioState } from "@/types/audio";
+import { fNameToDate } from "@/logic/strings";
+import { AudioAction, AudioState } from "@/types/frontend/audio";
 import { useCallback, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import DatePicker from "react-datepicker";

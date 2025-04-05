@@ -5,13 +5,13 @@ import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import styles from "./textsPage.module.css";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { fNameToDate } from "@/common/stringManipulation";
+import { fNameToDate } from "@/logic/strings";
 import { dateTimeToTimeStr, secondsToTime } from "@/logic/dateAndFile";
 import { useRefIntersection } from "@/logic/uiUtils";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { Variant } from "react-bootstrap/esm/types";
 import { typeFetch } from "@/logic/typeFetch";
-import { FrontendTextObject, GetAllTextsApi } from "@/types/api/apiv2/texts";
+import { FrontendTextObject, GetAllTextsApi } from "@/types/api/texts";
 
 interface TextObject extends FrontendTextObject {
   pageTime?: number;

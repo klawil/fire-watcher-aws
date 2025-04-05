@@ -1,7 +1,7 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, validateBodyIsJson } from '../utils/general';
-import { getLogger } from '../utils/logger';
+import { incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { getLogger } from '../../../logic/logger';
 
 const logger = getLogger('events');
 

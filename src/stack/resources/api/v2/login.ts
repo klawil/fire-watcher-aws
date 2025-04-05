@@ -1,11 +1,12 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '../../utils/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, getSetCookieHeader, getUserPermissions, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
-import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/apiv2/login';
-import { api200Body, generateApi400Body } from '@/types/api/apiv2/_shared';
-import { FullUserObject } from '@/types/api/apiv2/users';
+import { getLogger } from '../../../../logic/logger';
+import { checkObject, getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
+import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/login';
+import { api200Body, generateApi400Body } from '@/types/api/_shared';
+import { FullUserObject } from '@/types/api/users';
 import { LoginBody } from '../../types/queue';
-import { randomString } from '../../utils/general';
+import { getUserPermissions } from '../../../utils/user';
+import { randomString } from '@/logic/strings';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 

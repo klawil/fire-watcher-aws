@@ -1,4 +1,4 @@
-import { AudioAction, AudioState } from "@/types/audio";
+import { AudioAction, AudioState } from "@/types/frontend/audio";
 
 export const defaultFilterPreset = 'NSCFPD';
 

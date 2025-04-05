@@ -1,8 +1,17 @@
 import * as aws from 'aws-sdk';
 
+/**
+ * @deprecated The method should not be used
+ */
 export const authUserCookie = 'cofrn-user';
+/**
+ * @deprecated The method should not be used
+ */
 export const authTokenCookie = 'cofrn-token';
 
+/**
+ * @deprecated The method should not be used
+ */
 export const allUserCookies = [
 	authUserCookie,
 	authTokenCookie,
@@ -11,6 +20,9 @@ export const allUserCookies = [
 	'cofrn-user-super',
 ];
 
+/**
+ * @deprecated The method should not be used
+ */
 export function isUserActive(user: aws.DynamoDB.AttributeMap): boolean {
 	const userKeys = Object.keys(user);
 	for (let i = 0; i < userKeys.length; i++) {
@@ -23,6 +35,9 @@ export function isUserActive(user: aws.DynamoDB.AttributeMap): boolean {
 	return false;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export function isUserAdmin(user: aws.DynamoDB.AttributeMap): boolean {
 	const userKeys = Object.keys(user);
 	for (let i = 0; i < userKeys.length; i++) {

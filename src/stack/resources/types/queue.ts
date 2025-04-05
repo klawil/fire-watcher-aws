@@ -1,16 +1,25 @@
 import { PagingTalkgroup, UserDepartment } from "../../../common/userConstants";
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface ActivateBody {
 	action: 'activate';
 	phone: string;
 	department: UserDepartment;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface TwilioBody {
 	action: 'twilio';
 	body: string;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface TwilioErrorBody {
 	action: 'twilio_error';
 	count: number;
@@ -19,6 +28,9 @@ export interface TwilioErrorBody {
 	department: UserDepartment[];
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface AnnounceBody {
 	action: 'announce';
 	body: string;
@@ -28,6 +40,9 @@ export interface AnnounceBody {
 	talkgroup?: PagingTalkgroup;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface PageBody {
 	action: 'page';
 	key: string;
@@ -36,11 +51,17 @@ export interface PageBody {
 	isTest?: boolean;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface LoginBody {
 	action: 'login';
 	phone: string;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface TranscribeBody {
 	action: 'transcribe';
 	'detail-type': string;

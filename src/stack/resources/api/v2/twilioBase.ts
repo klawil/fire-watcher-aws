@@ -1,11 +1,11 @@
 import * as AWS from 'aws-sdk';
-import { CreateTextApi, createTextBodyValidator, createTextQueryValidator } from "@/types/api/apiv2/twilio";
-import { getTwilioSecret, twilioPhoneNumbers } from '../../utils/general';
-import { FullUserObject } from '@/types/api/apiv2/users';
-import { TwilioTextQueueItem } from '../../types/queue';
+import { CreateTextApi, createTextBodyValidator, createTextQueryValidator } from "@/types/api/twilio";
+import { getTwilioSecret, twilioPhoneNumbers } from '@/stack/utils/general';
+import { FullUserObject } from '@/types/api/users';
+import { TwilioTextQueueItem } from '@/types/backend/queue';
 import { validateTwilioRequest } from './_twilio';
 import { checkObject, handleResourceApi, LambdaApiFunction, TABLE_USER } from './_base';
-import { getLogger } from '../../utils/logger';
+import { getLogger } from '@/logic/logger';
 
 const logger = getLogger('twilioBase');
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -74,7 +74,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   for (const [key, value] of urlParamsBody.entries()) {
     bodyObj[key] = value;
   }
-  const [ body, bodyErrors ] = checkObject(
+  const [ body, bodyErrors ] = checkObject<CreateTextApi['body']>(
     bodyObj,
     createTextBodyValidator,
   );

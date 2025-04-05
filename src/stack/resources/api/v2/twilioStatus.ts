@@ -1,12 +1,13 @@
 import * as AWS from 'aws-sdk';
-import { generateApi400Body } from '@/types/api/apiv2/_shared';
-import { getLogger } from '../../utils/logger';
+import { generateApi400Body } from '@/types/api/_shared';
+import { getLogger } from '../../../../logic/logger';
 import { handleResourceApi, LambdaApiFunction, TABLE_TEXT, TABLE_USER, validateRequest } from './_base';
-import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator } from '@/types/api/apiv2/twilio';
+import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator } from '@/types/api/twilio';
 import { validateTwilioRequest } from './_twilio';
-import { getTwilioSecret, parsePhone, twilioPhoneNumbers } from '../../utils/general';
-import { FullUserObject, validDepartments } from '@/types/api/apiv2/users';
+import { getTwilioSecret, twilioPhoneNumbers } from '../../../utils/general';
+import { FullUserObject, validDepartments } from '@/types/api/users';
 import { TwilioErrorBody } from '../../types/queue';
+import { formatPhone } from '@/logic/strings';
 
 const logger = getLogger('twilioStatus');
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -167,7 +168,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
             action: 'twilio_error',
             count: result.Attributes.lastStatusCount,
             name: `${result.Attributes.fName} ${result.Attributes.lName}`,
-            number: parsePhone(result.Attributes.phone.toString(), true),
+            number: formatPhone(result.Attributes.phone.toString()),
             department: validDepartments.filter(dep => result.Attributes && result.Attributes[dep]?.active),
           };
           return sqs.sendMessage({

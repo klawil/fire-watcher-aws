@@ -1,3 +1,6 @@
+/**
+ * @deprecated The method should not be used
+ */
 export const validDepartments = [
 	'Baca',
 	'Crestone',
@@ -5,16 +8,28 @@ export const validDepartments = [
 	'PageOnly',
 	'Saguache',
 ] as const;
+/**
+ * @deprecated The method should not be used
+ */
 export type UserDepartment = typeof validDepartments[number];
 
+/**
+ * @deprecated The method should not be used
+ */
 export const validPhoneNumberAccounts = [
 	'Baca',
 	'NSCAD',
 	'Crestone',
 	'Saguache',
 ] as const;
+/**
+ * @deprecated The method should not be used
+ */
 export type PhoneNumberAccount = typeof validPhoneNumberAccounts[number];
 
+/**
+ * @deprecated The method should not be used
+ */
 export const pagingTalkgroupOrder = [
 	8332,
 	18332,
@@ -24,11 +39,23 @@ export const pagingTalkgroupOrder = [
 	8281,
 	8181,
 ] as const;
+/**
+ * @deprecated The method should not be used
+ */
 export type PagingTalkgroup = typeof pagingTalkgroupOrder[number];
 
+/**
+ * @deprecated The method should not be used
+ */
 export type ValidTwilioAccounts = '' | PhoneNumberAccount;
+/**
+ * @deprecated The method should not be used
+ */
 export type ValidTwilioNumberTypes = 'page' | 'alert' | 'chat';
 
+/**
+ * @deprecated The method should not be used
+ */
 export type PhoneNumberTypes = `${ValidTwilioNumberTypes}${ValidTwilioAccounts}`;
 
 interface DepartmentConfig {
@@ -46,12 +73,18 @@ interface PageConfig {
 	pageService: string;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export const defaultDepartment = 'Crestone';
 
 type DepartmentConfigBaseType = {
 	[key in UserDepartment]: DepartmentConfig;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export const departmentConfig: DepartmentConfigBaseType = {
 	Crestone: {
 		name: 'Crestone Volunteer Fire Department',
@@ -92,6 +125,9 @@ export const departmentConfig: DepartmentConfigBaseType = {
 	},
 };
 
+/**
+ * @deprecated The method should not be used
+ */
 export const pagingConfig: {
 	[key in PagingTalkgroup]: PageConfig;
 } = {

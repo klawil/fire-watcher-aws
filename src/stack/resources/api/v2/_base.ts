@@ -1,9 +1,11 @@
-import { api403Response, Validator } from "@/types/api/apiv2/_shared";
+import { api403Response, Validator } from "@/types/api/_shared";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "ts-oas";
 import * as AWS from 'aws-sdk';
-import { getLogger } from "../../utils/logger";
-import { districtAdminUserKeys, FrontendUserObject, FullUserObject, UserDepartment, validDepartments } from "@/types/api/apiv2/users";
+import { getLogger } from "../../../../logic/logger";
+import { districtAdminUserKeys, FrontendUserObject, FullUserObject } from "@/types/api/users";
+import { UserPermissions } from "@/types/backend/user";
+import { getUserPermissions } from "../../../utils/user";
 
 const logger = getLogger('api/v2/_base');
 
@@ -233,13 +235,6 @@ export function getFrontendUserObj(
   return newUser;
 }
 
-interface UserPermissions {
-  isUser: boolean;
-  isAdmin: boolean;
-  isDistrictAdmin: boolean;
-  adminDepartments: UserDepartment[];
-}
-
 const authUserCookie = 'cofrn-user';
 const authTokenCookie = 'cofrn-token';
 
@@ -249,25 +244,6 @@ function getDeleteCookieHeader(cookie: string) {
 
 export function getSetCookieHeader(cookie: string, value: string, age: number) {
   return `${encodeURIComponent(cookie)}=${encodeURIComponent(value)}; Secure; SameSite=None; Path=/; Max-Age=${age}`;
-}
-
-export function getUserPermissions(user: FullUserObject | null): UserPermissions {
-  const userPerms: UserPermissions = {
-    isUser: false,
-    isAdmin: false,
-    isDistrictAdmin: false,
-    adminDepartments: [],
-  };
-  if (user === null) return userPerms;
-
-  // Determine the permissions
-  const activeDepartments = validDepartments.filter(dep => user[dep]?.active);
-  userPerms.adminDepartments = activeDepartments.filter(dep => user[dep]?.admin);
-  userPerms.isUser = activeDepartments.length > 0;
-  userPerms.isAdmin = userPerms.adminDepartments.length > 0;
-  userPerms.isDistrictAdmin = !!user.isDistrictAdmin;
-
-  return userPerms;
 }
 
 export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[

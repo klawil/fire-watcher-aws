@@ -1,5 +1,5 @@
-import { FrontendUserObject } from "@/types/api/apiv2/users";
-import { UserActions, UsersState } from "@/types/users";
+import { FrontendUserObject } from "@/types/api/users";
+import { UserActions, UsersState } from "@/types/frontend/users";
 import { createContext } from "react";
 
 export const UsersDispatchContext = createContext<React.ActionDispatch<[action: UserActions]>>(() => {});

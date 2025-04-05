@@ -1,8 +1,14 @@
 import { ApiResponseBase } from "./common";
 import { PagingTalkgroup, UserDepartment } from "./userConstants";
 
+/**
+ * @deprecated The method should not be used
+ */
 export type UserObjectBooleans = 'isActive' | 'isAdmin' | 'isDistrictAdmin'
 	| 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts';
+/**
+ * @deprecated The method should not be used
+ */
 export type UserObjectStrings = 'phone' | 'fName' | 'lName';
 
 interface UserObjectBase {
@@ -24,8 +30,14 @@ type UserObjectBaseDepartments = {
 		admin: boolean;
 	};
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface UserObject extends UserObjectBase, UserObjectBaseBooleans, UserObjectBaseStrings, UserObjectBaseDepartments {}
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface InternalUserObject extends UserObject {
 	fidoKeys?: {
 		[key: string]: {
@@ -44,12 +56,21 @@ export interface InternalUserObject extends UserObject {
 	}[];
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserLoginBody {
 	phone: string;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserAuthBody {
 	code: string;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserUpdateBody {
 	isMe?: boolean;
 	phone: string;
@@ -65,6 +86,9 @@ export interface ApiUserUpdateBody {
 	callSign?: string;
 	pagingPhone?: UserDepartment | null;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserUpdateGroupBody {
 	phone: string;
 	department: UserDepartment;
@@ -72,6 +96,9 @@ export interface ApiUserUpdateGroupBody {
 	callSign?: string;
 	admin?: boolean;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserFidoAuthBody {
 	rawId: string;
 	challenge: string;
@@ -86,6 +113,9 @@ export interface ApiUserFidoAuthBody {
 		type: string;
 	};
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserFidoRegisterBody {
 	challenge: string;
 	name: string;
@@ -99,13 +129,22 @@ export interface ApiUserFidoRegisterBody {
 	};
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserLoginResult extends ApiResponseBase {
 	errors: string[];
 	data?: string[];
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserAuthResponse extends ApiResponseBase {
 	errors: string[];
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserGetUserResponse extends ApiResponseBase, Partial<UserObject> {
 	isDistrictAdmin: boolean;
 	isUser: boolean;
@@ -113,14 +152,26 @@ export interface ApiUserGetUserResponse extends ApiResponseBase, Partial<UserObj
 		[key: string]: string;
 	};
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserUpdateResponse extends ApiResponseBase {
 	errors: string[];
 	user?: UserObject;
 }
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserFidoGetAuthResponse extends ApiResponseBase {
 	challenge: string; // Baes64 Buffer
 }
+/**
+ * @deprecated The method should not be used
+ */
 export type ApiUserFidoAuthResponse = ApiResponseBase;
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserFidoChallengeResponse extends ApiResponseBase {
 	options: {
 		challenge: string; // Base64 Buffer
@@ -141,7 +192,13 @@ export interface ApiUserFidoChallengeResponse extends ApiResponseBase {
 		attestation?: 'direct' | 'indirect' | 'none';
 	};
 };
+/**
+ * @deprecated The method should not be used
+ */
 export type ApiUserFidoRegisterResponse = ApiResponseBase;
+/**
+ * @deprecated The method should not be used
+ */
 export interface ApiUserListResponse extends ApiResponseBase {
 	users: UserObject[];
 }

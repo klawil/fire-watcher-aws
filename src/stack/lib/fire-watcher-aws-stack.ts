@@ -1138,6 +1138,9 @@ export class FireWatcherAwsStack extends Stack {
           handler: 'main',
           timeout: Duration.seconds(10),
           initialPolicy,
+          environment: {
+            TESTING_USER: process.env.TESTING_USER as string,
+          },
         });
         resourceIntegration = new apigateway.LambdaIntegration(resourceHandler, {
           requestTemplates: {

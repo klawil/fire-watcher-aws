@@ -1,9 +1,9 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { getLogger } from './logger';
+import { getLogger } from '../../logic/logger';
 import { parseDynamoDbAttributeMap } from './dynamodb';
-import { InternalUserObject } from '../../../common/userApi';
-import { authTokenCookie, authUserCookie, isUserActive, isUserAdmin } from '../types/auth';
+import { InternalUserObject } from '../../common/userApi';
+import { authTokenCookie, authUserCookie, isUserActive, isUserAdmin } from '../resources/types/auth';
 
 const logger = getLogger('u-auth');
 
@@ -15,6 +15,9 @@ interface Cookies {
 	[key: string]: string;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export function getCookies(event: APIGatewayProxyEvent): Cookies {
 	logger.trace('getCookies', event);
 	return (event.headers.Cookie || '')
@@ -32,6 +35,9 @@ export function getCookies(event: APIGatewayProxyEvent): Cookies {
 		}, {});
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null | InternalUserObject> {
 	logger.trace('getLoggedInUser', event);
 

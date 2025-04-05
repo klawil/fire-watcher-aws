@@ -4,7 +4,7 @@ import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
 import { BsChevronDown, BsChevronUp, BsStar, BsStarFill } from "react-icons/bs";
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
-import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/audio";
+import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/frontend/audio";
 import { audioReducer, defaultAudioState } from "@/logic/audioState";
 import { dateToStr, findClosestFileIdx } from "@/logic/dateAndFile";
 import styles from './audioList.module.css';
@@ -12,12 +12,12 @@ import AudioPlayerBar from "../audioPlayerBar/audioPlayerBar";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 import { isElemInView, useRefIntersection } from "@/logic/uiUtils";
 import AudioFilter from "../audioFilter/audioFilter";
-import { fNameToDate } from "@/common/stringManipulation";
+import { fNameToDate } from "@/logic/strings";
 import CalendarModal from "../calendarModal/calendarModal";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { typeFetch } from "@/logic/typeFetch";
-import { GetAllTalkgroupsApi } from "@/types/api/apiv2/talkgroups";
-import { GetAllFilesApi } from "@/types/api/apiv2/files";
+import { GetAllTalkgroupsApi } from "@/types/api/talkgroups";
+import { GetAllFilesApi } from "@/types/api/files";
 
 const loadAfterAddedMinWait = 10000;
 

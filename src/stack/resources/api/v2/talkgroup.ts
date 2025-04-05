@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '../../utils/logger';
-import { api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/apiv2/_shared';
-import { GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator } from '@/types/api/apiv2/talkgroups';
+import { getLogger } from '../../../../logic/logger';
+import { api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
+import { GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator } from '@/types/api/talkgroups';
 import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, TABLE_TALKGROUP, validateRequest } from './_base';
 
 const logger = getLogger('file');

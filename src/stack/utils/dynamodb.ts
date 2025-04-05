@@ -1,10 +1,13 @@
 import * as aws from 'aws-sdk';
-import { getLogger } from './logger';
+import { getLogger } from '../../logic/logger';
 
 const logger = getLogger('dynamodb');
 
 type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
 
+/**
+ * @deprecated The method should not be used
+ */
 export function parseDynamoDbAttributeValue(value: aws.DynamoDB.AttributeValue): DynamoDbValues {
 	logger.trace('parseDynamoDbAttributeValue', value);
 	if (typeof value.S !== 'undefined') {
@@ -30,6 +33,9 @@ interface NewObject {
 	[key: string]: DynamoDbValues | NewObject;
 }
 
+/**
+ * @deprecated The method should not be used
+ */
 export function parseDynamoDbAttributeMap(item: aws.DynamoDB.AttributeMap): NewObject {
 	logger.trace('parseDynamoDbAttributeMap', item);
 	const newObj: NewObject = {};

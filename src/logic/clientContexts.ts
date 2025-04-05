@@ -2,7 +2,7 @@
 
 import { createContext } from "react";
 import { Variant } from 'react-bootstrap/esm/types';
-import { FrontendUserState } from "@/types/api/apiv2/users";
+import { FrontendUserState } from "@/types/api/users";
 
 export const LoggedInUserContext = createContext<null | FrontendUserState>(null);
 export const RefreshLoggedInUserContext = createContext<() => Promise<void>>(async () => {});

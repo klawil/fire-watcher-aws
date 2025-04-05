@@ -1,6 +1,6 @@
 'use client';
 
-import { PageConfig } from "@/types/page";
+import { PageConfig } from "@/types/frontend/page";
 import CofrnNavbar from "./navbar";
 import { Container, Nav, Navbar } from "react-bootstrap";
 import { LoggedInUserContext, DarkModeContext } from "@/logic/clientContexts";

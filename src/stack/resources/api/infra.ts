@@ -1,11 +1,11 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, validateBodyIsJson } from '../utils/general';
-import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
+import { getTwilioSecret, incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
 import { PageBody } from '../types/queue';
 import { PagingTalkgroup } from '../../../common/userConstants';
-import { getLogger } from '../utils/logger';
-import { mergeDynamoQueries } from '../utils/dynamo';
+import { getLogger } from '../../../logic/logger';
+import { mergeDynamoQueries } from '../../utils/dynamo';
 
 const logger = getLogger('infra');
 

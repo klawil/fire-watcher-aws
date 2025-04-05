@@ -1,6 +1,6 @@
 'use client';
 
-import { formatPhone } from "@/common/stringManipulation";
+import { formatPhone } from "@/logic/strings";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import { AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
 import { useCallback, useContext, useState } from "react";
@@ -13,7 +13,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { UpdateUserApi } from "@/types/api/apiv2/users";
+import { UpdateUserApi } from "@/types/api/users";
 import { typeFetch } from "@/logic/typeFetch";
 
 const userEditableFields: {

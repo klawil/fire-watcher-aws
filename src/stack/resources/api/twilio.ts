@@ -1,11 +1,12 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, parsePhone, twilioPhoneNumbers } from '../utils/general';
+import { getTwilioSecret, incrementMetric, twilioPhoneNumbers } from '../../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
 import { departmentConfig, PhoneNumberAccount, UserDepartment, validDepartments, validPhoneNumberAccounts, ValidTwilioAccounts } from '../../../common/userConstants';
-import { getLogger } from '../utils/logger';
+import { getLogger } from '../../../logic/logger';
 import { isUserActive } from '../types/auth';
-import { getLoggedInUser } from '../utils/auth';
+import { getLoggedInUser } from '../../utils/auth';
+import { formatPhone } from '@/logic/strings';
 
 const logger = getLogger('twilio');
 
@@ -361,7 +362,7 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 							action: 'twilio_error',
 							count: parseInt(result.Attributes?.lastStatusCount?.N || '0', 10),
 							name: `${result.Attributes?.fName?.S} ${result.Attributes?.lName?.S}`,
-							number: parsePhone(result.Attributes?.phone?.N || '', true),
+							number: formatPhone(result.Attributes?.phone?.N || ''),
 							department: validDepartments.filter(dep => result.Attributes && result.Attributes[dep]?.M?.active?.BOOL)
 						};
 						return sqs.sendMessage({

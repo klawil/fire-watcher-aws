@@ -1,14 +1,15 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, randomString, validateBodyIsJson } from '../utils/general';
-import { parseDynamoDbAttributeMap, parseDynamoDbAttributeValue } from '../utils/dynamodb';
-import { getCookies, getLoggedInUser } from '../utils/auth';
+import { incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { parseDynamoDbAttributeMap, parseDynamoDbAttributeValue } from '../../utils/dynamodb';
+import { getCookies, getLoggedInUser } from '../../utils/auth';
 import { authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
 import { ApiUserAuthResponse, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, InternalUserObject, UserObject } from '../../../common/userApi';
 import { unauthorizedApiResponse } from '../types/api';
 import { PagingTalkgroup, pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { ActivateBody, LoginBody } from '../types/queue';
-import { getLogger } from '../utils/logger';
+import { getLogger } from '../../../logic/logger';
+import { randomString } from '@/logic/strings';
 
 const logger = getLogger('user');
 

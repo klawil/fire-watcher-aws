@@ -7,7 +7,7 @@ import { AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext,
 import { Alert, Container } from 'react-bootstrap';
 import { Variant } from 'react-bootstrap/esm/types';
 import { typeFetch } from '@/logic/typeFetch';
-import { FrontendUserObject, FrontendUserState, GetUserApi } from '@/types/api/apiv2/users';
+import { FrontendUserObject, FrontendUserState, GetUserApi } from '@/types/api/users';
 import { validDepartments } from '@/common/userConstants';
 
 function useDarkMode() {

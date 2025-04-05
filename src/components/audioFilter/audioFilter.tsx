@@ -1,4 +1,4 @@
-import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams, filterPresetValues } from "@/types/audio";
+import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams, filterPresetValues } from "@/types/frontend/audio";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";

@@ -1,10 +1,10 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric } from '../utils/general';
-import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
-import { mergeDynamoQueries } from '../utils/dynamo';
+import { incrementMetric } from '../../utils/general';
+import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
+import { mergeDynamoQueries } from '../../utils/dynamo';
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject } from '../../../common/audioApi';
-import { getLogger } from '../utils/logger';
+import { getLogger } from '../../../logic/logger';
 
 const logger = getLogger('audio');
 

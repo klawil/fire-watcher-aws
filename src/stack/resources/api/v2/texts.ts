@@ -1,8 +1,8 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '../../utils/logger';
+import { getLogger } from '../../../../logic/logger';
 import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, TABLE_TEXT } from './_base';
-import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, omittedFrontendTextFields } from '@/types/api/apiv2/texts';
-import { api401Body, api403Body, generateApi400Body } from '@/types/api/apiv2/_shared';
+import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, omittedFrontendTextFields } from '@/types/api/texts';
+import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
 
 const logger = getLogger('texts');
 const docClient = new AWS.DynamoDB.DocumentClient();

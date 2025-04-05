@@ -10,8 +10,8 @@ import Table from "react-bootstrap/Table";
 import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
 import { UsersDispatchContext } from "@/logic/usersState";
-import { formatPhone } from "@/common/stringManipulation";
-import { CreateUserApi, FrontendUserObject, UpdateUserApi } from "@/types/api/apiv2/users";
+import { formatPhone } from "@/logic/strings";
+import { CreateUserApi, FrontendUserObject, UpdateUserApi } from "@/types/api/users";
 import { typeFetch } from "@/logic/typeFetch";
 
 interface CheckboxConfig {
