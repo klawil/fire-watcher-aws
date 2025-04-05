@@ -14,7 +14,7 @@ const sqs = new AWS.SQS();
 const cloudWatch = new AWS.CloudWatch();
 const queueUrl = process.env.QUEUE_URL as string;
 
-const GET: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
+const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   logger.trace('GET', ...arguments);
   const eventTime = Date.now();
 
@@ -61,7 +61,7 @@ const GET: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       generateApi400Body([ 'From' ]),
     ];
   }
-  const phoneNumberConf = phoneNumberConfigs[body.To];
+  const phoneNumberConf = phoneNumberConfigs[body.From];
   if (typeof twilioConf[`authToken${phoneNumberConf.account || ''}`] === 'undefined') {
     logger.error(`Invalid phone number account - ${phoneNumberConf.account || 'undef'}`, body, phoneNumberConf);
     return [
@@ -117,8 +117,13 @@ const GET: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       ':eventListItem': [ eventTime ],
       ':eventPhoneListItem': [ user.phone ],
       ':from': body.From,
+      ':blankList': [],
     },
-    UpdateExpression: 'ADD #eventName :eventListItem, #eventPhoneList :eventPhoneListItem SET #from = :from',
+    UpdateExpression: 'SET ' + [
+      '#eventName = list_append(if_not_exists(#eventName, :blankList), :eventListItem)',
+      '#eventPhoneList = list_append(if_not_exists(#eventPhoneList, :blankList), :eventPhoneListItem)',
+      '#from = :from',
+    ].join(', '),
   }).promise();
 
   // Update the user for delivered and undelivered messages
@@ -198,5 +203,5 @@ const GET: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
 }
 
 export const main = handleResourceApi.bind(null, {
-  GET,
+  POST,
 });
