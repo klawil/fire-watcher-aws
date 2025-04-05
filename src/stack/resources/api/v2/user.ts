@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
+import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, TABLE_USER, validateRequest } from './_base';
 import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiParamsValidator, validDepartments } from '@/common/apiv2/users';
 import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/common/apiv2/_shared';
 
@@ -58,19 +58,29 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
 const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
-  // Make sure the path parameter is valid
-  const [ params, paramsErrors ] = checkObject<GetUserApi['params']>(
-    event.pathParameters,
-    userApiParamsValidator,
-  );
+  // Validate the path params and body
+  const {
+    params,
+    body,
+    validationErrors,
+  } = validateRequest<UpdateUserApi>({
+    paramsRaw: event.pathParameters,
+    paramsValidator: userApiParamsValidator,
+    bodyRaw: event.body,
+    bodyParser: 'json',
+    bodyValidator: updateUserApiBodyValidator,
+  });
   if (
     params === null ||
-    paramsErrors.length > 0
-  )
+    body === null ||
+    Object.keys(body).length === 0 ||
+    validationErrors.length > 0
+  ) {
     return [
       400,
-      generateApi400Body(paramsErrors),
-    ];
+      generateApi400Body(validationErrors),
+    ]
+  }
 
   // Authorize the user
   const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
@@ -83,19 +93,6 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     updateType === 'OTHER'
   )
     return [ 403, api403Body, userHeaders ];
-
-  // Parse the body
-  const [ body, bodyErrors ] = parseJsonBody<UpdateUserApi['body']>(
-    event.body,
-    updateUserApiBodyValidator,
-  );
-  if (
-    body === null ||
-    Object.keys(body).length === 0 ||
-    bodyErrors.length > 0
-  ) {
-    return [ 400, generateApi400Body(bodyErrors), userHeaders ];
-  }
 
   // Validate the user exists and can be edited by the authenticated user
   const phoneToUpdate = updateType === 'SELF'
@@ -175,11 +172,15 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   logger.trace('DELETE', ...arguments);
 
   // Make sure the path parameter is valid
+  const [ params, paramsErrors ] = checkObject(
+    event.pathParameters,
+    userApiParamsValidator,
+  );
   if (
-    typeof event.pathParameters?.id !== 'string' ||
-    !/^[0-9]{10}$/.test(event.pathParameters.id)
+    params === null ||
+    paramsErrors.length > 0
   ) {
-    return [ 404, api404Body, {} ];
+    return [ 404, api404Body ];
   }
 
   // Authorize the user
@@ -190,7 +191,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   }
 
   // Validate the user exists
-  const phoneToDelete = Number(event.pathParameters.id);
+  const phoneToDelete = params.id;
   const changeUserGet = await docClient.get({
     TableName: TABLE_USER,
     Key: {

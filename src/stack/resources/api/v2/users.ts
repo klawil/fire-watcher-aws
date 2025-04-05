@@ -100,11 +100,6 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
 const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   logger.trace('POST', ...arguments);
 
-  // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
-
   // Parse the body
   const [ body, errorKeys ] = parseJsonBody<CreateUserApi['body']>(
     event.body,
@@ -114,8 +109,13 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
     body === null ||
     errorKeys.length > 0
   ) {
-    return [ 400, generateApi400Body(errorKeys), userHeaders ];
+    return [ 400, generateApi400Body(errorKeys) ];
   }
+
+  // Authorize the user
+  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
+  if (user === null) return [ 401, api401Body, userHeaders ];
+  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
 
   // Validate the user keys and build the insert
   const putConfig: AWS.DynamoDB.DocumentClient.PutItemInput = {

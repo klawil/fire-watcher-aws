@@ -2,7 +2,7 @@ import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
 import { api401Body, api403Body, api404Body, generateApi400Body } from '@/common/apiv2/_shared';
 import { GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator } from '@/common/apiv2/talkgroups';
-import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_TALKGROUP } from './_base';
+import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, TABLE_TALKGROUP, validateRequest } from './_base';
 
 const logger = getLogger('file');
 const docClient = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });
@@ -34,33 +34,31 @@ const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
 }
 
 const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
+  // Validate the request
+  const {
+    params,
+    body,
+    validationErrors,
+  } = validateRequest<PatchTalkgroupApi>({
+    paramsRaw: event.pathParameters,
+    paramsValidator: talkgroupParamsValidator,
+    bodyRaw: event.body,
+    bodyParser: 'json',
+    bodyValidator: talkgroupBodyValidator,
+  });
+  if (
+    params === null ||
+    body == null ||
+    validationErrors.length > 0
+  ) return [
+    400,
+    generateApi400Body(validationErrors),
+  ];
+
   // Authorize the user
   const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
   if (user === null) return [ 401, api401Body, userHeaders ];
   if (!userPerms.isDistrictAdmin) return [ 403, api403Body, userHeaders ];
-
-  // Validate the path parameters
-  const [ params, paramsErrors ] = checkObject<PatchTalkgroupApi['params']>(
-    event.pathParameters,
-    talkgroupParamsValidator,
-  );
-  if (
-    params === null ||
-    paramsErrors.length > 0
-  ) return [ 400, generateApi400Body(paramsErrors) ];
-
-  // Validate the body
-  const [ body, bodyErrors ] = parseJsonBody<PatchTalkgroupApi['body']>(
-    event.body,
-    talkgroupBodyValidator,
-  );
-  if (
-    body === null ||
-    bodyErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(bodyErrors),
-  ];
 
   // Verify that the talkgroup exists
   const tgObj = await docClient.get({

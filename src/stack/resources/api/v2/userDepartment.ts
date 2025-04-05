@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../utils/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
+import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, TABLE_USER, validateRequest } from './_base';
 import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/common/apiv2/users';
 import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/common/apiv2/_shared';
 import { ActivateBody } from '../../types/queue';
@@ -13,28 +13,29 @@ const queueUrl = process.env.QUEUE_URL as string;
 const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) {
   logger.trace('POST', ...arguments);
 
-  // Validate the parameters
-  const [ params, paramsErrors ] = checkObject<CreateUserDepartmentApi['params']>(
-    event.pathParameters,
-    userDepartmentApiParamsValidator,
-  );
+  // Validate the request
+  const {
+    params,
+    body,
+    validationErrors,
+  } = validateRequest<CreateUserDepartmentApi>({
+    paramsRaw: event.pathParameters,
+    paramsValidator: userDepartmentApiParamsValidator,
+    bodyRaw: event.body,
+    bodyParser: 'json',
+    bodyValidator: createUserDepartmentApiBodyValidator,
+  });
   if (
     params === null ||
-    paramsErrors.length > 0
-  )
-    return [ 400, generateApi400Body(paramsErrors), {} ];
-
-  // Parse the body
-  const [ body, bodyErrors ] = parseJsonBody<CreateUserDepartmentApi['body']>(
-    event.body,
-    createUserDepartmentApiBodyValidator,
-  );
-  if (
     body === null ||
     Object.keys(body).length === 0 ||
-    bodyErrors.length > 0
-  )
-    return [ 400, generateApi400Body(bodyErrors), {} ];
+    validationErrors.length > 0
+  ) {
+    return [
+      400,
+      generateApi400Body(validationErrors),
+    ];
+  }
 
   // Authorize the user
   const phoneToEdit = params.id;

@@ -15,6 +15,7 @@ const afterAddedIndexNames: {
 const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
+  // @TODO - implement the validator
   const queryStringParameters: GetAllFilesApi['query'] = event.queryStringParameters || {};
   const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
     AWS.DynamoDB.DocumentClient.QueryInput,

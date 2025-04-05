@@ -18,7 +18,8 @@ export type LambdaApiFunction<T extends Api> = (
 ) => Promise<[
   keyof T['responses'],
   T['responses'][keyof T['responses']],
-  APIGatewayProxyResult['multiValueHeaders']?
+  (APIGatewayProxyResult['multiValueHeaders'] | null)?,
+  string?
 ]>;
 
 export async function handleResourceApi(
@@ -26,7 +27,8 @@ export async function handleResourceApi(
     [key in Api['method']]?: (event: APIGatewayProxyEvent) => Promise<[
       number,
       unknown,
-      APIGatewayProxyResult['multiValueHeaders']?,
+      (APIGatewayProxyResult['multiValueHeaders'] | null)?,
+      string?,
     ]>;
   },
   event: APIGatewayProxyEvent,
@@ -34,16 +36,32 @@ export async function handleResourceApi(
   logger.trace('handleResourceApi', ...arguments);
   const method = event.httpMethod as Api['method'];
   if (typeof handlers[method] !== 'undefined') {
+    // Run the function
     const [
       statusCode,
       responseBody,
       responseHeaders,
+      contentType = 'application/json',
     ] = await handlers[method](event);
-    return {
-      statusCode: statusCode,
+
+    // Build the response
+    const response: APIGatewayProxyResult = {
+      statusCode,
       body: JSON.stringify(responseBody),
-      multiValueHeaders: responseHeaders || {},
     };
+    if (responseHeaders) {
+      response.multiValueHeaders = responseHeaders;
+    }
+    if (statusCode !== 204) {
+      response.headers = {
+        'Content-Type': contentType,
+      };
+    }
+    if (typeof responseBody === 'string') {
+      response.body = responseBody;
+    }
+
+    return response;
   }
 
   return api403Response;
@@ -376,7 +394,7 @@ export function checkObject<T extends object>(
 
     // If the key is undefined, show an error if it is required
     if (typeof obj[key] === 'undefined') {
-      if ('required' in config) {
+      if (config.required) {
         badKeys.push(key);
       }
       return;
@@ -510,4 +528,93 @@ export function checkObject<T extends object>(
     newObj as T,
     [],
   ];
+}
+
+export function validateRequest<A extends Api>({
+  paramsRaw, paramsValidator,
+  bodyRaw, bodyParser, bodyValidator,
+  queryRaw, queryValidator,
+}: {
+  paramsRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  paramsValidator?: Validator<A['params']>,
+  bodyRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  bodyParser?: 'json' | 'url',
+  bodyValidator?: Validator<A['body']>,
+  queryRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  queryValidator?: Validator<A['query']>,
+}): {
+  params: A['params'] | null,
+  body: A['body'] | null,
+  query: A['query'] | null,
+  validationErrors: (keyof A['params'] | keyof A['body'] | keyof A['query'])[],
+} {
+  const response: ReturnType<typeof validateRequest<A>> = {
+    params: null,
+    body: null,
+    query: null,
+    validationErrors: [],
+  };
+
+  // Validate the params
+  if (typeof paramsValidator !== 'undefined') {
+    const [ params, paramsErrors ] = checkObject(
+      paramsRaw,
+      paramsValidator,
+    );
+    if (params !== null) {
+      response.params = params;
+    }
+    if (paramsErrors.length > 0) {
+      response.validationErrors = [
+        ...response.validationErrors,
+        ...paramsErrors,
+      ];
+    }
+  }
+
+  // Validate the query
+  if (typeof queryValidator !== 'undefined') {
+    const [ query, queryErrors ] = checkObject(
+      queryRaw,
+      queryValidator,
+    );
+    if (query !== null) {
+      response.query = query;
+    }
+    if (queryErrors.length > 0) {
+      response.validationErrors = [
+        ...response.validationErrors,
+        ...queryErrors,
+      ];
+    }
+  }
+
+  // Validate the body
+  if (typeof bodyValidator !== 'undefined') {
+    // Use the JSON parser if needed
+    let body: typeof response['body'] = null;
+    let bodyErrors: typeof response['validationErrors'] = [];
+    if (bodyParser === 'json') {
+      [ body, bodyErrors ] = parseJsonBody(
+        bodyRaw,
+        bodyValidator,
+      );
+    } else {
+      [ body, bodyErrors ] = checkObject(
+        bodyRaw,
+        bodyValidator,
+      );
+    }
+    if (body !== null) {
+      response.body = body;
+    }
+    if (bodyErrors.length > 0) {
+      response.validationErrors = [
+        ...response.validationErrors,
+        ...bodyErrors,
+      ];
+    }
+  }
+
+  return response;
 }

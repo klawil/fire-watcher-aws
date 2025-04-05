@@ -12,6 +12,7 @@ const dtrIdRegex = /^(\d+)-(\d+)$/;
 const GET: LambdaApiFunction<GetFileApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
+  // @TODO - implement the validator
   const idParts = (event.pathParameters?.id || '').match(dtrIdRegex);
   if (idParts === null)
     return [ 404, api404Body ];
