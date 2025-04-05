@@ -1,3 +1,4 @@
+import { PhoneNumberAccount } from "../backend/department";
 import { api200Body, api400Body, api401Body, api403Body, api404Body, api500Body, OrNull, Validator } from "./_shared";
 
 export const validDepartments = [
@@ -27,7 +28,7 @@ export type FullUserObject = {
   /**
    * The department the user's paging texts should be associated with
    */
-  pagingPhone?: UserDepartment;
+  pagingPhone?: PhoneNumberAccount;
 
   getTranscript?: boolean;
   getApiAlerts?: boolean;

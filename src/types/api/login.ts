@@ -1,5 +1,5 @@
 import { api200Body, api400Body, api403Body, api500Body, Validator } from "./_shared";
-import { FrontendUserObject } from "./users";
+import { FrontendUserObject } from "@/types/api/users";
 
 /**
  * Request that a login code be sent to the user's phone

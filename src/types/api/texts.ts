@@ -1,6 +1,8 @@
 import { api400Body, api401Body, api403Body, api500Body, Validator } from "./_shared";
 import { UserDepartment } from "./users";
 
+export type TextTypes = 'page' | 'alert' | 'account' | 'transcript' | 'pageAnnounce'
+  | 'department' | 'departmentAnnounce' | 'departmentAlert';
 export interface FullTextObject {
   datetime: number;
   body?: string;
@@ -21,12 +23,12 @@ export interface FullTextObject {
    * First letter - was this a test text message, second letter - was this a page
    */
   testPageIndex?: 'yy' | 'yn' | 'ny' | 'nn';
-  type?: 'page' | 'department' | 'alert' | 'account' | 'transcript' | 'pageAnnounce';
+  type?: TextTypes;
   department?: UserDepartment;
   /**
    * Comma separated list of URLs that can be used to view media sent with the text
    */
-  mediaUrls?: string;
+  mediaUrls?: string | string[];
 
   recipients?: number;
   sent?: number[];
@@ -38,7 +40,6 @@ export interface FullTextObject {
   fromNumber?: string;
   isPage?: boolean;
   isTest?: boolean;
-  isTestString?: string;
 }
 export const omittedFrontendTextFields = [
   'csLooked',
