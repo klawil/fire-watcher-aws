@@ -464,8 +464,9 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
 	const msgBody = body.body.Body;
 	const doNotSend = (
 		msgBody.includes(`I'm Driving`) && msgBody.includes('Sent from My Car')
-	) || applePrefixes.some(prefix => msgBody.startsWith(prefix))
-	|| emojiRegex.test(msgBody);
+	)
+		|| applePrefixes.some(prefix => msgBody.startsWith(prefix))
+		|| emojiRegex.test(msgBody);
 
 	// Get the sending user's permissions
 	const userPerms = getUserPermissions(body.user);
