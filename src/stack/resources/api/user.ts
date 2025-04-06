@@ -6,10 +6,10 @@ import { getCookies, getLoggedInUser } from '../../utils/auth';
 import { authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
 import { ApiUserAuthResponse, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, InternalUserObject, UserObject } from '../../../common/userApi';
 import { unauthorizedApiResponse } from '../types/api';
-import { PagingTalkgroup, pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { ActivateBody, LoginBody } from '../types/queue';
 import { getLogger } from '../../../logic/logger';
 import { randomString } from '@/logic/strings';
+import { PagingTalkgroup, pagingTalkgroups, UserDepartment, validDepartments } from '@/types/api/users';
 
 const logger = getLogger('user');
 
@@ -678,7 +678,7 @@ async function createOrUpdateUser(event: APIGatewayProxyEvent, create: boolean):
 				break;
 			case 'talkgroups':
 				isInvalid = !Array.isArray(value) ||
-					value.filter(v => pagingTalkgroupOrder.includes(v as PagingTalkgroup)).length !== value.length;
+					value.filter(v => pagingTalkgroups.includes(v as PagingTalkgroup)).length !== value.length;
 				break;
 		}
 

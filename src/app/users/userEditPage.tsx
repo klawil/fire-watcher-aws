@@ -6,12 +6,11 @@ import Table from "react-bootstrap/Table";
 import { defaultUsersState, UsersDispatchContext, usersStateReducer } from "@/logic/usersState";
 import UserRow from "@/components/userRow/userRow";
 import Modal from "react-bootstrap/Modal";
-import { validDepartments } from "@/common/userConstants";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { AddAlertContext } from "@/logic/clientContexts";
 import { typeFetch } from "@/logic/typeFetch";
-import { DeleteUserApi, GetAllUsersApi } from "@/types/api/users";
+import { DeleteUserApi, GetAllUsersApi, validDepartments } from "@/types/api/users";
 
 export default function UserEditPage() {
   const [ state, dispatch ] = useReducer(usersStateReducer, defaultUsersState);

@@ -5,8 +5,8 @@ import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
 import { getLoggedInUser } from '../../utils/auth';
 import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, AnnouncementApiBody, TextObject } from '../../../common/frontendApi';
 import { getLogger } from '../../../logic/logger';
-import { pagingTalkgroupOrder, UserDepartment, validDepartments } from '../../../common/userConstants';
 import { AnnounceBody } from '../types/queue';
+import { pagingTalkgroups, validDepartments } from '@/types/api/users';
 
 const logger = getLogger('frontend');
 
@@ -137,7 +137,7 @@ async function getTexts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 	}
 	const result = await dynamodb.query(queryInput).promise();
 
-	const userAdminDeparments: UserDepartment[] = validDepartments
+	const userAdminDeparments = validDepartments
 		.filter(dep => user[dep]?.active && user[dep]?.admin);
 
 	// Filter out the texts the person does not have access to
@@ -214,7 +214,7 @@ async function sendAnnouncement(event: APIGatewayProxyEvent): Promise<APIGateway
 	}
 	if (
 		typeof body.talkgroup !== 'undefined' &&
-		!pagingTalkgroupOrder.includes(body.talkgroup)
+		!pagingTalkgroups.includes(body.talkgroup)
 	) {
 		response.errors.push('talkgroup');
 	}

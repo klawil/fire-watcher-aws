@@ -1,8 +1,9 @@
 import * as aws from 'aws-sdk';
-import { PhoneNumberAccount, PhoneNumberTypes, UserDepartment, validDepartments, ValidTwilioAccounts, ValidTwilioNumberTypes } from '../../common/userConstants';
 import { getLogger } from '../../logic/logger';
 import { MessageType } from '../../common/frontendApi';
 import { parsePhone } from '@/logic/strings';
+import { PhoneNumberAccount, PhoneNumberTypes, TwilioAccounts, TwilioNumberTypes } from '@/types/backend/department';
+import { UserDepartment, validDepartments } from '@/types/api/users';
 
 const logger = getLogger('u-gen');
 const twilio = require('twilio'); // eslint-disable-line @typescript-eslint/no-require-imports
@@ -70,9 +71,9 @@ export async function getRecipients(
 		.then((data) => data.Items || []);
 }
 
-type AccountSidKey = `accountSid${ValidTwilioAccounts}`;
-type AuthTokenKey = `authToken${ValidTwilioAccounts}`;
-type PhoneNumberKey = `phoneNumber${ValidTwilioAccounts}${ValidTwilioNumberTypes}`;
+type AccountSidKey = `accountSid${TwilioAccounts}`;
+type AuthTokenKey = `authToken${TwilioAccounts}`;
+type PhoneNumberKey = `phoneNumber${TwilioAccounts}${TwilioNumberTypes}`;
 
 export type TwilioConfig = {
 	[key in AccountSidKey]: string;
@@ -94,7 +95,7 @@ export interface PhoneNumberConfig {
 	number: string;
 	numberKey: PhoneNumberKey;
 	account?: PhoneNumberAccount;
-	type: ValidTwilioNumberTypes;
+	type: TwilioNumberTypes;
 	department?: UserDepartment;
 }
 

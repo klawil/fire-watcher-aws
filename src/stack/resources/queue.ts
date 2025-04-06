@@ -2,13 +2,14 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, incrementMetric, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
-import { PagingTalkgroup, PhoneNumberTypes, UserDepartment, defaultDepartment, departmentConfig, pagingConfig } from '../../common/userConstants';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
 import { TwilioTextQueueItem } from '@/types/backend/queue';
 import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
+import { departmentConfig, pagingTalkgroupConfig, PhoneNumberTypes } from '@/types/backend/department';
+import { PagingTalkgroup, UserDepartment } from '@/types/api/users';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
@@ -68,12 +69,12 @@ function createPageMessage(
 	transcript: string | null = null
 ): string {
 	logger.trace('createPageMessage', ...arguments);
-	const pageConfig = pagingConfig[pageTg];
+	const pageConfig = pagingTalkgroupConfig[pageTg];
 
 	if (typeof pageConfig === 'undefined')
 		return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
 
-	let pageStr = `${pageConfig.pageService} PAGE\n`;
+	let pageStr = `${pageConfig.pagedService} PAGE\n`;
 	pageStr += `${pageConfig.partyBeingPaged} paged `
 	pageStr += `${dateToTimeString(fNameToDate(fileKey))}\n`;
 	if (transcript !== null) {
@@ -118,7 +119,7 @@ async function handleActivation(body: ActivateBody) {
 
 	// Fetch the twilio config
 	const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
-	const config = departmentConfig[body.department] || departmentConfig[defaultDepartment];
+	const config = departmentConfig[body.department];
 	const pagePhoneName: PhoneNumberTypes = config
 		? config.pagePhone
 		: 'page';
@@ -131,7 +132,7 @@ async function handleActivation(body: ActivateBody) {
 	// Send the welcome message
 	const pageTgs = (updateResult.Attributes?.talkgroups?.NS || [])
 		.map(key => Number(key))
-		.map(key => pagingConfig[key as PagingTalkgroup]?.partyBeingPaged || `Talkgroup ${key}`)
+		.map(key => pagingTalkgroupConfig[key as PagingTalkgroup]?.partyBeingPaged || `Talkgroup ${key}`)
 		.join(', ')
 	const messagePieces: {
 		[key in WelcomeMessageConfigKeys]: string;
@@ -335,7 +336,7 @@ async function handleTwilio(body: TwilioBody) {
 	}
 
 	// Get the number that was messaged
-	const depConf = departmentConfig[departmentToUse] || departmentConfig[defaultDepartment];
+	const depConf = departmentConfig[departmentToUse];
 	if (typeof depConf === 'undefined')
 		throw new Error('Invalid department');
 	const isTest = !!sender.Item?.isTest?.BOOL;
@@ -453,7 +454,7 @@ async function handleAnnounce(body: AnnounceBody) {
 	if (typeof body.department !== 'undefined') {
 		announceBody = departmentConfig[body.department]?.shortName || 'Unkown';
 	} else if (typeof body.talkgroup !== 'undefined') {
-		announceBody = `${pagingConfig[body.talkgroup].partyBeingPaged} Pages`;
+		announceBody = `${pagingTalkgroupConfig[body.talkgroup].partyBeingPaged} Pages`;
 	}
 	announceBody += ` Announcement: ${body.body} - ${sender.Item?.fName?.S} ${sender.Item?.lName?.S}`;
 	if (
@@ -742,7 +743,7 @@ async function handleTranscribe(body: TranscribeBody) {
 			});
 	} else {
 		tg = Number(body.detail.TranscriptionJobName.split('-')[0]) as PagingTalkgroup;
-		messageBody = `Transcript for ${pagingConfig[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://cofrn.org/?tg=${pagingConfig[tg].linkPreset}`;
+		messageBody = `Transcript for ${pagingTalkgroupConfig[tg].partyBeingPaged} page:\n\n${transcript}\n\nCurrent radio traffic: https://cofrn.org/?tg=${pagingTalkgroupConfig[tg].linkPreset}`;
 	}
 
 	// Exit early if this is transcribing an emergency transmission

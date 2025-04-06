@@ -7,6 +7,8 @@ import { validateTwilioRequest } from './_twilio';
 import { checkObject, handleResourceApi, LambdaApiFunction, TABLE_USER } from './_base';
 import { getLogger } from '@/logic/logger';
 import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { getUserPermissions } from '@/stack/utils/user';
+import { departmentConfig } from '@/types/backend/department';
 
 const logger = getLogger('twilioBase');
 
@@ -133,6 +135,14 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   });
   if (!sender.Item) {
     return buildTwilioResponse(200);
+  }
+  if (
+    phoneNumberConf.type === 'page' &&
+    typeof phoneNumberConf.department !== 'undefined' &&
+    !getUserPermissions(sender.Item).adminDepartments.includes(phoneNumberConf.department) &&
+    departmentConfig[phoneNumberConf.department].type === 'page'
+  ) {
+    return buildTwilioResponse(200, 'This department is not using the group text feature of this system');
   }
 
   // Validate that the user can send a message to this number

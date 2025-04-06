@@ -7,14 +7,14 @@ import { useCallback, useContext, useState } from "react";
 import Table from "react-bootstrap/Table";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
-import { pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, validDepartments } from "@/common/userConstants";
 import { BsCheckCircleFill, BsXCircleFill } from "react-icons/bs";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { UpdateUserApi } from "@/types/api/users";
+import { PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments } from "@/types/api/users";
 import { typeFetch } from "@/logic/typeFetch";
+import { pagingTalkgroupConfig } from "@/types/backend/department";
 
 const userEditableFields: {
   key: 'fName' | 'lName';
@@ -169,14 +169,14 @@ export default function ProfilePage() {
       ))}
       <Row className="justify-content-center my-3"><Col xl={3} lg={4} xs={6}>
         <h5 className="text-center">Pages You Will Receive</h5>
-        {pagingTalkgroupOrder.map(tg => (<Form.Check
+        {pagingTalkgroups.map(tg => (<Form.Check
           key={tg}
           type="switch"
           checked={typeof userEditInfo.talkgroups !== 'undefined'
             ? userEditInfo.talkgroups?.includes(tg)
             : (user.talkgroups || []).includes(tg)
           }
-          label={pagingConfig[tg].partyBeingPaged}
+          label={pagingTalkgroupConfig[tg].partyBeingPaged}
           onChange={e => setUserTg(tg, e.target.checked)}
         />
         ))}

@@ -1,6 +1,5 @@
 import { UsersState } from "@/types/frontend/users";
 import styles from './userRow.module.css';
-import { validDepartments } from "@/common/userConstants";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
@@ -12,6 +11,7 @@ import { BsTrash } from "react-icons/bs";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { formatPhone } from "@/logic/strings";
 import Link from "next/link";
+import { validDepartments } from "@/types/api/users";
 
 export default function UserRow({
   user,

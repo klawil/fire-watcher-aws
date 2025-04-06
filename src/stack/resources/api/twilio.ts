@@ -2,11 +2,12 @@ import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { getTwilioSecret, incrementMetric, twilioPhoneNumbers } from '../../utils/general';
 import { TwilioBody, TwilioErrorBody } from '../types/queue';
-import { departmentConfig, PhoneNumberAccount, UserDepartment, validDepartments, validPhoneNumberAccounts, ValidTwilioAccounts } from '../../../common/userConstants';
 import { getLogger } from '../../../logic/logger';
 import { isUserActive } from '../types/auth';
 import { getLoggedInUser } from '../../utils/auth';
 import { formatPhone } from '@/logic/strings';
+import { departmentConfig, PhoneNumberAccount, TwilioAccounts, validPhoneNumberAccounts } from '@/types/backend/department';
+import { validDepartments } from '@/types/api/users';
 
 const logger = getLogger('twilio');
 
@@ -131,7 +132,7 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		response.body = `<Response><Message>Hmmm, it looks like you sent this to the wrong numer</Message></Response>`;
 		return response;
 	}
-	const phoneNumberDepartments = (Object.keys(departmentConfig) as UserDepartment[])
+	const phoneNumberDepartments = (Object.keys(departmentConfig) as (keyof typeof departmentConfig)[])
 		.filter(dep => departmentConfig[dep]?.pagePhone === phoneNumberConfig.name ||
 			departmentConfig[dep]?.textPhone === phoneNumberConfig.name);
 	
@@ -539,7 +540,7 @@ async function getBilling(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 		return unauthorizedResponse;
 	}
 
-	const account: ValidTwilioAccounts | undefined = event.queryStringParameters?.account as ValidTwilioAccounts | undefined;
+	const account: TwilioAccounts | undefined = event.queryStringParameters?.account as TwilioAccounts | undefined;
 	if (
 		typeof account === 'undefined' &&
 		!user.isDistrictAdmin

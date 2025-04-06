@@ -1,4 +1,4 @@
-import { PagingTalkgroup, UserDepartment } from "../../../common/userConstants";
+import { PagingTalkgroup, UserDepartment } from "@/types/api/users";
 
 /**
  * @deprecated The method should not be used

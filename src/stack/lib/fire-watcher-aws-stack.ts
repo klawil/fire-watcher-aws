@@ -22,9 +22,9 @@ import * as glue from 'aws-cdk-lib/aws-glue';
 import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
-import { PhoneNumberAccount, validPhoneNumberAccounts } from '../../common/userConstants';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
+import { PhoneNumberAccount, validPhoneNumberAccounts } from '@/types/backend/department';
 
 dotenv.config({ path: `${__dirname}/../../../.env` });
 

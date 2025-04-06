@@ -3,7 +3,6 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Col from "react-bootstrap/Col";
 import Row from 'react-bootstrap/Row';
-import { defaultDepartment, departmentConfig, pagingConfig, PagingTalkgroup, pagingTalkgroupOrder, validDepartments } from "@/common/userConstants";
 import Button from "react-bootstrap/Button";
 import { AddAlertContext, LoggedInUserContext } from "@/logic/clientContexts";
 import Table from "react-bootstrap/Table";
@@ -11,8 +10,9 @@ import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
 import { UsersDispatchContext } from "@/logic/usersState";
 import { formatPhone } from "@/logic/strings";
-import { CreateUserApi, FrontendUserObject, UpdateUserApi } from "@/types/api/users";
+import { CreateUserApi, FrontendUserObject, PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments } from "@/types/api/users";
 import { typeFetch } from "@/logic/typeFetch";
+import { departmentConfig, pagingTalkgroupConfig } from "@/types/backend/department";
 
 interface CheckboxConfig {
 	name: 'getTranscript' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';
@@ -150,8 +150,8 @@ export default function UserEdit({
 
   const userDepartments = validDepartments.filter(dep => user && user[dep]);
   const userDepartment = 'department' in updateState
-    ? updateState.department || defaultDepartment
-    : userDepartments[0] || defaultDepartment;
+    ? updateState.department
+    : userDepartments[0];
 
   const loggedInUserDepartments = validDepartments
     .filter(dep => loggedInUser?.isDistrictAdmin
@@ -254,7 +254,7 @@ export default function UserEdit({
   } else if (user !== null) {
     checkedTalkgroups = user.talkgroups || [];
   } else {
-    checkedTalkgroups = departmentConfig[userDepartment]?.defaultTalkgroups || [];
+    checkedTalkgroups = (userDepartment && departmentConfig[userDepartment]?.defaultTalkgroups) || [];
   }
 
   return (<Row>
@@ -334,7 +334,7 @@ export default function UserEdit({
 
       <Col lg={3} md={4} sm={5} xl={6}>
         <h6>Pages</h6>
-        {pagingTalkgroupOrder.map(tg => <Form.Check
+        {pagingTalkgroups.map(tg => <Form.Check
           isInvalid={errorFields.includes('tg')}
           key={tg}
           type="switch"
@@ -343,7 +343,7 @@ export default function UserEdit({
             add: event.target.checked,
             tg,
           })}
-          label={pagingConfig[tg].partyBeingPaged}
+          label={pagingTalkgroupConfig[tg].partyBeingPaged}
         />)}
       </Col>
       <Col lg={{span: 3, offset: 3}} md={{span: 4, offset: 2}} sm={{span: 5, offset: 1}} xl={{span: 6, offset: 0}}>
