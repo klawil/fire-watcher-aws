@@ -1,20 +1,25 @@
 type PossibleTypes = 'string' | 'number' | 'boolean' | 'array' | 'null';
-type TypeValidations = {
-  [type in PossibleTypes]: {
-    regex?: RegExp;
-    exact?: readonly (string | number | boolean)[];
-  };
-};
 type SpecificTypeValidations<V> = Pick<
-  TypeValidations,
+  {
+    [type in PossibleTypes]: {
+      regex?: RegExp;
+      exact?: readonly (string | number | boolean)[];
+    };
+  },
   {
     string: string extends V ? 'string' : never;
     number: V extends number ? 'number' : never;
     boolean: V extends boolean ? 'boolean' : never;
     array: Array<unknown> extends V ? 'array' : never;
     null: V extends null ? 'null' : never;
-  }[keyof TypeValidations]
-> & Partial<TypeValidations>;
+    object: V extends object ? 'object' : never;
+  }[PossibleTypes]
+> & {
+  [key in PossibleTypes]?: {
+    regex?: RegExp;
+    exact?: readonly (string | number | boolean)[];
+  };
+};
 export type Validator<T> = {
   [key in keyof T]: {
     required: undefined extends T[key] ? false : true;

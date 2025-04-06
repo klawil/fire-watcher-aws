@@ -6,13 +6,11 @@ import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared'
 import { ActivateBody } from '../../types/queue';
 import { TABLE_USER, typedPutItem, typedScan } from '@/stack/utils/dynamoTyped';
 import { TypedPutItemInput, TypedScanInput } from '@/types/backend/dynamo';
+import { ExceptSpecificKeys, OnlySpecificKeys } from '@/types/utility';
 
 const logger = getLogger('users');
 const sqs = new AWS.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
-
-type OnlySpecificKeys<T extends string, K extends string> = T extends K ? T : never;
-type ExceptSpecificKeys<T extends string, K extends string> = T extends K ? never : T;
 
 type EditKeyConfig = {
   name: OnlySpecificKeys<keyof CreateUserApi['body'], keyof FrontendUserObject>;
