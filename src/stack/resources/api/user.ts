@@ -111,10 +111,6 @@ function getUserCookieHeaders(
 
 async function loginUser(event: APIGatewayProxyEvent, user: InternalUserObject) {
 	logger.trace('loginUser', ...arguments);
-	// Find the previous tokens that should be deleted
-	const now = Date.now();
-	const validUserTokens = user.loginTokens
-		?.filter(token => (token.tokenExpiry || 0) > now) || [];
 
 	// Create a new token and attach it
 	const jwtSecret = await secretsManager.getSecretValue({
@@ -133,17 +129,8 @@ async function loginUser(event: APIGatewayProxyEvent, user: InternalUserObject) 
 		ExpressionAttributeNames: {
 			'#c': 'code',
 			'#ce': 'codeExpiry',
-			'#t': 'loginTokens',
 		},
-		ExpressionAttributeValues: {
-			':t': { L: validUserTokens.map(tkn => ({
-				M: {
-					token: { S: tkn.token },
-					tokenExpiry: { N: tkn.tokenExpiry.toString() },
-				}
-			})) },
-		},
-		UpdateExpression: 'REMOVE #c, #ce SET #t = :t'
+		UpdateExpression: 'REMOVE #c, #ce'
 	}).promise();
 
 	return getUserCookieHeaders(
@@ -382,40 +369,6 @@ async function handleLogout(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 	const user = await getLoggedInUser(event);
 	if (user === null)
 		return response;
-
-	// Delete the needed tokens
-	const loginToken = getCookies(event)[authTokenCookie];
-	const now = Date.now();
-	const validUserTokens = user.loginTokens
-		?.filter(token => token.token !== loginToken)
-		.filter(token => (token.tokenExpiry || 0) > now)
-		.map(token => ({
-			M: {
-				token: { S: token.token },
-				tokenExpiry: { N: token.tokenExpiry.toString() },
-			}
-		}));
-	const updateConfig: aws.DynamoDB.UpdateItemInput = {
-		TableName: userTable,
-		Key: {
-			phone: { N: user.phone.toString() }
-		},
-		ExpressionAttributeNames: {
-			'#t': 'loginTokens'
-		},
-		ExpressionAttributeValues: {
-			':t': { L: validUserTokens }
-		},
-		UpdateExpression: 'SET #t = :t'
-	};
-	if (
-		typeof validUserTokens === 'undefined' ||
-		validUserTokens.length === 0
-	) {
-		delete updateConfig.ExpressionAttributeValues;
-		updateConfig.UpdateExpression = 'REMOVE #t';
-	}
-	await dynamodb.updateItem(updateConfig).promise();
 
 	return response;
 }

@@ -50,10 +50,6 @@ export interface InternalUserObject extends UserObject {
 	lastLogin?: number;
 	lastStatus?: string;
 	lastStatusCount?: number;
-	loginTokens?: {
-		token: string;
-		tokenExpiry: number;
-	}[];
 }
 
 /**

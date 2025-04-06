@@ -153,27 +153,19 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   }).promise().then(data => data.SecretString);
   if (typeof jwtSecret === 'undefined')
     throw new Error(`Unable to get JWT secret`);
-  const nowTime = Date.now();
   const token = sign({ phone: userObj.phone }, jwtSecret, {
     expiresIn: `${loginDuration}s`,
   });
-  const userTokens: FullUserObject['loginTokens'] = [
-    ...(userObj.loginTokens || []).filter(token => (token.tokenExpiry || 0) > nowTime),
-  ];
   await typedUpdate<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: params.id,
     },
     ExpressionAttributeNames: {
-      '#loginTokens': 'loginTokens',
       '#code': 'code',
       '#codeExpiry': 'codeExpiry',
     },
-    ExpressionAttributeValues: {
-      ':loginTokens': userTokens,
-    },
-    UpdateExpression: 'REMOVE #code, #codeExpiry SET #loginTokens = :loginTokens',
+    UpdateExpression: 'REMOVE #code, #codeExpiry',
   });
 
   return [

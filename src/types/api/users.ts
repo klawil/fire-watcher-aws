@@ -49,14 +49,6 @@ export type FullUserObject = {
    * The talkgroups the user should receive pages from
    */
   talkgroups?: PagingTalkgroup[];
-  
-  /**
-   * Tokens used to authenticate the user (@TODO - deprecate in favor of JWT)
-   */
-  loginTokens?: {
-    token: string;
-    tokenExpiry: number;
-  }[];
 
   // Temporary code for user login
   code?: string;
@@ -70,7 +62,7 @@ export type FullUserObject = {
 };
 export type FrontendUserObject = Omit<
   FullUserObject,
-  'loginTokens' | 'code' | 'codeExpiry'
+  'code' | 'codeExpiry'
 >;
 interface MinimumUserState {
   fromApi: boolean;
