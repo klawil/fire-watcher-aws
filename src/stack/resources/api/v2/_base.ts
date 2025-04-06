@@ -280,11 +280,6 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
       !(authTokenCookie in cookies)
     ) return response;
 
-    // Validate the cookies
-    if (!/^[0-9]{10}$/.test(cookies[authUserCookie])) {
-      return response;
-    }
-
     // Use JWT to validate the user (first pass)
     const jwtSecret = await secretManager.getSecretValue({
       SecretId: jwtSecretArn,

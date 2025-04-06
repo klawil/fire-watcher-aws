@@ -804,6 +804,7 @@ export class FireWatcherAwsStack extends Stack {
       cost?: boolean;
       firehose?: kinesisfirehose.CfnDeliveryStream,
       secret?: secretsManager.ISecret;
+      secret2?: secretsManager.ISecret;
       metrics?: boolean;
       byAccount?: boolean;
     }
@@ -831,7 +832,8 @@ export class FireWatcherAwsStack extends Stack {
         ],
         bucket,
         queue,
-        secret: twilioSecret
+        secret: twilioSecret,
+        secret2: jwtSecret,
       },
       {
         name: 'user',
@@ -839,6 +841,7 @@ export class FireWatcherAwsStack extends Stack {
           phoneNumberTable
         ],
         queue,
+        secret2: jwtSecret,
       },
       {
         name: 'twilio',
@@ -853,6 +856,7 @@ export class FireWatcherAwsStack extends Stack {
         ],
         queue,
         secret: twilioSecret,
+        secret2: jwtSecret,
       },
       {
         name: 'events',
@@ -876,6 +880,7 @@ export class FireWatcherAwsStack extends Stack {
         ],
         queue,
         metrics: true,
+        secret2: jwtSecret,
       },
     ];
 
@@ -928,6 +933,8 @@ export class FireWatcherAwsStack extends Stack {
         }));
       if (config.secret)
         config.secret.grantRead(apiHandler);
+      if (config.secret2)
+        config.secret2.grantRead(apiHandler);
       if (config.metrics) {
         Object.keys(metricMappingEnv).forEach(key => {
           apiHandler.addEnvironment(key, metricMappingEnv[key]);

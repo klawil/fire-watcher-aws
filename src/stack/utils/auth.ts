@@ -4,6 +4,7 @@ import { getLogger } from '../../logic/logger';
 import { parseDynamoDbAttributeMap } from './dynamodb';
 import { InternalUserObject } from '../../common/userApi';
 import { authTokenCookie, authUserCookie, isUserActive, isUserAdmin } from '../resources/types/auth';
+import { verify } from 'jsonwebtoken';
 
 const logger = getLogger('u-auth');
 
@@ -35,6 +36,9 @@ export function getCookies(event: APIGatewayProxyEvent): Cookies {
 		}, {});
 }
 
+const jwtSecretArn = process.env.JWT_SECRET;
+const secretManager = new aws.SecretsManager();
+
 /**
  * @deprecated The method should not be used
  */
@@ -53,31 +57,35 @@ export async function getLoggedInUser(event: APIGatewayProxyEvent): Promise<null
 			return null;
 		}
 
+		// Get and validate the JWT
+    const jwtSecret = await secretManager.getSecretValue({
+      SecretId: jwtSecretArn,
+    }).promise().then(data => data.SecretString);
+    if (typeof jwtSecret === 'undefined')
+      throw new Error(`Unable to get JWT secret`);
+    const userPayload = verify(
+      cookies[authTokenCookie],
+      jwtSecret,
+    );
+    if (
+      typeof userPayload === 'string' ||
+      !('phone' in userPayload)
+    ) {
+      logger.error('Bad payload', userPayload);
+      throw new Error('Wrong JWT payload');
+    }
+
 		// Validate the cookies
 		const user = await dynamodb.getItem({
 			TableName: userTable,
 			Key: {
 				phone: {
-					N: cookies[authUserCookie]
-				}
-			}
+					N: userPayload.phone.toString(),
+				},
+			},
 		}).promise();
 		if (!user.Item) {
 			logger.warn('getLoggedInUser', 'failed', 'invalid user');
-			return null;
-		}
-
-		const matchingTokens = user.Item.loginTokens?.L
-			?.filter(t => t.M?.token?.S === cookies[authTokenCookie])
-			.map(t => parseInt(t.M?.tokenExpiry?.N || '0', 10));
-		
-		if (!matchingTokens || matchingTokens.length === 0) {
-			logger.warn('getLoggedInUser', 'failed', 'invalid token');
-			return null;
-		}
-
-		if (Date.now() > matchingTokens[0]) {
-			logger.warn('getLoggedInUser', 'failed', 'expired token');
 			return null;
 		}
 
