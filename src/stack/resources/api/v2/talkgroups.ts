@@ -1,7 +1,8 @@
 import { getLogger } from '../../../../logic/logger';
 import * as AWS from 'aws-sdk';
 import { FullTalkgroupObject, GetAllTalkgroupsApi } from '@/types/api/talkgroups';
-import { handleResourceApi, LambdaApiFunction, TABLE_TALKGROUP, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
+import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
+import { TABLE_TALKGROUP } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('talkgroups');
 

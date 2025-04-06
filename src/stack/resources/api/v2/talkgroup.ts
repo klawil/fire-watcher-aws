@@ -1,8 +1,8 @@
 import { getLogger } from '../../../../logic/logger';
 import { api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
 import { FullTalkgroupObject, GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator } from '@/types/api/talkgroups';
-import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, TABLE_TALKGROUP, validateRequest } from './_base';
-import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
+import { TABLE_TALKGROUP, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('file');
 

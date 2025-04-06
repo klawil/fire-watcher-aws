@@ -1,14 +1,14 @@
 import * as AWS from 'aws-sdk';
 import { generateApi400Body } from '@/types/api/_shared';
 import { getLogger } from '../../../../logic/logger';
-import { handleResourceApi, LambdaApiFunction, TABLE_TEXT, TABLE_USER, validateRequest } from './_base';
+import { handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
 import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator } from '@/types/api/twilio';
 import { validateTwilioRequest } from './_twilio';
 import { getTwilioSecret, twilioPhoneNumbers } from '../../../utils/general';
 import { FullUserObject, validDepartments } from '@/types/api/users';
 import { TwilioErrorBody } from '../../types/queue';
 import { formatPhone } from '@/logic/strings';
-import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { TABLE_TEXT, TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { FullTextObject } from '@/types/api/texts';
 
 const logger = getLogger('twilioStatus');

@@ -1,6 +1,7 @@
 import { getLogger } from '../../../../logic/logger';
 import { FullFileObject, GetAllFilesApi } from '@/types/api/files';
-import { handleResourceApi, LambdaApiFunction, TABLE_FILE, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
+import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
+import { TABLE_FILE } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('files');
 

@@ -6,16 +6,10 @@ import { getLogger } from "../../../../logic/logger";
 import { districtAdminUserKeys, FrontendUserObject, FullUserObject } from "@/types/api/users";
 import { UserPermissions } from "@/types/backend/user";
 import { getUserPermissions } from "../../../utils/user";
-import { typedGet, typedQuery } from "@/stack/utils/dynamoTyped";
+import { TABLE_USER, typedGet, typedQuery } from "@/stack/utils/dynamoTyped";
 import { TypedQueryInput } from "@/types/backend/dynamo";
 
 const logger = getLogger('api/v2/_base');
-
-export const TABLE_FILE = process.env.TABLE_FILE as string;
-export const TABLE_USER = process.env.TABLE_USER as string;
-export const TABLE_TEXT = process.env.TABLE_TEXT as string;
-export const TABLE_SITE = process.env.TABLE_SITE as string;
-export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP as string;
 
 export type LambdaApiFunction<T extends Api> = (
   event: APIGatewayProxyEvent,

@@ -1,8 +1,8 @@
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, TABLE_USER, validateRequest } from './_base';
+import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
 import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments } from '@/types/api/users';
 import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
-import { typedDeleteItem, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { TABLE_USER, typedDeleteItem, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('users');

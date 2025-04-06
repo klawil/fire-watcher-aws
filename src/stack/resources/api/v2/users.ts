@@ -1,10 +1,10 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
-import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
+import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
 import { CreateUserApi, createUserApiBodyValidator, FrontendUserObject, FullUserObject, GetAllUsersApi } from '@/types/api/users';
 import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
 import { ActivateBody } from '../../types/queue';
-import { typedPutItem, typedScan } from '@/stack/utils/dynamoTyped';
+import { TABLE_USER, typedPutItem, typedScan } from '@/stack/utils/dynamoTyped';
 import { TypedPutItemInput, TypedScanInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('users');

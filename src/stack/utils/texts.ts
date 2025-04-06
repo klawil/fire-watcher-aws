@@ -1,6 +1,5 @@
 import { getLogger } from "@/logic/logger";
 import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
-import { TABLE_TEXT, TABLE_USER } from "../resources/api/v2/_base";
 import { FullTextObject, TextTypes } from "@/types/api/texts";
 import CloudWatch from "aws-sdk/clients/cloudwatch";
 import { PhoneNumberTypes } from "@/types/backend/department";
@@ -8,7 +7,7 @@ import { getUserPermissions } from "./user";
 import { getTwilioSecret, twilioPhoneCategories } from "./general";
 import twilio from 'twilio';
 import { TypedScanInput, TypedUpdateInput } from "@/types/backend/dynamo";
-import { typedScan, typedUpdate } from "./dynamoTyped";
+import { TABLE_TEXT, TABLE_USER, typedScan, typedUpdate } from "./dynamoTyped";
 
 const logger = getLogger('stack/resources/utils/texts');
 

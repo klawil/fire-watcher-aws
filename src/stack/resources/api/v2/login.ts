@@ -1,13 +1,13 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody, TABLE_USER } from './_base';
+import { checkObject, getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
 import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/login';
 import { api200Body, generateApi400Body } from '@/types/api/_shared';
 import { FullUserObject } from '@/types/api/users';
 import { LoginBody } from '../../types/queue';
 import { getUserPermissions } from '../../../utils/user';
 import { randomString } from '@/logic/strings';
-import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 

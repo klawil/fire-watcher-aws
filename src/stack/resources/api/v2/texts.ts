@@ -1,8 +1,8 @@
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, TABLE_TEXT } from './_base';
+import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction } from './_base';
 import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, omittedFrontendTextFields } from '@/types/api/texts';
 import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
-import { typedQuery } from '@/stack/utils/dynamoTyped';
+import { TABLE_TEXT, typedQuery } from '@/stack/utils/dynamoTyped';
 import { TypedQueryInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('texts');

@@ -4,9 +4,9 @@ import { getTwilioSecret, twilioPhoneNumbers } from '@/stack/utils/general';
 import { FullUserObject } from '@/types/api/users';
 import { TwilioTextQueueItem } from '@/types/backend/queue';
 import { validateTwilioRequest } from './_twilio';
-import { checkObject, handleResourceApi, LambdaApiFunction, TABLE_USER } from './_base';
+import { checkObject, handleResourceApi, LambdaApiFunction } from './_base';
 import { getLogger } from '@/logic/logger';
-import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { getUserPermissions } from '@/stack/utils/user';
 import { departmentConfig } from '@/types/backend/department';
 

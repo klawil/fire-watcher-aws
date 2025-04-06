@@ -1,8 +1,8 @@
 import { getLogger } from '../../../../logic/logger';
 import { api404Body } from '@/types/api/_shared';
 import { FullFileObject, GetFileApi } from '@/types/api/files';
-import { handleResourceApi, LambdaApiFunction, TABLE_FILE } from './_base';
-import { typedGet } from '@/stack/utils/dynamoTyped';
+import { handleResourceApi, LambdaApiFunction } from './_base';
+import { TABLE_FILE, typedGet } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('file');
 
