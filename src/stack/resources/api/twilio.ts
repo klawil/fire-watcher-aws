@@ -379,30 +379,22 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 				}));
 		}
 
-		if (eventData.MessageStatus !== 'undelivered') {
-			const metricName = eventData.MessageStatus.slice(0, 1).toUpperCase() + eventData.MessageStatus.slice(1);
-			const messageTime = new Date(Number(messageId));
-			promises.push(cloudWatch.putMetricData({
-				Namespace: 'Twilio Health',
-				MetricData: [
-					{
-						MetricName: metricName,
-						Timestamp: messageTime,
-						Unit: 'Count',
-						Value: 1
-					},
-					{
-						MetricName: `${metricName}Time`,
-						Timestamp: messageTime,
-						Unit: 'Milliseconds',
-						Value: eventDatetime - messageTime.getTime()
-					}
-				]
-			}).promise()
-				.catch(e => {
-					logger.error('handleTextStatus', 'metrics', e);
-				}));
-		}
+		const metricName = eventData.MessageStatus.slice(0, 1).toUpperCase() + eventData.MessageStatus.slice(1);
+		const messageTime = new Date(Number(messageId));
+		promises.push(cloudWatch.putMetricData({
+			Namespace: 'Twilio Health',
+			MetricData: [
+				{
+					MetricName: `${metricName}Time`,
+					Timestamp: messageTime,
+					Unit: 'Milliseconds',
+					Value: eventDatetime - messageTime.getTime()
+				}
+			]
+		}).promise()
+			.catch(e => {
+				logger.error('handleTextStatus', 'metrics', e);
+			}));
 
 		await Promise.all(promises);
 	}

@@ -54,15 +54,6 @@ const talkgroupsToTag: {
 	'8331': 'Baca',
 };
 
-const towerToStation: {
-	[key: string]: 'NSCAD' | 'CVFD';
-} = {
-	Alamosa: 'CVFD',
-	Saguache: 'NSCAD',
-	SanAntonio: 'CVFD',
-	PoolTable: 'CVFD',
-};
-
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	logger.trace('parseRecord', ...arguments);
 	const Bucket = record.s3.bucket.name;
@@ -158,28 +149,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			
 			const towerUploadMetrics: aws.CloudWatch.MetricData = [
 				{
-					MetricName: 'Upload',
-					Dimensions: [ {
-						Name: 'Tower',
-						Value: headInfo.Metadata?.source as string
-					} ],
-					Unit: 'Count',
-					Value: 1
-				},
-			];
-			if (!Number.isNaN(Number(headInfo.Metadata?.stop_time))) {
-				const towerName = headInfo.Metadata?.source as string;
-				const stationName = towerToStation[towerName] || towerName;
-				towerUploadMetrics.push({
 					MetricName: 'UploadTime',
 					Dimensions: [ {
 						Name: 'Tower',
-						Value: stationName,
+						Value: headInfo.Metadata?.source as string,
 					} ],
 					Unit: 'Seconds',
 					Value: Math.round(addedTime / 1000) - Number(headInfo.Metadata?.stop_time),
-				});
-			}
+				}
+			];
 
 			await cloudwatch.putMetricData({
 				Namespace: 'DTR Metrics',
@@ -278,12 +256,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 
 				if (matchingItems.length > 1) {
 					doTranscriptOnly = true; // So we don't accidentally double page
-					const metric = incrementMetric('Event', {
-						source: metricSource,
-						type: 'dtr',
-						event: 'duplicate call'
-					}, false);
-					promises.push(metric);
 					const transcript: string | null = matchingItems.reduce((transcript: null | string, item) => {
 						if (transcript !== null) return transcript;
 						return item.Transcript?.S || null;

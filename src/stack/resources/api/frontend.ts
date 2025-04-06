@@ -659,14 +659,14 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'DTR Metrics',
-				MetricName: 'Upload',
+				MetricName: 'UploadTime',
 				Dimensions: [ {
 					Name: 'Tower',
 					Value: 'Saguache'
 				} ]
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},
@@ -711,14 +711,14 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'DTR Metrics',
-				MetricName: 'Upload',
+				MetricName: 'UploadTime',
 				Dimensions: [ {
 					Name: 'Tower',
 					Value: 'Alamosa'
 				} ]
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},
@@ -763,14 +763,14 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'DTR Metrics',
-				MetricName: 'Upload',
+				MetricName: 'UploadTime',
 				Dimensions: [ {
 					Name: 'Tower',
 					Value: 'PoolTable'
 				} ]
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},
@@ -815,14 +815,14 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'DTR Metrics',
-				MetricName: 'Upload',
+				MetricName: 'UploadTime',
 				Dimensions: [ {
 					Name: 'Tower',
 					Value: 'SanAntonio'
 				} ]
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},
@@ -867,14 +867,14 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'DTR Metrics',
-				MetricName: 'Upload',
+				MetricName: 'UploadTime',
 				Dimensions: [ {
 					Name: 'Tower',
 					Value: 'monte'
 				} ]
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},
@@ -895,10 +895,10 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'Twilio Health',
-				MetricName: 'Sent'
+				MetricName: 'SentTime'
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},
@@ -907,10 +907,10 @@ const statsMap: {
 		MetricStat: {
 			Metric: {
 				Namespace: 'Twilio Health',
-				MetricName: 'Delivered'
+				MetricName: 'DeliveredTime'
 			},
 			Period: 60,
-			Stat: 'Sum',
+			Stat: 'SampleCount',
 			Unit: 'Count'
 		}
 	},

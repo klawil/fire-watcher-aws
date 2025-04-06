@@ -1194,10 +1194,10 @@ export class FireWatcherAwsStack extends Stack {
       evaluationPeriods: 18,
       datapointsToAlarm: 18,
       metric: new cloudwatch.Metric({
-        metricName: 'Upload',
+        metricName: 'UploadTime',
         namespace: 'DTR Metrics',
         period: Duration.hours(1),
-        statistic: cloudwatch.Stats.SUM,
+        statistic: cloudwatch.Stats.SAMPLE_COUNT,
         dimensionsMap: {
           Tower: 'Saguache'
         }
@@ -1233,13 +1233,13 @@ export class FireWatcherAwsStack extends Stack {
           evaluationPeriods: 4,
           datapointsToAlarm: 4,
           metric: new cloudwatch.Metric({
-            metricName: 'Upload',
+            metricName: 'UploadTime',
             namespace: 'DTR Metrics',
             period: Duration.hours(3),
-            statistic: cloudwatch.Stats.SUM,
+            statistic: cloudwatch.Stats.SAMPLE_COUNT,
             dimensionsMap: {
               Tower: 'PoolTable'
-            }
+            },
           }),
           alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 12 hours which may indicate the tower is not being recorded',
           alarmName: 'Pool Table Uploads',
