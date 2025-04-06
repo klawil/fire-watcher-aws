@@ -4,12 +4,14 @@ import * as https from 'https';
 import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, incrementMetric, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
-import { TwilioTextQueueItem } from '@/types/backend/queue';
+import { ActivateUserQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
 import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
 import { departmentConfig, pagingTalkgroupConfig, PhoneNumberTypes } from '@/types/backend/department';
-import { PagingTalkgroup, UserDepartment } from '@/types/api/users';
+import { FullUserObject, PagingTalkgroup, UserDepartment } from '@/types/api/users';
+import { TABLE_FILE, TABLE_USER, typedGet, typedQuery, typedScan } from '../utils/dynamoTyped';
+import { FullFileObject } from '@/types/api/files';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
@@ -909,6 +911,145 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
 	await insertMessage;
 }
 
+async function handleActivateUser(body: ActivateUserQueueItem) {
+	logger.trace('handleActivateUser', ...arguments);
+	const promises: Promise<unknown>[] = [];
+
+	// Get the user's information
+	const userGet = await typedGet<FullUserObject>({
+		TableName: TABLE_USER,
+		Key: {
+			phone: body.phone,
+		},
+	});
+	if (!userGet.Item)
+		throw new Error(`Invalid user - ${body.phone}`);
+	const user = userGet.Item;
+
+	const phoneCategories = await twilioPhoneCategories();
+	const config = departmentConfig[body.department];
+	const pagePhoneName: PhoneNumberTypes = config.pagePhone;
+	if (
+		typeof config === 'undefined' ||
+		typeof phoneCategories[pagePhoneName] === 'undefined'
+	)
+		throw new Error(`Invalid phone config - ${config}`);
+	
+	const pageTgs = (user.talkgroups || [])
+		.map(key => pagingTalkgroupConfig[key].partyBeingPaged)
+		.join(', ');
+	const messagePieces: {
+		[key in WelcomeMessageConfigKeys]: string;
+	} = {
+		pageNumber: formatPhone(phoneCategories[pagePhoneName].number.slice(2)),
+		name: config.name,
+		type: config.type,
+	};
+	const groupType = config.type === 'page'
+		? 'page'
+		: pageTgs.length === 0
+			? 'text'
+			: 'textPage';
+	const phoneType = config.type === 'page'
+		? 'page'
+		: 'text';
+	const customWelcomeMessage = (
+		`${welcomeMessageParts.welcome}\n\n` +
+		`${welcomeMessageParts[`${groupType}Group`]}\n\n` +
+		(pageTgs.length > 0 ? `You will receive pages for: ${pageTgs}\n\n` : '') +
+		`${welcomeMessageParts.howToLeave}`
+	)
+		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => messagePieces[b]);
+	promises.push(sendMessage(
+		metricSource,
+		'account',
+		null,
+		body.phone,
+		config[`${phoneType}Phone`] || config.pagePhone,
+		customWelcomeMessage,
+		[]
+	));
+
+	// Send a message to the admins
+	promises.push(typedScan<FullUserObject>({
+		TableName: TABLE_USER,
+		ExpressionAttributeNames: {
+			'#admin': 'admin',
+			'#department': body.department,
+			'#isDistrictAdmin': 'isDistrictAdmin',
+		},
+		ExpressionAttributeValues: {
+			':admin': true,
+		},
+		FilterExpression: '#department.#admin = :admin OR #isDistrictAdmin = :admin',
+	})
+		.then(admins => {
+			const adminsToSendTo = (admins.Items || []);
+			if (adminsToSendTo.length === 0) return;
+
+			const adminMessageId = Date.now();
+			const adminMessageBody = `New subscribed: ${user.fName} ${user.lName} (${formatPhone(body.phone)}) has been added to the ${body.department} group`;
+			return Promise.all([
+				saveMessageData(
+					'departmentAlert',
+					adminMessageId,
+					adminsToSendTo.length,
+					adminMessageBody,
+					[],
+					null,
+					null,
+					body.department,
+				),
+				...adminsToSendTo.map(async (item) => sendMessage(
+					metricSource,
+					'departmentAlert',
+					adminMessageId,
+					item.phone,
+					groupType === 'page'
+						? await getPageNumber(item)
+						: (config.textPhone || config.pagePhone),
+					adminMessageBody,
+				)),
+			]);
+		}));
+
+	// Send a sample page
+	if (user.talkgroups && user.talkgroups.length > 0) {
+		promises.push(typedQuery<FullFileObject>({
+			TableName: TABLE_FILE,
+			IndexName: 'ToneIndex',
+			ExpressionAttributeValues: {
+				':ToneIndex': 'y',
+				':Talkgroup': user.talkgroups[0],
+			},
+			ExpressionAttributeNames: {
+				'#ToneIndex': 'ToneIndex',
+				'#Talkgroup': 'Talkgroup',
+			},
+			KeyConditionExpression: '#ToneIndex = :ToneIndex',
+			FilterExpression: '#Talkgroup = :Talkgroup',
+			ScanIndexForward: false,
+		})
+			.then(data => {
+				if (!data.Items || data.Items.length === 0) return;
+				const pageKey = data.Items[0].Key?.split('/').pop() || 'none';
+				const pageTg = data.Items[0].Talkgroup as PagingTalkgroup;
+
+				return sendMessage(
+					metricSource,
+					'account',
+					null,
+					body.phone,
+					config.pagePhone,
+					createPageMessage(pageKey, pageTg),
+					[],
+				);
+			}));
+	}
+
+	return await Promise.all(promises);
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	logger.debug('parseRecord', ...arguments);
 	const body = JSON.parse(event.body);
@@ -944,6 +1085,9 @@ async function parseRecord(event: lambda.SQSRecord) {
 			case 'twilio-text':
 				response = await handleTwilioText(body);
 				break;
+			case 'activate-user':
+				response = await handleActivateUser(body);
+				break;
 			default:
 				await incrementMetric('Error', {
 					source: metricSource,
@@ -952,7 +1096,7 @@ async function parseRecord(event: lambda.SQSRecord) {
 		}
 		return response;
 	} catch (e) {
-		logger.error('parseRecord', e);
+		logger.error('parseRecord', body, e);
 		await incrementMetric('Error', {
 			source: metricSource,
 			type: 'Thrown exception'

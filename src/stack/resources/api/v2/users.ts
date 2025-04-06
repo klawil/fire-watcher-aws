@@ -3,10 +3,10 @@ import { getLogger } from '../../../../logic/logger';
 import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
 import { CreateUserApi, createUserApiBodyValidator, FrontendUserObject, FullUserObject, GetAllUsersApi } from '@/types/api/users';
 import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
-import { ActivateBody } from '../../types/queue';
 import { TABLE_USER, typedPutItem, typedScan } from '@/stack/utils/dynamoTyped';
 import { TypedPutItemInput, TypedScanInput } from '@/types/backend/dynamo';
 import { ExceptSpecificKeys, OnlySpecificKeys } from '@/types/utility';
+import { ActivateUserQueueItem } from '@/types/backend/queue';
 
 const logger = getLogger('users');
 const sqs = new AWS.SQS();
@@ -160,9 +160,9 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   await typedPutItem(putConfig);
 
   // Send the queue message
-  const queueMessage: ActivateBody = {
-    action: 'activate',
-    phone: body.phone.toString(),
+  const queueMessage: ActivateUserQueueItem = {
+    action: 'activate-user',
+    phone: body.phone,
     department: body.department,
   };
   await sqs.sendMessage({

@@ -146,6 +146,7 @@ export async function saveMessageData(
     updateItem.ExpressionAttributeValues[':mediaUrls'] = mediaUrls;
     updateExpressions.push('#mediaUrls = :mediaUrls');
   }
+  updateItem.UpdateExpression = `SET ${updateExpressions.join(', ')}`;
   promises.push(typedUpdate<FullTextObject>(updateItem));
 
   // Add the metric data

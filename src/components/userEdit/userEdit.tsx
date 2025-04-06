@@ -13,6 +13,7 @@ import { formatPhone } from "@/logic/strings";
 import { CreateUserApi, FrontendUserObject, PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments } from "@/types/api/users";
 import { typeFetch } from "@/logic/typeFetch";
 import { departmentConfig, pagingTalkgroupConfig } from "@/types/backend/department";
+import { OrNull } from "@/types/backend/validation";
 
 interface CheckboxConfig {
 	name: 'getTranscript' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';
@@ -48,8 +49,7 @@ const userRoleCheckboxes: CheckboxConfig[] = [
 ];
 
 type UpdateState = Partial<
-  UpdateUserApi['body'] |
-  CreateUserApi['body']
+  OrNull<CreateUserApi['body']>
 >;
 
 function TextInput({
@@ -91,6 +91,10 @@ export default function UserEdit({
 
   const [updateState, setUpdateStateRaw] = useState<UpdateState>({});
   const setUpdateState = useCallback((userDelta: Partial<UpdateState>) => {
+    if (typeof userDelta.phone === 'string') {
+      userDelta.phone = Number((userDelta.phone as string).replace(/[^0-9]/g, ''));
+    }
+
     (Object.keys(userDelta) as (keyof UpdateState)[]).forEach(key => {
       if (
         typeof userDelta[key] === 'undefined' ||
@@ -104,9 +108,6 @@ export default function UserEdit({
         return;
       }
 
-      // if (key === 'phone') {
-      //   userDelta[key] = userDelta[key].replace(/[^0-9]/g, '');
-      // }
       setUpdateStateRaw((before) => ({
         ...before,
         [key]: userDelta[key] === false ? null : userDelta[key],
@@ -290,7 +291,7 @@ export default function UserEdit({
               onChange={e => setUpdateState({
                 department: e.target.value as CreateUserApi['body']['department'],
               })}
-              value={'department' in updateState ? updateState.department : ''}
+              value={'department' in updateState ? updateState.department || '' : ''}
               className="p-2"
             >
               {loggedInUserDepartments.map(dep => (<option
@@ -303,7 +304,7 @@ export default function UserEdit({
             <Form.Control
               isInvalid={errorFields.includes('callSign')}
               type="text"
-              value={'callSign' in updateState ? updateState.callSign : ''}
+              value={'callSign' in updateState ? updateState.callSign || '' : ''}
               onChange={(e) => setUpdateState({
                 callSign: e.target.value,
               })}

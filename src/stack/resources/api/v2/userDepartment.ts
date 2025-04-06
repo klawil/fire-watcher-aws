@@ -3,9 +3,9 @@ import { getLogger } from '../../../../logic/logger';
 import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
 import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/types/api/users';
 import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/types/api/_shared';
-import { ActivateBody } from '../../types/queue';
 import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { validateObject } from '@/stack/utils/validation';
+import { ActivateUserQueueItem } from '@/types/backend/queue';
 
 const logger = getLogger('userDepartment');
 const sqs = new AWS.SQS();
@@ -96,9 +96,9 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     !currentDepConfig.active &&
     body.active
   ) {
-    const queueMessage: ActivateBody = {
-      action: 'activate',
-      phone: phoneToEdit.toString(),
+    const queueMessage: ActivateUserQueueItem = {
+      action: 'activate-user',
+      phone: phoneToEdit,
       department: departmentToEdit,
     };
     await sqs.sendMessage({
@@ -149,7 +149,7 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     ExpressionAttributeNames: {
       [`#${departmentToEdit}`]: departmentToEdit,
     },
-    UpdateExpression: 'REMOVE #department',
+    UpdateExpression: `REMOVE #${departmentToEdit}`,
     ReturnValues: 'ALL_NEW',
   });
   if (!result.Attributes) return [

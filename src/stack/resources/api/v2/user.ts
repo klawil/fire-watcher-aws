@@ -142,8 +142,8 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
         if (body[key as keyof typeof body] === null) {
           deleteStrings.push(`#${key}`);
         } else {
-          updateConfig.ExpressionAttributeNames = {
-            ...(updateConfig.ExpressionAttributeNames || {}),
+          updateConfig.ExpressionAttributeValues = {
+            ...(updateConfig.ExpressionAttributeValues || {}),
             [`:${key}`]: body[key],
           };
           updateStrings.push(`#${key} = :${key}`);
