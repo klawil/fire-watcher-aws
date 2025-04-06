@@ -1,4 +1,3 @@
-import { DocumentClient } from "aws-sdk/clients/dynamodb";
 import { getLogger } from "@/logic/logger";
 import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
 import { TABLE_TEXT, TABLE_USER } from "../resources/api/v2/_base";
@@ -8,13 +7,13 @@ import { PhoneNumberTypes } from "@/types/backend/department";
 import { getUserPermissions } from "./user";
 import { getTwilioSecret, twilioPhoneCategories } from "./general";
 import twilio from 'twilio';
+import { TypedScanInput, TypedUpdateInput } from "@/types/backend/dynamo";
+import { typedScan, typedUpdate } from "./dynamoTyped";
 
 const logger = getLogger('stack/resources/utils/texts');
 
-const docClient = new DocumentClient();
 const cloudWatch = new CloudWatch();
 const testUser = Number(process.env.TESTING_USER as string);
-
 
 export async function getUserRecipients(
   department: UserDepartment | 'all',
@@ -24,7 +23,7 @@ export async function getUserRecipients(
   logger.trace('getRecipients', ...arguments);
 
   // Build out the scanning information
-  const scanInput: AWS.DynamoDB.DocumentClient.ScanInput = {
+  const scanInput: TypedScanInput<FullUserObject> = {
     TableName: TABLE_USER,
   };
   const filterExpressions: string[] = [];
@@ -32,17 +31,19 @@ export async function getUserRecipients(
     scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
     scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
   
-    filterExpressions.push('contains(#talkgroup, :talkgroup)');
-    scanInput.ExpressionAttributeNames['#talkgroup'] = 'talkgroups';
+    filterExpressions.push('contains(#talkgroups, :talkgroup)');
+    scanInput.ExpressionAttributeNames['#talkgroups'] = 'talkgroups';
     scanInput.ExpressionAttributeValues[':talkgroup'] = pageTg;
   }
   if (department !== 'all') {
-    scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
     scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
   
-    filterExpressions.push('#department.#active = :active');
-		scanInput.ExpressionAttributeNames['#department'] = department;
-		scanInput.ExpressionAttributeNames['#active'] = 'active';
+    filterExpressions.push(`#${department}.#active = :active`);
+    scanInput.ExpressionAttributeNames = {
+      ...(scanInput.ExpressionAttributeNames || {}),
+      [`#${department}`]: department,
+      '#active': 'active',
+    };
 		scanInput.ExpressionAttributeValues[':active'] = true;
   }
 
@@ -61,7 +62,7 @@ export async function getUserRecipients(
     scanInput.FilterExpression = filterExpressions.join(' AND ');
   }
 
-  const result = await docClient.scan(scanInput).promise();
+  const result = await typedScan(scanInput);
   const users = (result.Items || []) as FullUserObject[];
   if (isTest && !users.some(u => u.phone === testUser)) {
     users.push({
@@ -96,14 +97,7 @@ export async function saveMessageData(
   const promises: Promise<unknown>[] = [];
 
   // Build the insert/update statement
-  const updateItem: AWS.DynamoDB.DocumentClient.UpdateItemInput & {
-    ExpressionAttributeNames: {
-      [key in keyof Omit<FullTextObject, 'datetime'> as `#${key}`]?: key;
-    };
-    ExpressionAttributeValues: {
-      [key in keyof Omit<FullTextObject, 'datetime'> as `:${key}`]?: FullTextObject[key];
-    };
-  } = {
+  const updateItem: TypedUpdateInput<FullTextObject> & Required<Pick<TypedUpdateInput<FullTextObject>, 'ExpressionAttributeValues'>> = {
     TableName: TABLE_TEXT,
     Key: {
       datetime: messageId,
@@ -153,7 +147,7 @@ export async function saveMessageData(
     updateItem.ExpressionAttributeValues[':mediaUrls'] = mediaUrls;
     updateExpressions.push('#mediaUrls = :mediaUrls');
   }
-  promises.push(docClient.update(updateItem).promise());
+  promises.push(typedUpdate<FullTextObject>(updateItem));
 
   // Add the metric data
   const dataDate = new Date(messageId);

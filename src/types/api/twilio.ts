@@ -41,9 +41,25 @@ export type CreateTextApi = {
      */
     MediaUrl0?: string;
     /**
-     * Content type of the media at index 0
+     * URL to any media attached to the message
      */
-    MediaContentType0?: string;
+    MediaUrl1?: string;
+    /**
+     * URL to any media attached to the message
+     */
+    MediaUrl2?: string;
+    /**
+     * URL to any media attached to the message
+     */
+    MediaUrl3?: string;
+    /**
+     * URL to any media attached to the message
+     */
+    MediaUrl4?: string;
+    /**
+     * URL to any media attached to the message
+     */
+    MediaUrl5?: string;
   };
   responses: {
     /**
@@ -100,10 +116,6 @@ export const createTextBodyValidator: Validator<CreateTextApi['body']> = {
     types: { number: {} },
   },
   MediaUrl0: {
-    required: false,
-    types: { string: {} },
-  },
-  MediaContentType0: {
     required: false,
     types: { string: {} },
   },

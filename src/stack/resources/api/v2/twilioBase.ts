@@ -6,9 +6,9 @@ import { TwilioTextQueueItem } from '@/types/backend/queue';
 import { validateTwilioRequest } from './_twilio';
 import { checkObject, handleResourceApi, LambdaApiFunction, TABLE_USER } from './_base';
 import { getLogger } from '@/logic/logger';
+import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('twilioBase');
-const docClient = new AWS.DynamoDB.DocumentClient();
 
 const sqs = new AWS.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
@@ -125,18 +125,18 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   }
 
   // Check for a user
-  const sender = await docClient.get({
+  const sender = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: Number(body.From.slice(2)),
     },
-  }).promise();
+  });
   if (!sender.Item) {
     return buildTwilioResponse(200);
   }
 
   // Validate that the user can send a message to this number
-  const sendingUser = sender.Item as FullUserObject;
+  const sendingUser = sender.Item;
   if (
     typeof phoneNumberConf.department === 'undefined' ||
     phoneNumberConf.type === 'alert'
@@ -156,13 +156,13 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   // Check for messages that are text commands
   const isTextCommand = typeof textCommands[body.Body] !== 'undefined';
   if (isTextCommand) {
-    await docClient.update({
+    await typedUpdate<FullUserObject>({
       TableName: TABLE_USER,
       Key: {
         phone: sendingUser.phone,
       },
       ...textCommands[body.Body].update,
-    }).promise();
+    });
     return buildTwilioResponse(
       200,
       textCommands[body.Body].response,

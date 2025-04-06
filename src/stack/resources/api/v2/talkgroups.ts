@@ -1,6 +1,6 @@
 import { getLogger } from '../../../../logic/logger';
 import * as AWS from 'aws-sdk';
-import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
+import { FullTalkgroupObject, GetAllTalkgroupsApi } from '@/types/api/talkgroups';
 import { handleResourceApi, LambdaApiFunction, TABLE_TALKGROUP, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
 
 const logger = getLogger('talkgroups');
@@ -32,7 +32,7 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   }
 
   // Build the query configs
-  const queryConfigs: DocumentQueryConfig[] = partitions.map(partition => ({
+  const queryConfigs: DocumentQueryConfig<FullTalkgroupObject>[] = partitions.map(partition => ({
     ExpressionAttributeValues: {
       ':inUse': partition,
     },

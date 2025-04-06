@@ -1,11 +1,10 @@
-import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
 import { api404Body } from '@/types/api/_shared';
-import { GetFileApi } from '@/types/api/files';
+import { FullFileObject, GetFileApi } from '@/types/api/files';
 import { handleResourceApi, LambdaApiFunction, TABLE_FILE } from './_base';
+import { typedGet } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('file');
-const docClient = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });
 
 const dtrIdRegex = /^(\d+)-(\d+)$/;
 
@@ -17,13 +16,13 @@ const GET: LambdaApiFunction<GetFileApi> = async function (event) {
   if (idParts === null)
     return [ 404, api404Body ];
 
-  const file = await docClient.get({
+  const file = await typedGet<FullFileObject>({
     TableName: TABLE_FILE,
     Key: {
       Talkgroup: Number(idParts[1]),
       Added: Number(idParts[2]),
     }
-  }).promise();
+  });
 
   if (!file.Item)
     return [ 404, api404Body ];

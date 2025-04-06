@@ -4,9 +4,9 @@ import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, Lam
 import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/types/api/users';
 import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/types/api/_shared';
 import { ActivateBody } from '../../types/queue';
+import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 
 const logger = getLogger('userDepartment');
-const docClient = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });
 const sqs = new AWS.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
 
@@ -49,27 +49,27 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
   ) return [ 403, api403Body, userHeaders ];
 
   // Make sure the phone exists
-  const currentUser = await docClient.get({
+  const currentUser = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: phoneToEdit,
     },
-  }).promise();
+  });
   if (!currentUser.Item)
     return [ 404, api404Body, userHeaders ];
 
   // Build the update
   const currentDepConfig = currentUser.Item[departmentToEdit] || {};
-  const updateResult = await docClient.update({
+  const updateResult = await typedUpdate<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: phoneToEdit,
     },
     ExpressionAttributeNames: {
-      '#department': departmentToEdit,
+      [`#${departmentToEdit}`]: departmentToEdit,
     },
     ExpressionAttributeValues: {
-      ':department': {
+      [`:${departmentToEdit}`]: {
         active: typeof body.active === 'undefined'
           ? currentDepConfig.active || undefined
           : body.active === null ? undefined : body.active,
@@ -81,9 +81,9 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
           : body.callSign,
       },
     },
-    UpdateExpression: 'SET #department = :department',
+    UpdateExpression: `SET #${departmentToEdit} = :${departmentToEdit}`,
     ReturnValues: 'ALL_NEW',
-  }).promise();
+  });
   if (!updateResult.Attributes) return [
     500,
     api500Body,
@@ -140,17 +140,17 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
   ) return [ 403, api403Body, userHeaders ];
 
   // Run the deletion of the department
-  const result = await docClient.update({
+  const result = await typedUpdate<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: phoneToEdit,
     },
     ExpressionAttributeNames: {
-      '#department': departmentToEdit,
+      [`#${departmentToEdit}`]: departmentToEdit,
     },
     UpdateExpression: 'REMOVE #department',
     ReturnValues: 'ALL_NEW',
-  }).promise();
+  });
   if (!result.Attributes) return [
     500,
     api500Body,

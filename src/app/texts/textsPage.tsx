@@ -143,7 +143,7 @@ function TextsTable({
           >
             <td>{dateTimeToTimeStr(text.datetime)}</td>
             <td>{text.body?.split(/\n/g).map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}</td>
-            {!isPage && <td>{text.mediaUrls?.split(',')
+            {!isPage && <td>{(typeof text.mediaUrls === 'string' ? text.mediaUrls.split(',') : text.mediaUrls || [])
               .filter(s => s !== '')
               .map((v, i) => <a key={i} href={v}>{i + 1}</a>)
               .join(', ')}</td>}

@@ -7,11 +7,11 @@ import { FullUserObject } from '@/types/api/users';
 import { LoginBody } from '../../types/queue';
 import { getUserPermissions } from '../../../utils/user';
 import { randomString } from '@/logic/strings';
+import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const logger = getLogger('login');
-const docClient = new AWS.DynamoDB.DocumentClient();
 const sqs = new AWS.SQS();
 const queueUrl = process.env.QUEUE_URL as string;
 
@@ -38,19 +38,19 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   }
 
   // Make sure the user is actually valid
-  const userObj = await docClient.get({
+  const userObj = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: params.id,
     },
-  }).promise();
+  });
   if (!userObj.Item) {
     return [
       200,
       api200Body,
     ];
   }
-  const userPerms = getUserPermissions(userObj.Item as FullUserObject);
+  const userPerms = getUserPermissions(userObj.Item);
   if (!userPerms.isUser) {
     return [
       200,
@@ -111,19 +111,19 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   }
 
   // Make sure the user is actually valid
-  const userObjGet = await docClient.get({
+  const userObjGet = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: params.id,
     },
-  }).promise();
+  });
   if (!userObjGet.Item) {
     return [
       400,
       generateApi400Body([ 'code' ]),
     ];
   }
-  const userPerms = getUserPermissions(userObjGet.Item as FullUserObject);
+  const userPerms = getUserPermissions(userObjGet.Item);
   if (!userPerms.isUser) {
     return [
       400,
@@ -132,7 +132,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   }
 
   // Check that the code is not expired
-  const userObj = userObjGet.Item as FullUserObject;
+  const userObj = userObjGet.Item;
   logger.error('Possible fail', userObj, Date.now(), body);
   if (
     !userObj.code ||
@@ -155,7 +155,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
       tokenExpiry,
     },
   ];
-  await docClient.update({
+  await typedUpdate<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: params.id,
@@ -169,7 +169,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
       ':loginTokens': userTokens,
     },
     UpdateExpression: 'REMOVE #code, #codeExpiry SET #loginTokens = :loginTokens',
-  }).promise();
+  });
 
   return [
     200,

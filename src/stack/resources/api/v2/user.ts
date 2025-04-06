@@ -1,11 +1,11 @@
-import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
 import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, TABLE_USER, validateRequest } from './_base';
-import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiParamsValidator, validDepartments } from '@/types/api/users';
+import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments } from '@/types/api/users';
 import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
+import { typedDeleteItem, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { TypedUpdateInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('users');
-const docClient = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });
 
 const GET: LambdaApiFunction<GetUserApi> = async function (event) {
   logger.debug('GET', ...arguments);
@@ -39,18 +39,18 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
   }
 
   // Fetch the user
-  const userInfo = await docClient.get({
+  const userInfo = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: params.id,
     },
-  }).promise();
+  });
   if (!userInfo.Item)
     return [ 404, api404Body, userHeaders ];
 
   return [
     200,
-    getFrontendUserObj(userInfo.Item as FullUserObject),
+    getFrontendUserObj(userInfo.Item),
     userHeaders,
   ];
 }
@@ -97,15 +97,15 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   // Validate the user exists and can be edited by the authenticated user
   const phoneToUpdate = updateType === 'SELF'
     ? user.phone
-    : params.id;
+    : params.id as number;
   if (updateType === 'OTHER') {
     // Get the user being edited
-    const userToEdit = await docClient.get({
+    const userToEdit = await typedGet<FullUserObject>({
       TableName: TABLE_USER,
       Key: {
         phone: phoneToUpdate,
       },
-    }).promise();
+    });
     if (!userToEdit.Item) {
       return [ 404, api404Body, userHeaders ];
     }
@@ -121,10 +121,7 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   // Update the user record
   const updateStrings: string[] = [];
   const deleteStrings: string[] = [];
-  const updateConfig: AWS.DynamoDB.DocumentClient.UpdateItemInput & Required<Pick<
-    AWS.DynamoDB.DocumentClient.UpdateItemInput,
-    'ExpressionAttributeNames'
-  >> = {
+  const updateConfig: TypedUpdateInput<FullUserObject> = {
     TableName: TABLE_USER,
     Key: {
       phone: phoneToUpdate,
@@ -134,14 +131,20 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     ReturnValues: 'ALL_NEW',
   };
   (user.isDistrictAdmin ? districtAdminUserKeys : adminUserKeys)
-    .forEach(key => {
-      if (key in body) {
-        updateConfig.ExpressionAttributeNames[`#${key}`] = key;
+    .forEach(keyRaw => {
+      if (keyRaw in body && keyRaw !== 'phone') {
+        const key = keyRaw as keyof typeof body;
+        updateConfig.ExpressionAttributeNames = {
+          ...updateConfig.ExpressionAttributeNames,
+          [`#${key}`]: key,
+        };
         if (body[key as keyof typeof body] === null) {
           deleteStrings.push(`#${key}`);
         } else {
-          updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
-          updateConfig.ExpressionAttributeValues[`:${key}`] = body[key as keyof typeof body];
+          updateConfig.ExpressionAttributeNames = {
+            ...(updateConfig.ExpressionAttributeNames || {}),
+            [`:${key}`]: body[key],
+          };
           updateStrings.push(`#${key} = :${key}`);
         }
       }
@@ -155,7 +158,7 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     }
     updateConfig.UpdateExpression += `SET ${updateStrings.join(', ')}`;
   }
-  const updateResult = await docClient.update(updateConfig).promise();
+  const updateResult = await typedUpdate<FullUserObject>(updateConfig);
   if (!updateResult.Attributes) {
     logger.error(`Failed to update user`, body, updateResult);
     throw new Error(`Failed to create user`);
@@ -174,7 +177,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   // Make sure the path parameter is valid
   const [ params, paramsErrors ] = checkObject(
     event.pathParameters,
-    userApiParamsValidator,
+    userApiDeleteParamsValidator,
   );
   if (
     params === null ||
@@ -192,16 +195,16 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
 
   // Validate the user exists
   const phoneToDelete = params.id;
-  const changeUserGet = await docClient.get({
+  const changeUserGet = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: phoneToDelete,
     },
-  }).promise();
+  });
   if (!changeUserGet.Item) {
     return [ 404, api404Body, userHeaders ];
   }
-  const changeUser = changeUserGet.Item as FullUserObject;
+  const changeUser = changeUserGet.Item;
 
   // Validate the logged in user has the correct permissions
   const changeUserDepartments = validDepartments
@@ -216,12 +219,12 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   }
 
   // Delete the user
-  await docClient.delete({
+  await typedDeleteItem<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: phoneToDelete,
     },
-  }).promise();
+  });
 
   return [
     200,

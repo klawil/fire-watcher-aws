@@ -8,9 +8,10 @@ import { getTwilioSecret, twilioPhoneNumbers } from '../../../utils/general';
 import { FullUserObject, validDepartments } from '@/types/api/users';
 import { TwilioErrorBody } from '../../types/queue';
 import { formatPhone } from '@/logic/strings';
+import { typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { FullTextObject } from '@/types/api/texts';
 
 const logger = getLogger('twilioStatus');
-const docClient = new AWS.DynamoDB.DocumentClient();
 const sqs = new AWS.SQS();
 const cloudWatch = new AWS.CloudWatch();
 const queueUrl = process.env.QUEUE_URL as string;
@@ -87,45 +88,45 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   }
 
   // Validate the user sent to
-  const userGet = await docClient.get({
+  const userGet = await typedGet<FullUserObject>({
     TableName: TABLE_USER,
     Key: {
       phone: Number(body.To.slice(2)),
     },
-  }).promise();
+  });
   if (!userGet.Item) {
     logger.error(`Invalid user ID - user ${body.To}`, userGet);
     return [ 204, '' ];
   }
-  const user = userGet.Item as FullUserObject;
+  const user = userGet.Item;
 
   const promises: {
     [key: string]: Promise<unknown>;
   } = {};
 
   // Update the message table
-  promises['text-update'] = docClient.update({
+  promises['text-update'] = typedUpdate<FullTextObject>({
     TableName: TABLE_TEXT,
     Key: {
       datetime: params.id,
     },
     ExpressionAttributeNames: {
-      '#eventName': body.MessageStatus,
-      '#eventPhoneList': `${body.MessageStatus}Phone`,
-      '#from': 'fromNumber',
+      [`#${body.MessageStatus}`]: body.MessageStatus,
+      [`#${body.MessageStatus}Phone`]: `${body.MessageStatus}Phone`,
+      '#fromNumber': 'fromNumber',
     },
     ExpressionAttributeValues: {
-      ':eventListItem': [ eventTime ],
-      ':eventPhoneListItem': [ user.phone ],
-      ':from': body.From,
+      [`:${body.MessageStatus}`]: [ eventTime ],
+      [`:${body.MessageStatus}Phone`]: [ user.phone ],
+      ':fromNumber': body.From,
       ':blankList': [],
     },
     UpdateExpression: 'SET ' + [
-      '#eventName = list_append(if_not_exists(#eventName, :blankList), :eventListItem)',
-      '#eventPhoneList = list_append(if_not_exists(#eventPhoneList, :blankList), :eventPhoneListItem)',
-      '#from = :from',
+      `#${body.MessageStatus} = list_append(if_not_exists(#${body.MessageStatus}, :blankList), :eventListItem)`,
+      `#${body.MessageStatus}Phone = list_append(if_not_exists(#${body.MessageStatus}Phone, :blankList), :eventPhoneListItem)`,
+      '#fromNumber = :fromNumber',
     ].join(', '),
-  }).promise();
+  });
 
   // Update the user for delivered and undelivered messages
   if ([ 'undelivered', 'delivered' ].includes(body.MessageStatus)) {
@@ -141,7 +142,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       updateExpr = '#lastStatusCount = if_not_exists(#lastStatus, :lastStatusBase) + :lastStatusIncrement';
     }
 
-    promises['user-update'] = docClient.update({
+    promises['user-update'] = typedUpdate<FullUserObject>({
       TableName: TABLE_USER,
       Key: {
         phone: user.phone,
@@ -153,7 +154,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       ExpressionAttributeValues: updateValues,
       UpdateExpression: `SET #lastStatus = :lastStatus, ${updateExpr}`,
       ReturnValues: 'ALL_NEW',
-    }).promise()
+    })
       .then(result => {
         // Check for enough undelivered messages to alert the admins of the department
         if (result === null) return null;
@@ -162,7 +163,8 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
           result.Attributes?.lastStatus === 'undelivered' &&
           typeof result.Attributes?.lastStatusCount === 'number' &&
           result.Attributes.lastStatusCount >= 10 &&
-          result.Attributes.lastStatusCount % 10 === 0
+          result.Attributes.lastStatusCount % 10 === 0 &&
+          typeof result.Attributes.phone !== 'undefined'
         ) {
           const queueMessage: TwilioErrorBody = {
             action: 'twilio_error',

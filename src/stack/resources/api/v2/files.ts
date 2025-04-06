@@ -26,7 +26,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     ExpressionAttributeNames: {},
     Limit: defaultListLimit,
   };
-  const queryConfigs: DocumentQueryConfig[] = [];
+  const queryConfigs: DocumentQueryConfig<FullFileObject>[] = [];
 
   // Generate the base configs using an index. This can be a talkgroup index or emergency index
   if (typeof queryStringParameters.tg !== 'undefined') {
@@ -38,7 +38,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     queryStringParameters.tg.split('|')
       .forEach(tg => queryConfigs.push({
         ExpressionAttributeValues: {
-          ':tg': Number(tg),
+          ':talkgroup': Number(tg),
         },
       }));
   } else {

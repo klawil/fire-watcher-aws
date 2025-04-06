@@ -1,11 +1,11 @@
-import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
 import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, TABLE_TEXT } from './_base';
 import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, omittedFrontendTextFields } from '@/types/api/texts';
 import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
+import { typedQuery } from '@/stack/utils/dynamoTyped';
+import { TypedQueryInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('texts');
-const docClient = new AWS.DynamoDB.DocumentClient();
 
 const anyAdminTextTypes: FullTextObject['type'][] = [ 'page', 'transcript', 'pageAnnounce', ];
 const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
@@ -35,10 +35,10 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
 
   // Build and run the query
-  const queryInput: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
-    AWS.DynamoDB.DocumentClient.QueryInput,
+  const queryInput: TypedQueryInput<FullTextObject> & Required<Pick<
+    TypedQueryInput<FullTextObject>,
     'ExpressionAttributeNames' | 'ExpressionAttributeValues'
-  >> = {
+  >>= {
     TableName: TABLE_TEXT,
     IndexName: 'testPageIndex',
     Limit: 100,
@@ -56,10 +56,10 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
     queryInput.ExpressionAttributeValues[':datetime'] = query.before;
 		queryInput.KeyConditionExpression += ' AND #datetime < :datetime';
   }
-  const result = await docClient.query(queryInput).promise();
+  const result = await typedQuery<FullTextObject>(queryInput);
 
   // Filter out the texts the current user should not see
-  const data = ((result.Items || []) as FullTextObject[])
+  const data = (result.Items || [])
     .filter(text => {
       // Don't show texts that include auth codes
       if (text.type === 'account') return false;

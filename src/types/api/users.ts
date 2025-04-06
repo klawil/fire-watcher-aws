@@ -497,6 +497,18 @@ export type DeleteUserApi = {
   }];
 }
 
+export const userApiDeleteParamsValidator: Validator<DeleteUserApi['params']> = {
+  id: {
+    required: true,
+    parse: v => Number(v),
+    types: {
+      number: {
+        regex: /^[0-9]{10}$/,
+      },
+    },
+  },
+}
+
 /**** DEPARTMENT APIS ****/
 
 /**

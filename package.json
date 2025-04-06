@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "document": "ts-oas src/common/apiv2/talkgroups.ts,src/common/apiv2/files.ts,src/common/apiv2/users.ts,src/common/apiv2/texts.ts,src/common/apiv2/login.ts,src/common/apiv2/twilio.ts /.Api$/ -s oasBase.json -o oas.json -p ./oasSettings.json",
+    "document": "ts-oas src/types/api/talkgroups.ts,src/types/api/files.ts,src/types/api/users.ts,src/types/api/texts.ts,src/types/api/login.ts,src/types/api/twilio.ts /.Api$/ -s oasBase.json -o oas.json -p ./oasSettings.json",
     "build": "PROD_BUILD=y next build",
     "start": "next start",
     "lint": "next lint",

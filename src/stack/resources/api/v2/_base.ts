@@ -6,6 +6,8 @@ import { getLogger } from "../../../../logic/logger";
 import { districtAdminUserKeys, FrontendUserObject, FullUserObject } from "@/types/api/users";
 import { UserPermissions } from "@/types/backend/user";
 import { getUserPermissions } from "../../../utils/user";
+import { typedGet, typedQuery } from "@/stack/utils/dynamoTyped";
+import { TypedQueryInput } from "@/types/backend/dynamo";
 
 const logger = getLogger('api/v2/_base');
 
@@ -69,8 +71,6 @@ export async function handleResourceApi(
   return api403Response;
 }
 
-const docClient = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });
-
 interface DocClientListOutput<
 	ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
 > extends AWS.DynamoDB.DocumentClient.QueryOutput {
@@ -83,8 +83,8 @@ interface DocClientListOutput<
 	MaxAfterKey: number | null;
 }
 
-export type DocumentQueryConfig = Omit<
-  AWS.DynamoDB.DocumentClient.QueryInput,
+export type DocumentQueryConfig<T extends object> = Omit<
+  TypedQueryInput<T>,
 	'TableName' | 'IndexName' | 'Limit' | 'ScanIndexForward' | 'ProjectionExpression'
 	| 'FilterExpression' | 'KeyConditionExpression'
 > & Required<Pick<
@@ -95,8 +95,8 @@ export type DocumentQueryConfig = Omit<
 export async function mergeDynamoQueriesDocClient<
 	ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
 >(
-	baseConfig: AWS.DynamoDB.DocumentClient.QueryInput,
-	queryConfigs: DocumentQueryConfig[],
+	baseConfig: TypedQueryInput<ItemType>,
+	queryConfigs: DocumentQueryConfig<ItemType>[],
 	sortKey: keyof ItemType,
 	afterKey: (keyof ItemType | null) = null,
 ) {
@@ -110,10 +110,10 @@ export async function mergeDynamoQueriesDocClient<
 	const sortDirLesser = scanForward ? -1 : 1;
 
 	// Run the query and combine the items
-	const queryResults = await Promise.all(queryConfigs.map(config => docClient.query({
+	const queryResults = await Promise.all(queryConfigs.map(config => typedQuery<ItemType>({
 		...baseConfig,
 		...config
-	}).promise()));
+	})));
 	const combinedQueryResults = queryResults.reduce((agg: DocClientListOutput<ItemType>, result) => {
 		if (typeof result.Count !== 'undefined')
 			agg.Count += result.Count;
@@ -286,12 +286,12 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
     }
 
     // Get the user object from DynamoDB
-    const user = await docClient.get({
+    const user = await typedGet<FullUserObject>({
       TableName: TABLE_USER,
       Key: {
         phone: Number(cookies[authUserCookie]),
       },
-    }).promise();
+    });
     if (!user.Item) {
       logger.warn('getCurrentUser', 'failed', `Invalid user from cookie - ${cookies[authUserCookie]}`);
       return response;
