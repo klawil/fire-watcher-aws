@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { validateBodyIsJson } from '../../utils/general';
 import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
 import { getLoggedInUser } from '../../utils/auth';
 import { ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, AnnouncementApiBody, TextObject } from '../../../common/frontendApi';
@@ -9,8 +9,6 @@ import { AnnounceBody } from '../types/queue';
 import { pagingTalkgroups, validDepartments } from '@/types/api/users';
 
 const logger = getLogger('frontend');
-
-const metricSource = 'Frontend';
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
@@ -1622,42 +1620,26 @@ async function getSites(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
-	try {
-		switch (action) {
-			case 'listTexts':
-				return await getTexts(event);
-			case 'pageView':
-				return await handlePageView(event);
-			case 'stats':
-				return await getStats(event);
-			case 'sites':
-				return await getSites(event);
-			case 'announce':
-				return await sendAnnouncement(event);
-		}
+	switch (action) {
+		case 'listTexts':
+			return await getTexts(event);
+		case 'pageView':
+			return await handlePageView(event);
+		case 'stats':
+			return await getStats(event);
+		case 'sites':
+			return await getSites(event);
+		case 'announce':
+			return await sendAnnouncement(event);
+	}
 
-		logger.error('main', 'Invalid action', action);
-		return {
-			statusCode: 404,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: `Invalid action '${action}'`
-			})
-		}
-	} catch (e) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown exception'
-		});
-		logger.error('main', e);
-		return {
-			statusCode: 400,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: (e as Error).message
-			})
-		};
+	logger.error('main', 'Invalid action', action);
+	return {
+		statusCode: 404,
+		headers: {},
+		body: JSON.stringify({
+			error: true,
+			message: `Invalid action '${action}'`
+		})
 	}
 }

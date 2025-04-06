@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
-import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, incrementMetric, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
+import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
 import { ActivateUserQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
@@ -1054,52 +1054,41 @@ async function parseRecord(event: lambda.SQSRecord) {
 	if (typeof body.action === 'undefined' && typeof body['detail-type'] !== 'undefined') {
 		body.action = 'transcribe';
 	}
-	try {
-		let response;
-		switch (body.action) {
-			case 'activate':
-				response = await handleActivation(body);
-				break;
-			case 'twilio':
-				response = await handleTwilio(body);
-				break;
-			case 'twilio_error':
-				response = await handleTwilioError(body);
-				break;
-			case 'announce':
-				response = await handleAnnounce(body);
-				break;
-			case 'page':
-				response = await handlePage(body);
-				break;
-			case 'login':
-				response = await handleLogin(body);
-				break;
-			case 'transcribe':
-				response = await handleTranscribe(body);
-				break;
+	let response;
+	switch (body.action) {
+		case 'activate':
+			response = await handleActivation(body);
+			break;
+		case 'twilio':
+			response = await handleTwilio(body);
+			break;
+		case 'twilio_error':
+			response = await handleTwilioError(body);
+			break;
+		case 'announce':
+			response = await handleAnnounce(body);
+			break;
+		case 'page':
+			response = await handlePage(body);
+			break;
+		case 'login':
+			response = await handleLogin(body);
+			break;
+		case 'transcribe':
+			response = await handleTranscribe(body);
+			break;
 
-			// v2 functions
-			case 'twilio-text':
-				response = await handleTwilioText(body);
-				break;
-			case 'activate-user':
-				response = await handleActivateUser(body);
-				break;
-			default:
-				await incrementMetric('Error', {
-					source: metricSource,
-					type: '404'
-				});
-		}
-		return response;
-	} catch (e) {
-		logger.error('parseRecord', body, e);
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown exception'
-		});
+		// v2 functions
+		case 'twilio-text':
+			response = await handleTwilioText(body);
+			break;
+		case 'activate-user':
+			response = await handleActivateUser(body);
+			break;
+		default:
+			throw new Error(`Unkown body - ${JSON.stringify(body)}`);
 	}
+	return response;
 }
 
 export async function main(event: lambda.SQSEvent) {

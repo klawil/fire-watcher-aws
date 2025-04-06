@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { validateBodyIsJson } from '../../utils/general';
 import { parseDynamoDbAttributeMap, parseDynamoDbAttributeValue } from '../../utils/dynamodb';
 import { getCookies, getLoggedInUser } from '../../utils/auth';
 import { authTokenCookie, authUserCookie, isUserActive } from '../types/auth';
@@ -13,7 +13,6 @@ import { PagingTalkgroup, pagingTalkgroups, UserDepartment, validDepartments } f
 
 const logger = getLogger('user');
 
-const metricSource = 'User';
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const dynamodb = new aws.DynamoDB();
@@ -1116,50 +1115,34 @@ async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
-	try {
-		switch (action) {
-			case 'login':
-				return await handleLogin(event);
-			case 'auth':
-				return await handleAuth(event);
-			case 'getUser':
-				return await getUser(event);
-			case 'logout':
-				return await handleLogout(event);
-			case 'list':
-				return await handleList(event);
-			case 'create':
-				return await createOrUpdateUser(event, true);
-			case 'update':
-				return await createOrUpdateUser(event, false);
-			case 'updateGroup':
-				return await updateUserGroup(event);
-			case 'delete':
-				return await deleteUser(event);
-		}
-
-		logger.error('main', 'Invalid Action', action);
-		return {
-			statusCode: 404,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: `Invalid action '${action}'`
-			})
-		};
-	} catch (e) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown error'
-		});
-		logger.error('main', e);
-		return {
-			statusCode: 400,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: (e as Error).message
-			})
-		};
+	switch (action) {
+		case 'login':
+			return await handleLogin(event);
+		case 'auth':
+			return await handleAuth(event);
+		case 'getUser':
+			return await getUser(event);
+		case 'logout':
+			return await handleLogout(event);
+		case 'list':
+			return await handleList(event);
+		case 'create':
+			return await createOrUpdateUser(event, true);
+		case 'update':
+			return await createOrUpdateUser(event, false);
+		case 'updateGroup':
+			return await updateUserGroup(event);
+		case 'delete':
+			return await deleteUser(event);
 	}
+
+	logger.error('main', 'Invalid Action', action);
+	return {
+		statusCode: 404,
+		headers: {},
+		body: JSON.stringify({
+			error: true,
+			message: `Invalid action '${action}'`
+		})
+	};
 }

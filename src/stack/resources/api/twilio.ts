@@ -8,6 +8,7 @@ import { getLoggedInUser } from '../../utils/auth';
 import { formatPhone } from '@/logic/strings';
 import { departmentConfig, PhoneNumberAccount, TwilioAccounts, validPhoneNumberAccounts } from '@/types/backend/department';
 import { validDepartments } from '@/types/api/users';
+import { api400Body, api401Body } from '@/types/api/_shared';
 
 const logger = getLogger('twilio');
 
@@ -108,11 +109,13 @@ async function handleText(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
 
 	// Validate the call is from Twilio
 	if (code !== twilioConf.apiCode) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Missing auth Twilio'
-		});
-		return response;
+		return {
+			statusCode: 401,
+			headers: {
+				'Content-Type': 'application/xml',
+			},
+			body: '<Response></Response>',
+		};
 	}
 
 	// Get the event data
@@ -255,16 +258,16 @@ async function handleTextStatus(event: APIGatewayProxyEvent): Promise<APIGateway
 	// Validate the call is from Twilio
 	if (code !== twilioConf.apiCode) {
 		logger.error('handleTextStatus', 'invalid API code');
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Invalid Twilio code'
-		});
+		return {
+			statusCode: 401,
+			body: JSON.stringify(api401Body),
+		};
 	} else if (messageId === null) {
 		logger.error('handleTextStatus', 'invalid message ID');
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Invalid message ID'
-		});
+		return {
+			statusCode: 400,
+			body: JSON.stringify(api400Body),
+		};
 	} else {
 		const eventData = event.body?.split('&')
 			.map(str => str.split('=').map(str => decodeURIComponent(str)))
@@ -636,38 +639,22 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
-	try {
-		switch (action) {
-			case 'text':
-				return await handleText(event);
-			case 'textStatus':
-				return await handleTextStatus(event);
-			case 'billing':
-				return await getBilling(event);
-		}
-
-		logger.error('main', 'Invalid Action', action);
-		return {
-			statusCode: 404,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: `Invalid action '${action}'`
-			})
-		};
-	} catch (e) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown error'
-		});
-		logger.error('main', e);
-		return {
-			statusCode: 400,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: (e as Error).message
-			})
-		};
+	switch (action) {
+		case 'text':
+			return await handleText(event);
+		case 'textStatus':
+			return await handleTextStatus(event);
+		case 'billing':
+			return await getBilling(event);
 	}
+
+	logger.error('main', 'Invalid Action', action);
+	return {
+		statusCode: 404,
+		headers: {},
+		body: JSON.stringify({
+			error: true,
+			message: `Invalid action '${action}'`
+		})
+	};
 }

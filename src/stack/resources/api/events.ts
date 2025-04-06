@@ -1,11 +1,10 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { validateBodyIsJson } from '../../utils/general';
 import { getLogger } from '../../../logic/logger';
 
 const logger = getLogger('events');
 
-const metricSource = 'Events';
 const FIREHOSE_NAME = process.env.FIREHOSE_NAME;
 
 const firehose = new aws.Firehose();
@@ -140,36 +139,20 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
-	try {
-		switch (action) {
-			case 'event':
-				return await handleEvent(event);
-			case 'events':
-				return await handleEvents(event);
-		}
-
-		logger.error('main', 'Invalid action', action);
-		return {
-			statusCode: 404,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: `Invalid action '${action}'`
-			})
-		};
-	} catch (e) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown error'
-		});
-		logger.error('main', e);
-		return {
-			statusCode: 400,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: (e as Error).message
-			})
-		};
+	switch (action) {
+		case 'event':
+			return await handleEvent(event);
+		case 'events':
+			return await handleEvents(event);
 	}
+
+	logger.error('main', 'Invalid action', action);
+	return {
+		statusCode: 404,
+		headers: {},
+		body: JSON.stringify({
+			error: true,
+			message: `Invalid action '${action}'`
+		})
+	};
 }

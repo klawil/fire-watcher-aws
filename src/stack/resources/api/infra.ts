@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getTwilioSecret, incrementMetric, validateBodyIsJson } from '../../utils/general';
+import { getTwilioSecret, validateBodyIsJson } from '../../utils/general';
 import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
 import { PageBody } from '../types/queue';
 import { getLogger } from '../../../logic/logger';
@@ -8,8 +8,6 @@ import { mergeDynamoQueries } from '../../utils/dynamo';
 import { PagingTalkgroup } from '@/types/api/users';
 
 const logger = getLogger('infra');
-
-const metricSource = 'Infra';
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
@@ -146,10 +144,6 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 
 	if (!response.success) {
 		logger.error('handleHeartbeat', response);
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Invalid heartbeat'
-		});
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -494,10 +488,6 @@ async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGa
 	}
 	if (response.errors.length > 0) {
 		response.success = false;
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Invalid DTR Exists'
-		});
 		return {
 			statusCode: 400,
 			body: JSON.stringify(response)
@@ -732,51 +722,35 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
 
-	try {
-		switch (action) {
-			case 'page':
-			case 'dtrPage':
-				return await handlePage(event);
-			case 'heartbeat':
-				return await handleHeartbeat(event);
-			case 'site_status':
-				return await handleSiteStatus(event);
-			case 'dtrExists':
-				return await handleDtrExists(event);
-			case 'dtrExistsSingle':
-				return await handleDtrExistsSingle(event);
-			case 'startTest':
-				return await handleTestState(event, true);
-			case 'endTest':
-				return await handleTestState(event, false);
-			case 'getTexts':
-				return await getTestTexts(event);
-			case 'metric':
-				return await handleMetrics(event);
-		}
-
-		logger.error('main', 'Invalid Action', action);
-		return {
-			statusCode: 404,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: `Invalid action '${action}'`
-			})
-		};
-	} catch (e) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown error'
-		});
-		logger.error('main', e);
-		return {
-			statusCode: 400,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: (e as Error).message
-			})
-		};
+	switch (action) {
+		case 'page':
+		case 'dtrPage':
+			return await handlePage(event);
+		case 'heartbeat':
+			return await handleHeartbeat(event);
+		case 'site_status':
+			return await handleSiteStatus(event);
+		case 'dtrExists':
+			return await handleDtrExists(event);
+		case 'dtrExistsSingle':
+			return await handleDtrExistsSingle(event);
+		case 'startTest':
+			return await handleTestState(event, true);
+		case 'endTest':
+			return await handleTestState(event, false);
+		case 'getTexts':
+			return await getTestTexts(event);
+		case 'metric':
+			return await handleMetrics(event);
 	}
+
+	logger.error('main', 'Invalid Action', action);
+	return {
+		statusCode: 404,
+		headers: {},
+		body: JSON.stringify({
+			error: true,
+			message: `Invalid action '${action}'`
+		})
+	};
 }

@@ -505,185 +505,6 @@ export class FireWatcherAwsStack extends Stack {
 
     const alarmAction = new cw_actions.LambdaAction(alarmQueueHandler);
 
-    const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 6,
-      datapointsToAlarm: 5,
-      metric: new cloudwatch.Metric({
-        metricName: 'Decode Rate',
-        namespace: 'DTR Metrics',
-        period: Duration.minutes(5),
-        statistic: cloudwatch.Stats.MINIMUM,
-        dimensionsMap: {
-          Tower: 'Saguache'
-        }
-      }),
-      threshold: 30,
-      alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
-      alarmName: 'Saguache Tower Decode Rate',
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING
-    };
-    const baseApiAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 1,
-      datapointsToAlarm: 1,
-      metric: new cloudwatch.Metric({
-        metricName: 'Error',
-        namespace: 'CVFD API',
-        period: Duration.hours(1),
-        statistic: cloudwatch.Stats.SUM,
-        dimensionsMap: {
-          source: 'User'
-        }
-      }),
-      threshold: 0,
-      alarmDescription: 'Users trying to use the User API are getting errors and may not be able to log in or access restricted pages',
-      alarmName: 'User API Errors',
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    };
-    const baseUploadAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 18,
-      datapointsToAlarm: 18,
-      metric: new cloudwatch.Metric({
-        metricName: 'Upload',
-        namespace: 'DTR Metrics',
-        period: Duration.hours(1),
-        statistic: cloudwatch.Stats.SUM,
-        dimensionsMap: {
-          Tower: 'Saguache'
-        }
-      }),
-      threshold: 0,
-      alarmDescription: 'No files have been uploaded for Saguache Tower in the past 18 hours which may indicate the tower is not being recorded',
-      alarmName: 'Saguache Tower Uploads',
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING
-    };
-    const alarms: CvfdAlarm[] = [
-      // {
-      //   tag: 'Api',
-      //   codeName: 'lambda-errors',
-      //   okayAction: false,
-      //   alarm: {
-      //     evaluationPeriods: 1,
-      //     datapointsToAlarm: 1,
-      //     metric: new cloudwatch.Metric({
-      //       metricName: 'Errors',
-      //       namespace: 'AWS/Lambda',
-      //       period: Duration.minutes(30),
-      //       statistic: cloudwatch.Stats.SUM,
-      //     }),
-      //     threshold: 0,
-      //     alarmDescription: 'One or more lambda functions is throwing uncaught errors which mean the the lambda task is not being completed',
-      //     alarmName: 'Lambda Function Errors',
-      //     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      //     treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-      //   }
-      // },
-      {
-        tag: 'Dtr',
-        codeName: 'saguache-tower',
-        alarm: {
-          ...baseTowerAlarmConfig
-        }
-      },
-      {
-        tag: 'Dtr',
-        codeName: 'saguache-tower-upload',
-        alarm: {
-          ...baseUploadAlarmConfig,
-          evaluationPeriods: 18,
-          datapointsToAlarm: 18,
-        }
-      },
-      {
-        tag: 'Dtr',
-        codeName: 'pool-table-upload',
-        alarm: {
-          ...baseUploadAlarmConfig,
-          evaluationPeriods: 4,
-          datapointsToAlarm: 4,
-          metric: new cloudwatch.Metric({
-            metricName: 'Upload',
-            namespace: 'DTR Metrics',
-            period: Duration.hours(3),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              Tower: 'PoolTable'
-            }
-          }),
-          alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 12 hours which may indicate the tower is not being recorded',
-          alarmName: 'Pool Table Uploads',
-        }
-      },
-      {
-        tag: 'Api',
-        codeName: 'twilio-api',
-        okayAction: false,
-        alarm: {
-          ...baseApiAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Error',
-            namespace: 'CVFD API',
-            period: Duration.minutes(1),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              source: 'Twilio'
-            }
-          }),
-          alarmDescription: 'Calls to the Twilio API are failing, potentially resulting in undelivered texts or pages',
-          alarmName: 'Twilio API Errors'
-        }
-      },
-      {
-        tag: 'Api',
-        codeName: 's3-api',
-        okayAction: false,
-        alarm: {
-          ...baseApiAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Error',
-            namespace: 'CVFD API',
-            period: Duration.minutes(1),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              source: 'S3'
-            }
-          }),
-          alarmDescription: 'Files being uploaded to S3 may not be getting processed correctly (or at all) potentially impacts pages',
-          alarmName: 'S3 API Error'
-        }
-      },
-      {
-        tag: 'Api',
-        codeName: 'queue-api',
-        okayAction: false,
-        alarm: {
-          ...baseApiAlarmConfig,
-          metric: new cloudwatch.Metric({
-            metricName: 'Error',
-            namespace: 'CVFD API',
-            period: Duration.minutes(1),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              source: 'Queue'
-            }
-          }),
-          alarmDescription: 'The event queue is not being processed correctly, potentially impacting texts, pages, and sign-ups',
-          alarmName: 'Queue API Error'
-        }
-      },
-    ];
-
-    alarms.forEach(alarmConfig => {
-      const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm)
-      alarm.addAlarmAction(alarmAction);
-      if (alarmConfig.okayAction !== false)
-        alarm.addOkAction(alarmAction);
-      
-      Tags.of(alarm).add('cofrn-alarm-type', alarmConfig.tag);
-    });
-
     // Create the event trigger
     const s3Destination = new s3Notifications.LambdaDestination(s3Handler);
     bucket.addEventNotification(
@@ -1348,6 +1169,183 @@ export class FireWatcherAwsStack extends Stack {
           }]
         },
       ]
+    });
+
+    // Add the alarms
+    const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
+      evaluationPeriods: 6,
+      datapointsToAlarm: 5,
+      metric: new cloudwatch.Metric({
+        metricName: 'Decode Rate',
+        namespace: 'DTR Metrics',
+        period: Duration.minutes(5),
+        statistic: cloudwatch.Stats.MINIMUM,
+        dimensionsMap: {
+          Tower: 'Saguache'
+        }
+      }),
+      threshold: 30,
+      alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
+      alarmName: 'Saguache Tower Decode Rate',
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    };
+    const baseUploadAlarmConfig: cloudwatch.AlarmProps = {
+      evaluationPeriods: 18,
+      datapointsToAlarm: 18,
+      metric: new cloudwatch.Metric({
+        metricName: 'Upload',
+        namespace: 'DTR Metrics',
+        period: Duration.hours(1),
+        statistic: cloudwatch.Stats.SUM,
+        dimensionsMap: {
+          Tower: 'Saguache'
+        }
+      }),
+      threshold: 0,
+      alarmDescription: 'No files have been uploaded for Saguache Tower in the past 18 hours which may indicate the tower is not being recorded',
+      alarmName: 'Saguache Tower Uploads',
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    };
+    const alarms: CvfdAlarm[] = [
+      { // Saguache tower not decoding
+        tag: 'Dtr',
+        codeName: 'saguache-tower',
+        alarm: {
+          ...baseTowerAlarmConfig
+        }
+      },
+      { // Saguache tower down
+        tag: 'Dtr',
+        codeName: 'saguache-tower-upload',
+        alarm: {
+          ...baseUploadAlarmConfig,
+          evaluationPeriods: 18,
+          datapointsToAlarm: 18,
+        }
+      },
+      { // Pool table tower down
+        tag: 'Dtr',
+        codeName: 'pool-table-upload',
+        alarm: {
+          ...baseUploadAlarmConfig,
+          evaluationPeriods: 4,
+          datapointsToAlarm: 4,
+          metric: new cloudwatch.Metric({
+            metricName: 'Upload',
+            namespace: 'DTR Metrics',
+            period: Duration.hours(3),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              Tower: 'PoolTable'
+            }
+          }),
+          alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 12 hours which may indicate the tower is not being recorded',
+          alarmName: 'Pool Table Uploads',
+        }
+      },
+      { // API 4XX errors
+        tag: 'Api',
+        codeName: 'api4xx',
+        okayAction: false,
+        alarm: {
+          evaluationPeriods: 1,
+          datapointsToAlarm: 1,
+          threshold: 0,
+          alarmDescription: 'COFRN API is giving 4XX responses',
+          alarmName: 'COFRN API 4XX',
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+          metric: new cloudwatch.Metric({
+            metricName: '4XXError',
+            namespace: 'AWS/ApiGateway',
+            period: Duration.minutes(15),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              ApiName: api.restApiName,
+            },
+          }),
+        },
+      },
+      { // API 5XX errors
+        tag: 'Api',
+        codeName: 'api5xx',
+        okayAction: false,
+        alarm: {
+          evaluationPeriods: 1,
+          datapointsToAlarm: 1,
+          threshold: 0,
+          alarmDescription: 'COFRN API is giving 5XX responses',
+          alarmName: 'COFRN API 5XX',
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+          metric: new cloudwatch.Metric({
+            metricName: '5XXError',
+            namespace: 'AWS/ApiGateway',
+            period: Duration.minutes(15),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              ApiName: api.restApiName,
+            },
+          }),
+        },
+      },
+      { // Queue errors
+        tag: 'Api',
+        codeName: 'queue-handler',
+        okayAction: false,
+        alarm: {
+          evaluationPeriods: 1,
+          datapointsToAlarm: 1,
+          threshold: 0,
+          alarmDescription: 'The queue handler is throwing errors',
+          alarmName: 'Queue Errors',
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+          metric: new cloudwatch.Metric({
+            metricName: 'Errors',
+            namespace: 'AWS/Lambda',
+            period: Duration.minutes(15),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              FunctionName: queueHandler.functionName,
+            },
+          }),
+        },
+      },
+      { // S3 errors
+        tag: 'Api',
+        codeName: 's3-handler',
+        okayAction: false,
+        alarm: {
+          evaluationPeriods: 1,
+          datapointsToAlarm: 1,
+          threshold: 0,
+          alarmDescription: 'The S3 event handler is throwing errors',
+          alarmName: 'S3 Errors',
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+          metric: new cloudwatch.Metric({
+            metricName: 'Errors',
+            namespace: 'AWS/Lambda',
+            period: Duration.minutes(15),
+            statistic: cloudwatch.Stats.SUM,
+            dimensionsMap: {
+              FunctionName: s3Handler.functionName,
+            },
+          }),
+        },
+      },
+    ];
+
+    alarms.forEach(alarmConfig => {
+      const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm)
+      alarm.addAlarmAction(alarmAction);
+      if (alarmConfig.okayAction !== false)
+        alarm.addOkAction(alarmAction);
+      
+      Tags.of(alarm).add('cofrn-alarm-type', alarmConfig.tag);
     });
   }
 }

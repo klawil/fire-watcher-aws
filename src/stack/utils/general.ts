@@ -393,11 +393,7 @@ export async function sendMessage(
 	const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
 	if (typeof resolvedTwilioPhoneCategories[sendNumberCategory] === 'undefined') {
 		logger.error('sendMessage', `Invalid number category - ${sendNumberCategory}`);
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Invalid destination'
-		});
-		return;
+		throw new Error(`Invalid number category - ${sendNumberCategory}`);
 	}
 	const numberConfig = resolvedTwilioPhoneCategories[sendNumberCategory];
 
@@ -430,11 +426,7 @@ export async function sendMessage(
 		typeof authToken === 'undefined'
 	) {
 		logger.error(`Invalid phone information`, fromNumber, accountSid, authToken);
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: `Invalid phone information`
-		});
-		return;
+		throw new Error(`Invalid phone information`);
 	}
 
 	const messageConfig: TwilioMessageConfig = {
@@ -483,11 +475,6 @@ export async function sendAlertMessage(metricSource: string, alertType: AlertTyp
 	]);
 }
 
-interface ErrorMetric {
-	source: string;
-	type: string;
-}
-
 interface CallMetric {
 	source: string;
 	action: string;
@@ -499,15 +486,6 @@ interface EventMetric {
 	event: string;
 }
 
-/**
- * @deprecated The method should not be used
- */
-export async function incrementMetric(
-	name: 'Error',
-	metricData: ErrorMetric,
-	sendLessSpecific?: boolean,
-	sendMoreSpecific?: boolean
-): Promise<unknown>
 /**
  * @deprecated The method should not be used
  */
@@ -530,8 +508,8 @@ export async function incrementMetric(
  * @deprecated The method should not be used
  */
 export async function incrementMetric(
-	name: string,
-	metricData: ErrorMetric | CallMetric | EventMetric,
+	name: 'Call' | 'Event',
+	metricData: CallMetric | EventMetric,
 	sendLessSpecific: boolean = true,
 	sendMoreSpecific: boolean = true
 ): Promise<unknown> {
@@ -556,7 +534,7 @@ export async function incrementMetric(
 		});
 	}
 
-	if (sendMoreSpecific && name !== 'Error') {
+	if (sendMoreSpecific) {
 		putConfig.MetricData.push({
 			MetricName: name,
 			Dimensions: (Object.keys(metricData) as Array<keyof typeof metricData>)

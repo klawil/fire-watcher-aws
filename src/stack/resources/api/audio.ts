@@ -1,14 +1,11 @@
 import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { incrementMetric } from '../../utils/general';
 import { parseDynamoDbAttributeMap } from '../../utils/dynamodb';
 import { mergeDynamoQueries } from '../../utils/dynamo';
 import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject } from '../../../common/audioApi';
 import { getLogger } from '../../../logic/logger';
 
 const logger = getLogger('audio');
-
-const metricSource = 'Audio';
 
 const dtrTable = process.env.TABLE_FILE;
 const talkgroupTable = process.env.TABLE_TALKGROUP;
@@ -196,36 +193,20 @@ async function getTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.debug('main', ...arguments);
 	const action = event.queryStringParameters?.action || 'none';
-	try {
-		switch (action) {
-			case 'list':
-				return await getList(event);
-			case 'talkgroups':
-				return await getTalkgroups(event);
-		}
+	switch (action) {
+		case 'list':
+			return await getList(event);
+		case 'talkgroups':
+			return await getTalkgroups(event);
+	}
 
-		logger.error('main', 'Invalid action', action);
-		return {
-			statusCode: 404,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: `Invalid action '${action}'`
-			})
-		}
-	} catch (e) {
-		await incrementMetric('Error', {
-			source: metricSource,
-			type: 'Thrown exception'
-		});
-		logger.error('main', e);
-		return {
-			statusCode: 400,
-			headers: {},
-			body: JSON.stringify({
-				error: true,
-				message: (e as Error).message
-			})
-		};
+	logger.error('main', 'Invalid action', action);
+	return {
+		statusCode: 404,
+		headers: {},
+		body: JSON.stringify({
+			error: true,
+			message: `Invalid action '${action}'`
+		})
 	}
 }
