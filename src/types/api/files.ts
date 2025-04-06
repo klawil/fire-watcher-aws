@@ -29,6 +29,12 @@ export interface FullFileObject {
   Transcript?: string;
 }
 
+export interface FileTranslationObject {
+  Key: string;
+  NewKey?: string;
+  TTL?: number;
+}
+
 /**
  * Retrieve a list of files that match the given filters
  * @summary Retrieve Files List

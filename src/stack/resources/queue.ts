@@ -2,16 +2,17 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, incrementMetric, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
-import { ActivateBody, AnnounceBody, LoginBody, PageBody, TranscribeBody, TwilioBody, TwilioErrorBody } from './types/queue';
+import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
-import { ActivateUserQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
+import { ActivateUserQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
 import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
 import { departmentConfig, pagingTalkgroupConfig, PhoneNumberTypes } from '@/types/backend/department';
 import { FullUserObject, PagingTalkgroup, UserDepartment } from '@/types/api/users';
-import { TABLE_FILE, TABLE_USER, typedGet, typedQuery, typedScan } from '../utils/dynamoTyped';
-import { FullFileObject } from '@/types/api/files';
+import { TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate } from '../utils/dynamoTyped';
+import { FileTranslationObject, FullFileObject } from '@/types/api/files';
+import { TypedGetOutput } from '@/types/backend/dynamo';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
@@ -20,7 +21,6 @@ const cloudWatch = new AWS.CloudWatch();
 
 const phoneTable = process.env.TABLE_USER;
 const dtrTable = process.env.TABLE_FILE;
-const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION;
 const testingUser = process.env.TESTING_USER;
 
 const metricSource = 'Queue';
@@ -648,34 +648,34 @@ interface TranscribeResult {
 	};
 };
 
-async function getItemToUpdate(key: string | null): Promise<AWS.DynamoDB.AttributeMap | null> {
+async function getItemToUpdate(key: string | null): Promise<FullFileObject | null> {
 	logger.trace('getItemToUpdate', ...arguments);
 	if (key === null) return key;
 
-	let item: AWS.DynamoDB.AttributeMap | null = null;
+	let item: FullFileObject | null = null;
 	let count = 0;
 	do {
-		const result = await dynamodb.query({
-			TableName: dtrTable,
+		const result = await typedQuery<FullFileObject>({
+			TableName: TABLE_FILE,
 			IndexName: 'KeyIndex',
 			ExpressionAttributeNames: {
-				'#k': 'Key',
+				'#Key': 'Key',
 			},
 			ExpressionAttributeValues: {
-				':k': { S: key },
+				':Key': key,
 			},
-			KeyConditionExpression: '#k = :k',
-		}).promise();
+			KeyConditionExpression: '#Key = :Key',
+		});
 
 		if (!result.Items || result.Items.length === 0) {
-			const resultMap = await dynamodb.getItem({
-				TableName: dtrTranslationTable,
+			const resultMap: TypedGetOutput<FileTranslationObject> = await typedGet<FileTranslationObject>({
+				TableName: TABLE_FILE_TRANSLATION,
 				Key: {
-					Key: { S: key },
-				}
-			}).promise();
+					Key: key,
+				},
+			});
 
-			key = resultMap.Item?.NewKey?.S || null;
+			key = resultMap.Item?.NewKey || null;
 		} else {
 			item = result.Items[0];
 		}
@@ -684,7 +684,7 @@ async function getItemToUpdate(key: string | null): Promise<AWS.DynamoDB.Attribu
 	return item;
 }
 
-async function handleTranscribe(body: TranscribeBody) {
+async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 	logger.trace('handleTranscribe', ...arguments);
 	// Check for the correct transcription job fomat
 	if (!/^\d{4,5}\-\d+$/.test(body.detail.TranscriptionJobName)) {
@@ -709,7 +709,7 @@ async function handleTranscribe(body: TranscribeBody) {
 
 	// Build the message
 	let messageBody: string;
-	let promise: Promise<unknown> = new Promise(res => res(null));
+	let updateFilePromise: Promise<unknown> = new Promise(res => res(null));
 	let tg: PagingTalkgroup;
 	const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || []).reduce((agg: { [key: string]: string; }, value) => {
 		agg[value.Key] = value.Value;
@@ -724,24 +724,24 @@ async function handleTranscribe(body: TranscribeBody) {
 			transcript
 		);
 
-		promise = getItemToUpdate(jobInfo.FileKey as string)
+		updateFilePromise = getItemToUpdate(jobInfo.FileKey as string)
 			.then(item => {
 				if (item === null) return;
 
-				return dynamodb.updateItem({
-					TableName: dtrTable,
+				return typedUpdate<FullFileObject>({
+					TableName: TABLE_FILE,
 					Key: {
-						Talkgroup: { N: item.Talkgroup.N },
-						Added: { N: item.Added.N },
+						Talkgroup: item.Talkgroup,
+						Added: item.Added,
 					},
 					ExpressionAttributeNames: {
-						'#t': 'Transcript',
+						'#Transcript': 'Transcript',
 					},
 					ExpressionAttributeValues: {
-						':t': { S: transcript },
+						':Transcript': transcript,
 					},
-					UpdateExpression: 'SET #t = :t',
-				}).promise();
+					UpdateExpression: 'SET #Transcript = :Transcript',
+				});
 			});
 	} else {
 		tg = Number(body.detail.TranscriptionJobName.split('-')[0]) as PagingTalkgroup;
@@ -750,15 +750,15 @@ async function handleTranscribe(body: TranscribeBody) {
 
 	// Exit early if this is transcribing an emergency transmission
 	if (jobInfo.IsPage === 'n') {
-		await promise;
+		await updateFilePromise;
 		return;
 	}
 
 	// Get recipients and send
-	const recipients = (await getRecipients('all', tg))
-		.filter(r => r.getTranscript?.BOOL);
-	const messageId = Date.now().toString();
-	const insertMessage = saveMessageDataOld(
+	const recipients = (await getUserRecipients('all', tg))
+		.filter(r => r.getTranscript);
+	const messageId = Date.now();
+	const insertMessage = saveMessageData(
 		'transcript',
 		messageId,
 		recipients.length,
@@ -770,36 +770,34 @@ async function handleTranscribe(body: TranscribeBody) {
 
 	if (jobInfo.File) {
 		await Promise.all(recipients
-			.filter(phone => typeof phone.phone.N !== 'undefined')
-			.map(async phone => sendMessageOld(
+			.map(async phone => sendMessage(
 				metricSource,
 				'transcript',
 				messageId,
-				phone.phone.N as string,
-				await getPageNumberOld(phone),
+				phone.phone,
+				await getPageNumber(phone),
 				createPageMessage(
 					jobInfo.File as string,
 					tg,
-					phone.phone.N,
+					phone.phone.toString(),
 					transcript
 				),
 				[]
 			)));
 	} else {
 		await Promise.all(recipients
-			.filter(number => typeof number.phone.N !== 'undefined')
-			.map(async number => sendMessageOld(
+			.map(async number => sendMessage(
 				metricSource,
 				'transcript',
 				messageId,
-				number.phone.N as string,
-				await getPageNumberOld(number),
+				number.phone,
+				await getPageNumber(number),
 				messageBody,
 				[]
 			)));
 	}
 	await insertMessage;
-	await promise;
+	await updateFilePromise;
 }
 
 const applePrefixes = [
