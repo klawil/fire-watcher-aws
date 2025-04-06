@@ -77,7 +77,7 @@ const lineChartsToShow: {
   {
     type: 'Metric',
     title: 'Function Errors',
-		dataUrl: 'metrics=s3-err-all,queue-err-all,alarmqueue-err,status-err,weather-err,infraapi-err-all,userapi-err-all,twilioapi-err-all,eventsapi-err-all,frontendapi-err-all,audioapi-err-all&live=y',
+		dataUrl: 'metrics=s3-err,queue-err,alarmqueue-err,status-err,weather-err,infraapi-err,userapi-err,twilioapi-err,eventsapi-err,frontendapi-err,audioapi-err&live=y',
   },
 ];
 

@@ -23,17 +23,14 @@ const sqsQueue = process.env.SQS_QUEUE;
 const lambdaFunctionNames: { [key: string]: {
 	name: string,
 	fn: string,
-	errName?: string,
 } } = {
 	S3: {
 		name: 'S3 Lambda',
 		fn: process.env.S3_LAMBDA as string,
-		errName: 's3',
 	},
 	queue: {
 		name: 'Queue Lambda',
 		fn: process.env.QUEUE_LAMBDA as string,
-		errName: 'queue',
 	},
 	alarmQueue: {
 		name: 'Alarm Queue Lambda',
@@ -50,32 +47,26 @@ const lambdaFunctionNames: { [key: string]: {
 	infraApi: {
 		name: 'Infra API',
 		fn: process.env.INFRA_API_LAMBDA as string,
-		errName: 'infra',
 	},
 	userApi: {
 		name: 'User API',
 		fn: process.env.USER_API_LAMBDA as string,
-		errName: 'user',
 	},
 	twilioApi: {
 		name: 'Twilio API',
 		fn: process.env.TWILIO_API_LAMBDA as string,
-		errName: 'twilio',
 	},
 	eventsApi: {
 		name: 'Events API',
 		fn: process.env.EVENTS_API_LAMBDA as string,
-		errName: 'events',
 	},
 	audioApi: {
 		name: 'Audio API',
 		fn: process.env.AUDIO_API_LAMBDA as string,
-		errName: 'audio',
 	},
 	frontendApi: {
 		name: 'Frontend API',
 		fn: process.env.AWS_LAMBDA_FUNCTION_NAME as string,
-		errName: 'frontend',
 	},
 };
 
@@ -418,36 +409,6 @@ const statsMap: {
 			Unit: 'Count'
 		}
 	},
-	's3-dtr-dup': {
-		Label: 'Duplicate DTR Files Uploaded',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Event',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'S3'
-					},
-					{
-						Name: 'event',
-						Value: 'duplicate call'
-					},
-					{
-						Name: 'type',
-						Value: 'dtr'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	's3-dtr-uniq': {
-		Label: 'Unique DTR Files Uploaded',
-		Expression: 's3_dtr-s3_dtr_dup'
-	},
 	's3-vhf': {
 		Label: 'VHF Files Uploaded',
 		MetricStat: {
@@ -472,151 +433,7 @@ const statsMap: {
 	},
 	's3-created': {
 		Label: 'S3 Files Created',
-		Expression: 's3_dtr+s3_vhf-s3_dtr_dup'
-	},
-	'err-frontend': {
-		Label: 'Frontend API Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Frontend'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-infra': {
-		Label: 'Infrastructure API Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Infra'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-user': {
-		Label: 'User API Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'User'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-twilio': {
-		Label: 'Twilio API Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Twilio'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-events': {
-		Label: 'Event API Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Events'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-audio': {
-		Label: 'Audio API Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Audio'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-s3': {
-		Label: 'S3 Event Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'S3'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
-	},
-	'err-queue': {
-		Label: 'Queue Event Errors',
-		MetricStat: {
-			Metric: {
-				Namespace: 'CVFD API',
-				MetricName: 'Error',
-				Dimensions: [
-					{
-						Name: 'source',
-						Value: 'Queue'
-					}
-				]
-			},
-			Period: 60,
-			Stat: 'Sum',
-			Unit: 'Count'
-		}
+		Expression: 's3_dtr+s3_vhf'
 	},
 	'tower-sag-min': {
 		Label: 'Saguache Tower Decode Rate - Min',
@@ -1131,7 +948,7 @@ const statsMap: {
 };
 Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 	const baseId = lambdaFn.toLowerCase();
-	const {name, fn: fnName, errName } = lambdaFunctionNames[lambdaFn];
+	const {name, fn: fnName } = lambdaFunctionNames[lambdaFn];
 	statsMap[`${baseId}-call`] = {
 		Label: `${name} Calls`,
 		MetricStat: {
@@ -1168,11 +985,27 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 			Unit: 'Count',
 		},
 	};
-	if (typeof errName === 'string')
-		statsMap[`${baseId}-err-all`] = {
-			Label: `${name} Errors`,
-			Expression: `${baseId}_err+err_${errName}`,
-		};
+	/**
+	 * @deprecated Use -err instead
+	 */
+	statsMap[`${baseId}-err-all`] = {
+		Label: `${name} Errors`,
+		MetricStat: {
+			Metric: {
+				Namespace: 'AWS/Lambda',
+				MetricName: 'Errors',
+				Dimensions: [
+					{
+						Name: 'FunctionName',
+						Value: fnName,
+					},
+				],
+			},
+			Period: 60,
+			Stat: 'Sum',
+			Unit: 'Count',
+		},
+	};
 	statsMap[`${baseId}-dur`] = {
 		Label: `${name} Duration`,
 		MetricStat: {
