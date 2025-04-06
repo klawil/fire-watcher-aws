@@ -19,8 +19,8 @@ const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 
-const queueUrl = process.env.QUEUE_URL as string;
-const userTable = process.env.TABLE_USER as string;
+const queueUrl = process.env.SQS_QUEUE;
+const userTable = process.env.TABLE_USER;
 
 interface ApiResponse {
 	success: boolean;

@@ -14,7 +14,7 @@ import { validateObject } from '@/stack/utils/validation';
 const logger = getLogger('twilioBase');
 
 const sqs = new AWS.SQS();
-const queueUrl = process.env.QUEUE_URL as string;
+const queueUrl = process.env.SQS_QUEUE;
 
 function buildTwilioResponse(
   statusCode: keyof CreateTextApi['responses'],

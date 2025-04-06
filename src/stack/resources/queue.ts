@@ -16,10 +16,10 @@ const dynamodb = new AWS.DynamoDB();
 const transcribe = new AWS.TranscribeService();
 const cloudWatch = new AWS.CloudWatch();
 
-const phoneTable = process.env.TABLE_USER as string;
-const dtrTable = process.env.TABLE_DTR as string;
-const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
-const testingUser = process.env.TESTING_USER as string;
+const phoneTable = process.env.TABLE_USER;
+const dtrTable = process.env.TABLE_FILE;
+const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION;
+const testingUser = process.env.TESTING_USER;
 
 const metricSource = 'Queue';
 

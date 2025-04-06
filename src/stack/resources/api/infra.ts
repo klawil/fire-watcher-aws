@@ -15,13 +15,13 @@ const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const cloudWatch = new aws.CloudWatch();
 
-const s3Bucket = process.env.S3_BUCKET as string;
-const sqsQueue = process.env.SQS_QUEUE as string;
-const dtrTable = process.env.TABLE_DTR as string;
-const userTable = process.env.TABLE_USER as string;
-const textTable = process.env.TABLE_TEXT as string;
-const statusTable = process.env.TABLE_STATUS as string;
-const siteTable = process.env.TABLE_SITE as string;
+const s3Bucket = process.env.S3_BUCKET;
+const sqsQueue = process.env.SQS_QUEUE;
+const dtrTable = process.env.TABLE_FILE;
+const userTable = process.env.TABLE_USER;
+const textTable = process.env.TABLE_TEXT;
+const statusTable = process.env.TABLE_STATUS;
+const siteTable = process.env.TABLE_SITE;
 
 interface GenericApiResponse {
 	success: boolean;

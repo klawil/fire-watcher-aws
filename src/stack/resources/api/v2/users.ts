@@ -10,7 +10,7 @@ import { ExceptSpecificKeys, OnlySpecificKeys } from '@/types/utility';
 
 const logger = getLogger('users');
 const sqs = new AWS.SQS();
-const queueUrl = process.env.QUEUE_URL as string;
+const queueUrl = process.env.SQS_QUEUE;
 
 type EditKeyConfig = {
   name: OnlySpecificKeys<keyof CreateUserApi['body'], keyof FrontendUserObject>;

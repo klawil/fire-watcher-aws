@@ -18,9 +18,9 @@ const cloudWatch = new aws.CloudWatch();
 
 const defaultListLimit = 100;
 
-const textsTable = process.env.TABLE_TEXTS as string;
-const siteTable = process.env.TABLE_SITE as string;
-const sqsQueue = process.env.SQS_QUEUE as string;
+const textsTable = process.env.TABLE_TEXT;
+const siteTable = process.env.TABLE_SITE;
+const sqsQueue = process.env.SQS_QUEUE;
 
 const lambdaFunctionNames: { [key: string]: {
 	name: string,

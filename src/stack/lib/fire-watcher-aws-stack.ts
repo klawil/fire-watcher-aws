@@ -25,6 +25,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '@/types/backend/department';
+import { LambdaEnvironment } from '@/types/backend/environment';
 
 dotenv.config({ path: `${__dirname}/../../../.env` });
 
@@ -380,6 +381,25 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    // Build the lambda environment variables
+    const lambdaEnv: LambdaEnvironment = {
+      S3_BUCKET: bucket.bucketName,
+      COSTS_BUCKET: costDataS3Bucket.bucketName,
+
+      TWILIO_SECRET: twilioSecret.secretArn,
+      TESTING_USER: process.env.TESTING_USER as string,
+      SQS_QUEUE: queue.queueUrl,
+      FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
+
+      TABLE_USER: phoneNumberTable.tableName,
+      TABLE_FILE: dtrTable.tableName,
+      TABLE_TEXT: textsTable.tableName,
+      TABLE_STATUS: statusTable.tableName,
+      TABLE_TALKGROUP: talkgroupTable.tableName,
+      TABLE_SITE: siteTable.tableName,
+      TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
+    };
+
     // Create a handler that pushes file information into Dynamo DB
     const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
       initialPolicy: [
@@ -398,10 +418,7 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/s3.ts',
       handler: 'main',
       environment: {
-        TABLE_DTR: dtrTable.tableName,
-        TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
-        TABLE_TALKGROUP: talkgroupTable.tableName,
-        SQS_QUEUE: queue.queueUrl
+        ...lambdaEnv,
       },
       timeout: Duration.minutes(1)
     });
@@ -431,12 +448,7 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/queue.ts',
       handler: 'main',
       environment: {
-        TABLE_USER: phoneNumberTable.tableName,
-        TABLE_MESSAGES: textsTable.tableName,
-        TABLE_DTR: dtrTable.tableName,
-        TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
-        TWILIO_SECRET: secretArn,
-        TESTING_USER: process.env.TESTING_USER as string,
+        ...lambdaEnv,
       },
       timeout: Duration.minutes(1)
     });
@@ -463,10 +475,7 @@ export class FireWatcherAwsStack extends Stack {
       handler: 'main',
       timeout: Duration.seconds(30),
       environment: {
-        TWILIO_SECRET: secretArn,
-        TABLE_USER: phoneNumberTable.tableName,
-        TABLE_MESSAGES: textsTable.tableName,
-        CACHE_BUCKET: costDataS3Bucket.bucketName,
+        ...lambdaEnv,
       }
     });
     textsTable.grantReadWriteData(alarmQueueHandler);
@@ -704,10 +713,7 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/status.ts',
       handler: 'main',
       environment: {
-        TABLE_STATUS: statusTable.tableName,
-        TABLE_USER: phoneNumberTable.tableName,
-        TWILIO_SECRET: secretArn,
-        TABLE_MESSAGES: textsTable.tableName
+        ...lambdaEnv,
       },
       timeout: Duration.minutes(1)
     });
@@ -732,7 +738,7 @@ export class FireWatcherAwsStack extends Stack {
       entry: __dirname + '/../resources/weather.ts',
       handler: 'main',
       environment: {
-        S3_BUCKET: bucket.bucketName
+        ...lambdaEnv,
       },
       timeout: Duration.minutes(5)
     });
@@ -778,9 +784,6 @@ export class FireWatcherAwsStack extends Stack {
 
     interface ApiDefinition {
       name: string;
-      env: {
-        [key: string]: string;
-      }
       read?: dynamodb.Table[];
       readWrite?: dynamodb.Table[];
       readWriteBucket?: s3.Bucket[];
@@ -804,18 +807,6 @@ export class FireWatcherAwsStack extends Stack {
     const cofrnApis: ApiDefinition[] = [
       {
         name: 'infra',
-        env: {
-          S3_BUCKET: bucket.bucketName,
-          SQS_QUEUE: queue.queueUrl,
-          TWILIO_SECRET: secretArn,
-          TABLE_DTR: dtrTable.tableName,
-          TABLE_USER: phoneNumberTable.tableName,
-          TABLE_TEXT: textsTable.tableName,
-          TABLE_STATUS: statusTable.tableName,
-          TABLE_SITE: siteTable.tableName,
-          TABLE_MESSAGES: textsTable.tableName,
-          TESTING_USER: process.env.TESTING_USER as string,
-        },
         read: [
           dtrTable,
           textsTable
@@ -832,11 +823,6 @@ export class FireWatcherAwsStack extends Stack {
       },
       {
         name: 'user',
-        env: {
-          QUEUE_URL: queue.queueUrl,
-          TWILIO_SECRET: secretArn,
-          TABLE_USER: phoneNumberTable.tableName,
-        },
         readWrite: [
           phoneNumberTable
         ],
@@ -846,13 +832,6 @@ export class FireWatcherAwsStack extends Stack {
         name: 'twilio',
         byAccount: true,
         cost: true,
-        env: {
-          SQS_QUEUE: queue.queueUrl,
-          TWILIO_SECRET: secretArn,
-          TABLE_USER: phoneNumberTable.tableName,
-          TABLE_MESSAGES: textsTable.tableName,
-          COSTS_BUCKET: costDataS3Bucket.bucketName,
-        },
         readWrite: [
           phoneNumberTable,
           textsTable,
@@ -865,17 +844,10 @@ export class FireWatcherAwsStack extends Stack {
       },
       {
         name: 'events',
-        env: {
-          FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
-        },
         firehose: eventsFirehose
       },
       {
         name: 'audio',
-        env: {
-          TABLE_DTR: dtrTable.tableName,
-          TABLE_TALKGROUP: talkgroupTable.tableName,
-        },
         read: [
           dtrTable,
           talkgroupTable,
@@ -883,12 +855,6 @@ export class FireWatcherAwsStack extends Stack {
       },
       {
         name: 'frontend',
-        env: {
-          SQS_QUEUE: queue.queueUrl,
-          TABLE_TEXTS: textsTable.tableName,
-          TABLE_USER: phoneNumberTable.tableName,
-          TABLE_SITE: siteTable.tableName,
-        },
         read: [
           phoneNumberTable,
           siteTable
@@ -913,11 +879,9 @@ export class FireWatcherAwsStack extends Stack {
         runtime: lambda.Runtime.NODEJS_18_X,
         entry: __dirname + `/../resources/api/${config.name}.ts`,
         handler: 'main',
-        environment: Object.keys(config.env)
-          .reduce((agg: { [key: string]: string }, key) => {
-            agg[key] = config.env[key];
-            return agg;
-          }, {}),
+        environment: {
+          ...lambdaEnv,
+        },
         timeout: Duration.seconds(10)
       });
       if (!config.metrics)
@@ -1139,7 +1103,7 @@ export class FireWatcherAwsStack extends Stack {
           timeout: Duration.seconds(10),
           initialPolicy,
           environment: {
-            TESTING_USER: process.env.TESTING_USER as string,
+            ...lambdaEnv,
           },
         });
         resourceIntegration = new apigateway.LambdaIntegration(resourceHandler, {
@@ -1162,10 +1126,6 @@ export class FireWatcherAwsStack extends Stack {
 
         // Add the table permissions
         config.tables?.forEach(table => {
-          resourceHandler.addEnvironment(
-            `TABLE_${table.table}`,
-            tableMap[table.table].tableName,
-          );
           if (table.readOnly) {
             tableMap[table.table].grantReadData(resourceHandler);
           } else {
@@ -1175,19 +1135,11 @@ export class FireWatcherAwsStack extends Stack {
         
         // Grant access to the SQS queue if needed
         if (config.sqsQueue) {
-          resourceHandler.addEnvironment(
-            'QUEUE_URL',
-            queue.queueUrl,
-          );
           queue.grantSendMessages(resourceHandler);
         }
 
         // Grant access to the Twilio secret if needed
         if (config.twilioSecret) {
-          resourceHandler.addEnvironment(
-            'TWILIO_SECRET',
-            secretArn,
-          );
           twilioSecret.grantRead(resourceHandler);
         }
       }

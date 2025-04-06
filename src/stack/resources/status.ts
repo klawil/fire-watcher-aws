@@ -8,7 +8,7 @@ const dynamodb = new AWS.DynamoDB();
 
 const metricSource = 'Status';
 
-const statusTable = process.env.TABLE_STATUS as string;
+const statusTable = process.env.TABLE_STATUS;
 
 const maxSpacing = 5 * 60 * 1000; // The amount of time to wait for a heartbeat before failing over (in ms)
 

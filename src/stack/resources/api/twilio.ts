@@ -19,10 +19,10 @@ const cloudWatch = new aws.CloudWatch();
 const costExplorer = new aws.CostExplorer();
 const s3 = new aws.S3();
 
-const sqsQueue = process.env.SQS_QUEUE as string;
-const userTable = process.env.TABLE_USER as string;
-const textTable = process.env.TABLE_MESSAGES as string;
-const costCacheBucket = process.env.COSTS_BUCKET as string;
+const sqsQueue = process.env.SQS_QUEUE;
+const userTable = process.env.TABLE_USER;
+const textTable = process.env.TABLE_TEXT;
+const costCacheBucket = process.env.COSTS_BUCKET;
 
 interface TwilioTextEvent {
 	From: string;

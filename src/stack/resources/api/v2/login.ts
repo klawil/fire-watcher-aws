@@ -14,7 +14,7 @@ const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const logger = getLogger('login');
 const sqs = new AWS.SQS();
-const queueUrl = process.env.QUEUE_URL as string;
+const queueUrl = process.env.SQS_QUEUE;
 
 const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   logger.trace('GET', ...arguments);

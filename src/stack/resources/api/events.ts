@@ -6,7 +6,7 @@ import { getLogger } from '../../../logic/logger';
 const logger = getLogger('events');
 
 const metricSource = 'Events';
-const FIREHOSE_NAME = process.env.FIREHOSE_NAME as string;
+const FIREHOSE_NAME = process.env.FIREHOSE_NAME;
 
 const firehose = new aws.Firehose();
 

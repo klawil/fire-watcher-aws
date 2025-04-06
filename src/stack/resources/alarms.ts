@@ -9,7 +9,7 @@ const metricSource = 'Alarms';
 const cloudWatch = new aws.CloudWatch();
 const s3 = new aws.S3();
 
-const S3_BUCKET = process.env.CACHE_BUCKET as string;
+const S3_BUCKET = process.env.COSTS_BUCKET;
 const S3_KEY = 'alarm-data.json';
 
 interface DataCache {

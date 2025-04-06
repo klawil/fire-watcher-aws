@@ -14,7 +14,7 @@ import { FullTextObject } from '@/types/api/texts';
 const logger = getLogger('twilioStatus');
 const sqs = new AWS.SQS();
 const cloudWatch = new AWS.CloudWatch();
-const queueUrl = process.env.QUEUE_URL as string;
+const queueUrl = process.env.SQS_QUEUE;
 
 const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   logger.trace('GET', ...arguments);

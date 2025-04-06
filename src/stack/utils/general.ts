@@ -8,8 +8,8 @@ import { UserDepartment, validDepartments } from '@/types/api/users';
 const logger = getLogger('u-gen');
 const twilio = require('twilio'); // eslint-disable-line @typescript-eslint/no-require-imports
 
-const messagesTable = process.env.TABLE_MESSAGES as string;
-const phoneTable = process.env.TABLE_USER as string;
+const messagesTable = process.env.TABLE_TEXT;
+const phoneTable = process.env.TABLE_USER;
 
 const secretManager = new aws.SecretsManager();
 const cloudWatch = new aws.CloudWatch();
@@ -103,7 +103,7 @@ type TwilioPhoneCategories = {
 	[key in PhoneNumberTypes]?: PhoneNumberConfig;
 }
 
-const twilioSecretId = process.env.TWILIO_SECRET as string;
+const twilioSecretId = process.env.TWILIO_SECRET;
 let cachedTwilioPhoneCategories: null | Promise<TwilioPhoneCategories> = null;
 export const twilioPhoneCategories: () => Promise<TwilioPhoneCategories> = async () => {
 	if (cachedTwilioPhoneCategories === null) {

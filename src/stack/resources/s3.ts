@@ -13,10 +13,10 @@ const sqs = new aws.SQS();
 const transcribe = new aws.TranscribeService();
 const cloudwatch = new aws.CloudWatch();
 
-const dtrTable = process.env.TABLE_DTR as string;
-const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION as string;
-const talkgroupTable = process.env.TABLE_TALKGROUP as string;
-const sqsQueue = process.env.SQS_QUEUE as string;
+const dtrTable = process.env.TABLE_FILE;
+const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION;
+const talkgroupTable = process.env.TABLE_TALKGROUP;
+const sqsQueue = process.env.SQS_QUEUE;
 
 const metricSource = 'S3';
 

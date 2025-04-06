@@ -9,7 +9,7 @@ import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('userDepartment');
 const sqs = new AWS.SQS();
-const queueUrl = process.env.QUEUE_URL as string;
+const queueUrl = process.env.SQS_QUEUE;
 
 const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) {
   logger.trace('POST', ...arguments);

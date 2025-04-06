@@ -10,8 +10,8 @@ const logger = getLogger('audio');
 
 const metricSource = 'Audio';
 
-const dtrTable = process.env.TABLE_DTR as string;
-const talkgroupTable = process.env.TABLE_TALKGROUP as string;
+const dtrTable = process.env.TABLE_FILE;
+const talkgroupTable = process.env.TABLE_TALKGROUP;
 
 const defaultListLimit = 100;
 const dtrTableIndexes: {

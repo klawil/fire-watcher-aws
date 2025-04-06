@@ -3,11 +3,11 @@ import { DocumentClient } from "aws-sdk/clients/dynamodb";
 
 const docClient = new DocumentClient();
 
-export const TABLE_FILE = process.env.TABLE_FILE as string;
-export const TABLE_USER = process.env.TABLE_USER as string;
-export const TABLE_TEXT = process.env.TABLE_TEXT as string;
-export const TABLE_SITE = process.env.TABLE_SITE as string;
-export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP as string;
+export const TABLE_FILE = process.env.TABLE_FILE;
+export const TABLE_USER = process.env.TABLE_USER;
+export const TABLE_TEXT = process.env.TABLE_TEXT;
+export const TABLE_SITE = process.env.TABLE_SITE;
+export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP;
 
 export async function typedUpdate<T extends object>(
   config: TypedUpdateInput<T>

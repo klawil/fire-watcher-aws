@@ -9,7 +9,7 @@ const logger = getLogger('u-auth');
 
 const dynamodb = new aws.DynamoDB();
 
-const userTable = process.env.TABLE_USER as string;
+const userTable = process.env.TABLE_USER;
 
 interface Cookies {
 	[key: string]: string;

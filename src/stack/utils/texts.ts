@@ -12,7 +12,7 @@ import { TABLE_TEXT, TABLE_USER, typedScan, typedUpdate } from "./dynamoTyped";
 const logger = getLogger('stack/resources/utils/texts');
 
 const cloudWatch = new CloudWatch();
-const testUser = Number(process.env.TESTING_USER as string);
+const testUser = Number(process.env.TESTING_USER);
 
 export async function getUserRecipients(
   department: UserDepartment | 'all',
