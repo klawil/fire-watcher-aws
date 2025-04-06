@@ -14,7 +14,7 @@ const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const logger = getLogger('login');
 const sqs = new AWS.SQS();
-const secretManager = new AWS.SecretsManager();
+const secretsManager = new AWS.SecretsManager();
 const queueUrl = process.env.SQS_QUEUE;
 const jwtSecretArn = process.env.JWT_SECRET;
 
@@ -148,7 +148,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   ];
 
   // Generate the authentication token for the user
-  const jwtSecret = await secretManager.getSecretValue({
+  const jwtSecret = await secretsManager.getSecretValue({
     SecretId: jwtSecretArn,
   }).promise().then(data => data.SecretString);
   if (typeof jwtSecret === 'undefined')

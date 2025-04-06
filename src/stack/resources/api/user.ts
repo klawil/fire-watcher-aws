@@ -8,8 +8,8 @@ import { ApiUserAuthResponse, ApiUserGetUserResponse, ApiUserListResponse, ApiUs
 import { unauthorizedApiResponse } from '../types/api';
 import { ActivateBody, LoginBody } from '../types/queue';
 import { getLogger } from '../../../logic/logger';
-import { randomString } from '@/logic/strings';
 import { PagingTalkgroup, pagingTalkgroups, UserDepartment, validDepartments } from '@/types/api/users';
+import { sign } from 'jsonwebtoken';
 
 const logger = getLogger('user');
 
@@ -17,9 +17,11 @@ const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
+const secretsManager = new aws.SecretsManager();
 
 const queueUrl = process.env.SQS_QUEUE;
 const userTable = process.env.TABLE_USER;
+const jwtSecretArn = process.env.JWT_SECRET;
 
 interface ApiResponse {
 	success: boolean;
@@ -115,11 +117,13 @@ async function loginUser(event: APIGatewayProxyEvent, user: InternalUserObject) 
 		?.filter(token => (token.tokenExpiry || 0) > now) || [];
 
 	// Create a new token and attach it
-	const token = randomString(32);
-	const tokenExpiry = Date.now() + (loginDuration * 1000);
-	validUserTokens.push({
-		token,
-		tokenExpiry,
+	const jwtSecret = await secretsManager.getSecretValue({
+		SecretId: jwtSecretArn,
+	}).promise().then(data => data.SecretString);
+	if (typeof jwtSecret === 'undefined')
+		throw new Error(`Unable to get JWT secret`);
+	const token = sign({ phone: Number(user.phone) }, jwtSecret, {
+		expiresIn: `${loginDuration}s`,
 	});
 	await dynamodb.updateItem({
 		TableName: userTable,
