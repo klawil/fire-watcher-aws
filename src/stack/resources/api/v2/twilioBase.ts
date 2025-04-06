@@ -4,11 +4,12 @@ import { getTwilioSecret, twilioPhoneNumbers } from '@/stack/utils/general';
 import { FullUserObject } from '@/types/api/users';
 import { TwilioTextQueueItem } from '@/types/backend/queue';
 import { validateTwilioRequest } from './_twilio';
-import { checkObject, handleResourceApi, LambdaApiFunction } from './_base';
+import { handleResourceApi, LambdaApiFunction } from './_base';
 import { getLogger } from '@/logic/logger';
 import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { getUserPermissions } from '@/stack/utils/user';
 import { departmentConfig } from '@/types/backend/department';
+import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('twilioBase');
 
@@ -76,7 +77,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   for (const [key, value] of urlParamsBody.entries()) {
     bodyObj[key] = value;
   }
-  const [ body, bodyErrors ] = checkObject<CreateTextApi['body']>(
+  const [ body, bodyErrors ] = validateObject<CreateTextApi['body']>(
     bodyObj,
     createTextBodyValidator,
   );
@@ -89,7 +90,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   }
 
   // Get and validate the query params
-  const [ query, queryErrors ] = checkObject(
+  const [ query, queryErrors ] = validateObject(
     event.queryStringParameters || {},
     createTextQueryValidator,
   );

@@ -1,9 +1,10 @@
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
+import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
 import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments } from '@/types/api/users';
 import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
 import { TABLE_USER, typedDeleteItem, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('users');
 
@@ -13,7 +14,7 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
   // Authorize the user
   const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
   if (user === null) return [ 401, api401Body, userHeaders ];
-  const [ params, paramsErrors ] = checkObject<GetUserApi['params']>(
+  const [ params, paramsErrors ] = validateObject<GetUserApi['params']>(
     event.pathParameters,
     userApiParamsValidator,
   );
@@ -175,7 +176,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   logger.trace('DELETE', ...arguments);
 
   // Make sure the path parameter is valid
-  const [ params, paramsErrors ] = checkObject(
+  const [ params, paramsErrors ] = validateObject(
     event.pathParameters,
     userApiDeleteParamsValidator,
   );

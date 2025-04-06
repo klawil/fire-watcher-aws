@@ -1,8 +1,9 @@
 import { getLogger } from '../../../../logic/logger';
 import { api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
 import { FullTalkgroupObject, GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator } from '@/types/api/talkgroups';
-import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
+import { getCurrentUser, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
 import { TABLE_TALKGROUP, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('file');
 
@@ -10,7 +11,7 @@ const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
   // Validate the path parameters
-  const [ params, paramsErrors ] = checkObject<GetTalkgroupApi['params']>(
+  const [ params, paramsErrors ] = validateObject<GetTalkgroupApi['params']>(
     event.pathParameters,
     talkgroupParamsValidator,
   );

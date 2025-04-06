@@ -1,9 +1,10 @@
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, handleResourceApi, LambdaApiFunction } from './_base';
+import { getCurrentUser, handleResourceApi, LambdaApiFunction } from './_base';
 import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, omittedFrontendTextFields } from '@/types/api/texts';
 import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
 import { TABLE_TEXT, typedQuery } from '@/stack/utils/dynamoTyped';
 import { TypedQueryInput } from '@/types/backend/dynamo';
+import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('texts');
 
@@ -14,7 +15,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   // Validate the query
   const [ query, queryErrors ] = !event.queryStringParameters
     ? [ {}, [] ]
-    : checkObject(
+    : validateObject<GetAllTextsApi['query']>(
       event.queryStringParameters,
       getAllTextsApiQueryValidator,
     );

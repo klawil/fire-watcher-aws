@@ -1,4 +1,5 @@
-import { api400Body, api401Body, api403Body, api404Body, api500Body, Validator } from "./_shared";
+import { Validator } from "../backend/validation";
+import { api400Body, api401Body, api403Body, api404Body, api500Body } from "./_shared";
 
 export interface FullTalkgroupObject {
   ID: number;

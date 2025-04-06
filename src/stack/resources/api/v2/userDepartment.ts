@@ -1,10 +1,11 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
+import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
 import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/types/api/users';
 import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/types/api/_shared';
 import { ActivateBody } from '../../types/queue';
 import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('userDepartment');
 const sqs = new AWS.SQS();
@@ -118,7 +119,7 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
   logger.trace('POST', ...arguments);
 
   // Validate the parameters
-  const [ params, paramsErrors ] = checkObject<CreateUserDepartmentApi['params']>(
+  const [ params, paramsErrors ] = validateObject<CreateUserDepartmentApi['params']>(
     event.pathParameters,
     userDepartmentApiParamsValidator,
   );

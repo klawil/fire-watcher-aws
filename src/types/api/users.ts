@@ -1,5 +1,6 @@
 import { PhoneNumberAccount } from "../backend/department";
-import { api200Body, api400Body, api401Body, api403Body, api404Body, api500Body, OrNull, Validator } from "./_shared";
+import { OrNull, Validator } from "../backend/validation";
+import { api200Body, api400Body, api401Body, api403Body, api404Body, api500Body } from "./_shared";
 
 export const validDepartments = [
   'Baca',

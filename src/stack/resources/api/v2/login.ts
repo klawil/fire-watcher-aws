@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
-import { checkObject, getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
+import { getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
 import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/login';
 import { api200Body, generateApi400Body } from '@/types/api/_shared';
 import { FullUserObject } from '@/types/api/users';
@@ -8,6 +8,7 @@ import { LoginBody } from '../../types/queue';
 import { getUserPermissions } from '../../../utils/user';
 import { randomString } from '@/logic/strings';
 import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
+import { validateObject } from '@/stack/utils/validation';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
@@ -19,7 +20,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   logger.trace('GET', ...arguments);
 
   // Validate the path parameters
-  const [ params, paramsErrors ] = checkObject<GetLoginCodeApi['params']>(
+  const [ params, paramsErrors ] = validateObject<GetLoginCodeApi['params']>(
     event.pathParameters,
     loginApiParamsValidator,
   );
@@ -78,7 +79,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   logger.trace('POST', ...arguments);
 
   // Validate the path parameters
-  const [ params, paramsErrors ] = checkObject<GetLoginCodeApi['params']>(
+  const [ params, paramsErrors ] = validateObject<GetLoginCodeApi['params']>(
     event.pathParameters,
     loginApiParamsValidator,
   );

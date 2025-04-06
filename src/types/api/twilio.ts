@@ -1,4 +1,5 @@
-import { api400Body, api500Body, Validator } from "./_shared";
+import { Validator } from "../backend/validation";
+import { api400Body, api500Body } from "./_shared";
 
 /**
  * Create a text (this endpoint is used by Twilio)

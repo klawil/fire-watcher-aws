@@ -1,4 +1,5 @@
-import { api400Body, api401Body, api403Body, api500Body, Validator } from "./_shared";
+import { Validator } from "../backend/validation";
+import { api400Body, api401Body, api403Body, api500Body } from "./_shared";
 import { UserDepartment } from "./users";
 
 export type TextTypes = 'page' | 'alert' | 'account' | 'transcript' | 'pageAnnounce'

@@ -1,4 +1,4 @@
-import { api403Response, Validator } from "@/types/api/_shared";
+import { api403Response } from "@/types/api/_shared";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "ts-oas";
 import * as AWS from 'aws-sdk';
@@ -8,6 +8,8 @@ import { UserPermissions } from "@/types/backend/user";
 import { getUserPermissions } from "../../../utils/user";
 import { TABLE_USER, typedGet, typedQuery } from "@/stack/utils/dynamoTyped";
 import { TypedQueryInput } from "@/types/backend/dynamo";
+import { validateObject } from "@/stack/utils/validation";
+import { Validator } from "@/types/backend/validation";
 
 const logger = getLogger('api/v2/_base');
 
@@ -332,172 +334,13 @@ export function parseJsonBody<T extends object>(
     const parsed = JSON.parse(body);
 
     if (validator)
-      return checkObject<T>(parsed, validator);
+      return validateObject<T>(parsed, validator);
 
     return [ parsed as T, [] ];
   } catch (e) {
     logger.error(`Error parsing body`, body, e);
     return [ null, [] ];
   }
-}
-
-export function checkObject<T extends object>(
-  obj: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-  validator: Validator<T>
-): [T | null, (keyof T)[] ] {
-  const newObj: Partial<T> = {};
-
-  // Validate the object
-  const objKeys = Object.keys(validator) as (keyof typeof validator)[];
-  const badKeys: (keyof typeof validator)[] = [];
-  if (
-    typeof obj !== 'object' ||
-    Array.isArray(obj) ||
-    obj === null
-  ) {
-    return [ null, objKeys ];
-  }
-
-  // Loop over the keys
-  objKeys.forEach(key => {
-    const config = validator[key];
-
-    // If the key is undefined, show an error if it is required
-    if (typeof obj[key] === 'undefined') {
-      if (config.required) {
-        badKeys.push(key);
-      }
-      return;
-    }
-
-    // Validate using the different types
-    const value = config.parse ? config.parse(obj[key]) : obj[key];
-    let foundType = false;
-
-    // Validate strings
-    if (typeof value === 'string') {
-      const conf = config.types.string;
-      if (
-        !conf ||
-        (conf.regex && !conf.regex.test(value)) ||
-        (conf.exact && !conf.exact.includes(value))
-      ) {
-        logger.error(
-          `Failed to validate ${String(key)} as string`,
-          obj[key],
-          value,
-          conf,
-          (conf?.regex && !conf.regex.test(value)),
-          (conf?.exact && !conf.exact.includes(value)),
-        );
-        badKeys.push(key);
-        return;
-      }
-      foundType = true;
-    }
-
-    // Validate numbers
-    if (typeof value === 'number') {
-      const conf = config.types.number;
-      if (
-        !conf ||
-        Number.isNaN(value) ||
-        (conf.regex && !conf.regex.test(value.toString())) ||
-        (conf.exact && !conf.exact.includes(value))
-      ) {
-        logger.error(
-          `Failed to validate ${String(key)} as number`,
-          obj[key],
-          value,
-          conf,
-          Number.isNaN(value),
-          (conf?.regex && !conf.regex.test(value.toString())),
-          (conf?.exact && !conf.exact.includes(value)),
-        );
-        badKeys.push(key);
-        return;
-      }
-      foundType = true;
-    }
-
-    // Validate booleans
-    if (typeof value === 'boolean') {
-      const conf = config.types.boolean;
-      if (
-        !conf ||
-        (conf.regex && !conf.regex.test(value.toString())) ||
-        (conf.exact && !conf.exact.includes(value))
-      ) {
-        logger.error(
-          `Failed to validate ${String(key)} as boolean`,
-          obj[key],
-          value,
-          conf,
-          (conf?.regex && !conf.regex.test(value.toString())),
-          (conf?.exact && !conf.exact.includes(value)),
-        );
-        badKeys.push(key);
-        return;
-      }
-      foundType = true;
-    }
-
-    // Validate arrays
-    if (Array.isArray(value)) {
-      const conf = config.types.array;
-      if (
-        !conf ||
-        (conf.regex && value.some(v => !conf.regex?.test(v.toString()))) ||
-        (conf.exact && value.some(v => !conf.exact?.includes(v)))
-      ) {
-        logger.error(
-          `Failed to validate ${String(key)} as boolean`,
-          obj[key],
-          value,
-          conf,
-          (conf?.regex && value.some(v => !conf.regex?.test(v.toString()))),
-          (conf?.exact && value.some(v => !conf.exact?.includes(v))),
-        );
-        badKeys.push(key);
-        return;
-      }
-      foundType = true;
-    }
-
-    // Validate null values
-    if (value === null) {
-      const conf = config.types.null;
-      if (!conf) {
-        logger.error(
-          `Failed to validate ${String(key)} as null`,
-          obj[key],
-          value,
-          conf,
-        );
-        badKeys.push(key);
-        return;
-      }
-      foundType = true;
-    }
-
-    // If it isn't a valid type
-    if (!foundType) {
-      badKeys.push(key);
-      return;
-    }
-    
-    // Add the key to the object
-    newObj[key] = value;
-  });
-
-  if (badKeys.length > 0) {
-    return [ null, badKeys ];
-  }
-
-  return [
-    newObj as T,
-    [],
-  ];
 }
 
 export function validateRequest<A extends Api>({
@@ -527,7 +370,7 @@ export function validateRequest<A extends Api>({
 
   // Validate the params
   if (typeof paramsValidator !== 'undefined') {
-    const [ params, paramsErrors ] = checkObject(
+    const [ params, paramsErrors ] = validateObject(
       paramsRaw,
       paramsValidator,
     );
@@ -544,7 +387,7 @@ export function validateRequest<A extends Api>({
 
   // Validate the query
   if (typeof queryValidator !== 'undefined') {
-    const [ query, queryErrors ] = checkObject(
+    const [ query, queryErrors ] = validateObject(
       queryRaw,
       queryValidator,
     );
@@ -570,7 +413,7 @@ export function validateRequest<A extends Api>({
         bodyValidator,
       );
     } else {
-      [ body, bodyErrors ] = checkObject(
+      [ body, bodyErrors ] = validateObject(
         bodyRaw,
         bodyValidator,
       );
