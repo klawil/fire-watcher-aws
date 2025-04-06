@@ -5,17 +5,17 @@ import { PageBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
 import { PhoneNumberAccount } from '@/types/backend/department';
 import { PagingTalkgroup } from '@/types/api/users';
+import { TypedDeleteItemInput, TypedPutItemInput } from '@/types/backend/dynamo';
+import { FileTranslationObject, FullFileObject } from '@/types/api/files';
+import { TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem, typedQuery, typedUpdate } from '../utils/dynamoTyped';
+import { FullTalkgroupObject } from '@/types/api/talkgroups';
 
 const logger = getLogger('s3');
 const s3 = new aws.S3();
-const dynamodb = new aws.DynamoDB();
 const sqs = new aws.SQS();
 const transcribe = new aws.TranscribeService();
 const cloudwatch = new aws.CloudWatch();
 
-const dtrTable = process.env.TABLE_FILE;
-const dtrTranslationTable = process.env.TABLE_DTR_TRANSLATION;
-const talkgroupTable = process.env.TABLE_TALKGROUP;
 const sqsQueue = process.env.SQS_QUEUE;
 
 const metricSource = 'S3';
@@ -25,18 +25,18 @@ const actualDuplicateBuffer = 1; // Check for calls 1s each way for DTR duplicat
 
 const vhfConfig: {
 	[key: string]: {
-		tg: string;
-		freq: string;
+		tg: number;
+		freq: number;
 	}
 } = {
 	'BG_FIRE_VHF': {
-		tg: '18331',
-		freq: '154445000'
+		tg: 18331,
+		freq: 154445000,
 	},
 	'SAG_FIRE_VHF': {
-		tg: '18332',
-		freq: '154190000'
-	}
+		tg: 18332,
+		freq: 154190000,
+	},
 };
 
 interface SourceListItem {
@@ -60,38 +60,37 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 	const Key = record.s3.object.key;
 
 	if (record.eventName.indexOf('ObjectCreated') === 0) {
-		const promises: Promise<unknown>[] = [];
+		const promises: {
+			[key: string]: Promise<unknown>;
+		 } = {};
 
 		const metric = incrementMetric('Call', {
 			source: metricSource,
 			action: `create${Key.indexOf('/dtr') !== -1 ? 'DTR' : 'VHF'}`
 		}, false);
-		promises.push(metric);
+		promises['call-metric'] = metric;
 		const headInfo = await s3.headObject({
 			Bucket,
 			Key
 		}).promise();
 
 		const addedTime = Date.now();
-		const body: AWS.DynamoDB.PutItemInput = {
-			TableName: dtrTable,
+		const body: TypedPutItemInput<FullFileObject> = {
+			TableName: TABLE_FILE,
 			Item: {
-				Key: {
-					S: Key
-				},
-				Added: {
-					N: addedTime.toString()
-				}
-			}
+				Key: Key,
+				Added: addedTime,
+				Talkgroup: -1,
+			},
 		};
 
-		const sourceList: string[] = [];
+		const sourceList: number[] = [];
 		let config: {
-			tg: string;
-			freq: string;
+			tg: number;
+			freq: number;
 		} = {
-			tg: '999999',
-			freq: '0',
+			tg: -1,
+			freq: 0,
 		};
 		let fileTag: PhoneNumberAccount | null = null;
 		if (Key.indexOf('/dtr') !== -1) {
@@ -100,42 +99,22 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					JSON.parse(headInfo.Metadata?.source_list)
 						.map((v: SourceListItem) => v.src)
 						.filter((v: number, i: number, a: number[]) => a.indexOf(v) === i && Number(v) > 0)
-						.forEach((source: number) => sourceList.push(`${source}`));
+						.forEach((source: number) => sourceList.push(source));
 				}
 			} catch (e) {} // eslint-disable-line @typescript-eslint/no-unused-vars
 
 			body.Item = {
 				...body.Item,
-				StartTime: {
-					N: headInfo.Metadata?.start_time
-				},
-				EndTime: {
-					N: headInfo.Metadata?.stop_time
-				},
-				Len: {
-					N: headInfo.Metadata?.call_length
-				},
-				Freq: {
-					N: headInfo.Metadata?.freq
-				},
-				Emergency: {
-					N: headInfo.Metadata?.emergency
-				},
-				Tone: {
-					BOOL: headInfo.Metadata?.tone === 'true'
-				},
-				ToneIndex: {
-					S: headInfo.Metadata?.tone === 'true' ? 'y' : 'n'
-				},
-				Tower: {
-					S: headInfo.Metadata?.source
-				},
-				Sources: {
-					NS: sourceList
-				},
-				Talkgroup: {
-					N: headInfo.Metadata?.talkgroup_num
-				}
+				StartTime: Number(headInfo.Metadata?.start_time),
+				EndTime: Number(headInfo.Metadata?.stop_time),
+				Len: Number(headInfo.Metadata?.call_length),
+				Freq: Number(headInfo.Metadata?.freq),
+				Emergency: headInfo.Metadata?.emergency === '1' ? 1 : 0,
+				Tone: headInfo.Metadata?.tone === 'true',
+				ToneIndex: headInfo.Metadata?.tone === 'true' ? 'y' : 'n',
+				Tower: headInfo.Metadata?.source,
+				Sources: sourceList,
+				Talkgroup: Number(headInfo.Metadata?.talkgroup_num),
 			};
 			if (
 				headInfo.Metadata?.talkgroup_num &&
@@ -159,7 +138,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 				}
 			];
 
-			await cloudwatch.putMetricData({
+			promises['put-metric-data'] = cloudwatch.putMetricData({
 				Namespace: 'DTR Metrics',
 				MetricData: towerUploadMetrics,
 			}).promise();
@@ -172,110 +151,89 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 
 			body.Item = {
 				...body.Item,
-				StartTime: {
-					N: (Number(headInfo.Metadata?.datetime) / 1000).toString()
-				},
-				EndTime: {
-					N: ((Number(headInfo.Metadata?.datetime) / 1000) + Number(headInfo.Metadata?.len || '0')).toString()
-				},
-				Len: {
-					N: headInfo.Metadata?.len
-				},
-				Freq: {
-					N: config.freq
-				},
-				Emergency: {
-					N: '0'
-				},
-				Tone: {
-					BOOL: headInfo.Metadata?.tone === 'y'
-				},
-				ToneIndex: {
-					S: headInfo.Metadata?.tone || 'n'
-				},
-				Tower: {
-					S: 'vhf'
-				},
-				Talkgroup: {
-					N: config.tg
-				}
+				StartTime: Number(headInfo.Metadata?.datetime) / 1000,
+				EndTime: (Number(headInfo.Metadata?.datetime) / 1000) + Number(headInfo.Metadata?.len || '0'),
+				Len: Number(headInfo.Metadata?.len),
+				Freq: config.freq,
+				Emergency: 0,
+				Tone: headInfo.Metadata?.tone === 'y',
+				ToneIndex: headInfo.Metadata?.tone === 'y' ? 'y' : 'n',
+				Tower: 'vhf',
+				Talkgroup: config.tg,
 			};
 			if (typeof talkgroupsToTag[config.tg] !== 'undefined') {
 				fileTag = talkgroupsToTag[config.tg];
 			}
 		}
-		await dynamodb.putItem(body).promise();
+		await typedPutItem<FullFileObject>(body);
 
 		let doTranscriptOnly: boolean = false;
-		const isPage: boolean = !!body.Item.Tone?.BOOL;
-		const shouldDoTranscript: boolean = body.Item.Emergency?.N === '1'
+		const isPage: boolean = !!body.Item.Tone;
+		const shouldDoTranscript: boolean = body.Item.Emergency === 1
 			|| isPage;
 		if (Key.indexOf('/dtr') !== -1) {
-			const startTime: number = Number(body.Item.StartTime?.N);
-			const endTime: number = Number(body.Item.EndTime?.N);
-			const existingItems: AWS.DynamoDB.QueryOutput = await dynamodb.query({
-				TableName: dtrTable,
+			const startTime = body.Item.StartTime as number;
+			const endTime = body.Item.EndTime as number;
+			const existingItems = await typedQuery<FullFileObject>({
+				TableName: TABLE_FILE,
 				IndexName: 'StartTimeTgIndex',
 				ExpressionAttributeNames: {
-					'#tg': 'Talkgroup',
-					'#st': 'StartTime',
-					'#e': 'Emergency',
-					'#t': 'Tone',
+					'#Talkgroup': 'Talkgroup',
+					'#StartTime': 'StartTime',
 				},
 				ExpressionAttributeValues: {
-					':tg': {
-						N: body.Item?.Talkgroup?.N
-					},
-					':st1': {
-						N: (startTime - selectDuplicateBuffer).toString()
-					},
-					':st2': {
-						N: (endTime + selectDuplicateBuffer).toString()
-					},
-					':e': {
-						N: body.Item?.Emergency?.N
-					},
-					':t': {
-						BOOL: headInfo.Metadata?.tone === 'true',
-					},
+					':Talkgroup': body.Item.Talkgroup,
+					':StartTime1': startTime - selectDuplicateBuffer,
+					':StartTime2': startTime + selectDuplicateBuffer,
 				},
-				KeyConditionExpression: '#tg = :tg AND #st BETWEEN :st1 AND :st2',
-				FilterExpression: '#e = :e AND #t = :t',
-			}).promise();
+				KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
+			});
 			if (
 				!!existingItems.Items &&
 				existingItems.Items.length > 1
 			) {
-				const matchingItems = existingItems.Items.filter(item => {
-					const itemStartTime = Number(item.StartTime.N);
-					const itemEndTime = Number(item.EndTime.N);
+				const matchingItems = existingItems.Items
+					.filter(item => {
+						const itemStartTime = item.StartTime;
+						const itemEndTime = item.EndTime;
+						if (
+							typeof itemStartTime === 'undefined' ||
+							typeof itemEndTime === 'undefined'
+						) return false;
 
-					return (itemStartTime >= startTime - actualDuplicateBuffer && itemStartTime <= endTime + actualDuplicateBuffer) ||
-						(itemStartTime - actualDuplicateBuffer <= startTime && itemEndTime + actualDuplicateBuffer >= startTime);
-				});
+						// Return true if the file starts in, ends in, or covers the buffer period
+						const startsIn = itemStartTime >= startTime - actualDuplicateBuffer && itemStartTime <= endTime + actualDuplicateBuffer;
+						const endsIn = itemEndTime >= startTime - actualDuplicateBuffer && itemEndTime <= endTime + actualDuplicateBuffer;
+						const covers = itemStartTime <= startTime - actualDuplicateBuffer && itemEndTime >= endTime + actualDuplicateBuffer;
+						return startsIn || endsIn || covers;
+					});
 
 				if (matchingItems.length > 1) {
 					doTranscriptOnly = true; // So we don't accidentally double page
 					const transcript: string | null = matchingItems.reduce((transcript: null | string, item) => {
-						if (transcript !== null) return transcript;
-						return item.Transcript?.S || null;
+						if (item.Transcript) {
+							return transcript !== null && transcript.length > item.Transcript.length
+								? transcript
+								: item.Transcript;
+						}
+						return null;
 					}, null);
 					const allItems = matchingItems
 						.sort((a, b) => {
-							const aAdded = Number(a.Added.N);
-							const bAdded = Number(b.Added.N);
-							const aLen = Number(a.Len.N);
-							const bLen = Number(b.Len.N);
+							const aAdded = a.Added;
+							const bAdded = b.Added;
+							const aLen = a.Len;
+							const bLen = b.Len;
 
 							if (aLen === bLen)
 								return aAdded > bAdded ? -1 : 1;
 
-							return aLen > bLen ? 1 : -1;
+							return (aLen || 0) > (bLen || 0) ? 1 : -1;
 						});
 					const itemsToDelete = allItems
 						.slice(0, -1);
 					const keptItem = allItems.slice(-1)[0];
-					const keepingCurrentItem: boolean = keptItem.Key.S === Key;
+					const keepingCurrentItem: boolean = keptItem.Key === Key;
 					if (isPage) {
 						logger.error('itemsToDelete', itemsToDelete);
 						logger.error('keptItem', keptItem);
@@ -285,79 +243,62 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						logger.debug('keptItem', keptItem);
 						logger.debug('body', body.Item);
 					}
-					promises.push(dynamodb.batchWriteItem({
-						RequestItems: {
-							[dtrTable]: itemsToDelete.map(itemToDelete => ({
-								DeleteRequest: {
-									Key: {
-										Talkgroup: {
-											N: itemToDelete.Talkgroup.N
-										},
-										Added: {
-											N: itemToDelete.Added.N
-										}
-									}
-								}
-							}))
-						}
-					}).promise());
+					promises['delete-dups'] = Promise.all(itemsToDelete.map(item => typedDeleteItem<FullFileObject>({
+						TableName: TABLE_FILE,
+						Key: {
+							Talkgroup: item.Talkgroup,
+							Added: item.Added,
+						},
+					})));
 					if (shouldDoTranscript && !keepingCurrentItem) {
-						promises.push(dynamodb.batchWriteItem({
-							RequestItems: {
-								[dtrTranslationTable]: itemsToDelete.map(itemToDelete => ({
-									PutRequest: {
-										Item: {
-											Key: { S: itemToDelete.Key.S },
-											NewKey: { S: keptItem.Key.S },
-											TTL: { N: (Math.round(Date.now() / 1000) + (10 * 60)).toString() },
-										}
-									}
-								}))
-							}
-						}).promise()
-							.catch(e => logger.error('parseRecord', 'translate table', e)));
+						promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
+							TableName: TABLE_FILE_TRANSLATION,
+							Item: {
+								Key: item.Key || '',
+								NewKey: keptItem.Key || '',
+								TTL: Math.round(Date.now() / 1000) + (60 * 60), // 1 hour TTL
+							},
+						})));
 					}
 					if (transcript !== null && keepingCurrentItem) {
-						promises.push(dynamodb.updateItem({
-							TableName: dtrTable,
+						promises['add-transcript'] = typedUpdate<FullFileObject>({
+							TableName: TABLE_FILE,
 							Key: {
-								Talkgroup: { N: keptItem.Talkgroup.N },
-								Added: { N: keptItem.Added.N },
+								Talkgroup: keptItem.Talkgroup,
+								Added: keptItem.Added,
 							},
 							ExpressionAttributeNames: {
-								'#t': 'Transcript',
+								'#Transcript': 'Transcript',
 							},
 							ExpressionAttributeValues: {
-								':t': { S: transcript },
+								':Transcript': transcript,
 							},
-							UpdateExpression: 'SET #t = :t',
-						}).promise());
+							UpdateExpression: 'SET #Transcript = :Transcript',
+						});
 					}
 
 					// Check to see if we need to send a paging message
 					if (
 						isPage &&
 						keepingCurrentItem &&
-						!itemsToDelete.reduce((agg, item) => agg || !!(item.PageSent?.BOOL), false)
+						!itemsToDelete.reduce((agg, item) => agg || !!item.PageSent, false)
 					) {
 						// Update the current item to indicate a page will have been sent
 						doTranscriptOnly = false;
-						promises.push(dynamodb.updateItem({
-							TableName: dtrTable,
+						promises['set-page-sent'] = typedUpdate<FullFileObject>({
+							TableName: TABLE_FILE,
 							Key: {
 								Talkgroup: keptItem.Talkgroup,
 								Added: keptItem.Added,
 							},
 							ExpressionAttributeNames: {
-								'#ps': 'PageSent',
+								'#PageSent': 'PageSent',
 							},
 							ExpressionAttributeValues: {
-								':ps': {
-									BOOL: true,
-								},
+								':PageSent': true,
 							},
-							UpdateExpression: 'SET #ps = :ps',
-						}).promise());
+							UpdateExpression: 'SET #PageSent = :PageSent',
+						});
 					}
 
 					// Check to see if we should redo the transcription
@@ -366,40 +307,43 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 						!shouldDoTranscript // This file doesn't need a transcript
 					) {
 						logger.debug('Duplicate, no transcript or page');
-						await Promise.all(promises);
+						let wasError = false;
+						await Promise.all(Object.keys(promises).map(key => promises[key]
+							.catch(e => {
+								logger.error(`Error on ${key}`, e);
+								wasError = true;
+							})
+						));
+						if (wasError) throw new Error(`Error in promises`);
 						return;
 					}
 				} else if (isPage) {
-					promises.push(dynamodb.updateItem({
-						TableName: dtrTable,
+					promises['set-page-sent-nodup'] = typedUpdate<FullFileObject>({
+						TableName: TABLE_FILE,
 						Key: {
 							Talkgroup: body.Item.Talkgroup,
 							Added: body.Item.Added,
 						},
 						ExpressionAttributeNames: {
-							'#ps': 'PageSent',
+							'#PageSent': 'PageSent',
 						},
 						ExpressionAttributeValues: {
-							':ps': {
-								BOOL: true,
-							},
+							':PageSent': true,
 						},
-						UpdateExpression: 'SET #ps = :ps',
-					}).promise());
+						UpdateExpression: 'SET #PageSent = :PageSent',
+					});
 				}
-			} else if (shouldDoTranscript) {
-				logger.debug('body', body.Item);
 			}
 		}
 
 		if (shouldDoTranscript) {
-			const transcribeJobName = `${body.Item.Talkgroup.N}-${Date.now()}`;
+			const transcribeJobName = `${body.Item.Talkgroup}-${Date.now()}`;
 			const toneFile = Key.split('/')[2] || Key.split('/')[1];
 			const Tags: aws.TranscribeService.TagList = [
-				{ Key: 'Talkgroup', Value: body.Item.Talkgroup?.N as string },
+				{ Key: 'Talkgroup', Value: body.Item.Talkgroup.toString() },
 				{ Key: 'File', Value: toneFile },
 				{ Key: 'FileKey', Value: Key },
-				{ Key: 'IsPage', Value: body.Item.Tone?.BOOL ? 'y' : 'n' },
+				{ Key: 'IsPage', Value: body.Item.Tone ? 'y' : 'n' },
 			];
 			if (fileTag !== null) {
 				Tags.push({
@@ -407,7 +351,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					Value: fileTag,
 				});
 			}
-			promises.push(transcribe.startTranscriptionJob({
+			promises['start-transcribe'] = transcribe.startTranscriptionJob({
 				TranscriptionJobName: transcribeJobName,
 				LanguageCode: 'en-US',
 				Media: {
@@ -419,97 +363,95 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 					ShowSpeakerLabels: true,
 				},
 				Tags,
-			}).promise());
+			}).promise();
 
-			if (!doTranscriptOnly && body.Item.Tone?.BOOL) {
+			if (!doTranscriptOnly && body.Item.Tone) {
 				logger.debug('Transcript and page');
 				const queueMessage: PageBody = {
 					action: 'page',
-					tg: Number(body.Item.Talkgroup?.N) as PagingTalkgroup,
+					tg: body.Item.Talkgroup as PagingTalkgroup,
 					key: toneFile,
-					len: Number(body.Item.Len.N)
+					len: body.Item.Len,
 				};
-				promises.push(sqs.sendMessage({
+				promises['page-sqs'] = sqs.sendMessage({
 					MessageBody: JSON.stringify(queueMessage),
 					QueueUrl: sqsQueue
-				}).promise());
+				}).promise();
 			} else {
 				// Exit early if we just wanted to kick off the transcript
 				logger.debug('Transcript only');
-				await Promise.all(promises);
+				let wasError = false;
+				await Promise.all(Object.keys(promises).map(key => promises[key]
+					.catch(e => {
+						logger.error(`Error on ${key}`, e);
+						wasError = true;
+					})
+				));
+				if (wasError) throw new Error(`Error in promises`);
 				return;
 			}
 		}
 
-		const talkgroupCreate: Promise<unknown> = (async () => {
-			const item = await dynamodb.query({
-				TableName: talkgroupTable,
-				ExpressionAttributeNames: {
-					'#id': 'ID',
+		promises['talkgroup-update'] = (async () => {
+			const item = await typedGet<FullTalkgroupObject>({
+				TableName: TABLE_TALKGROUP,
+				Key: {
+					ID: body.Item.Talkgroup,
 				},
-				ExpressionAttributeValues: {
-					':id': {
-						N: body.Item?.Talkgroup?.N
-					}
-				},
-				KeyConditionExpression: '#id = :id',
-			}).promise();
+			});
 
-			if (!item.Items) {
-				await dynamodb.updateItem({
-					TableName: talkgroupTable,
+			if (!item.Item || item.Item.InUse !== 'Y') {
+				await typedUpdate<FullTalkgroupObject>({
+					TableName: TABLE_TALKGROUP,
+					Key: {
+						ID: body.Item.Talkgroup,
+					},
 					ExpressionAttributeNames: {
-						'#iu': 'InUse'
+						'#InUse': 'InUse',
 					},
 					ExpressionAttributeValues: {
-						':iu': {
-							S: 'Y'
-						}
+						':InUse': 'Y',
 					},
-					Key: {
-						'ID': {
-							N: body.Item?.Talkgroup?.N
-						}
-					},
-					UpdateExpression: 'SET #iu = :iu'
-				}).promise();
+					UpdateExpression: 'SET #InUse = :InUse',
+				});
 			}
 		})();
-		promises.push(talkgroupCreate);
 
-		await Promise.all(promises);
+		let wasError = false;
+		await Promise.all(Object.keys(promises).map(key => promises[key]
+			.catch(e => {
+				logger.error(`Error on ${key}`, e);
+				wasError = true;
+			})
+		));
+		if (wasError) throw new Error(`Error in promises`);
 	} else {
 		await incrementMetric('Call', {
 			source: metricSource,
 			action: 'delete'
 		}, false);
-		const dynamoQuery = await dynamodb.query({
-			TableName: dtrTable,
+		const dynamoQuery = await typedQuery<FullFileObject>({
+			TableName: TABLE_FILE,
 			IndexName: 'KeyIndex',
 			ExpressionAttributeNames: {
-				'#key': 'Key'
+				'#Key': 'Key',
 			},
 			ExpressionAttributeValues: {
-				':key': {
-					S: Key
-				}
+				':Key': Key,
 			},
-			KeyConditionExpression: '#key = :key'
-		}).promise();
+			KeyConditionExpression: '#Key = :Key',
+		});
 
 		if (dynamoQuery.Items && dynamoQuery.Items.length > 0) {
-			const body: AWS.DynamoDB.DeleteItemInput = {
+			const body: TypedDeleteItemInput<FullFileObject> = {
 				Key: {
 					Talkgroup: dynamoQuery.Items[0].Talkgroup,
-					Added: dynamoQuery.Items[0].Added
+					Added: dynamoQuery.Items[0].Added,
 				},
-				TableName: dtrTable
+				TableName: TABLE_FILE,
 			};
 			logger.info('parseRecord', 'delete', body);
-			const promises: Promise<unknown>[] = [];
-			promises.push(dynamodb.deleteItem(body).promise());
-		
-			await Promise.all(promises);
+			await typedDeleteItem<FullFileObject>(body);
 		} else {
 			logger.error('parseRecord', 'delete', 'not found', Key);
 		}

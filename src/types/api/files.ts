@@ -27,6 +27,7 @@ export interface FullFileObject {
   ToneIndex?: 'y' | 'n';
   Tower?: string;
   Transcript?: string;
+  PageSent?: boolean;
 }
 
 export interface FileTranslationObject {
