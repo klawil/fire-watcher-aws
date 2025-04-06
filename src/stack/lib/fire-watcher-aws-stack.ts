@@ -381,12 +381,24 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
+    // Create the secret for JWT authentication
+    const jwtSecret = new secretsManager.Secret(this, 'cofrn-jwt-secret', {
+      description: 'The secret used for signing and verifying JWTs',
+      generateSecretString: {
+        excludeCharacters: 'ghijklmnopqrstuvwxyz',
+        excludePunctuation: true,
+        excludeUppercase: true,
+        passwordLength: 64,
+      },
+    });
+
     // Build the lambda environment variables
     const lambdaEnv: LambdaEnvironment = {
       S3_BUCKET: bucket.bucketName,
       COSTS_BUCKET: costDataS3Bucket.bucketName,
 
       TWILIO_SECRET: twilioSecret.secretArn,
+      JWT_SECRET: jwtSecret.secretArn,
       TESTING_USER: process.env.TESTING_USER as string,
       SQS_QUEUE: queue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
@@ -979,7 +991,6 @@ export class FireWatcherAwsStack extends Stack {
           pathPart: '{id}',
           fileName: 'file',
           methods: [ 'GET' ],
-          authRequired: true,
           tables: [{
             table: 'FILE',
             readOnly: true,
@@ -1074,6 +1085,7 @@ export class FireWatcherAwsStack extends Stack {
           pathPart: '{id}',
           fileName: 'login',
           methods: [ 'GET', 'POST' ],
+          authRequired: true,
           sqsQueue: true,
           tables: [{
             table: 'USER',
@@ -1122,6 +1134,11 @@ export class FireWatcherAwsStack extends Stack {
             table: 'USER',
             readOnly: true,
           });
+        }
+
+        // Add access to the JWT secret
+        if (config.authRequired) {
+          jwtSecret.grantRead(resourceHandler);
         }
 
         // Add the table permissions

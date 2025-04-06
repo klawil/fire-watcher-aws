@@ -1,5 +1,6 @@
 export interface LambdaEnvironment {
   S3_BUCKET: string;
+  JWT_SECRET: string;
   TWILIO_SECRET: string;
   TESTING_USER: string;
   TABLE_USER: string;

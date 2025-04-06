@@ -4,6 +4,7 @@ import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQ
 import { TABLE_FILE } from '@/stack/utils/dynamoTyped';
 import { validateObject } from '@/stack/utils/validation';
 import { generateApi400Body } from '@/types/api/_shared';
+import { TypedQueryInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('files');
 
@@ -27,13 +28,9 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     queryErrors.length > 0
   ) return [ 400, generateApi400Body(queryErrors) ];
 
-  const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
-    AWS.DynamoDB.DocumentClient.QueryInput,
-    'ExpressionAttributeNames'
-  >>= {
+  const baseQueryConfig: TypedQueryInput<FullFileObject> = {
     ScanIndexForward: false,
     TableName: TABLE_FILE,
-    ExpressionAttributeNames: {},
     Limit: defaultListLimit,
   };
   const queryConfigs: DocumentQueryConfig<FullFileObject>[] = [];
@@ -41,10 +38,10 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   // Generate the base configs using an index. This can be a talkgroup index or emergency index
   if (typeof query.tg !== 'undefined') {
     baseQueryConfig.ExpressionAttributeNames = {
-      '#tg': 'Talkgroup',
+      '#talkgroup': 'Talkgroup',
     };
     baseQueryConfig.IndexName = 'StartTimeTgIndex';
-    baseQueryConfig.KeyConditionExpression = '#tg = :tg';
+    baseQueryConfig.KeyConditionExpression = '#talkgroup = :talkgroup';
     query.tg.split('|')
       .forEach(tg => queryConfigs.push({
         ExpressionAttributeValues: {

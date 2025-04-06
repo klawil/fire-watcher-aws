@@ -50,7 +50,7 @@ export default function ProfilePage() {
     let hasChanges = true;
     if (user !== null) {
       const newTgs = newTalkgroups.filter(tg => !(user.talkgroups || [])
-        .includes(tg as PagingTalkgroup));
+        .includes(tg));
       const removedTgs = (user.talkgroups || []).filter(tg => !newTalkgroups.includes(tg));
       hasChanges = newTgs.length > 0 || removedTgs.length > 0;
     }

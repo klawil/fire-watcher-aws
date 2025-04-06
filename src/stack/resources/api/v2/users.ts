@@ -171,7 +171,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   }).promise();
 
   // Return the safed user object
-  const returnBody = getFrontendUserObj(putConfig.Item as FullUserObject);
+  const returnBody = getFrontendUserObj(putConfig.Item);
   return [
     200,
     returnBody,

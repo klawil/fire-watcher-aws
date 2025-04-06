@@ -13,12 +13,10 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
   // Validate the query
-  const [ query, queryErrors ] = !event.queryStringParameters
-    ? [ {}, [] ]
-    : validateObject<GetAllTextsApi['query']>(
-      event.queryStringParameters,
-      getAllTextsApiQueryValidator,
-    );
+  const [ query, queryErrors ] = validateObject<GetAllTextsApi['query']>(
+    event.queryStringParameters || {},
+    getAllTextsApiQueryValidator,
+  );
   if (
     query === null ||
     queryErrors.length > 0

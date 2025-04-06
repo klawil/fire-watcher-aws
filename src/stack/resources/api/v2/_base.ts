@@ -10,8 +10,10 @@ import { TABLE_USER, typedGet, typedQuery } from "@/stack/utils/dynamoTyped";
 import { TypedQueryInput } from "@/types/backend/dynamo";
 import { validateObject } from "@/stack/utils/validation";
 import { Validator } from "@/types/backend/validation";
+import { verify } from 'jsonwebtoken';
 
 const logger = getLogger('api/v2/_base');
+const secretManager = new AWS.SecretsManager();
 
 export type LambdaApiFunction<T extends Api> = (
   event: APIGatewayProxyEvent,
@@ -242,6 +244,8 @@ export function getSetCookieHeader(cookie: string, value: string, age: number) {
   return `${encodeURIComponent(cookie)}=${encodeURIComponent(value)}; Secure; SameSite=None; Path=/; Max-Age=${age}`;
 }
 
+const jwtSecretArn = process.env.JWT_SECRET;
+
 export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
   FrontendUserObject | null,
   UserPermissions,
@@ -281,11 +285,29 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
       return response;
     }
 
+    // Use JWT to validate the user (first pass)
+    const jwtSecret = await secretManager.getSecretValue({
+      SecretId: jwtSecretArn,
+    }).promise().then(data => data.SecretString);
+    if (typeof jwtSecret === 'undefined')
+      throw new Error(`Unable to get JWT secret`);
+    const userPayload = verify(
+      cookies[authTokenCookie],
+      jwtSecret,
+    );
+    if (
+      typeof userPayload === 'string' ||
+      !('phone' in userPayload)
+    ) {
+      logger.error('Bad payload', userPayload);
+      throw new Error('Wrong JWT payload');
+    }
+
     // Get the user object from DynamoDB
     const user = await typedGet<FullUserObject>({
       TableName: TABLE_USER,
       Key: {
-        phone: Number(cookies[authUserCookie]),
+        phone: userPayload.phone,
       },
     });
     if (!user.Item) {
@@ -293,25 +315,11 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
       return response;
     }
 
-    // Validate the token
-    const currentTime = Date.now();
-    const matchingTokens = (user.Item as FullUserObject).loginTokens
-      ?.filter(t => t.token === cookies[authTokenCookie])
-      .map(t => t.tokenExpiry || 0)
-      .filter(expiry => expiry > currentTime);
-    if (
-      !matchingTokens ||
-      matchingTokens.length === 0
-    ) {
-      logger.warn('getCurrentUser', 'failed', 'invalid token');
-      return response;
-    }
-
     // Remove the cookie deletion
     response[2] = {};
 
     // Parse the user
-    const userObj = response[0] = getFrontendUserObj(user.Item as FullUserObject);
+    const userObj = response[0] = getFrontendUserObj(user.Item);
     response[1] = getUserPermissions(userObj);
   } catch (e) {
     logger.error('getCurrentUser', e);

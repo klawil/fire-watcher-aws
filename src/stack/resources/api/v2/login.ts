@@ -6,15 +6,17 @@ import { api200Body, generateApi400Body } from '@/types/api/_shared';
 import { FullUserObject } from '@/types/api/users';
 import { LoginBody } from '../../types/queue';
 import { getUserPermissions } from '../../../utils/user';
-import { randomString } from '@/logic/strings';
 import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { validateObject } from '@/stack/utils/validation';
+import { sign } from 'jsonwebtoken';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const logger = getLogger('login');
 const sqs = new AWS.SQS();
+const secretManager = new AWS.SecretsManager();
 const queueUrl = process.env.SQS_QUEUE;
+const jwtSecretArn = process.env.JWT_SECRET;
 
 const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   logger.trace('GET', ...arguments);
@@ -146,15 +148,17 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   ];
 
   // Generate the authentication token for the user
+  const jwtSecret = await secretManager.getSecretValue({
+    SecretId: jwtSecretArn,
+  }).promise().then(data => data.SecretString);
+  if (typeof jwtSecret === 'undefined')
+    throw new Error(`Unable to get JWT secret`);
   const nowTime = Date.now();
-  const token = randomString(32);
-  const tokenExpiry = nowTime + (loginDuration * 1000);
+  const token = sign({ phone: userObj.phone }, jwtSecret, {
+    expiresIn: `${loginDuration}s`,
+  });
   const userTokens: FullUserObject['loginTokens'] = [
     ...(userObj.loginTokens || []).filter(token => (token.tokenExpiry || 0) > nowTime),
-    {
-      token,
-      tokenExpiry,
-    },
   ];
   await typedUpdate<FullUserObject>({
     TableName: TABLE_USER,

@@ -62,7 +62,7 @@ export async function getUserRecipients(
   }
 
   const result = await typedScan(scanInput);
-  const users = (result.Items || []) as FullUserObject[];
+  const users = (result.Items || []);
   if (isTest && !users.some(u => u.phone === testUser)) {
     users.push({
       phone: testUser,

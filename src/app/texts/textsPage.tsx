@@ -47,8 +47,8 @@ async function getTexts(
     const [ code, apiResult ] = await typeFetch<GetAllTextsApi>({
       path: '/api/v2/texts/',
       method: 'GET',
-      params: {
-        page: isPage ? 'y' : 'n',
+      query: {
+        page: isPage ? 'y' : undefined,
         before: loadBefore === null ? undefined : loadBefore,
       },
     });
@@ -145,8 +145,7 @@ function TextsTable({
             <td>{text.body?.split(/\n/g).map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}</td>
             {!isPage && <td>{(typeof text.mediaUrls === 'string' ? text.mediaUrls.split(',') : text.mediaUrls || [])
               .filter(s => s !== '')
-              .map((v, i) => <a key={i} href={v}>{i + 1}</a>)
-              .join(', ')}</td>}
+              .map((v, i) => <a key={i} href={v}>{i + 1}</a>)}</td>}
             <td className="text-center">{text.recipients}</td>
             <td className="text-center">{makePercentString((text.sent || []).length, text.recipients || 0)}</td>
             <td className="text-center">{makePercentString((text.delivered || []).length, text.recipients || 0)}</td>
