@@ -1,8 +1,9 @@
 import { getLogger } from '../../../../logic/logger';
-import { api404Body } from '@/types/api/_shared';
-import { FullFileObject, GetFileApi } from '@/types/api/files';
+import { api404Body, generateApi400Body } from '@/types/api/_shared';
+import { FullFileObject, GetFileApi, getFileApiParamsValidator } from '@/types/api/files';
 import { handleResourceApi, LambdaApiFunction } from './_base';
 import { TABLE_FILE, typedGet } from '@/stack/utils/dynamoTyped';
+import { validateObject } from '@/stack/utils/validation';
 
 const logger = getLogger('file');
 
@@ -11,8 +12,20 @@ const dtrIdRegex = /^(\d+)-(\d+)$/;
 const GET: LambdaApiFunction<GetFileApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
-  // @TODO - implement the validator
-  const idParts = (event.pathParameters?.id || '').match(dtrIdRegex);
+  // Validate the parameters
+  const [ params, paramsErrors ] = validateObject<GetFileApi['params']>(
+    event.pathParameters,
+    getFileApiParamsValidator,
+  );
+  if (
+    params === null ||
+    paramsErrors.length > 0
+  ) return [
+    400,
+    generateApi400Body(paramsErrors),
+  ];
+
+  const idParts = params.id.match(dtrIdRegex);
   if (idParts === null)
     return [ 404, api404Body ];
 

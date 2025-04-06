@@ -41,9 +41,24 @@ export type GetAllTalkgroupsApi = {
     /**
      * @contentType application/json
      */
+    400: typeof api400Body;
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
 }
+
+export const getAllTalkgroupsApiQueryValidator: Validator<GetAllTalkgroupsApi['query']> = {
+  all: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'y' ],
+      },
+    },
+  },
+};
 
 /**
  * Retrieve the metadata of a specific talkgroup

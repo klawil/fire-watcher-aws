@@ -1,16 +1,25 @@
 import { getLogger } from '../../../../logic/logger';
 import * as AWS from 'aws-sdk';
-import { FullTalkgroupObject, GetAllTalkgroupsApi } from '@/types/api/talkgroups';
+import { FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator } from '@/types/api/talkgroups';
 import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
 import { TABLE_TALKGROUP } from '@/stack/utils/dynamoTyped';
+import { validateObject } from '@/stack/utils/validation';
+import { generateApi400Body } from '@/types/api/_shared';
 
 const logger = getLogger('talkgroups');
 
 const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
-  // @TODO - implement the validator
-  const queryStringParameters: GetAllTalkgroupsApi['query'] = event.queryStringParameters || {};
+  const [ query, queryErrors ] = validateObject<GetAllTalkgroupsApi['query']>(
+    event.queryStringParameters || {},
+    getAllTalkgroupsApiQueryValidator,
+  );
+  if (
+    query === null ||
+    queryErrors.length > 0
+  ) return [ 400, generateApi400Body(queryErrors) ];
+
   const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
     AWS.DynamoDB.DocumentClient.QueryInput,
     'ExpressionAttributeNames'
@@ -28,7 +37,7 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   };
 
   const partitions: ('Y' | 'N')[] = [ 'Y' ];
-  if (queryStringParameters.all === 'y') {
+  if (query.all === 'y') {
     partitions.push('N');
   }
 

@@ -1,4 +1,5 @@
-import { api404Body, api500Body } from "./_shared";
+import { Validator } from "../backend/validation";
+import { api400Body, api404Body, api500Body } from "./_shared";
 
 export interface FullFileObject {
   Talkgroup: number;
@@ -74,8 +75,52 @@ export type GetAllFilesApi = {
     /**
      * @contentType application/json
      */
+    400: typeof api400Body;
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
+};
+
+export const getAllFilesApiQueryValidator: Validator<GetAllFilesApi['query']> = {
+  tg: {
+    required: false,
+    types: {
+      string: {
+        regex: /^[0-9|]+$/,
+      },
+    },
+  },
+  emerg: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'y', 'n' ],
+      },
+    },
+  },
+  before: {
+    required: false,
+    parse: v => Number(v),
+    types: {
+      number: {},
+    },
+  },
+  after: {
+    required: false,
+    parse: v => Number(v),
+    types: {
+      number: {},
+    },
+  },
+  afterAdded: {
+    required: false,
+    parse: v => Number(v),
+    types: {
+      number: {},
+    },
+  },
 };
 
 /**
@@ -100,10 +145,25 @@ export type GetFileApi = {
     /**
      * @contentType application/json
      */
+    400: typeof api400Body;
+    /**
+     * @contentType application/json
+     */
     404: typeof api404Body;
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
+};
+
+export const getFileApiParamsValidator: Validator<GetFileApi['params']> = {
+  id: {
+    required: true,
+    types: {
+      string: {
+        regex: /^[0-9]+-[0-9]+$/,
+      },
+    },
+  },
 };

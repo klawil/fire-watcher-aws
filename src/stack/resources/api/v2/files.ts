@@ -1,7 +1,9 @@
 import { getLogger } from '../../../../logic/logger';
-import { FullFileObject, GetAllFilesApi } from '@/types/api/files';
+import { FullFileObject, GetAllFilesApi, getAllFilesApiQueryValidator } from '@/types/api/files';
 import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
 import { TABLE_FILE } from '@/stack/utils/dynamoTyped';
+import { validateObject } from '@/stack/utils/validation';
+import { generateApi400Body } from '@/types/api/_shared';
 
 const logger = getLogger('files');
 
@@ -16,8 +18,15 @@ const afterAddedIndexNames: {
 const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
-  // @TODO - implement the validator
-  const queryStringParameters: GetAllFilesApi['query'] = event.queryStringParameters || {};
+  const [ query, queryErrors ] = validateObject<GetAllFilesApi['query']>(
+    event.queryStringParameters || {},
+    getAllFilesApiQueryValidator,
+  );
+  if (
+    query === null ||
+    queryErrors.length > 0
+  ) return [ 400, generateApi400Body(queryErrors) ];
+
   const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
     AWS.DynamoDB.DocumentClient.QueryInput,
     'ExpressionAttributeNames'
@@ -30,13 +39,13 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   const queryConfigs: DocumentQueryConfig<FullFileObject>[] = [];
 
   // Generate the base configs using an index. This can be a talkgroup index or emergency index
-  if (typeof queryStringParameters.tg !== 'undefined') {
+  if (typeof query.tg !== 'undefined') {
     baseQueryConfig.ExpressionAttributeNames = {
       '#tg': 'Talkgroup',
     };
     baseQueryConfig.IndexName = 'StartTimeTgIndex';
     baseQueryConfig.KeyConditionExpression = '#tg = :tg';
-    queryStringParameters.tg.split('|')
+    query.tg.split('|')
       .forEach(tg => queryConfigs.push({
         ExpressionAttributeValues: {
           ':talkgroup': Number(tg),
@@ -44,8 +53,8 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
       }));
   } else {
     let emergencyValues = [ 0, 1 ];
-    if (typeof queryStringParameters.emerg !== 'undefined') {
-      emergencyValues = queryStringParameters.emerg === 'y'
+    if (typeof query.emerg !== 'undefined') {
+      emergencyValues = query.emerg === 'y'
         ? [ 1 ]
         : [ 0 ];
     }
@@ -62,37 +71,25 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     }));
   }
 
-  if (
-    typeof queryStringParameters.before !== 'undefined' &&
-    !isNaN(Number(queryStringParameters.before))
-  ) {
+  if (typeof query.before !== 'undefined') {
     // Add a filter for files recorded before a certain time
-    const before = Number(queryStringParameters.before);
     baseQueryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
     baseQueryConfig.KeyConditionExpression += ' AND #st < :st';
 
     queryConfigs.forEach(queryConfig => {
-      queryConfig.ExpressionAttributeValues[':st'] = before;
+      queryConfig.ExpressionAttributeValues[':st'] = query.before;
     });
-  } else if (
-		typeof queryStringParameters.after !== 'undefined' &&
-		!isNaN(Number(queryStringParameters.after))
-  ) {
+  } else if (typeof query.after !== 'undefined') {
     // Add a filter for files recorded after a certain time
-    const after = Number(queryStringParameters.after);
     baseQueryConfig.ScanIndexForward = true;
     baseQueryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
     baseQueryConfig.KeyConditionExpression += ' AND #st > :st';
 
     queryConfigs.forEach(queryConfig => {
-      queryConfig.ExpressionAttributeValues[':st'] = after;
+      queryConfig.ExpressionAttributeValues[':st'] = query.after;
     });
-  } else if (
-		typeof queryStringParameters.afterAdded !== 'undefined' &&
-		!isNaN(Number(queryStringParameters.afterAdded))
-  ) {
+  } else if (typeof query.afterAdded !== 'undefined') {
     // Add a filter for files ADDED after a certain time
-    const afterAdded = Number(queryStringParameters.afterAdded);
     baseQueryConfig.ScanIndexForward = true;
     baseQueryConfig.ExpressionAttributeNames['#added'] = 'Added';
     baseQueryConfig.KeyConditionExpression += ' AND #added > :added';
@@ -104,7 +101,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
       baseQueryConfig.IndexName = newIndex;
 
     queryConfigs.forEach(queryConfig => {
-      queryConfig.ExpressionAttributeValues[':added'] = afterAdded;
+      queryConfig.ExpressionAttributeValues[':added'] = query.afterAdded;
     });
   }
 
