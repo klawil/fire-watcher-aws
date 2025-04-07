@@ -102,6 +102,7 @@ export function useChartData(
           const datasets: ChartDataset<"line", number[]>[] = Object.keys(names)
             .map(key => ({
               label: names[key],
+              stepped: true,
               data: labels.map(label => chartData[label][key]),
               fill: false,
               tension: 0.1,

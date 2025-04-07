@@ -3,12 +3,9 @@
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Dispatch, SetStateAction } from "react";
-import { Chart, registerables } from "chart.js";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 import { useChartData, usePageWidth } from "./common";
-import { Line } from "react-chartjs-2";
-
-Chart.register(...registerables);
+import { Line } from 'react-chartjs-2';
 
 export default function StatusMetricLineChart({
   title,

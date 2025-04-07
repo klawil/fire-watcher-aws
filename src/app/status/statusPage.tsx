@@ -5,6 +5,16 @@ import StatusMetricLineChart from "@/components/statusChart/statusMetricLineChar
 import StatusTimingLineChart from "@/components/statusChart/statusTimingLineChart";
 import StatusTowerLineChart from "@/components/statusChart/statusTowerLineChart";
 import React, { useState } from "react";
+import annotationPlugin from 'chartjs-plugin-annotation';
+import {
+  Chart as ChartJS,
+  registerables,
+} from 'chart.js';
+
+ChartJS.register(
+  annotationPlugin,
+  ...registerables,
+);
 
 const maxParallelCharts = 5;
 const lineChartsToShow: {

@@ -3,15 +3,10 @@
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Dispatch, SetStateAction, useContext } from "react";
-import { Chart, registerables } from "chart.js";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
-import annotationPlugin from 'chartjs-plugin-annotation';
 import { useChartData } from "./common";
-import { Line } from "react-chartjs-2";
 import { DarkModeContext } from "@/logic/clientContexts";
-
-Chart.register(...registerables);
-Chart.register(annotationPlugin);
+import { Line } from 'react-chartjs-2';
 
 interface ColorConfig {
 	backgroundColor: string;
@@ -56,6 +51,7 @@ export default function StatusTowerLineChart({
       pointStyle: false,
       tension: 0.0,
       label: 'none',
+      stepped: true,
       data: data.labels.map((label, i) => {
         const dataA = data.datasets[0].data[i];
         const dataB = data.datasets[1].data[i] as number;
