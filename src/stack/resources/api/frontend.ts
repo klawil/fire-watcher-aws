@@ -406,7 +406,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Sum',
-			Unit: 'Count'
 		}
 	},
 	's3-vhf': {
@@ -428,7 +427,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Sum',
-			Unit: 'Count'
 		}
 	},
 	's3-created': {
@@ -450,7 +448,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Minimum',
-			Unit: 'Count'
 		}
 	},
 	'tower-sag-max': {
@@ -468,7 +465,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
-			Unit: 'Count'
 		}
 	},
 	'tower-sag-upload': {
@@ -484,8 +480,7 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
-		}
+		},
 	},
 	'tower-ala-min': {
 		Label: 'Alamosa Tower Decode Rate - Min',
@@ -502,7 +497,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Minimum',
-			Unit: 'Count'
 		}
 	},
 	'tower-ala-max': {
@@ -520,7 +514,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
-			Unit: 'Count'
 		}
 	},
 	'tower-ala-upload': {
@@ -536,7 +529,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
 		}
 	},
 	'tower-pt-min': {
@@ -554,7 +546,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Minimum',
-			Unit: 'Count'
 		}
 	},
 	'tower-pt-max': {
@@ -572,7 +563,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
-			Unit: 'Count'
 		}
 	},
 	'tower-pt-upload': {
@@ -588,7 +578,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
 		}
 	},
 	'tower-sa-min': {
@@ -606,7 +595,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Minimum',
-			Unit: 'Count'
 		}
 	},
 	'tower-sa-max': {
@@ -624,7 +612,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
-			Unit: 'Count'
 		}
 	},
 	'tower-sa-upload': {
@@ -640,7 +627,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
 		}
 	},
 	'tower-mv-min': {
@@ -658,7 +644,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Minimum',
-			Unit: 'Count'
 		}
 	},
 	'tower-mv-max': {
@@ -676,7 +661,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Maximum',
-			Unit: 'Count'
 		}
 	},
 	'tower-mv-upload': {
@@ -692,7 +676,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
 		}
 	},
 	'twilio-init': {
@@ -704,7 +687,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'Sum',
-			Unit: 'Count'
 		}
 	},
 	'twilio-sent': {
@@ -716,7 +698,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
 		}
 	},
 	'twilio-delivered': {
@@ -728,7 +709,6 @@ const statsMap: {
 			},
 			Period: 60,
 			Stat: 'SampleCount',
-			Unit: 'Count'
 		}
 	},
 	'twilio-sent-percent': {
@@ -964,7 +944,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 			},
 			Period: 60,
 			Stat: 'Sum',
-			Unit: 'Count',
 		},
 	};
 	statsMap[`${baseId}-err`] = {
@@ -982,7 +961,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 			},
 			Period: 60,
 			Stat: 'Sum',
-			Unit: 'Count',
 		},
 	};
 	/**
@@ -1003,7 +981,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 			},
 			Period: 60,
 			Stat: 'Sum',
-			Unit: 'Count',
 		},
 	};
 	statsMap[`${baseId}-dur`] = {
@@ -1021,7 +998,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 			},
 			Period: 60,
 			Stat: 'p50',
-			Unit: 'Milliseconds',
 		},
 	};
 	statsMap[`${baseId}-dur-max`] = {
@@ -1039,7 +1015,6 @@ Object.keys(lambdaFunctionNames).forEach(lambdaFn => {
 			},
 			Period: 60,
 			Stat: 'Maximum',
-			Unit: 'Milliseconds',
 		},
 	};
 });
@@ -1334,8 +1309,8 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 			endTime: Number(event.queryStringParameters.endTime),
 			period: Number(event.queryStringParameters.period),
 			data: await cloudWatch.getMetricData(metricRequest).promise()
-				.then(response => {
-					if (typeof response.MetricDataResults === 'undefined')
+				.then(metricsResponse => {
+					if (typeof metricsResponse.MetricDataResults === 'undefined')
 						return {
 							names: {},
 							data: [],
@@ -1356,14 +1331,14 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 						data: []
 					};
 
-					metrics.names = response.MetricDataResults
+					metrics.names = metricsResponse.MetricDataResults
 						.reduce((agg: { [key: string]: string }, item) => {
 							agg[item.Id || 'ERR'] = item.Label || '';
 
 							return agg;
 						}, {});
 
-					metrics.data = response.MetricDataResults
+					metrics.data = metricsResponse.MetricDataResults
 						.reduce((
 							agg: { ts: string; values: { [key: string]: number; } }[],
 							item
@@ -1395,11 +1370,11 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 
 					return metrics;
 				})
-			};
-		} catch (e) {
-			response.success = false;
-			response.errors.push((<Error>e).message);
-		}
+		};
+	} catch (e) {
+		response.success = false;
+		response.errors.push((<Error>e).message);
+	}
 
 	return {
 		statusCode: 200,
