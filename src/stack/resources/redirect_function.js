@@ -51,6 +51,12 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
     request.uri = request.uri.replace('.html', '/');
   }
 
+  // Make sure the URI has a trailing slash
+  if (!request.uri.endsWith('/')) {
+    hasRedirect = true;
+    request.uri = request.uri + '/';
+  }
+
   // Redirect to the correct URL
   if (hasRedirect) {
     let searchString = '';
