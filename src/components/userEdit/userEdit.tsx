@@ -16,7 +16,7 @@ import { departmentConfig, pagingTalkgroupConfig } from "@/types/backend/departm
 import { OrNull } from "@/types/backend/validation";
 
 interface CheckboxConfig {
-	name: 'getTranscript' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';
+	name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';
 	label: string;
 	districtAdmin?: boolean;
 }
@@ -30,6 +30,11 @@ const userRoleCheckboxes: CheckboxConfig[] = [
 	{
 		name: 'getTranscript',
 		label: 'Get Transcripts',
+	},
+	{
+		name: 'getTranscriptOnly',
+		label: 'Only Get Transcripts',
+    districtAdmin: true,
 	},
 	{
 		name: 'getApiAlerts',

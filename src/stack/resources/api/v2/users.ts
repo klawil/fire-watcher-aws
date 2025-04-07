@@ -49,6 +49,9 @@ const createUserKeys: EditKeyConfig[] = [
 ];
 const districtAdminUserKeys: EditKeyConfig[] = [
   {
+    name: 'getTranscriptOnly',
+  },
+  {
     name: 'getApiAlerts',
   },
   {

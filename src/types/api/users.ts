@@ -32,6 +32,7 @@ export type FullUserObject = {
   pagingPhone?: PhoneNumberAccount;
 
   getTranscript?: boolean;
+  getTranscriptOnly?: boolean;
   getApiAlerts?: boolean;
   getDtrAlerts?: boolean;
   getVhfAlerts?: boolean;
@@ -90,6 +91,7 @@ export const districtAdminUserKeys = [
   'getDtrAlerts',
   'isDistrictAdmin',
   'pagingPhone',
+  'getTranscriptOnly',
 ] as const;
 
 /**
@@ -137,7 +139,7 @@ export type CreateUserApi = {
     'phone' | 'talkgroups' | 'fName' | 'lName'
   >> & Pick<
     FrontendUserObject,
-    'getTranscript' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone'
+    'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone'
   > & {
     department: UserDepartment;
     admin?: boolean;
@@ -249,7 +251,7 @@ export type UpdateUserApi = {
   };
   body: OrNull<Pick<
     FrontendUserObject,
-    'talkgroups' | 'fName' | 'lName' | 'getTranscript' | 'getApiAlerts' | 'getVhfAlerts'
+    'talkgroups' | 'fName' | 'lName' | 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts'
     | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone'
   >>;
   responses: {
@@ -351,6 +353,10 @@ export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
       null: {},
     },
   },
+  getTranscriptOnly: {
+    required: false,
+    types: { boolean: {}, null: {} },
+  },
 };
 
 export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
@@ -441,6 +447,10 @@ export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
         regex: /^[^\t\n]+$/,
       },
     },
+  },
+  getTranscriptOnly: {
+    required: false,
+    types: { boolean: {} },
   },
 };
 

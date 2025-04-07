@@ -502,7 +502,8 @@ async function handlePage(body: PageBody) {
 	// Build the message body
 	const pageInitTime = new Date();
 	const messageBody = createPageMessage(body.key, body.tg);
-	const recipients = await getRecipients('all', body.tg, !!body.isTest);
+	const recipients = (await getRecipients('all', body.tg, !!body.isTest))
+		.filter(v => !v.getTranscriptOnly?.BOOL);
 
 	body.len = body.len || 0;
 
