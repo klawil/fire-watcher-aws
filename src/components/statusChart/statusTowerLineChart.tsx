@@ -111,6 +111,10 @@ export default function StatusTowerLineChart({
             y: {
               min: 0,
               max: 45,
+              title: {
+                text: 'Messages per Second',
+                display: true,
+              },
             },
             y2: {
               type: 'linear',
@@ -118,6 +122,10 @@ export default function StatusTowerLineChart({
               position: 'right',
               grid: {
                 drawOnChartArea: false,
+              },
+              title: {
+                text: 'Recordings Uploaded',
+                display: true,
               },
             },
           },
@@ -156,7 +164,6 @@ export default function StatusTowerLineChart({
             },
             legend: {
               display: false,
-              // position: 'right',
             },
             tooltip: {
               filter: (a, b, c) => a.dataset.label !== 'none' &&

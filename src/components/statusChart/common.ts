@@ -49,7 +49,7 @@ export function useChartData(
   dataUrl: string,
   shouldLoad: boolean,
   setChartLoaded: Dispatch<SetStateAction<number>>,
-  convertValue: (a: number) => number,
+  convertValue: (a: number) => number = v => v,
 ) {
   const [data, setData] = useState<{
     labels: string[];

@@ -47,11 +47,38 @@ export default function StatusTimingLineChart({
             y: {
               min: 0,
               stacked: true,
+              title: {
+                display: true,
+                text: 'Cumulative Time (s)',
+              },
             },
           },
           plugins: {
             legend: {
               position: pageWidth && pageWidth >= 992 ? 'right' : 'bottom',
+            },
+            tooltip: {
+              callbacks: {
+                label: context => {
+                  console.log(context);
+                  let label = context.dataset.label || '';
+
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += context.parsed.y + 's';
+                  }
+                  if (context.parsed._stacks?.y && context.datasetIndex > 0) {
+                    let sum = 0;
+                    for (let i = 0; i <= context.datasetIndex; i++) {
+                      sum += context.parsed._stacks.y[i] || 0;
+                    }
+                    label += ` (cum: ${sum}s)`;
+                  }
+                  return label;
+                },
+              },
             },
           },
         }}
