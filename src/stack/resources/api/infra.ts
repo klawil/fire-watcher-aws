@@ -720,32 +720,10 @@ async function handleMetrics(event: APIGatewayProxyEvent): Promise<APIGatewayPro
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
 	logger.debug('main', ...arguments);
+	const start = Date.now();
 	const action = event.queryStringParameters?.action || 'none';
-
-	switch (action) {
-		case 'page':
-		case 'dtrPage':
-			return await handlePage(event);
-		case 'heartbeat':
-			return await handleHeartbeat(event);
-		case 'site_status':
-			return await handleSiteStatus(event);
-		case 'dtrExists':
-			return await handleDtrExists(event);
-		case 'dtrExistsSingle':
-			return await handleDtrExistsSingle(event);
-		case 'startTest':
-			return await handleTestState(event, true);
-		case 'endTest':
-			return await handleTestState(event, false);
-		case 'getTexts':
-			return await getTestTexts(event);
-		case 'metric':
-			return await handleMetrics(event);
-	}
-
-	logger.error('main', 'Invalid Action', action);
-	return {
+	logger.error('KLAWIL-START', action);
+	let result: APIGatewayProxyResult = {
 		statusCode: 404,
 		headers: {},
 		body: JSON.stringify({
@@ -753,4 +731,47 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 			message: `Invalid action '${action}'`
 		})
 	};
+
+	switch (action) {
+		case 'page':
+		case 'dtrPage':
+			result = await handlePage(event);
+			break;
+		case 'heartbeat':
+			result = await handleHeartbeat(event);
+			break;
+		case 'site_status':
+			result = await handleSiteStatus(event);
+			break;
+		case 'dtrExists':
+			result = await handleDtrExists(event);
+			break;
+		case 'dtrExistsSingle':
+			result = await handleDtrExistsSingle(event);
+			break;
+		case 'startTest':
+			result = await handleTestState(event, true);
+			break;
+		case 'endTest':
+			result = await handleTestState(event, false);
+			break;
+		case 'getTexts':
+			result = await getTestTexts(event);
+			break;
+		case 'metric':
+			result = await handleMetrics(event);
+			break;
+	}
+
+	logger.error('KLAWIL-DONE', action, Date.now() - start);
+	return result;
+	// logger.error('main', 'Invalid Action', action);
+	// return {
+	// 	statusCode: 404,
+	// 	headers: {},
+	// 	body: JSON.stringify({
+	// 		error: true,
+	// 		message: `Invalid action '${action}'`
+	// 	})
+	// };
 }
