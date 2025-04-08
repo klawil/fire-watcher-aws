@@ -1,5 +1,5 @@
 import { Validator } from "../backend/validation";
-import { api400Body, api401Body, api403Body, api500Body } from "./_shared";
+import { api200Body, api400Body, api401Body, api403Body, api500Body } from "./_shared";
 import { UserDepartment, validDepartments } from "./users";
 
 export const textTypes = [ 'page', 'alert', 'account', 'transcript', 'pageAnnounce',
@@ -141,6 +141,62 @@ export const getAllTextsApiQueryValidator: Validator<GetAllTextsApi['query']> = 
       string: {
         exact: validDepartments,
       },
+    },
+  },
+};
+
+/**
+ * Update which users have opened the link in the paging message
+ * @summary Retrieve Texts List
+ * @tags Texts
+ * @body.contentType application/json
+ */
+export type UpdateTextSeenApi = {
+  path: '/api/v2/texts/{id}/';
+  method: 'PATCH';
+  params: {
+    /**
+     * The text ID that was opened
+     */
+    id: number;
+  };
+  body: {
+    /**
+     * The phone number that opened the message
+     */
+    phone: number;
+  };
+  responses: {
+    /**
+     * @contentType application/json
+     */
+    200: typeof api200Body;
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+};
+
+export const updateTextSeenApiParamsValidator: Validator<UpdateTextSeenApi['params']> = {
+  id: {
+    required: true,
+    parse: v => Number(v),
+    types: {
+      number: {},
+    },
+  },
+};
+
+export const updateTextSeenApiBodyValidator: Validator<UpdateTextSeenApi['body']> = {
+  phone: {
+    required: true,
+    types: {
+      number: {},
     },
   },
 };

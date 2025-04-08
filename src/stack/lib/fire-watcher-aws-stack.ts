@@ -899,11 +899,19 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'texts',
         fileName: 'texts',
-        methods: [ 'GET', 'POST', ],
+        methods: [ 'GET', ],
         authRequired: true,
         tables: [{
           table: 'TEXT',
           readOnly: true,
+        }],
+        next: [{
+          pathPart: '{id}',
+          fileName: 'text',
+          methods: [ 'PATCH', ],
+          tables: [{
+            table: 'TEXT',
+          }],
         }],
       },
       {

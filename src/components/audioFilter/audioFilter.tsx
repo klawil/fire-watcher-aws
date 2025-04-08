@@ -8,6 +8,8 @@ import Tab from "react-bootstrap/Tab";
 import Form from "react-bootstrap/Form";
 import { defaultFilterPreset } from "@/logic/audioState";
 import { Col, Container, Row, Table } from "react-bootstrap";
+import { typeFetch } from "@/logic/typeFetch";
+import { UpdateTextSeenApi } from "@/types/api/texts";
 
 
 export default function AudioFilter({
@@ -43,20 +45,32 @@ export default function AudioFilter({
     // Check for a link from a paging message
     if (
       !state.queryParsed &&
-      searchParams.get('cs') !== null &&
-      searchParams.get('f') !== null
+      searchParams.get('p') !== null &&
+      searchParams.get('m') !== null
     ) {
-      fetch(`/api/frontend?action=pageView`, {
-        method: 'POST',
-        body: JSON.stringify({
-          cs: searchParams.get('cs'),
-          f: searchParams.get('f'),
-        })
-      }).then(r => r.json())
-        .catch(e => console.log(`Failed to log page`, e));
+      (async (phone: number, message: number) => {
+        if (Number.isNaN(phone) || Number.isNaN(message)) {
+          throw new Error('Invalid phone or message');
+        }
+
+        const [ code ] = await typeFetch<UpdateTextSeenApi>({
+          path: '/api/v2/texts/{id}/',
+          method: 'PATCH',
+          params: {
+            id: message,
+          },
+          body: {
+            phone: phone,
+          },
+        });
+        if (code !== 200) {
+          throw new Error(`Failed to update text seen - ${code}`);
+        }
+      })(Number(searchParams.get('p')), Number(searchParams.get('m')));
       
       const newParams = new URLSearchParams(searchParams.toString());
-      newParams.delete('cs');
+      newParams.delete('p');
+      newParams.delete('m');
       window.history.replaceState(null, '', `?${newParams.toString()}`);
       return;
     }

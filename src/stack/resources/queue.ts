@@ -65,13 +65,16 @@ function dateToTimeString(d: Date): string {
 	return `on ${dateString} at ${timeString}`;
 }
 
-function createPageMessage(
+/**
+ * @deprecated
+ */
+function createPageMessageOld(
 	fileKey: string,
 	pageTg: PagingTalkgroup,
 	number: string | null = null,
 	transcript: string | null = null
 ): string {
-	logger.trace('createPageMessage', ...arguments);
+	logger.trace('createPageMessageOld', ...arguments);
 	const pageConfig = pagingTalkgroupConfig[pageTg];
 
 	if (typeof pageConfig === 'undefined')
@@ -248,7 +251,7 @@ async function handleActivation(body: ActivateBody) {
 					null,
 					body.phone,
 					config.pagePhone,
-					createPageMessage(pageKey, pageTg),
+					createPageMessageOld(pageKey, pageTg),
 					[]
 				)
 			}));
@@ -477,7 +480,7 @@ async function handlePage(body: PageBody) {
 	logger.trace('handlePage', ...arguments);
 	// Build the message body
 	const pageInitTime = new Date();
-	const messageBody = createPageMessage(body.key, body.tg);
+	const messageBody = createPageMessageOld(body.key, body.tg);
 	const recipients = (await getRecipients('all', body.tg, !!body.isTest))
 		.filter(v => !v.getTranscriptOnly?.BOOL);
 
@@ -546,7 +549,7 @@ async function handlePage(body: PageBody) {
 			messageId,
 			phone.phone.N as string,
 			await getPageNumberOld(phone),
-			createPageMessage(body.key, body.tg, phone.phone.N),
+			createPageMessageOld(body.key, body.tg, phone.phone.N),
 			[],
 		)));
 
@@ -598,6 +601,38 @@ async function handleLogin(body: LoginBody) {
 		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`,
 		[]
 	);
+}
+
+function createPageMessage(
+	fileKey: string,
+	pageTg: PagingTalkgroup,
+	number: number | null = null,
+	messageId: number | null = null,
+	transcript: string | null = null
+): string {
+	logger.trace('createPageMessage', ...arguments);
+	const pageConfig = pagingTalkgroupConfig[pageTg];
+
+	if (typeof pageConfig === 'undefined')
+		return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
+
+	let pageStr = `${pageConfig.pagedService} PAGE\n`;
+	pageStr += `${pageConfig.partyBeingPaged} paged `
+	pageStr += `${dateToTimeString(fNameToDate(fileKey))}\n`;
+	if (transcript !== null) {
+		pageStr += `\n${transcript}\n\n`;
+	}
+	pageStr += `https://cofrn.org/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
+	if (number !== null) {
+		pageStr += `&p=${number}`;
+	}
+	if (messageId !== null) {
+		pageStr += `&m=${messageId}`;
+	}
+	if (number && number.toString() === testingUser) {
+		pageStr = pageStr.replace(/cofrn\.org/g, 'new.cofrn.org');
+	}
+	return pageStr;
 }
 
 interface TranscribeResult {
@@ -701,6 +736,7 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 			jobInfo.File as string,
 			tg,
 			null,
+			null,
 			transcript
 		);
 
@@ -758,8 +794,9 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 				createPageMessage(
 					jobInfo.File as string,
 					tg,
-					phone.phone.toString(),
-					transcript
+					phone.phone,
+					messageId,
+					transcript,
 				),
 				[]
 			)));

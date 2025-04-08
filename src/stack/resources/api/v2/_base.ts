@@ -354,7 +354,7 @@ export function validateRequest<A extends Api>({
   paramsRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   paramsValidator?: Validator<A['params']>,
   bodyRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-  bodyParser?: 'json' | 'url',
+  bodyParser?: 'json',
   bodyValidator?: Validator<A['body']>,
   queryRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   queryValidator?: Validator<A['query']>,
