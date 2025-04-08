@@ -19,7 +19,7 @@ export default function CofrnNavbar({
   const loc = useContext(LocationContext);
   const redirectTo = encodeURIComponent(loc ? `${loc?.pathname}${loc?.search}` : '')
   const loginLink = `/login?redirectTo=${redirectTo}`;
-  const logoutLink = `/api/user?action=logout&redirectTo=${redirectTo}`;
+  const logoutLink = `/api/v2/logout/?redirectTo=${redirectTo}`;
 
   const user = useContext(LoggedInUserContext);
   if (user === null || colorModeName === null) return null;

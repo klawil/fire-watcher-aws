@@ -236,7 +236,7 @@ export function getFrontendUserObj(
 const authUserCookie = 'cofrn-user';
 const authTokenCookie = 'cofrn-token';
 
-function getDeleteCookieHeader(cookie: string) {
+export function getDeleteCookieHeader(cookie: string) {
   return `${encodeURIComponent(cookie)}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 }
 

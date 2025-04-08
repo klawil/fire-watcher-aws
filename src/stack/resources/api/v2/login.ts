@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '../../../../logic/logger';
 import { getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
-import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/login';
+import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/auth';
 import { api200Body, generateApi400Body } from '@/types/api/_shared';
 import { FullUserObject } from '@/types/api/users';
 import { getUserPermissions } from '../../../utils/user';

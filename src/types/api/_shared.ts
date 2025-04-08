@@ -1,10 +1,10 @@
 export const api200Body = {
   message: 'Success',
 } as const;
-export const api200Response = {
-  statusCode: 200,
-  body: JSON.stringify(api200Body),
-};
+
+export const api302Body = {
+  message: 'Found',
+} as const;
 
 export interface api400Body {
   message: 'Invalid request body';
@@ -24,10 +24,6 @@ export function generateApi400Body(errors: string[]) {
 export const api401Body = {
   message: 'Missing Authentication Token',
 } as const;
-export const api401Response = {
-  statusCode: 401,
-  body: JSON.stringify(api401Body),
-};
 
 export const api403Body = {
   message: 'Missing Authentication Token',
@@ -40,15 +36,7 @@ export const api403Response = {
 export const api404Body = {
   message: 'Resource not found',
 } as const;
-export const api404Response = {
-  statusCode: 404,
-  body: JSON.stringify(api404Body),
-};
 
 export const api500Body = {
   message: 'Internal server error',
 } as const;
-export const api500Response = {
-  statusCode: 500,
-  body: JSON.stringify(api500Body),
-};
