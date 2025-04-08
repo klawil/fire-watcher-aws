@@ -1,5 +1,6 @@
 import { CreateTextApi } from "@/types/api/twilio";
 import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
+import { DynamicSiteKeys, FullSiteObject } from "../api/sites";
 
 export interface ActivateUserQueueItem {
   action: 'activate-user';
@@ -50,4 +51,11 @@ export interface TranscribeJobResultQueueItem {
 		TranscriptionJobName: string;
 		TranscriptionJobStatus: string;
   };
+}
+
+export interface SiteStatusQueueItem {
+  action: 'site-status';
+  sites: {
+    [key: string]: Required<Pick<FullSiteObject, DynamicSiteKeys>>;
+  }
 }

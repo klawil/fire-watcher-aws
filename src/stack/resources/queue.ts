@@ -4,15 +4,16 @@ import * as https from 'https';
 import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
-import { ActivateUserQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
+import { ActivateUserQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
 import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
 import { departmentConfig, pagingTalkgroupConfig, PhoneNumberTypes } from '@/types/backend/department';
 import { FullUserObject, PagingTalkgroup, UserDepartment } from '@/types/api/users';
-import { TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate } from '../utils/dynamoTyped';
+import { TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate } from '../utils/dynamoTyped';
 import { FileTranslationObject, FullFileObject } from '@/types/api/files';
-import { TypedGetOutput } from '@/types/backend/dynamo';
+import { TypedGetOutput, TypedUpdateInput } from '@/types/backend/dynamo';
+import { FullSiteObject } from '@/types/api/sites';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();
@@ -1049,6 +1050,51 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 	return await Promise.all(promises);
 }
 
+async function handleSiteStatus(body: SiteStatusQueueItem) {
+	const sites = body.sites;
+
+	await Promise.all(Object.keys(sites).map(async siteId => {
+		const site = sites[siteId];
+		const systemShortNames: string[] = [];
+
+		const updateConfig: TypedUpdateInput<FullSiteObject> = {
+			TableName: TABLE_SITE,
+			Key: {
+				SiteId: siteId,
+			},
+			ExpressionAttributeNames: {
+				'#IsActive': 'IsActive',
+			},
+			ExpressionAttributeValues: {
+				':IsActive': 'y',
+			},
+			UpdateExpression: '',
+		};
+		const updateStrings: string[] = [ '#IsActive = :IsActive' ];
+		(Object.keys(site) as (keyof typeof site)[]).forEach(key => {
+			if (typeof site[key] === 'string') return;
+			
+			updateConfig.ExpressionAttributeNames[`#${key}`] = key as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+			Object.keys(site[key]).forEach(shortName => {
+				if (!systemShortNames.includes(shortName)) {
+					updateConfig.ExpressionAttributeNames[`#sys${systemShortNames.length}`] = shortName;
+					systemShortNames.push(shortName);
+				}
+
+				const sysIndex = systemShortNames.indexOf(shortName);
+				const value = site[key][shortName];
+				updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
+				updateConfig.ExpressionAttributeValues[`:${key}${sysIndex}`] = value;
+				updateStrings.push(`#${key}.#sys${sysIndex} = :${key}${sysIndex}`);
+			});
+		});
+		updateConfig.UpdateExpression = `SET ${updateStrings.join(', ')}`;
+
+		await typedUpdate<FullSiteObject>(updateConfig);
+	}));
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	logger.debug('parseRecord', ...arguments);
 	const body = JSON.parse(event.body);
@@ -1085,6 +1131,9 @@ async function parseRecord(event: lambda.SQSRecord) {
 			break;
 		case 'activate-user':
 			response = await handleActivateUser(body);
+			break;
+		case 'site-status':
+			response = await handleSiteStatus(body);
 			break;
 		default:
 			throw new Error(`Unkown body - ${JSON.stringify(body)}`);

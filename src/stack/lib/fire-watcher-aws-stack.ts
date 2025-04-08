@@ -472,6 +472,7 @@ export class FireWatcherAwsStack extends Stack {
     dtrTable.grantReadWriteData(queueHandler);
     twilioSecret.grantRead(queueHandler);
     dtrTranslationTable.grantReadWriteData(queueHandler);
+    siteTable.grantReadWriteData(queueHandler);
 
     // Create a queue for cloudwatch alarms
     const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
