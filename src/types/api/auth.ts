@@ -13,7 +13,6 @@ export type GetLoginCodeApi = {
   params: {
     /**
      * The user ID (10 digit phone number) to send the code for
-     * @format integer
      */
     id: number;
   };
@@ -45,7 +44,6 @@ export type SubmitLoginCodeApi = {
   params: {
     /**
      * The user ID (10 digit phone number) to authenticate as
-     * @format integer
      */
     id: number;
   };

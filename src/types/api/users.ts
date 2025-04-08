@@ -183,7 +183,6 @@ export type GetUserApi = {
   params: {
     /**
      * The user ID (10 digit phone number) or "current" to retrieve the current user's information
-     * @format integer
      */
     id: number | string;
   };
@@ -245,7 +244,6 @@ export type UpdateUserApi = {
   params: {
     /**
      * The user ID (10 digit phone number) or "current" to update the current user's information
-     * @format integer
      */
     id: number | string;
   };
@@ -465,7 +463,6 @@ export type DeleteUserApi = {
   params: {
     /**
      * The user ID (10 digit phone number)
-     * @format integer
      */
     id: number;
   };
@@ -526,7 +523,6 @@ export type CreateUserDepartmentApi = {
   params: {
     /**
      * The user ID (10 digit phone number)
-     * @format integer
      */
     id: number;
     /**
@@ -651,7 +647,6 @@ export type DeleteUserDepartmentApi = {
   params: {
     /**
      * The user ID (10 digit phone number)
-     * @format integer
      */
     id: number;
     /**

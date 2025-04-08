@@ -69,9 +69,6 @@ export type GetTalkgroupApi = {
   path: '/api/v2/talkgroups/{id}/';
   method: 'GET';
   params: {
-    /**
-     * @format integer
-     */
     id: number;
   };
   responses: {
@@ -105,9 +102,6 @@ export type PatchTalkgroupApi = {
   path: '/api/v2/talkgroups/{id}/';
   method: 'PATCH';
   params: {
-    /**
-     * @format integer
-     */
     id: number;
   };
   body: {

@@ -85,7 +85,6 @@ export type GetAllTextsApi = {
     department?: UserDepartment;
     /**
      * The timestamp to return messages before, in ms since epoch
-     * @format integer
      */
     before?: number;
   };

@@ -55,17 +55,14 @@ export type GetAllFilesApi = {
     emerg?: 'y' | 'n';
     /**
      * Return files with a start time less than this time
-     * @format integer
      */
     before?: number;
     /**
      * Return files with a start time greater than this time
-     * @format integer
      */
     after?: number;
     /**
      * Return files with an added time greater than this time
-     * @format integer
      */
     afterAdded?: number;
   };
