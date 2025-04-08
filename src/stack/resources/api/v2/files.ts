@@ -20,8 +20,9 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
   const [ query, queryErrors ] = validateObject<GetAllFilesApi['query']>(
-    event.queryStringParameters || {},
+    event.multiValueQueryStringParameters || {},
     getAllFilesApiQueryValidator,
+    true,
   );
   if (
     query === null ||
@@ -42,7 +43,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     };
     baseQueryConfig.IndexName = 'StartTimeTgIndex';
     baseQueryConfig.KeyConditionExpression = '#talkgroup = :talkgroup';
-    query.tg.split('|')
+    query.tg
       .forEach(tg => queryConfigs.push({
         ExpressionAttributeValues: {
           ':talkgroup': Number(tg),

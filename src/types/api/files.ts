@@ -48,7 +48,7 @@ export type GetAllFilesApi = {
     /**
      * The talkgroups to retrieve file from. This should be a pipe-separated list of integers
      */
-    tg?: string;
+    tg?: number[];
     /**
      * Whether to exclusively return traffic that is marked as "emergency"
      */
@@ -94,9 +94,7 @@ export const getAllFilesApiQueryValidator: Validator<GetAllFilesApi['query']> = 
   tg: {
     required: false,
     types: {
-      string: {
-        regex: /^[0-9|]+$/,
-      },
+      array: {},
     },
   },
   emerg: {

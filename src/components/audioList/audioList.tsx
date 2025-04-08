@@ -228,15 +228,15 @@ function useLoadFiles(
       if (typeof state.filter.tg !== 'undefined') {
         // Get the URL value
         const tgFilter = state.filter.tg;
-        let tgUrlValue: string = '';
+        let tgUrlValue: number[] = [];
         if (tgFilter.startsWith('tg')) {
-          tgUrlValue = tgFilter.slice(2);
+          tgUrlValue = tgFilter.slice(2).split('|').map(v => Number(v));
         } else if (tgFilter.startsWith('p')) {
           tgUrlValue = filterPresets[tgFilter.slice(1) as FilterPresetUrlParams]
-            .talkgroups.join('|');
+            .talkgroups;
         }
 
-        if (tgUrlValue !== '') {
+        if (tgUrlValue.length > 0) {
           urlParams.tg = tgUrlValue;
         }
       }

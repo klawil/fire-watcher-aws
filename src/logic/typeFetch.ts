@@ -25,13 +25,18 @@ export async function typeFetch<T extends Api>({
 
   // Add the search params
   const searchParams = Object.keys(query || {});
-  if (searchParams.length > 0) {
+  if (searchParams.length > 0 && query) {
     const searchStr = new URLSearchParams();
     searchParams
-      .filter(key => typeof (query || {})[key] !== 'undefined')
-      .forEach(key =>
-        searchStr.set(key, String((query || {})[key]))
-      );
+      .filter(key => typeof query[key] !== 'undefined')
+      .forEach(key => {
+        let value = query[key];
+        if (!Array.isArray(value)) {
+          value = [ value ];
+        }
+
+        value.forEach((v: unknown) => searchStr.set(key, String(v)));
+      });
     apiPath += `?${searchStr.toString()}`;
   }
 

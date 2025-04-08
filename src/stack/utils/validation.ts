@@ -5,7 +5,8 @@ const logger = getLogger('stack/utils/validation');
 
 export function validateObject<T extends object>(
   obj: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-  validator: Validator<T>
+  validator: Validator<T>,
+  useMultiValue: boolean = false,
 ): [T | null, (keyof T)[] ] {
   logger.trace('validateObject', ...arguments);
   const newObj: Partial<T> = {};
@@ -34,7 +35,10 @@ export function validateObject<T extends object>(
     }
 
     // Validate using the different types
-    const value = config.parse ? config.parse(obj[key]) : obj[key];
+    const rawValue = useMultiValue && Array.isArray(obj[key]) && obj[key].length === 1 && typeof config.types.array === 'undefined'
+      ? obj[key][0]
+      : obj[key];
+    const value = config.parse ? config.parse(rawValue) : rawValue;
     let foundType = false;
 
     // Validate strings
@@ -43,7 +47,7 @@ export function validateObject<T extends object>(
       if (
         !conf ||
         (conf.regex && !conf.regex.test(value)) ||
-        (conf.exact && !conf.exact.includes(value))
+        (conf.exact && !conf.exact.includes(value as typeof conf.exact[number]))
       ) {
         logger.error(
           `Failed to validate ${String(key)} as string`,
@@ -51,7 +55,7 @@ export function validateObject<T extends object>(
           value,
           conf,
           (conf?.regex && !conf.regex.test(value)),
-          (conf?.exact && !conf.exact.includes(value)),
+          (conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])),
         );
         badKeys.push(key);
         return;
@@ -66,7 +70,7 @@ export function validateObject<T extends object>(
         !conf ||
         Number.isNaN(value) ||
         (conf.regex && !conf.regex.test(value.toString())) ||
-        (conf.exact && !conf.exact.includes(value))
+        (conf.exact && !conf.exact.includes(value as typeof conf.exact[number]))
       ) {
         logger.error(
           `Failed to validate ${String(key)} as number`,
@@ -75,7 +79,7 @@ export function validateObject<T extends object>(
           conf,
           Number.isNaN(value),
           (conf?.regex && !conf.regex.test(value.toString())),
-          (conf?.exact && !conf.exact.includes(value)),
+          (conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])),
         );
         badKeys.push(key);
         return;
@@ -89,7 +93,7 @@ export function validateObject<T extends object>(
       if (
         !conf ||
         (conf.regex && !conf.regex.test(value.toString())) ||
-        (conf.exact && !conf.exact.includes(value))
+        (conf.exact && !conf.exact.includes(value as typeof conf.exact[number]))
       ) {
         logger.error(
           `Failed to validate ${String(key)} as boolean`,
@@ -97,7 +101,7 @@ export function validateObject<T extends object>(
           value,
           conf,
           (conf?.regex && !conf.regex.test(value.toString())),
-          (conf?.exact && !conf.exact.includes(value)),
+          (conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])),
         );
         badKeys.push(key);
         return;
