@@ -14,10 +14,6 @@ export function dateToStr(d: Date) {
 	return `${dateString} ${timeString}`;
 }
 
-export function padLeft(num: number, len = 2): string {
-	return `${num}`.padStart(len, '0');
-}
-
 export function dateTimeToTimeStr(datetime: number): string {
 	return dateToStr(new Date(datetime));
 }
