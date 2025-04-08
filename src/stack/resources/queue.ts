@@ -999,7 +999,7 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 			if (adminsToSendTo.length === 0) return;
 
 			const adminMessageId = Date.now();
-			const adminMessageBody = `New subscribed: ${user.fName} ${user.lName} (${formatPhone(body.phone)}) has been added to the ${body.department} group`;
+			const adminMessageBody = `New subscriber: ${user.fName} ${user.lName} (${formatPhone(body.phone)}) has been added to the ${body.department} group`;
 			return Promise.all([
 				saveMessageData(
 					'departmentAlert',
