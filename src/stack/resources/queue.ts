@@ -2,9 +2,9 @@ import * as AWS from 'aws-sdk';
 import * as lambda from 'aws-lambda';
 import * as https from 'https';
 import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
-import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody, TwilioErrorBody } from './types/queue';
+import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
-import { ActivateUserQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
+import { ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
 import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
@@ -93,6 +93,9 @@ function createPageMessage(
 	return pageStr;
 }
 
+/**
+ * @deprecated in favor of handleActivateUser
+ */
 async function handleActivation(body: ActivateBody) {
 	logger.trace('handleActivation', ...arguments);
 	const promises: Promise<unknown>[] = [];
@@ -261,6 +264,9 @@ interface TwilioParams {
 	MediaUrl0?: string;
 }
 
+/**
+ * @deprecated in favor of handleTwilioText
+ */
 async function handleTwilio(body: TwilioBody) {
 	logger.trace('handleTwilio', ...arguments);
 	// Pull out the information needed to validate the Twilio request
@@ -391,43 +397,9 @@ async function handleTwilio(body: TwilioBody) {
 	await insertMessage;
 }
 
-async function handleTwilioError(body: TwilioErrorBody) {
-	logger.trace('handleTwilioError', ...arguments);
-	const recipients = (await getRecipients('all', null))
-		.filter(user => {
-			for (let i = 0; i < body.department.length; i++) {
-				const dep = body.department[i];
-				if (user[dep]?.M?.admin?.BOOL && user[dep]?.M?.active?.BOOL) {
-					return true;
-				}
-			}
-
-			return false;
-		});
-	const message = `Possible issue with ${body.name} phone (number is ${body.number})\n\nLast ${body.count} messages have not been delivered.`;
-
-	const messageId = Date.now().toString();
-	const insertMessage = saveMessageDataOld(
-		'departmentAlert',
-		messageId,
-		recipients.length,
-		message,
-		[],
-		null,
-		null,
-	);
-	await Promise.all(recipients.map(async user => sendMessageOld(
-		metricSource,
-		'departmentAlert',
-		messageId,
-		user.phone.N as string,
-		await getPageNumberOld(user),
-		message,
-		[]
-	)));
-	await insertMessage;
-}
-
+/**
+ * @deprecated @TODO
+ */
 async function handleAnnounce(body: AnnounceBody) {
 	logger.trace('handleAnnounce', ...arguments);
 	const recipients = await getRecipients(
@@ -498,6 +470,9 @@ async function handleAnnounce(body: AnnounceBody) {
 	await insertMessage;
 }
 
+/**
+ * @deprecated @TODO
+ */
 async function handlePage(body: PageBody) {
 	logger.trace('handlePage', ...arguments);
 	// Build the message body
@@ -579,6 +554,9 @@ async function handlePage(body: PageBody) {
 	await metricPromise;
 }
 
+/**
+ * @deprecated in favor of handleAuthCode
+ */
 async function handleLogin(body: LoginBody) {
 	logger.trace('handleLogin', ...arguments);
 	const code = randomString(6, true);
@@ -773,7 +751,6 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 	if (jobInfo.File) {
 		await Promise.all(recipients
 			.map(async phone => sendMessage(
-				metricSource,
 				'transcript',
 				messageId,
 				phone.phone,
@@ -789,7 +766,6 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 	} else {
 		await Promise.all(recipients
 			.map(async number => sendMessage(
-				metricSource,
 				'transcript',
 				messageId,
 				number.phone,
@@ -897,7 +873,6 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
 	await Promise.all(recipients
 		.filter(number => typeof number.phone !== 'undefined')
 		.map(async (number) => sendMessage(
-			metricSource,
 			isAnnouncement ? 'departmentAnnounce' : 'department',
 			messageId,
 			number.phone,
@@ -908,6 +883,43 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
 			mediaUrls,
 		))
 	);
+	await insertMessage;
+}
+
+async function handlePhoneIssue(body: PhoneNumberIssueQueueItem) {
+	logger.trace('handlePhoneIssue', ...arguments);
+
+	const recipients = (await getUserRecipients('all', null))
+		.filter(u => {
+			if (u.phone === body.number) return false;
+
+			for (let i = 0; i < body.department.length; i++) {
+				const dep = body.department[i];
+				if (u[dep]?.admin && u[dep].active) return true;
+			}
+
+			return false;
+		});
+	const message = `Text delivery issue for ${body.name} (number ${formatPhone(body.number)})\n\nLast ${body.count} messages have not been delivered.`;
+
+	const messageId = Date.now();
+	const insertMessage = saveMessageData(
+		'departmentAlert',
+		messageId,
+		recipients.length,
+		message,
+		[],
+		null,
+		null,
+	);
+	await Promise.all(recipients.map(async user => sendMessage(
+		'departmentAlert',
+		messageId,
+		user.phone,
+		await getPageNumber(user),
+		message,
+		[],
+	)));
 	await insertMessage;
 }
 
@@ -961,7 +973,6 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 	)
 		.replace(/\{\{([^\}]+)\}\}/g, (a: string, b: WelcomeMessageConfigKeys) => messagePieces[b]);
 	promises.push(sendMessage(
-		metricSource,
 		'account',
 		null,
 		body.phone,
@@ -1001,7 +1012,6 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 					body.department,
 				),
 				...adminsToSendTo.map(async (item) => sendMessage(
-					metricSource,
 					'departmentAlert',
 					adminMessageId,
 					item.phone,
@@ -1036,7 +1046,6 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 				const pageTg = data.Items[0].Talkgroup as PagingTalkgroup;
 
 				return sendMessage(
-					metricSource,
 					'account',
 					null,
 					body.phone,
@@ -1120,7 +1129,6 @@ async function handleAuthCode(body: SendUserAuthCodeQueueItem) {
 		throw new Error(`Failed to add login code to user`);
 
 	await sendMessage(
-		metricSource,
 		'account',
 		null,
 		body.phone,
@@ -1144,9 +1152,6 @@ async function parseRecord(event: lambda.SQSRecord) {
 		case 'twilio':
 			response = await handleTwilio(body);
 			break;
-		case 'twilio_error':
-			response = await handleTwilioError(body);
-			break;
 		case 'announce':
 			response = await handleAnnounce(body);
 			break;
@@ -1156,13 +1161,16 @@ async function parseRecord(event: lambda.SQSRecord) {
 		case 'login':
 			response = await handleLogin(body);
 			break;
+
+		// v2 functions
 		case 'transcribe':
 			response = await handleTranscribe(body);
 			break;
-
-		// v2 functions
 		case 'twilio-text':
 			response = await handleTwilioText(body);
+			break;
+		case 'phone-issue':
+			response = await handlePhoneIssue(body);
 			break;
 		case 'activate-user':
 			response = await handleActivateUser(body);

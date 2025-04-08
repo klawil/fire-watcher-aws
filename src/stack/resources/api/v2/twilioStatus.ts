@@ -6,10 +6,9 @@ import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyVali
 import { validateTwilioRequest } from './_twilio';
 import { getTwilioSecret, twilioPhoneNumbers } from '../../../utils/general';
 import { FullUserObject, validDepartments } from '@/types/api/users';
-import { TwilioErrorBody } from '../../types/queue';
-import { formatPhone } from '@/logic/strings';
 import { TABLE_TEXT, TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { FullTextObject } from '@/types/api/texts';
+import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
 
 const logger = getLogger('twilioStatus');
 const sqs = new AWS.SQS();
@@ -166,11 +165,11 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
           result.Attributes.lastStatusCount % 10 === 0 &&
           typeof result.Attributes.phone !== 'undefined'
         ) {
-          const queueMessage: TwilioErrorBody = {
-            action: 'twilio_error',
+          const queueMessage: PhoneNumberIssueQueueItem = {
+            action: 'phone-issue',
             count: result.Attributes.lastStatusCount,
             name: `${result.Attributes.fName} ${result.Attributes.lName}`,
-            number: formatPhone(result.Attributes.phone.toString()),
+            number: result.Attributes.phone,
             department: validDepartments.filter(dep => result.Attributes && result.Attributes[dep]?.active),
           };
           return sqs.sendMessage({

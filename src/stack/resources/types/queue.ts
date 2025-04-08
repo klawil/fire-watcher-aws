@@ -20,17 +20,6 @@ export interface TwilioBody {
 /**
  * @deprecated The method should not be used
  */
-export interface TwilioErrorBody {
-	action: 'twilio_error';
-	count: number;
-	name: string;
-	number: string;
-	department: UserDepartment[];
-}
-
-/**
- * @deprecated The method should not be used
- */
 export interface AnnounceBody {
 	action: 'announce';
 	body: string;

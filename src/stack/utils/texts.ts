@@ -167,7 +167,6 @@ export async function saveMessageData(
 }
 
 export async function sendMessage(
-  metricSource: string,
   messageType: TextTypes,
   messageId: number | null,
   phone: number,
