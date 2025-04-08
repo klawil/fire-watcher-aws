@@ -121,8 +121,8 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       ':blankList': [],
     },
     UpdateExpression: 'SET ' + [
-      `#${body.MessageStatus} = list_append(if_not_exists(#${body.MessageStatus}, :blankList), :eventListItem)`,
-      `#${body.MessageStatus}Phone = list_append(if_not_exists(#${body.MessageStatus}Phone, :blankList), :eventPhoneListItem)`,
+      `#${body.MessageStatus} = list_append(if_not_exists(#${body.MessageStatus}, :blankList), :${body.MessageStatus})`,
+      `#${body.MessageStatus}Phone = list_append(if_not_exists(#${body.MessageStatus}Phone, :blankList), :${body.MessageStatus}Phone)`,
       '#fromNumber = :fromNumber',
     ].join(', '),
   });
@@ -197,9 +197,14 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     ],
   }).promise();
 
+  let wasError = false;
   await Promise.all(Object.keys(promises)
-    .map(name => promises[name].catch(e => logger.error(`Error on promise ${name}`, e)))
+    .map(name => promises[name].catch(e => {
+      wasError = true;
+      logger.error(`Error on promise ${name}`, e)
+    }))
   );
+  if (wasError) throw new Error(`Error in promises`);
 
   return [ 204, '' ];
 }
