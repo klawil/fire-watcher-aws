@@ -40,7 +40,7 @@ export interface SendPageQueueItem {
 }
 
 export interface SendUserAuthCodeQueueItem {
-  action: 'login';
+  action: 'auth-code';
   phone: number;
 }
 

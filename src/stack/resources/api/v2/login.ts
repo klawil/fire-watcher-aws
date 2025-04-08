@@ -4,11 +4,11 @@ import { getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceA
 import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/login';
 import { api200Body, generateApi400Body } from '@/types/api/_shared';
 import { FullUserObject } from '@/types/api/users';
-import { LoginBody } from '../../types/queue';
 import { getUserPermissions } from '../../../utils/user';
 import { TABLE_USER, typedGet, typedUpdate } from '@/stack/utils/dynamoTyped';
 import { validateObject } from '@/stack/utils/validation';
 import { sign } from 'jsonwebtoken';
+import { SendUserAuthCodeQueueItem } from '@/types/backend/queue';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
@@ -62,9 +62,9 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   }
 
   // Trigger the text to be sent to the user
-  const queueMessage: LoginBody = {
-    action: 'login',
-    phone: params.id.toString(),
+  const queueMessage: SendUserAuthCodeQueueItem = {
+    action: 'auth-code',
+    phone: params.id,
   };
   await sqs.sendMessage({
     MessageBody: JSON.stringify(queueMessage),

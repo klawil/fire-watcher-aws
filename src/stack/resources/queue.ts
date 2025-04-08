@@ -4,7 +4,7 @@ import * as https from 'https';
 import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers } from '../utils/general';
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody, TwilioErrorBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
-import { ActivateUserQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
+import { ActivateUserQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
 import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
@@ -1095,6 +1095,41 @@ async function handleSiteStatus(body: SiteStatusQueueItem) {
 	}));
 }
 
+async function handleAuthCode(body: SendUserAuthCodeQueueItem) {
+	logger.trace('handleAuthCode', ...arguments);
+	const code = randomString(6, true);
+	const codeTimeout = Date.now() + codeTtl;
+
+	const updateResult = await typedUpdate<FullUserObject>({
+		TableName: TABLE_USER,
+		Key: {
+			phone: body.phone,
+		},
+		ExpressionAttributeNames: {
+			'#code': 'code',
+			'#codeExpiry': 'codeExpiry',
+		},
+		ExpressionAttributeValues: {
+			':code': code,
+			':codeExpiry': codeTimeout,
+		},
+		UpdateExpression: 'SET #code = :code, #codeExpiry = :codeExpiry',
+		ReturnValues: 'ALL_NEW',
+	});
+	if (!updateResult.Attributes)
+		throw new Error(`Failed to add login code to user`);
+
+	await sendMessage(
+		metricSource,
+		'account',
+		null,
+		body.phone,
+		await getPageNumber(updateResult.Attributes as FullUserObject),
+		`This message was only sent to you. Your login code is ${code}. This code expires in 5 minutes.`,
+		[],
+	);
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
 	logger.debug('parseRecord', ...arguments);
 	const body = JSON.parse(event.body);
@@ -1134,6 +1169,9 @@ async function parseRecord(event: lambda.SQSRecord) {
 			break;
 		case 'site-status':
 			response = await handleSiteStatus(body);
+			break;
+		case 'auth-code':
+			response = await handleAuthCode(body);
 			break;
 		default:
 			throw new Error(`Unkown body - ${JSON.stringify(body)}`);
