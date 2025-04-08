@@ -14,6 +14,8 @@ import { typeFetch } from "@/logic/typeFetch";
 import { FrontendTextObject, GetAllTextsApi } from "@/types/api/texts";
 import { validDepartments } from "@/types/api/users";
 
+const maxParallelTableLoads = 3;
+
 interface TextObject extends FrontendTextObject {
   pageTime?: number;
 }
@@ -86,10 +88,14 @@ function TextsTable({
   title,
   query,
   isPage,
+  shouldLoad,
+  setTableLoaded,
 }: Readonly<{
   title: string;
   query: GetAllTextsApi['query'];
   isPage: boolean;
+  shouldLoad: boolean;
+  setTableLoaded: React.Dispatch<React.SetStateAction<number>>;
 }>) {
   const [texts, setTexts] = useState<TextObject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,6 +108,7 @@ function TextsTable({
 
   useEffect(() => {
     if (
+      !shouldLoad ||
       (texts.length > 0 && loadMoreRefInView === false) ||
       isLoading ||
       Date.now() - lastLoad <= 2000
@@ -111,10 +118,13 @@ function TextsTable({
     setScrollIdx(texts.length - 1);
     (async () => {
       setTexts(await getTexts(query, texts[texts.length - 1]?.datetime || null, addAlert));
+      if (lastLoad === 0) {
+        setTableLoaded(v => v + 1);
+      }
       setLastLoad(Date.now());
       setIsLoading(false);
     })();
-  }, [texts, isLoading, loadMoreRefInView, query, lastLoad, addAlert]);
+  }, [shouldLoad, setTableLoaded, texts, isLoading, loadMoreRefInView, query, lastLoad, addAlert]);
 
   const loadNextBatchRefIdx = texts.length - 1;
 
@@ -180,6 +190,8 @@ function TextsTable({
 
 export default function TextsPage() {
   const user = useContext(LoggedInUserContext);
+  const [tablesLoadedCount, setTablesLoadedCount] = useState(0);
+
   if (user === null) {
     return <LoadingSpinner />;
   }
@@ -233,6 +245,8 @@ export default function TextsPage() {
         title={table.title}
         query={table.query}
         isPage={!!table.isPage}
+        shouldLoad={i <= tablesLoadedCount + maxParallelTableLoads}
+        setTableLoaded={setTablesLoadedCount}
       />))}
   </>);
 }
