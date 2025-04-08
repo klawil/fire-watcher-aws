@@ -52,7 +52,10 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   }
 
   // Make sure the URI has a trailing slash
-  if (!request.uri.endsWith('/')) {
+  if (
+    !request.uri.endsWith('/') &&
+    !request.uri.includes('.')
+  ) {
     hasRedirect = true;
     request.uri = request.uri + '/';
   }
