@@ -185,6 +185,28 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    textsTable.addGlobalSecondaryIndex({
+      indexName: 'typeIndex',
+      partitionKey: {
+        name: 'type',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'datetime',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
+    textsTable.addGlobalSecondaryIndex({
+      indexName: 'departmentIndex',
+      partitionKey: {
+        name: 'department',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'datetime',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
 
     siteTable.addGlobalSecondaryIndex({
       indexName: 'active',

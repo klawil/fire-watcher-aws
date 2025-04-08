@@ -1,9 +1,10 @@
 import { Validator } from "../backend/validation";
 import { api400Body, api401Body, api403Body, api500Body } from "./_shared";
-import { UserDepartment } from "./users";
+import { UserDepartment, validDepartments } from "./users";
 
-export type TextTypes = 'page' | 'alert' | 'account' | 'transcript' | 'pageAnnounce'
-  | 'department' | 'departmentAnnounce' | 'departmentAlert';
+export const textTypes = [ 'page', 'alert', 'account', 'transcript', 'pageAnnounce',
+  'department', 'departmentAnnounce', 'departmentAlert' ] as const;
+export type TextTypes = typeof textTypes[number];
 export interface FullTextObject {
   datetime: number;
   body?: string;
@@ -42,15 +43,27 @@ export interface FullTextObject {
   isPage?: boolean;
   isTest?: boolean;
 }
-export const omittedFrontendTextFields = [
-  'csLooked',
-  'sentPhone',
-  'deliveredPhone',
-  'undeliveredPhone',
+export const allowedFrontendTextFields = [
+  'datetime',
+  'body',
+  'pageId',
+  'csLookedTime',
+  'talkgroup',
+  'testPageIndex',
+  'type',
+  'department',
+  'mediaUrls',
+  'recipients',
+  'sent',
+  'delivered',
+  'undelivered',
+  'fromNumber',
+  'isPage',
+  'isTest',
 ] as const;
-export type FrontendTextObject = Omit<
+export type FrontendTextObject = Pick<
   FullTextObject,
-  typeof omittedFrontendTextFields[number]
+  typeof allowedFrontendTextFields[number]
 >;
 
 /**
@@ -63,9 +76,13 @@ export type GetAllTextsApi = {
   method: 'GET';
   query: {
     /**
-     * Send 'y' to only receive texts that are for pages, default is to return non-paging texts
+     * The type of texts to retrieve
      */
-    page?: 'y';
+    type?: TextTypes;
+    /**
+     * The department to retrieve texts from
+     */
+    department?: UserDepartment;
     /**
      * The timestamp to return messages before, in ms since epoch
      * @format integer
@@ -104,19 +121,27 @@ export type GetAllTextsApi = {
 }
 
 export const getAllTextsApiQueryValidator: Validator<GetAllTextsApi['query']> = {
-  page: {
-    required: false,
-    types: {
-      string: {
-        exact: [ 'y' ],
-      },
-    },
-  },
   before: {
     required: false,
     parse: v => Number(v),
     types: {
       number: {},
+    },
+  },
+  type: {
+    required: false,
+    types: {
+      string: {
+        exact: textTypes,
+      },
+    },
+  },
+  department: {
+    required: false,
+    types: {
+      string: {
+        exact: validDepartments,
+      },
     },
   },
 };

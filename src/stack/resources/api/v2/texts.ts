@@ -1,6 +1,6 @@
 import { getLogger } from '../../../../logic/logger';
 import { getCurrentUser, handleResourceApi, LambdaApiFunction } from './_base';
-import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, omittedFrontendTextFields } from '@/types/api/texts';
+import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, allowedFrontendTextFields } from '@/types/api/texts';
 import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
 import { TABLE_TEXT, typedQuery } from '@/stack/utils/dynamoTyped';
 import { TypedQueryInput } from '@/types/backend/dynamo';
@@ -26,35 +26,61 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
       generateApi400Body(queryErrors),
     ];
 
-  const wantPages = query.page === 'y';
+  // Make sure either department or type is passed
+  if (
+    typeof query.type === typeof query.department
+  ) return [
+    400,
+    generateApi400Body([ 'type', 'department' ]),
+  ];
 
   // Authorize the user
   const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
   if (user === null) return [ 401, api401Body, userHeaders ];
   if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
 
-  // Build and run the query
-  const queryInput: TypedQueryInput<FullTextObject> & Required<Pick<
+  // Build the query input
+  let queryInput: (TypedQueryInput<FullTextObject> & Required<Pick<
     TypedQueryInput<FullTextObject>,
     'ExpressionAttributeNames' | 'ExpressionAttributeValues'
-  >>= {
-    TableName: TABLE_TEXT,
-    IndexName: 'testPageIndex',
-    Limit: 100,
-    ScanIndexForward: false,
-    ExpressionAttributeNames: {
-      '#testPageIndex': 'testPageIndex',
-    },
-    ExpressionAttributeValues: {
-      ':testPageIndex': `n${wantPages ? 'y' : 'n'}`,
-    },
-    KeyConditionExpression: '#testPageIndex = :testPageIndex',
-  };
+  >>) | null = null;
+  if (typeof query.type !== 'undefined') {
+    queryInput = {
+      TableName: TABLE_TEXT,
+      IndexName: 'typeIndex',
+      ScanIndexForward: false,
+      ExpressionAttributeNames: {
+        '#type': 'type',
+      },
+      ExpressionAttributeValues: {
+        ':type': query.type,
+      },
+      KeyConditionExpression: '#type = :type',
+    };
+  } else if (typeof query.department !== 'undefined') {
+    queryInput = {
+      TableName: TABLE_TEXT,
+      IndexName: 'departmentIndex',
+      ScanIndexForward: false,
+      ExpressionAttributeNames: {
+        '#department': 'department',
+      },
+      ExpressionAttributeValues: {
+        ':department': query.department,
+      },
+      KeyConditionExpression: '#department = :department',
+    };
+  }
+  if (queryInput === null) throw new Error(`Not enough info to make query`);
+  
+  // Add the timing component
   if (typeof query.before !== 'undefined') {
     queryInput.ExpressionAttributeNames['#datetime'] = 'datetime'
     queryInput.ExpressionAttributeValues[':datetime'] = query.before;
 		queryInput.KeyConditionExpression += ' AND #datetime < :datetime';
   }
+
+  // Run the query
   const result = await typedQuery<FullTextObject>(queryInput);
 
   // Filter out the texts the current user should not see
@@ -79,7 +105,9 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
       return userPerms.adminDepartments.includes(text.department);
     })
     .map(text => {
-      omittedFrontendTextFields.forEach(key => delete text[key]);
+      (Object.keys(text) as (keyof typeof text)[])
+        .filter(key => !allowedFrontendTextFields.includes(key))
+        .forEach(key => delete text[key]);
       return text;
     });
 

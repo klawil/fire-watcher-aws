@@ -911,6 +911,7 @@ async function handlePhoneIssue(body: PhoneNumberIssueQueueItem) {
 		[],
 		null,
 		null,
+		body.department[0],
 	);
 	await Promise.all(recipients.map(async user => sendMessage(
 		'departmentAlert',

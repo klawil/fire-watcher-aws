@@ -8,10 +8,11 @@ import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import { fNameToDate } from "@/logic/strings";
 import { dateTimeToTimeStr, secondsToTime } from "@/logic/dateAndFile";
 import { useRefIntersection } from "@/logic/uiUtils";
-import { AddAlertContext } from "@/logic/clientContexts";
+import { AddAlertContext, LoggedInUserContext } from "@/logic/clientContexts";
 import { Variant } from "react-bootstrap/esm/types";
 import { typeFetch } from "@/logic/typeFetch";
 import { FrontendTextObject, GetAllTextsApi } from "@/types/api/texts";
+import { validDepartments } from "@/types/api/users";
 
 interface TextObject extends FrontendTextObject {
   pageTime?: number;
@@ -39,7 +40,7 @@ function getPercentile(values: number[], percentile: number) {
 }
 
 async function getTexts(
-  isPage: boolean,
+  queryBase: GetAllTextsApi['query'],
   loadBefore: number | null,
   addAlert: (type: Variant, message: string) => void
 ) {
@@ -48,7 +49,7 @@ async function getTexts(
       path: '/api/v2/texts/',
       method: 'GET',
       query: {
-        page: isPage ? 'y' : undefined,
+        ...queryBase,
         before: loadBefore === null ? undefined : loadBefore,
       },
     });
@@ -75,15 +76,19 @@ async function getTexts(
         return text;
       });
   } catch (e) {
-    addAlert('danger', `Failed to get ${isPage ? 'paging' : 'non paging'} texts`);
-    console.error(`Failed to get texts (page: ${isPage})`, e);
+    addAlert('danger', `Failed to get texts for one of the tables`);
+    console.error(`Failed to get texts`, queryBase, e);
   }
   return [];
 }
 
 function TextsTable({
+  title,
+  query,
   isPage,
 }: Readonly<{
+  title: string;
+  query: GetAllTextsApi['query'];
   isPage: boolean;
 }>) {
   const [texts, setTexts] = useState<TextObject[]>([]);
@@ -105,16 +110,16 @@ function TextsTable({
     setIsLoading(true);
     setScrollIdx(texts.length - 1);
     (async () => {
-      setTexts(await getTexts(isPage, texts[texts.length - 1]?.datetime || null, addAlert));
+      setTexts(await getTexts(query, texts[texts.length - 1]?.datetime || null, addAlert));
       setLastLoad(Date.now());
       setIsLoading(false);
     })();
-  }, [texts, isLoading, loadMoreRefInView, isPage, lastLoad, addAlert]);
+  }, [texts, isLoading, loadMoreRefInView, query, lastLoad, addAlert]);
 
   const loadNextBatchRefIdx = texts.length - 1;
 
   return (<>
-    <h2 className="text-center">{isPage ? 'Paging' : 'Other'} Texts</h2>
+    <h2 className="text-center">{title}</h2>
 
     <Container fluid>
       {texts.length > 0 && <Table striped className={`align-middle ${styles.tableScrollY}`}>
@@ -167,21 +172,67 @@ function TextsTable({
           </tr>)}
         </tbody>
       </Table>}
-      {texts.length === 0 && <LoadingSpinner />}
+      {texts.length === 0 && lastLoad === 0 && <LoadingSpinner />}
+      {texts.length === 0 && lastLoad > 0 && <h3 className="text-center">No Texts Found</h3>}
     </Container>
   </>)
 }
 
 export default function TextsPage() {
+  const user = useContext(LoggedInUserContext);
+  if (user === null) {
+    return <LoadingSpinner />;
+  }
+
+  const tablesToLoad: {
+    title: string;
+    query: GetAllTextsApi['query'];
+    requireDistrictAdmin?: true;
+    isPage?: true;
+  }[] = [
+    {
+      title: 'Paging Texts',
+      isPage: true,
+      query: {
+        type: 'page',
+      },
+    },
+    {
+      title: 'Transcript Texts',
+      isPage: true,
+      query: {
+        type: 'transcript',
+      },
+    },
+    {
+      title: 'Alert Texts',
+      requireDistrictAdmin: true,
+      query: {
+        type: 'alert',
+      },
+    },
+  ];
+  validDepartments
+    .filter(dep => user.isDistrictAdmin || (
+      user[dep]?.active &&
+      user[dep].admin
+    ))
+    .forEach(dep => tablesToLoad.push({
+      title: `${dep} Texts`,
+      query: {
+        department: dep,
+      },
+    }));
+
   return (<>
     {/* @TODO - Implement the form to send an announcement from the website */}
 
-    <TextsTable
-      isPage={true}
-    />
-
-    <TextsTable
-      isPage={false}
-    />
+    {tablesToLoad.filter(table => !table.requireDistrictAdmin || user.isDistrictAdmin).map((table, i) =>
+      (<TextsTable
+        key={i}
+        title={table.title}
+        query={table.query}
+        isPage={!!table.isPage}
+      />))}
   </>);
 }
