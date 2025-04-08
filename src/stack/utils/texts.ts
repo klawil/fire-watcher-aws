@@ -114,7 +114,7 @@ export async function saveMessageData(
       ':body': body,
       ':isPage': pageId !== null,
       ':isTest': isTest,
-      ':testPageIndex': `${isTest ? 'y' : 'n'}${pageId === null ? 'y' : 'n'}`,
+      ':testPageIndex': `${isTest ? 'y' : 'n'}${pageId !== null ? 'y' : 'n'}`,
       ':type': messageType,
     },
   };
