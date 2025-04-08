@@ -1,4 +1,4 @@
-import { getLogger } from '../../../../logic/logger';
+import { getLogger } from '@/logic/logger';
 import * as AWS from 'aws-sdk';
 import { FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator } from '@/types/api/talkgroups';
 import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';

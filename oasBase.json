@@ -21,6 +21,10 @@
       "description": "Read only access to information about the audio files"
     },
     {
+      "name": "Sites",
+      "description": "Information about sites the DTR system monitors"
+    },
+    {
       "name": "Talkgroups",
       "description": "Information about talkgroups recognized by the system"
     },

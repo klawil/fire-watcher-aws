@@ -8,11 +8,12 @@ import Table from "react-bootstrap/Table";
 import { Circle, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import styles from "./adjacentSites.module.css";
 import "leaflet/dist/leaflet.css";
-import { ApiFrontendSitesResponse, SeenByRecorderKeys, SiteObject } from "@/common/frontendApi";
 import { useCallback, useContext, useEffect, useState } from "react";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 import L from 'leaflet';
 import { AddAlertContext } from "@/logic/clientContexts";
+import { typeFetch } from "@/logic/typeFetch";
+import { DynamicSiteKeys, FullSiteObject, GetAllSitesApi } from "@/types/api/sites";
 
 const fadeSiteTime = 1000 * 60 * 15; // 15 minutes
 const localeTimeOptions: Intl.DateTimeFormatOptions = {
@@ -23,8 +24,8 @@ const localeTimeOptions: Intl.DateTimeFormatOptions = {
 };
 
 const makeSiteStringFn = (keysAndNames: {
-	[key in SeenByRecorderKeys]?: string;
-}) => (site: SiteObject) => {
+	[key in DynamicSiteKeys]?: string;
+}) => (site: FullSiteObject) => {
 	const flags: string[] = [];
 	(Object.keys(keysAndNames) as (keyof typeof keysAndNames)[]).forEach((key) => {
 		const siteData = site[key];
@@ -57,7 +58,7 @@ function SiteMapMarker({
   site,
   minUpdateTime,
 }: Readonly<{
-  site: SiteObject;
+  site: FullSiteObject;
   minUpdateTime: number;
 }>) {
   if (typeof site.SiteLat === 'undefined' || typeof site.SiteLon === 'undefined') return (<></>);
@@ -94,7 +95,7 @@ function SiteMapMarker({
 }
 
 export default function AdjacentSites() {
-  const [sites, setSites] = useState<SiteObject[]>([]);
+  const [sites, setSites] = useState<FullSiteObject[]>([]);
   const addAlert = useContext(AddAlertContext);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -103,12 +104,18 @@ export default function AdjacentSites() {
 
     setIsLoading(true);
     try {
-      const siteData: ApiFrontendSitesResponse = await fetch(`/api/frontend?action=sites`)
-        .then(r => r.json());
+      const [ code, siteData ] = await typeFetch<GetAllSitesApi>({
+        path: '/api/v2/sites/',
+        method: 'GET',
+      });
 
-      if (!siteData.success) throw siteData;
+      if (
+        code !== 200 ||
+        siteData === null ||
+        'message' in siteData
+      ) throw { code, siteData };
 
-      setSites(siteData.data);
+      setSites(siteData.sites);
     } catch (e) {
       console.error(`Failed to get site data`, e);
       addAlert('danger', 'Failed to retrieve DTR site data');

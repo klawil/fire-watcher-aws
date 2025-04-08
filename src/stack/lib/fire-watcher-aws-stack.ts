@@ -920,7 +920,16 @@ export class FireWatcherAwsStack extends Stack {
             table: 'USER',
           }],
         }],
-      }
+      },
+      {
+        pathPart: 'sites',
+        fileName: 'sites',
+        methods: [ 'GET' ],
+        authRequired: true,
+        tables: [{
+          table: 'SITE',
+        }],
+      },
     ];
     const createApi = (
       baseResource: apigateway.Resource,

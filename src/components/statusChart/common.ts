@@ -64,7 +64,7 @@ export function useChartData(
     (async () => {
       setIsLoading(true);
       try {
-        const newData: ApiFrontendStatsResponse = await fetch(`/api/frontend?action=stats&${dataUrl}`)
+        const newData: ApiFrontendStatsResponse = await fetch(`/api/frontend/?action=stats&${dataUrl}`)
           .then(r => r.json());
 
         if (newData.success) {
