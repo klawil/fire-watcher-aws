@@ -1,23 +1,30 @@
+type ExactValues<V, key> = key extends 'array'
+  ? V extends any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+    ? readonly V[number][]
+    : readonly V[]
+  : readonly V[];
+
 type PossibleTypes = 'string' | 'number' | 'boolean' | 'array' | 'null';
+
 type SpecificTypeValidations<V> = Pick<
   {
     [type in PossibleTypes]: {
       regex?: RegExp;
-      exact?: readonly (string | number | boolean)[];
+      exact?: ExactValues<V, type>;
     };
   },
   {
-    string: string extends V ? 'string' : never;
+    string: V extends string ? 'string' : never;
     number: V extends number ? 'number' : never;
     boolean: V extends boolean ? 'boolean' : never;
-    array: Array<unknown> extends V ? 'array' : never;
+    array: V extends Array<unknown> ? 'array' : never;
     null: V extends null ? 'null' : never;
     object: V extends object ? 'object' : never;
   }[PossibleTypes]
 > & {
   [key in PossibleTypes]?: {
     regex?: RegExp;
-    exact?: readonly (string | number | boolean)[];
+    exact?: ExactValues<V, key>;
   };
 };
 export type Validator<T> = {

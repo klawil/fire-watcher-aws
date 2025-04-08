@@ -1,4 +1,4 @@
-import { PhoneNumberAccount } from "../backend/department";
+import { PhoneNumberAccount, validPhoneNumberAccounts } from "../backend/department";
 import { OrNull, Validator } from "../backend/validation";
 import { api200Body, api400Body, api401Body, api403Body, api404Body, api500Body } from "./_shared";
 
@@ -339,7 +339,7 @@ export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
     required: false,
     types: {
       string: {
-        exact: validDepartments,
+        exact: validPhoneNumberAccounts,
       },
       null: {},
     },
@@ -406,7 +406,7 @@ export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
     required: false,
     types: {
       string: {
-        exact: validDepartments,
+        exact: validPhoneNumberAccounts,
       },
     },
   },
