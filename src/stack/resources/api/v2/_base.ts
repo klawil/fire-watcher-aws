@@ -7,7 +7,7 @@ import { districtAdminUserKeys, FrontendUserObject, FullUserObject } from "@/typ
 import { UserPermissions } from "@/types/backend/user";
 import { getUserPermissions } from "../../../utils/user";
 import { TABLE_USER, typedGet, typedQuery } from "@/stack/utils/dynamoTyped";
-import { TypedQueryInput } from "@/types/backend/dynamo";
+import { TypedQueryInput, TypedQueryOutput } from "@/types/backend/dynamo";
 import { validateObject } from "@/stack/utils/validation";
 import { Validator } from "@/types/backend/validation";
 import { verify } from 'jsonwebtoken';
@@ -71,7 +71,7 @@ export async function handleResourceApi(
 
 interface DocClientListOutput<
 	ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
-> extends AWS.DynamoDB.DocumentClient.QueryOutput {
+> extends TypedQueryOutput<ItemType> {
 	Items: ItemType[],
 	Count: number;
 	ScannedCount: number;
@@ -86,7 +86,7 @@ export type DocumentQueryConfig<T extends object> = Omit<
 	'TableName' | 'IndexName' | 'Limit' | 'ScanIndexForward' | 'ProjectionExpression'
 	| 'FilterExpression' | 'KeyConditionExpression'
 > & Required<Pick<
-  AWS.DynamoDB.DocumentClient.QueryInput,
+  TypedQueryInput<T>,
 	'ExpressionAttributeValues'
 >>
 
