@@ -120,6 +120,26 @@ export const createTextBodyValidator: Validator<CreateTextApi['body']> = {
     required: false,
     types: { string: {} },
   },
+  MediaUrl1: {
+    required: false,
+    types: { string: {} },
+  },
+  MediaUrl2: {
+    required: false,
+    types: { string: {} },
+  },
+  MediaUrl3: {
+    required: false,
+    types: { string: {} },
+  },
+  MediaUrl4: {
+    required: false,
+    types: { string: {} },
+  },
+  MediaUrl5: {
+    required: false,
+    types: { string: {} },
+  },
 };
 
 /**

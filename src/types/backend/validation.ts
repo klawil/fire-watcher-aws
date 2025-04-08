@@ -28,7 +28,7 @@ type SpecificTypeValidations<V> = Pick<
   };
 };
 export type Validator<T> = {
-  [key in keyof T]: {
+  [key in keyof Required<T>]: {
     required: undefined extends T[key] ? false : true;
     parse?: (v: string) => T[key];
     types: SpecificTypeValidations<T[key]>;
