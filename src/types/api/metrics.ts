@@ -95,6 +95,9 @@ export type GetMetricsApi = {
      */
     500: typeof api500Body;
   };
+  security: [{
+    cookie: [],
+  }];
 }
 
 export const getMetricsApiBodyValidator: Validator<GetMetricsApi['body']> = {

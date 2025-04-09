@@ -66,4 +66,7 @@ export type GetAllSitesApi = {
      */
     500: typeof api500Body;
   };
+  security: [{
+    cookie: [],
+  }];
 };

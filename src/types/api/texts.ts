@@ -147,7 +147,7 @@ export const getAllTextsApiQueryValidator: Validator<GetAllTextsApi['query']> = 
 
 /**
  * Update which users have opened the link in the paging message
- * @summary Retrieve Texts List
+ * @summary Mark Text Opened
  * @tags Texts
  * @body.contentType application/json
  */
