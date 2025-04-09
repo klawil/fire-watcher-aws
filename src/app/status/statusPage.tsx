@@ -17,6 +17,11 @@ ChartJS.register(
   ...registerables,
 );
 
+// All values in seconds
+const FIVE_MINUTES = 5 * 60;
+const ONE_DAY = 60 * 60 * 24;
+const ONE_MONTH = ONE_DAY * 28;
+
 const maxParallelCharts = 5;
 const lineChartsToShow: ChartConfig[] = [
   {
@@ -42,8 +47,8 @@ const lineChartsToShow: ChartConfig[] = [
         metric: 'UploadTime',
         stat: 'SampleCount',
       }],
-      period: 300,
-      timerange: 86400000,
+      period: FIVE_MINUTES,
+      timerange: ONE_DAY,
       live: 'y',
     },
   },
@@ -70,8 +75,8 @@ const lineChartsToShow: ChartConfig[] = [
         metric: 'UploadTime',
         stat: 'SampleCount',
       }],
-      period: 300,
-      timerange: 86400000,
+      period: FIVE_MINUTES,
+      timerange: ONE_DAY,
       live: 'y',
     },
   },
@@ -99,8 +104,8 @@ const lineChartsToShow: ChartConfig[] = [
         metric: 'UploadTime',
         stat: 'SampleCount',
       }],
-      period: 300,
-      timerange: 86400000,
+      period: FIVE_MINUTES,
+      timerange: ONE_DAY,
       live: 'y',
     },
   },
@@ -109,8 +114,8 @@ const lineChartsToShow: ChartConfig[] = [
     title: 'VHF Recorder Pings',
     unit: 'Count',
     body: {
-      period: 300,
-      timerange: 86400000,
+      period: FIVE_MINUTES,
+      timerange: ONE_DAY,
       metrics: [{
         type: 'event',
         label: 'Home Server',
@@ -182,8 +187,8 @@ const lineChartsToShow: ChartConfig[] = [
         metricName: 'DeliveredTime',
         stat: 'SampleCount',
       }],
-      period: 86400,
-      timerange: 2419200000,
+      period: ONE_DAY,
+      timerange: ONE_MONTH,
       live: 'y',
     },
   },

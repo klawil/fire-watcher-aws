@@ -136,27 +136,27 @@ const periodToTime: {
 	timerange: number; // milliseconds
 }[] = [
 	{
-		timerange: 365 * 24 * 60 * 60 * 1000, // 365 days (1 year)
+		timerange: 365 * 24 * 60 * 60, // 365 days (1 year)
 		period: 24 * 60 * 60 // 24 hours
 	},
 	{
-		timerange: 28 * 24 * 60 * 60 * 1000, // 28 days (1 month)
+		timerange: 28 * 24 * 60 * 60, // 28 days (1 month)
 		period: 6 * 60 * 60 // 6 hours
 	},
 	{
-		timerange: 7 * 24 * 60 * 60 * 1000, // 7 days
+		timerange: 7 * 24 * 60 * 60, // 7 days
 		period: 60 * 60 // 1 hour
 	},
 	{
-		timerange: 24 * 60 * 60 * 1000, // 24 hours
+		timerange: 24 * 60 * 60, // 24 hours
 		period: 15 * 60 // 15 minutes
 	},
 	{
-		timerange: 6 * 60 * 60 * 1000, // 6 hours
+		timerange: 6 * 60 * 60, // 6 hours
 		period: 5 * 60 // 5 minutes
 	},
 	{
-		timerange: 60 * 60 * 1000, // 1 hour
+		timerange: 60 * 60, // 1 hour
 		period: 60 // 1 minute
 	},
 ];
@@ -284,14 +284,14 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     }
 
     if (typeof body.startTime !== 'undefined') {
-      body.endTime = body.startTime + body.timerange;
+      body.endTime = body.startTime + body.timerange * 1000;
     } else if (typeof body.endTime !== 'undefined') {
-      body.startTime = body.endTime - body.timerange;
+      body.startTime = body.endTime - body.timerange * 1000;
     } else {
       const nowTime = Math[dir]((Date.now() + timeZoneOffset) / (body.period * 1000))
         * body.period * 1000 - timeZoneOffset;
       body.endTime = nowTime;
-      body.startTime = nowTime - body.timerange;
+      body.startTime = nowTime - body.timerange * 1000;
     }
   } else if (
     // Period missing but startTime or endTime (or both) are provided
@@ -307,7 +307,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     ) {
       body.timerange = defaultTimeRange;
     } else {
-      body.timerange = body.endTime - body.startTime;
+      body.timerange = Math.floor((body.endTime - body.startTime) / 1000);
     }
   }
 

@@ -52,7 +52,7 @@ export type GetMetricsApi = {
      */
     period?: number;
     /**
-     * Amount of time to cover in the response, in milliseconds
+     * Amount of time to cover in the response, in seconds
      */
     timerange?: number;
     /**
