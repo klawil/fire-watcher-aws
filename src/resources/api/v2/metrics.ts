@@ -237,6 +237,8 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
   });
   if (allErrors.length > 0)
     return [ 400, generateApi400Body(allErrors) ];
+  if (body.metrics.length === 0)
+    return [ 400, generateApi400Body([ 'metrics' ]) ];
 
   // Get the timezone information
   const nowDate = new Date();
