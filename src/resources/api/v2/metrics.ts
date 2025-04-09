@@ -1,6 +1,6 @@
 import { getLogger } from "@/utils/common/logger";
 import { handleResourceApi, LambdaApiFunction, parseJsonBody } from "./_base";
-import { eventMetricValidator, GetMetricsApi, getMetricsApiBodyValidator, LambdaMetric, lambdaMetricValidator, MetricToFetch, towerMetricValidator } from "@/types/api/metrics";
+import { countMetricValidator, GetMetricsApi, getMetricsApiBodyValidator, LambdaMetric, lambdaMetricValidator, MetricToFetch, timingMetricValidator } from "@/types/api/metrics";
 import { generateApi400Body } from "@/types/api/_shared";
 import { validateObject } from "@/utils/backend/validation";
 import CloudWatch, { GetMetricDataInput, MetricDataQueries } from "aws-sdk/clients/cloudwatch";
@@ -14,15 +14,18 @@ function buildMetricKey(metric: MetricToFetch): string {
     case 'lambda':
       key += `${metric.fn}_${metric.metric}_${metric.stat}`;
       break;
-    case 'event':
+    case 'count':
       key += `${metric.namespace}_${metric.metricName}`;
       if (typeof metric.source !== 'undefined')
         key += `_${metric.source}`;
       if (typeof metric.action !== 'undefined')
         key += `_${metric.action}`;
       break;
-    case 'tower':
-      key += `${metric.tower}_${metric.metric}_${metric.stat}`;
+    case 'timing':
+      key += `${metric.namespace}_${metric.metricName}`;
+      if (typeof metric.tower !== 'undefined')
+        key += `_${metric.tower}`;
+      key += `_${metric.stat}`;
       break;
   }
   return key.replace(/ /g, '_').replace(/[^A-Za-z0-9_]/g, '');
@@ -198,10 +201,16 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     let metricParsed: typeof metric | null = null;
     let metricErrors: string[] = [];
     switch (metric.type) {
-      case 'event':
+      case 'timing':
         [ metricParsed, metricErrors ] = validateObject(
           metric,
-          eventMetricValidator,
+          timingMetricValidator,
+        );
+        break;
+      case 'count':
+        [ metricParsed, metricErrors ] = validateObject(
+          metric,
+          countMetricValidator,
         );
         break;
       case 'lambda':
@@ -218,12 +227,6 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
         ) {
           metricErrors.push('fn');
         }
-        break;
-      case 'tower':
-        [ metricParsed, metricErrors ] = validateObject(
-          metric,
-          towerMetricValidator,
-        );
         break;
     }
 
@@ -367,7 +370,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
         });
         break;
       }
-      case 'tower': {
+      case 'timing': {
         const key = buildMetricKey(metric);
         if (includedMetrics.includes(key)) return;
         metricRequest.MetricDataQueries.push({
@@ -375,12 +378,14 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
           Id: key,
           MetricStat: {
             Metric: {
-              Namespace: 'DTR Metrics',
-              MetricName: metric.metric,
-              Dimensions: [{
-                Name: 'Tower',
-                Value: metric.tower,
-              }],
+              Namespace: metric.namespace,
+              MetricName: metric.metricName,
+              Dimensions: metric.tower
+                ? [{
+                  Name: 'Tower',
+                  Value: metric.tower,
+                }]
+                : undefined,
             },
             Period: fullBody.period,
             Stat: metric.stat,
@@ -389,7 +394,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
         includedMetrics.push(key);
         break;
       }
-      case 'event': {
+      case 'count': {
         const key = buildMetricKey(metric);
         if (includedMetrics.includes(key)) return;
         metricRequest.MetricDataQueries.push({
@@ -409,7 +414,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
               }).filter(v => v !== null),
             },
             Period: fullBody.period,
-            Stat: metric.stat || 'Sum',
+            Stat: 'Sum',
           },
         });
         includedMetrics.push(key);
@@ -417,7 +422,6 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
       }
     }
   });
-  console.log(includedMetrics);
 
   const response: GetMetricsApi['responses'][200] = {
     startTime: body.startTime,

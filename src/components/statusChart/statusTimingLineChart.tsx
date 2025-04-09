@@ -32,6 +32,15 @@ export default function StatusTimingLineChart({
     convertValue,
   );
 
+  const datasets = data?.datasets.map((v, i, a) => {
+    if (i < a.length - 1) return v;
+
+    return {
+      ...v,
+      data: v.data.map((v, i2) => v - a[i - 1].data[i2]),
+    };
+  }) || [];
+
   const [ pageWidth, pageHeight ] = usePageSize();
 
   return (<>
@@ -54,7 +63,7 @@ export default function StatusTimingLineChart({
       {data && <Line
         data={{
           labels: data.labels,
-          datasets: data.datasets,
+          datasets,
         }}
         options={{
           maintainAspectRatio: false,
@@ -69,6 +78,9 @@ export default function StatusTimingLineChart({
                 display: true,
                 text: 'Cumulative Time (s)',
               },
+              ticks: {
+                callback: v => (Number(v) / 1000).toFixed(1),
+              },
             },
           },
           plugins: {
@@ -78,21 +90,21 @@ export default function StatusTimingLineChart({
             tooltip: {
               callbacks: {
                 label: context => {
-                  console.log(context);
                   let label = context.dataset.label || '';
 
                   if (label) {
                     label += ': ';
                   }
                   if (context.parsed.y !== null) {
-                    label += context.parsed.y + 's';
+                    label += (Math.round(context.parsed.y / 100) / 10).toFixed(1) + 's';
                   }
                   if (context.parsed._stacks?.y && context.datasetIndex > 0) {
                     let sum = 0;
                     for (let i = 0; i <= context.datasetIndex; i++) {
                       sum += context.parsed._stacks.y[i] || 0;
                     }
-                    label += ` (cum: ${sum}s)`;
+                    sum = Math.round(sum / 100) / 10;
+                    label += ` (cum: ${sum.toFixed(1)}s)`;
                   }
                   return label;
                 },

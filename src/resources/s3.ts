@@ -64,11 +64,13 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 			[key: string]: Promise<unknown>;
 		 } = {};
 
-		const metric = incrementMetric('Call', {
-			source: metricSource,
-			action: `create${Key.indexOf('/dtr') !== -1 ? 'DTR' : 'VHF'}`
-		}, false);
-		promises['call-metric'] = metric;
+		if (!Key.includes('/dtr')) {
+			const metric = incrementMetric('Call', {
+				source: metricSource,
+				action: `createVHF`,
+			}, false);
+			promises['call-metric'] = metric;
+		}
 		const headInfo = await s3.headObject({
 			Bucket,
 			Key

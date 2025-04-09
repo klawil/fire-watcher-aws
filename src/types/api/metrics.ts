@@ -1,29 +1,29 @@
 import { Validator } from "@/types/backend/validation";
 import { api400Body, api401Body, api403Body, api500Body } from "./_shared";
 
+export interface TimingMetric {
+  type: 'timing';
+  label: string;
+  namespace: 'Twilio Health' | 'DTR Metrics';
+  metricName: 'UploadTime' | 'SentTime' | 'DeliveredTime' | 'PageDuration' | 'PageToQueue' | 'Decode Rate';
+  tower?: 'Saguache' | 'PoolTable' | 'SanAntonio';
+  stat: 'Minimum' | 'Maximum' | 'SampleCount' | 'p50' | 'p80';
+}
+export interface CountMetric {
+  type: 'count';
+  label: string;
+  namespace: 'CVFD API' | 'VHF Metrics' | 'Twilio Health';
+  metricName: 'Call' | '120-home' | 'cvfd-station' | 'Initiated';
+  source?: 'S3';
+  action?: 'createDTR' | 'createVHF';
+}
 export interface LambdaMetric {
   type: 'lambda';
   fn: string | 'all';
   metric: 'Invocations' | 'Errors' | 'Duration';
   stat: 'p50' | 'Maximum' | 'Minimum' | 'Sum';
 }
-export interface EventMetric {
-  type: 'event';
-  label: string;
-  namespace: 'CVFD API' | 'VHF Metrics' | 'Twilio Health';
-  metricName: 'Call' | '120-home' | 'cvfd-station' | 'Initiated' | 'SentTime' | 'DeliveredTime' | 'PageDuration';
-  source?: 'S3';
-  action?: 'createDTR' | 'createVHF';
-  stat?: 'Sum' | 'SampleCount' | 'p80';
-}
-export interface TowerMetric {
-  type: 'tower';
-  label: string;
-  tower: 'Saguache' | 'PoolTable' | 'SanAntonio';
-  metric: 'UploadTime' | 'Decode Rate';
-  stat: 'Minimum' | 'Maximum' | 'SampleCount' | 'p50';
-}
-export type MetricToFetch = LambdaMetric | EventMetric | TowerMetric;
+export type MetricToFetch = TimingMetric | CountMetric | LambdaMetric;
 
 /**
  * Retrieve one or more metrics
@@ -138,6 +138,100 @@ export const getMetricsApiBodyValidator: Validator<GetMetricsApi['body']> = {
   },
 };
 
+export const timingMetricValidator: Validator<TimingMetric> = {
+  type: {
+    required: true,
+    types: {
+      string: {
+        exact: [ 'timing' ],
+      },
+    },
+  },
+  label: {
+    required: true,
+    types: { string: {} },
+  },
+  namespace: {
+    required: true,
+    types: {
+      string: {
+        exact: [ 'DTR Metrics', 'Twilio Health', ],
+      },
+    },
+  },
+  metricName: {
+    required: true,
+    types: {
+      string: {
+        exact: [ 'Decode Rate', 'DeliveredTime', 'PageDuration', 'PageToQueue', 'SentTime', 'UploadTime', ],
+      },
+    },
+  },
+  tower: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'PoolTable', 'Saguache', 'SanAntonio', ],
+      },
+    },
+  },
+  stat: {
+    required: true,
+    types: {
+      string: {
+        exact: [ 'Minimum', 'Maximum', 'SampleCount', 'p50', 'p80', ],
+      },
+    },
+  },
+}
+
+export const countMetricValidator: Validator<CountMetric> = {
+  type: {
+    required: true,
+    types: {
+      string: {
+        exact: [ 'count' ],
+      },
+    },
+  },
+  label: {
+    required: true,
+    types: { string: {} },
+  },
+  namespace: {
+    required: true,
+    types: {
+      string: {
+        exact: [ 'CVFD API', 'Twilio Health', 'VHF Metrics', ],
+      },
+    },
+  },
+  metricName: {
+    required: true,
+    types: {
+      string: {
+        exact: [ '120-home', 'Call', 'Initiated', 'cvfd-station', ],
+      },
+    },
+  },
+  source: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'S3', ],
+      },
+    },
+  },
+  action: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'createDTR', 'createVHF', ],
+      },
+    },
+  },
+}
+
 export const lambdaMetricValidator: Validator<LambdaMetric> = {
   type: {
     required: true,
@@ -164,102 +258,6 @@ export const lambdaMetricValidator: Validator<LambdaMetric> = {
     types: {
       string: {
         exact: [ 'p50', 'Maximum', 'Minimum', 'Sum', ],
-      },
-    },
-  },
-}
-
-export const eventMetricValidator: Validator<EventMetric> = {
-  type: {
-    required: true,
-    types: {
-      string: {
-        exact: [ 'event' ],
-      },
-    },
-  },
-  label: {
-    required: true,
-    types: {
-      string: {},
-    },
-  },
-  namespace: {
-    required: true,
-    types: {
-      string: {
-        exact: [ 'CVFD API', 'VHF Metrics', 'Twilio Health', ],
-      },
-    },
-  },
-  metricName: {
-    required: true,
-    types: {
-      string: {
-        exact: [ '120-home', 'Call', 'cvfd-station', 'Initiated', 'DeliveredTime', 'SentTime', 'PageDuration', ],
-      },
-    },
-  },
-  source: {
-    required: false,
-    types: {
-      string: {
-        exact: [ 'S3', ],
-      },
-    },
-  },
-  action: {
-    required: false,
-    types: {
-      string: {
-        exact: [ 'createDTR', 'createVHF', ],
-      },
-    },
-  },
-  stat: {
-    required: false,
-    types: {
-      string: {
-        exact: [ 'SampleCount', 'Sum', 'p80', ],
-      },
-    },
-  },
-}
-
-export const towerMetricValidator: Validator<TowerMetric> = {
-  type: {
-    required: true,
-    types: {
-      string: {
-        exact: [ 'tower' ],
-      },
-    },
-  },
-  label: {
-    required: true,
-    types: {
-      string: {},
-    },
-  },
-  tower: {
-    required: true,
-    types: { string: {
-      exact: [ 'PoolTable', 'Saguache', 'SanAntonio', ],
-    } },
-  },
-  metric: {
-    required: true,
-    types: {
-      string: {
-        exact: [ 'UploadTime', 'Decode Rate', ],
-      },
-    },
-  },
-  stat: {
-    required: true,
-    types: {
-      string: {
-        exact: [ 'p50', 'Maximum', 'Minimum', 'SampleCount', ],
       },
     },
   },

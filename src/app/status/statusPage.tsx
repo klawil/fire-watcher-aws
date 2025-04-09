@@ -24,27 +24,31 @@ const ONE_MONTH = ONE_DAY * 28;
 
 const maxParallelCharts = 5;
 const lineChartsToShow: ChartConfig[] = [
+  /** Recorder Metrics **/
   {
     type: 'Tower',
     title: 'Saguache Tower Status',
     body: {
       metrics: [{
-        type: 'tower',
+        type: 'timing',
         label: 'Maximum',
+        namespace: 'DTR Metrics',
+        metricName: 'Decode Rate',
         tower: 'Saguache',
-        metric: 'Decode Rate',
         stat: 'Maximum',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Minimum',
+        namespace: 'DTR Metrics',
+        metricName: 'Decode Rate',
         tower: 'Saguache',
-        metric: 'Decode Rate',
         stat: 'Minimum',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Uploads',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
         tower: 'Saguache',
-        metric: 'UploadTime',
         stat: 'SampleCount',
       }],
       period: FIVE_MINUTES,
@@ -57,22 +61,25 @@ const lineChartsToShow: ChartConfig[] = [
     title: 'Pool Table Status',
     body: {
       metrics: [{
-        type: 'tower',
+        type: 'timing',
         label: 'Maximum',
+        namespace: 'DTR Metrics',
+        metricName: 'Decode Rate',
         tower: 'PoolTable',
-        metric: 'Decode Rate',
         stat: 'Maximum',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Minimum',
+        namespace: 'DTR Metrics',
+        metricName: 'Decode Rate',
         tower: 'PoolTable',
-        metric: 'Decode Rate',
         stat: 'Minimum',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Uploads',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
         tower: 'PoolTable',
-        metric: 'UploadTime',
         stat: 'SampleCount',
       }],
       period: FIVE_MINUTES,
@@ -86,22 +93,25 @@ const lineChartsToShow: ChartConfig[] = [
     lazyLoad: true,
     body: {
       metrics: [{
-        type: 'tower',
+        type: 'timing',
         label: 'Maximum',
+        namespace: 'DTR Metrics',
+        metricName: 'Decode Rate',
         tower: 'SanAntonio',
-        metric: 'Decode Rate',
         stat: 'Maximum',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Minimum',
+        namespace: 'DTR Metrics',
+        metricName: 'Decode Rate',
         tower: 'SanAntonio',
-        metric: 'Decode Rate',
         stat: 'Minimum',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Uploads',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
         tower: 'SanAntonio',
-        metric: 'UploadTime',
         stat: 'SampleCount',
       }],
       period: FIVE_MINUTES,
@@ -117,12 +127,12 @@ const lineChartsToShow: ChartConfig[] = [
       period: FIVE_MINUTES,
       timerange: ONE_DAY,
       metrics: [{
-        type: 'event',
+        type: 'count',
         label: 'Home Server',
         namespace: 'VHF Metrics',
         metricName: '120-home',
       }, {
-        type: 'event',
+        type: 'count',
         label: 'CVFD Server',
         namespace: 'VHF Metrics',
         metricName: 'cvfd-station',
@@ -136,25 +146,28 @@ const lineChartsToShow: ChartConfig[] = [
     unit: 'Count',
     body: {
       metrics: [{
-        type: 'tower',
+        type: 'timing',
         label: 'Saguache Tower Uploads',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
         tower: 'Saguache',
-        metric: 'UploadTime',
         stat: 'SampleCount',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'Pool Table Uploads',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
         tower: 'PoolTable',
-        metric: 'UploadTime',
         stat: 'SampleCount',
       }, {
-        type: 'tower',
+        type: 'timing',
         label: 'San Antonio Peak Uploads',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
         tower: 'SanAntonio',
-        metric: 'UploadTime',
         stat: 'SampleCount',
       }, {
-        type: 'event',
+        type: 'count',
         label: 'VHF Uploads',
         namespace: 'CVFD API',
         metricName: 'Call',
@@ -166,22 +179,52 @@ const lineChartsToShow: ChartConfig[] = [
   },
   {
     type: 'Metric',
+    unit: 'Seconds',
+    title: 'Upload Delay',
+    body: {
+      metrics: [{
+        type: 'timing',
+        label: 'Saguache Tower',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
+        tower: 'Saguache',
+        stat: 'p50',
+      }, {
+        type: 'timing',
+        label: 'Pool Table',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
+        tower: 'PoolTable',
+        stat: 'p50',
+      }, {
+        type: 'timing',
+        label: 'San Antonio Peak',
+        namespace: 'DTR Metrics',
+        metricName: 'UploadTime',
+        tower: 'SanAntonio',
+        stat: 'p50',
+      }],
+    },
+  },
+  /** Twilio Metrics **/
+  {
+    type: 'Metric',
     title: 'Text Counts',
     unit: 'Count',
     body: {
       metrics: [{
-        type: 'event',
+        type: 'count',
         label: 'Initiated',
         namespace: 'Twilio Health',
         metricName: 'Initiated',
       }, {
-        type: 'event',
+        type: 'timing',
         label: 'Sent',
         namespace: 'Twilio Health',
         metricName: 'SentTime',
         stat: 'SampleCount',
       }, {
-        type: 'event',
+        type: 'timing',
         label: 'Delivered',
         namespace: 'Twilio Health',
         metricName: 'DeliveredTime',
@@ -192,48 +235,50 @@ const lineChartsToShow: ChartConfig[] = [
       live: 'y',
     },
   },
-
-  // {
-  //   type: 'Timing',
-  //   title: 'Text Times',
-	// 	dataUrl: 'metrics=twilio-page-duration,twilio-page-time,twilio-sent-time,twilio-delivered-sent-time&period=86400&timerange=2419200000&live=y',
-  //   convertValue: val => val > 300000 ? 300 : Math.ceil(val / 1000),
-  // },
-
   {
-    type: 'Metric',
-    unit: 'Seconds',
-    title: 'Upload Delay',
+    type: 'Timing',
+    title: 'Text Times',
     body: {
       metrics: [{
-        type: 'tower',
-        label: 'Saguache Tower',
-        tower: 'Saguache',
-        metric: 'UploadTime',
-        stat: 'p50',
+        type: 'timing',
+        label: 'Page Duration',
+        namespace: 'Twilio Health',
+        metricName: 'PageDuration',
+        stat: 'p80',
       }, {
-        type: 'tower',
-        label: 'Pool Table',
-        tower: 'PoolTable',
-        metric: 'UploadTime',
-        stat: 'p50',
+        type: 'timing',
+        label: 'Page at Server',
+        namespace: 'Twilio Health',
+        metricName: 'PageToQueue',
+        stat: 'p80',
       }, {
-        type: 'tower',
-        label: 'San Antonio',
-        tower: 'SanAntonio',
-        metric: 'UploadTime',
-        stat: 'p50',
+        type: 'timing',
+        label: 'Message Sent',
+        namespace: 'Twilio Health',
+        metricName: 'SentTime',
+        stat: 'p80',
+      }, {
+        type: 'timing',
+        label: 'Message Delivered',
+        namespace: 'Twilio Health',
+        metricName: 'DeliveredTime',
+        stat: 'p80',
       }],
+      period: ONE_DAY,
+      timerange: ONE_MONTH,
+      live: 'y',
     },
+    convertValue: v => v > 300000 ? 300000 : v,
   },
+  /** Lambda Metrics **/
   {
     type: 'Metric',
-    title: 'API Calls',
+    title: 'Infrastructure Errors',
     body: {
       metrics: [{
         type: 'lambda',
-        fn: 'all_A',
-        metric: 'Invocations',
+        fn: 'all_I',
+        metric: 'Errors',
         stat: 'Sum',
       }],
     },
@@ -254,34 +299,6 @@ const lineChartsToShow: ChartConfig[] = [
   },
   {
     type: 'Metric',
-    lazyLoad: true,
-    title: 'API Durations (average)',
-    body: {
-      metrics: [{
-        type: 'lambda',
-        fn: 'all_A',
-        metric: 'Duration',
-        stat: 'p50',
-      }],
-    },
-    unit: 'Milliseconds',
-  },
-  {
-    type: 'Metric',
-    lazyLoad: true,
-    title: 'API Durations (max)',
-    body: {
-      metrics: [{
-        type: 'lambda',
-        fn: 'all_A',
-        metric: 'Duration',
-        stat: 'Maximum',
-      }],
-    },
-    unit: 'Milliseconds',
-  },
-  {
-    type: 'Metric',
     title: 'Infrastructure Calls',
     body: {
       metrics: [{
@@ -295,12 +312,13 @@ const lineChartsToShow: ChartConfig[] = [
   },
   {
     type: 'Metric',
-    title: 'Infrastructure Errors',
+    title: 'API Calls',
+    lazyLoad: true,
     body: {
       metrics: [{
         type: 'lambda',
-        fn: 'all_I',
-        metric: 'Errors',
+        fn: 'all_A',
+        metric: 'Invocations',
         stat: 'Sum',
       }],
     },
@@ -323,11 +341,39 @@ const lineChartsToShow: ChartConfig[] = [
   {
     type: 'Metric',
     lazyLoad: true,
+    title: 'API Durations (average)',
+    body: {
+      metrics: [{
+        type: 'lambda',
+        fn: 'all_A',
+        metric: 'Duration',
+        stat: 'p50',
+      }],
+    },
+    unit: 'Milliseconds',
+  },
+  {
+    type: 'Metric',
     title: 'Infrastructure Durations (max)',
+    lazyLoad: true,
     body: {
       metrics: [{
         type: 'lambda',
         fn: 'all_I',
+        metric: 'Duration',
+        stat: 'Maximum',
+      }],
+    },
+    unit: 'Milliseconds',
+  },
+  {
+    type: 'Metric',
+    lazyLoad: true,
+    title: 'API Durations (max)',
+    body: {
+      metrics: [{
+        type: 'lambda',
+        fn: 'all_A',
         metric: 'Duration',
         stat: 'Maximum',
       }],
