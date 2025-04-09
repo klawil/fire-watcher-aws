@@ -26,6 +26,10 @@ const baseOasSpec: OpenApiSpecData<"3.1.0"> = {
       description: 'Read only access to information about the audio files',
     },
     {
+      name: 'Heartbeats',
+      description: 'Pings from the VHF recording servers',
+    },
+    {
       name: 'Metrics',
       description: 'Metrics about the system',
     },

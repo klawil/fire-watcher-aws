@@ -2,21 +2,11 @@ import { getLogger } from '@/utils/common/logger';
 import { sendAlertMessage } from '@/utils/backend/texts';
 import { TABLE_STATUS, typedScan, typedUpdate } from '@/utils/backend/dynamoTyped';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import { Heartbeat } from '@/types/api/heartbeat';
 
 const logger = getLogger('status');
 
 const maxSpacing = 5 * 60 * 1000; // The amount of time to wait for a heartbeat before failing over (in ms)
-
-interface Heartbeat {
-	ServerProgram: string;
-	Program: string;
-	LastHeartbeat?: number;
-	Server?: string;
-	IsActive?: boolean;
-	IsFailed?: boolean;
-	IsPrimary?: boolean;
-	AlertSent?: boolean;
-};
 
 export async function main() {
 	logger.trace('main', ...arguments);
@@ -37,8 +27,7 @@ export async function main() {
 		const updateConfig: TypedUpdateInput<Heartbeat> = {
 			TableName: TABLE_STATUS,
 			Key: {
-				ServerProgram: hb.ServerProgram,
-				Program: hb.Program,
+				Server: hb.Server,
 			},
 			ExpressionAttributeNames: {
 				'#IsFailed': 'IsFailed',
@@ -62,16 +51,14 @@ export async function main() {
 	}));
 
 	const messages = changedHeartbeats
-		.filter(hb => hb.Program !== 'dtr')
 		.map(hb => {
-			const programCaps = hb.Program.toUpperCase();
-			const programHeartbeats = heartbeats.filter(hb2 => hb2.Program === hb.Program);
-			const primaryHeartbeats = programHeartbeats.filter(hb2 => hb2.IsPrimary);
-			const secondaryHeartbeats = programHeartbeats.filter(hb2 => !hb2.IsPrimary);
+			const programCaps = 'VHF';
+			const primaryHeartbeats = heartbeats.filter(hb2 => hb2.IsPrimary);
+			const secondaryHeartbeats = heartbeats.filter(hb2 => !hb2.IsPrimary);
 
 			const parts = {
 				changed: `${hb.IsPrimary ? 'Primary' : 'Secondary'} ${programCaps} server (${hb.Server})`,
-				all: `All ${programCaps} servers (${programHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
+				all: `All ${programCaps} servers (${heartbeats.map(hb2 => hb2.Server).join(', ')})`,
 				primary: `primary ${programCaps} server (${primaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
 				secondary: `secondary ${programCaps} server (${secondaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
 			};

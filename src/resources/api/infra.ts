@@ -7,6 +7,8 @@ import { getLogger } from '@/utils/common/logger';
 import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
 import { PagingTalkgroup } from '@/types/api/users';
 import { SiteStatusQueueItem } from '@/types/backend/queue';
+import { TABLE_STATUS, typedScan, typedUpdate } from '@/utils/backend/dynamoTyped';
+import { Heartbeat } from '@/types/api/heartbeat';
 
 const logger = getLogger('infra');
 
@@ -19,7 +21,6 @@ const sqsQueue = process.env.SQS_QUEUE;
 const dtrTable = process.env.TABLE_FILE;
 const userTable = process.env.TABLE_USER;
 const textTable = process.env.TABLE_TEXT;
-const statusTable = process.env.TABLE_STATUS;
 
 interface GenericApiResponse {
 	success: boolean;
@@ -150,45 +151,7 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		};
 	}
 
-	await dynamodb.updateItem({
-		TableName: statusTable,
-		Key: {
-			ServerProgram: {
-				S: `${body.Server}:${body.Program}`
-			},
-			Program: {
-				S: body.Program
-			}
-		},
-		ExpressionAttributeNames: {
-			'#s': 'Server',
-			'#ip': 'IsPrimary',
-			'#ia': 'IsActive',
-			'#lh': 'LastHeartbeat'
-		},
-		ExpressionAttributeValues: {
-			':s': { S: body.Server },
-			':ip': { BOOL: body.IsPrimary },
-			':ia': { BOOL: body.IsActive },
-			':lh': { N: Date.now().toString() }
-		},
-		UpdateExpression: 'SET #s = :s, #ip = :ip, #ia = :ia, #lh = :lh'
-	}).promise();
-
-	response.data = await dynamodb.scan({
-		TableName: statusTable,
-		ExpressionAttributeNames: {
-			'#p': 'Program'
-		},
-		ExpressionAttributeValues: {
-			':p': { S: body.Program }
-		},
-		FilterExpression: '#p = :p'
-	}).promise()
-		.then(data => data.Items || [])
-		.then(data => data.map(parseDynamoDbAttributeMap));
-
-	await cloudWatch.putMetricData({
+	const metricPromise = cloudWatch.putMetricData({
 		Namespace: 'VHF Metrics',
 		MetricData: [{
 			MetricName: body.Server,
@@ -198,6 +161,29 @@ async function handleHeartbeat(event: APIGatewayProxyEvent): Promise<APIGatewayP
 		}],
 	}).promise();
 
+	await typedUpdate<Heartbeat>({
+		TableName: TABLE_STATUS,
+		Key: {
+			Server: body.Server,
+		},
+		ExpressionAttributeNames: {
+			'#IsPrimary': 'IsPrimary',
+			'#IsActive': 'IsActive',
+			'#LastHeartbeat': 'LastHeartbeat',
+		},
+		ExpressionAttributeValues: {
+			':IsPrimary': body.IsPrimary,
+			':IsActive': body.IsActive,
+			':LastHeartbeat': Date.now(),
+		},
+		UpdateExpression: 'SET #IsPrimary = :IsPrimary, #IsActive = :IsActive, #LastHeartbeat = :LastHeartbeat',
+	});
+
+	response.data = (await typedScan<Heartbeat>({
+		TableName: TABLE_STATUS,
+	})).Items || [];
+
+	await metricPromise;
 	return {
 		statusCode: 200,
 		body: JSON.stringify(response)

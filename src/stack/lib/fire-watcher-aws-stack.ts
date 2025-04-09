@@ -90,16 +90,12 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER
       }
     });
-    const statusTable = new dynamodb.Table(this, 'cvfd-status', {
+    const statusTable = new dynamodb.Table(this, 'cofrn-status', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
-        name: 'ServerProgram',
-        type: dynamodb.AttributeType.STRING
+        name: 'Server',
+        type: dynamodb.AttributeType.STRING,
       },
-      sortKey: {
-        name: 'Program',
-        type: dynamodb.AttributeType.STRING
-      }
     });
     const talkgroupTable = new dynamodb.Table(this, 'cvfd-talkgroups', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -840,6 +836,7 @@ export class FireWatcherAwsStack extends Stack {
       TEXT: textsTable,
       SITE: siteTable,
       TALKGROUP: talkgroupTable,
+      STATUS: statusTable,
     } as const;
     const apiV2 = apiResource.addResource('v2');
     interface V2ApiConfigBase {
@@ -995,6 +992,16 @@ export class FireWatcherAwsStack extends Stack {
         authRequired: true,
         tables: [{
           table: 'SITE',
+        }],
+      },
+      {
+        pathPart: 'heartbeats',
+        fileName: 'heartbeats',
+        methods: [ 'GET' ],
+        authRequired: true,
+        tables: [{
+          table: 'STATUS',
+          readOnly: true,
         }],
       },
     ];
