@@ -9,6 +9,7 @@ export const TABLE_TEXT = process.env.TABLE_TEXT;
 export const TABLE_SITE = process.env.TABLE_SITE;
 export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP;
 export const TABLE_FILE_TRANSLATION = process.env.TABLE_DTR_TRANSLATION;
+export const TABLE_STATUS = process.env.TABLE_STATUS;
 
 export async function typedUpdate<T extends object>(
   config: TypedUpdateInput<T>

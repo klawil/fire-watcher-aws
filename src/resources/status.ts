@@ -1,76 +1,65 @@
-import * as AWS from 'aws-sdk';
-import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
 import { getLogger } from '@/utils/common/logger';
 import { sendAlertMessage } from '@/utils/backend/texts';
+import { TABLE_STATUS, typedScan, typedUpdate } from '@/utils/backend/dynamoTyped';
+import { TypedUpdateInput } from '@/types/backend/dynamo';
 
 const logger = getLogger('status');
-const dynamodb = new AWS.DynamoDB();
-
-const statusTable = process.env.TABLE_STATUS;
 
 const maxSpacing = 5 * 60 * 1000; // The amount of time to wait for a heartbeat before failing over (in ms)
 
 interface Heartbeat {
-	LastHeartbeat: number;
-	Server: string;
-	Program: string;
 	ServerProgram: string;
-	IsActive: boolean;
-	IsFailed: boolean;
-	IsPrimary: boolean;
+	Program: string;
+	LastHeartbeat?: number;
+	Server?: string;
+	IsActive?: boolean;
+	IsFailed?: boolean;
+	IsPrimary?: boolean;
 	AlertSent?: boolean;
-};
-
-type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
-  [Property in Key]-?: Type[Property];
 };
 
 export async function main() {
 	logger.trace('main', ...arguments);
 
 	// Get all of the heartbeats
-	const heartbeats: Heartbeat[] = await dynamodb.scan({
-		TableName: statusTable
-	}).promise()
-		.then(results => (results.Items || []).map(parseDynamoDbAttributeMap) as unknown as Heartbeat[]);
+	const heartbeatsScan = await typedScan<Heartbeat>({
+		TableName: TABLE_STATUS,
+	});
+	const heartbeats = heartbeatsScan.Items || [];
 	
 	const now = Date.now();
-	const changedHeartbeats = heartbeats.filter(hb => (hb.IsFailed && now - hb.LastHeartbeat <= maxSpacing) ||
-		(!hb.IsFailed && now - hb.LastHeartbeat >= maxSpacing));
+	const changedHeartbeats = heartbeats.filter(hb => (hb.IsFailed && now - (hb.LastHeartbeat || 0) <= maxSpacing) ||
+		(!hb.IsFailed && now - (hb.LastHeartbeat || 0) >= maxSpacing));
+	
+	const updateDynamoPromises = Promise.all(changedHeartbeats.map(hb => {
+		hb.IsFailed = !hb.IsFailed;
 
-	const updateDynamoPromies = Promise.all(changedHeartbeats
-		.map(hb => {
-			hb.IsFailed = !hb.IsFailed;
+		const updateConfig: TypedUpdateInput<Heartbeat> = {
+			TableName: TABLE_STATUS,
+			Key: {
+				ServerProgram: hb.ServerProgram,
+				Program: hb.Program,
+			},
+			ExpressionAttributeNames: {
+				'#IsFailed': 'IsFailed',
+			},
+			ExpressionAttributeValues: {
+				':IsFailed': hb.IsFailed,
+			},
+			UpdateExpression: 'SET #IsFailed = :IsFailed',
+		};
 
-			const updateConfig: WithRequiredProperty<AWS.DynamoDB.UpdateItemInput, 'ExpressionAttributeNames' | 'ExpressionAttributeValues' | 'UpdateExpression'> = {
-				TableName: statusTable,
-				Key: {
-					ServerProgram: {
-						S: hb.ServerProgram
-					},
-					Program: {
-						S: hb.Program
-					}
-				},
-				ExpressionAttributeNames: {
-					'#if': 'IsFailed'
-				},
-				ExpressionAttributeValues: {
-					':if': { BOOL: hb.IsFailed }
-				},
-				UpdateExpression: 'SET #if = :if'
-			};
+		// Set active to false if the heartbeat failed
+		if (hb.IsFailed) {
+			updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
 
-			if (hb.IsFailed) {
-				updateConfig.ExpressionAttributeNames['#ia'] = 'IsActive';
-				updateConfig.ExpressionAttributeValues[':ia'] = {
-					BOOL: false
-				};
-				updateConfig.UpdateExpression += ', #ia = :ia';
-			}
+			updateConfig.ExpressionAttributeNames['#IsActive'] = 'IsActive';
+			updateConfig.ExpressionAttributeValues[':IsActive'] = false;
+			updateConfig.UpdateExpression += ', #IsActive = :IsActive';
+		}
 
-			return dynamodb.updateItem(updateConfig).promise();
-		}));
+		return typedUpdate(updateConfig);
+	}));
 
 	const messages = changedHeartbeats
 		.filter(hb => hb.Program !== 'dtr')
@@ -131,5 +120,5 @@ export async function main() {
 		await sendAlertMessage('Vhf', messages.join('\n'));
 	}
 
-	await updateDynamoPromies;
+	await updateDynamoPromises;
 }
