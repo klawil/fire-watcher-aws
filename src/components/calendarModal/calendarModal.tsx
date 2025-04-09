@@ -1,6 +1,6 @@
 'use client';
 
-import { fNameToDate } from "@/logic/strings";
+import { fNameToDate } from "@/utils/common/strings";
 import { AudioAction, AudioState } from "@/types/frontend/audio";
 import { useCallback, useState } from "react";
 import { Button, Modal } from "react-bootstrap";

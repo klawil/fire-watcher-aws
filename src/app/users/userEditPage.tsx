@@ -3,13 +3,13 @@
 import React, { useCallback, useContext, useEffect, useReducer, useState } from "react";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import Table from "react-bootstrap/Table";
-import { defaultUsersState, UsersDispatchContext, usersStateReducer } from "@/logic/usersState";
+import { defaultUsersState, UsersDispatchContext, usersStateReducer } from "@/utils/frontend/usersState";
 import UserRow from "@/components/userRow/userRow";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import { AddAlertContext } from "@/logic/clientContexts";
-import { typeFetch } from "@/logic/typeFetch";
+import { AddAlertContext } from "@/utils/frontend/clientContexts";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { DeleteUserApi, GetAllUsersApi, validDepartments } from "@/types/api/users";
 
 export default function UserEditPage() {

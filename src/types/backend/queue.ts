@@ -1,6 +1,6 @@
 import { CreateTextApi } from "@/types/api/twilio";
 import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
-import { DynamicSiteKeys, FullSiteObject } from "../api/sites";
+import { DynamicSiteKeys, FullSiteObject } from "@/types/api/sites";
 
 export interface ActivateUserQueueItem {
   action: 'activate-user';

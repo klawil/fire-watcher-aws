@@ -3,7 +3,7 @@
 import { PageConfig } from "@/types/frontend/page";
 import CofrnNavbar from "./navbar";
 import { Container, Nav, Navbar } from "react-bootstrap";
-import { LoggedInUserContext, DarkModeContext } from "@/logic/clientContexts";
+import { LoggedInUserContext, DarkModeContext } from "@/utils/frontend/clientContexts";
 import { useContext, useEffect } from "react";
 
 export default function CofrnLayout({

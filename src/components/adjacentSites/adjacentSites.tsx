@@ -9,10 +9,10 @@ import { Circle, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import styles from "./adjacentSites.module.css";
 import "leaflet/dist/leaflet.css";
 import { useCallback, useContext, useEffect, useState } from "react";
-import LoadingSpinner from "../loadingSpinner/loadingSpinner";
+import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import L from 'leaflet';
-import { AddAlertContext } from "@/logic/clientContexts";
-import { typeFetch } from "@/logic/typeFetch";
+import { AddAlertContext } from "@/utils/frontend/clientContexts";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { DynamicSiteKeys, FullSiteObject, GetAllSitesApi } from "@/types/api/sites";
 
 const fadeSiteTime = 1000 * 60 * 15; // 15 minutes

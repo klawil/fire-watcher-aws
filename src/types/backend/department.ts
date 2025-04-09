@@ -1,4 +1,4 @@
-import { PagingTalkgroup, UserDepartment } from "../api/users";
+import { PagingTalkgroup, UserDepartment } from "@/types/api/users";
 
 export const validPhoneNumberAccounts = [
 	'Baca',

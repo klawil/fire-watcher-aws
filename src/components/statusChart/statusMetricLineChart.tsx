@@ -2,7 +2,7 @@
 
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import LoadingSpinner from "../loadingSpinner/loadingSpinner";
+import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import { useChartData, usePageSize } from "./common";
 import { Line } from 'react-chartjs-2';
 import { ChartComponentParams, MetricChart } from "@/types/frontend/chart";

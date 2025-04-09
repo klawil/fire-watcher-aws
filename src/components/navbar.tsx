@@ -6,8 +6,8 @@ import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import { PageConfig } from '@/types/frontend/page';
 import { useContext } from 'react';
-import { LoggedInUserContext } from '@/logic/clientContexts';
-import { DarkModeContext, LocationContext } from '@/logic/clientContexts';
+import { LoggedInUserContext } from '@/utils/frontend/clientContexts';
+import { DarkModeContext, LocationContext } from '@/utils/frontend/clientContexts';
 
 export default function CofrnNavbar({
   pageConfig,

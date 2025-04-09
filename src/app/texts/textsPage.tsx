@@ -5,12 +5,12 @@ import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import styles from "./textsPage.module.css";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { fNameToDate } from "@/logic/strings";
-import { dateTimeToTimeStr, secondsToTime } from "@/logic/dateAndFile";
-import { useRefIntersection } from "@/logic/uiUtils";
-import { AddAlertContext, LoggedInUserContext } from "@/logic/clientContexts";
+import { fNameToDate } from "@/utils/common/strings";
+import { dateTimeToTimeStr, secondsToTime } from "@/utils/common/dateAndFile";
+import { useRefIntersection } from "@/utils/frontend/uiUtils";
+import { AddAlertContext, LoggedInUserContext } from "@/utils/frontend/clientContexts";
 import { Variant } from "react-bootstrap/esm/types";
-import { typeFetch } from "@/logic/typeFetch";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { FrontendTextObject, GetAllTextsApi } from "@/types/api/texts";
 import { validDepartments } from "@/types/api/users";
 

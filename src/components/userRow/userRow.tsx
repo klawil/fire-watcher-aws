@@ -4,12 +4,12 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { LoggedInUserContext } from "@/logic/clientContexts";
-import UserEdit from "../userEdit/userEdit";
+import { LoggedInUserContext } from "@/utils/frontend/clientContexts";
+import UserEdit from "@/components/userEdit/userEdit";
 import { useContext, useEffect, useState } from "react";
 import { BsTrash } from "react-icons/bs";
-import { UsersDispatchContext } from "@/logic/usersState";
-import { formatPhone } from "@/logic/strings";
+import { UsersDispatchContext } from "@/utils/frontend/usersState";
+import { formatPhone } from "@/utils/common/strings";
 import Link from "next/link";
 import { validDepartments } from "@/types/api/users";
 

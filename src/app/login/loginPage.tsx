@@ -1,7 +1,7 @@
 'use client';
 
-import { formatPhone } from "@/logic/strings";
-import { AddAlertContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
+import { formatPhone } from "@/utils/common/strings";
+import { AddAlertContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/utils/frontend/clientContexts";
 import { useCallback, useContext, useEffect, useState } from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -10,7 +10,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { GetLoginCodeApi, SubmitLoginCodeApi } from "@/types/api/auth";
-import { typeFetch } from "@/logic/typeFetch";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 
 export default function LoginPage() {
   const user = useContext(LoggedInUserContext);

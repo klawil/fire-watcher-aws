@@ -6,9 +6,9 @@ import Button from "react-bootstrap/Button";
 import Tabs from "react-bootstrap/Tabs";
 import Tab from "react-bootstrap/Tab";
 import Form from "react-bootstrap/Form";
-import { defaultFilterPreset } from "@/logic/audioState";
+import { defaultFilterPreset } from "@/utils/frontend/audioState";
 import { Col, Container, Row, Table } from "react-bootstrap";
-import { typeFetch } from "@/logic/typeFetch";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { UpdateTextSeenApi } from "@/types/api/texts";
 
 

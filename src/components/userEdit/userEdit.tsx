@@ -4,14 +4,14 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Col from "react-bootstrap/Col";
 import Row from 'react-bootstrap/Row';
 import Button from "react-bootstrap/Button";
-import { AddAlertContext, LoggedInUserContext } from "@/logic/clientContexts";
+import { AddAlertContext, LoggedInUserContext } from "@/utils/frontend/clientContexts";
 import Table from "react-bootstrap/Table";
 import styles from './userEdit.module.css';
 import UserDepartmentRow from "../userDepartmentRow/userDepartmentRow";
-import { UsersDispatchContext } from "@/logic/usersState";
-import { formatPhone } from "@/logic/strings";
+import { UsersDispatchContext } from "@/utils/frontend/usersState";
+import { formatPhone } from "@/utils/common/strings";
 import { CreateUserApi, FrontendUserObject, PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments } from "@/types/api/users";
-import { typeFetch } from "@/logic/typeFetch";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { departmentConfig, pagingTalkgroupConfig } from "@/types/backend/department";
 import { OrNull } from "@/types/backend/validation";
 

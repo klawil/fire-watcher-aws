@@ -1,12 +1,12 @@
 'use client';
 
-import { WeatherResultJson } from '@/common/weather';
+import { WeatherResultJson } from '@/deprecated/common/weather';
 import { useCallback, useContext, useEffect, useState } from "react";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import styles from "./weather.module.css";
 import { Col, Image, Row } from "react-bootstrap";
 import Link from "next/link";
-import { AddAlertContext } from '@/logic/clientContexts';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
 
 export default function WeatherPage() {
   const addAlert = useContext(AddAlertContext);

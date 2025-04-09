@@ -1,8 +1,8 @@
 'use client';
 
-import { formatPhone } from "@/logic/strings";
+import { formatPhone } from "@/utils/common/strings";
 import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/logic/clientContexts";
+import { AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/utils/frontend/clientContexts";
 import { useCallback, useContext, useState } from "react";
 import Table from "react-bootstrap/Table";
 import Col from "react-bootstrap/Col";
@@ -13,7 +13,7 @@ import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments } from "@/types/api/users";
-import { typeFetch } from "@/logic/typeFetch";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { pagingTalkgroupConfig } from "@/types/backend/department";
 
 const userEditableFields: {

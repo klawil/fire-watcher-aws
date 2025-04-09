@@ -1,8 +1,8 @@
 'use client';
 
-import { ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess } from "@/common/frontendApi";
-import { AddAlertContext } from "@/logic/clientContexts";
-import { typeFetch } from "@/logic/typeFetch";
+import { ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess } from "@/deprecated/common/frontendApi";
+import { AddAlertContext } from "@/utils/frontend/clientContexts";
+import { typeFetch } from "@/utils/frontend/typeFetch";
 import { GetMetricsApi } from "@/types/api/metrics";
 import { ChartDataset } from "chart.js";
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from "react";

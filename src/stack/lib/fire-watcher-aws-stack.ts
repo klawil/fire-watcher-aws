@@ -26,8 +26,20 @@ import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
 import { PhoneNumberAccount, validPhoneNumberAccounts } from '@/types/backend/department';
 import { LambdaEnvironment } from '@/types/backend/environment';
+import { resolve } from "path";
 
-dotenv.config({ path: `${__dirname}/../../../.env` });
+dotenv.config({ path: resolve(
+  '..', // stack
+  '..', //src
+  '..', // root
+  '.env',
+) });
+
+const resourceBase = resolve(
+  '..', // stack
+  '..', // src
+  'resources',
+);
 
 const bucketName = process.env.BUCKET_NAME as string;
 const certArn = process.env.SSL_CERT_ARN as string;
@@ -449,7 +461,7 @@ export class FireWatcherAwsStack extends Stack {
         })
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: __dirname + '/../resources/s3.ts',
+      entry: resolve(resourceBase, 's3.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
@@ -479,7 +491,7 @@ export class FireWatcherAwsStack extends Stack {
         })
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: __dirname + '/../resources/queue.ts',
+      entry: resolve(resourceBase, 'queue.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
@@ -506,7 +518,7 @@ export class FireWatcherAwsStack extends Stack {
         }),
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: __dirname + '/../resources/alarms.ts',
+      entry: resolve(resourceBase, 'alarms.ts'),
       handler: 'main',
       timeout: Duration.seconds(30),
       environment: {
@@ -566,7 +578,7 @@ export class FireWatcherAwsStack extends Stack {
         })
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: __dirname + '/../resources/status.ts',
+      entry: resolve(resourceBase, 'status.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
@@ -591,7 +603,7 @@ export class FireWatcherAwsStack extends Stack {
     // Create the weather updater
     const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: __dirname + '/../resources/weather.ts',
+      entry: resolve(resourceBase, 'weather.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
@@ -748,7 +760,7 @@ export class FireWatcherAwsStack extends Stack {
           })
         ],
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: __dirname + `/../resources/api/${config.name}.ts`,
+        entry: resolve(resourceBase, 'api', `${config.name}.ts`),
         handler: 'main',
         environment: {
           ...lambdaEnv,
@@ -1009,7 +1021,7 @@ export class FireWatcherAwsStack extends Stack {
 
         resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
           runtime: lambda.Runtime.NODEJS_20_X,
-          entry: `${__dirname}/../resources/api/v2/${config.fileName}.ts`,
+          entry: resolve(resourceBase, 'api', 'v2', `${config.fileName}.ts`),
           handler: 'main',
           timeout: Duration.seconds(10),
           initialPolicy,

@@ -3,10 +3,10 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { useCallback, useEffect, useState } from 'react';
-import { AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/logic/clientContexts';
+import { AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from '@/utils/frontend/clientContexts';
 import { Alert, Container } from 'react-bootstrap';
 import { Variant } from 'react-bootstrap/esm/types';
-import { typeFetch } from '@/logic/typeFetch';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 import { FrontendUserObject, FrontendUserState, GetUserApi, validDepartments } from '@/types/api/users';
 
 function useDarkMode() {

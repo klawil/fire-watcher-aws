@@ -1,4 +1,4 @@
-import { UserDepartment } from "../api/users";
+import { UserDepartment } from "@/types/api/users";
 
 export interface UserPermissions {
   isUser: boolean;

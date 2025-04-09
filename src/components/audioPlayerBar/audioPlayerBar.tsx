@@ -7,7 +7,7 @@ import styles from './audioPlayerBar.module.css';
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Button from "react-bootstrap/Button";
-import { findClosestFileIdx } from "@/logic/dateAndFile";
+import { findClosestFileIdx } from "@/utils/common/dateAndFile";
 
 function timeToStr(timestamp?: number, duration?: number) {
   if (

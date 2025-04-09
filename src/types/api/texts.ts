@@ -1,4 +1,4 @@
-import { Validator } from "../backend/validation";
+import { Validator } from "@/types/backend/validation";
 import { api200Body, api400Body, api401Body, api403Body, api500Body } from "./_shared";
 import { UserDepartment, validDepartments } from "./users";
 

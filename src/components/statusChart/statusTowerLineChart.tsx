@@ -3,9 +3,9 @@
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { useContext, useState } from "react";
-import LoadingSpinner from "../loadingSpinner/loadingSpinner";
+import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
 import { useChartData } from "./common";
-import { DarkModeContext } from "@/logic/clientContexts";
+import { DarkModeContext } from "@/utils/frontend/clientContexts";
 import { Line } from 'react-chartjs-2';
 import { ChartComponentParams, TowerChart } from "@/types/frontend/chart";
 import Button from "react-bootstrap/Button";
