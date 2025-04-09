@@ -1,12 +1,10 @@
 import * as AWS from 'aws-sdk';
-import { sendAlertMessage } from '../utils/general';
 import { parseDynamoDbAttributeMap } from '../utils/dynamodb';
 import { getLogger } from '../../logic/logger';
+import { sendAlertMessage } from '../utils/texts';
 
 const logger = getLogger('status');
 const dynamodb = new AWS.DynamoDB();
-
-const metricSource = 'Status';
 
 const statusTable = process.env.TABLE_STATUS;
 
@@ -130,7 +128,7 @@ export async function main() {
 
 	if (messages.length > 0) {
 		logger.debug('main', 'alert messages', messages);
-		await sendAlertMessage(metricSource, 'Vhf', messages.join('\n'));
+		await sendAlertMessage('Vhf', messages.join('\n'));
 	}
 
 	await updateDynamoPromies;

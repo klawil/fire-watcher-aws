@@ -8,6 +8,7 @@ import { getTwilioSecret, twilioPhoneCategories } from "./general";
 import twilio from 'twilio';
 import { TypedScanInput, TypedUpdateInput } from "@/types/backend/dynamo";
 import { TABLE_TEXT, TABLE_USER, typedScan, typedUpdate } from "./dynamoTyped";
+import { AlertCategory } from "@/types/backend/alerts";
 
 const logger = getLogger('stack/resources/utils/texts');
 
@@ -227,6 +228,29 @@ export async function sendMessage(
         statusCallback: `https://new.cofrn.org/api/v2/twilio/${messageId}/`,
       }),
     saveMessageDataPromise,
+  ]);
+}
+
+export async function sendAlertMessage(
+  alertType: AlertCategory,
+  body: string,
+) {
+  logger.trace('sendAlertMessage', ...arguments);
+
+  const messageId = Date.now();
+  const recipients = (await getUserRecipients('all', null))
+    .filter(user => user[`get${alertType}Alerts`]);
+  if (recipients.length === 0) throw new Error(`No recipients found for ${alertType} alert`);
+
+  await Promise.all([
+    saveMessageData('alert', messageId, recipients.length, body),
+    ...recipients.map(user => sendMessage(
+      'alert',
+      messageId,
+      user.phone,
+      'alert',
+      body,
+    )),
   ]);
 }
 

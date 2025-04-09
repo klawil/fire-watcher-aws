@@ -1,11 +1,12 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
-import { sendAlertMessage, AlertType } from '../utils/general';
 import { getLogger } from '../../logic/logger';
+import { sendAlertMessage } from '../utils/texts';
+import { AlertCategory } from '@/types/backend/alerts';
+import { dateToTimeString } from '@/logic/strings';
 
 const logger = getLogger('alarms');
 
-const metricSource = 'Alarms';
 const cloudWatch = new aws.CloudWatch();
 const s3 = new aws.S3();
 
@@ -14,7 +15,7 @@ const S3_KEY = 'alarm-data.json';
 
 interface DataCache {
 	[key: string]: {
-		type: AlertType;
+		type: AlertCategory;
 		lastAlarm?: number;
 		lastOk?: number;
 		lastOkSent?: number;
@@ -51,12 +52,12 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 		name: string;
 		newState: string;
 		reason: string;
-		type: AlertType;
+		type: AlertCategory;
 	} = null;
 	const nowTime = Date.now();
 
 	if (event.source !== 'aws.events') {
-		const tags: { 'cofrn-alarm-type': AlertType, [key: string]: string } = {
+		const tags: { 'cofrn-alarm-type': AlertCategory, [key: string]: string } = {
 			'cofrn-alarm-type': 'Api',
 		};
 		try {
@@ -71,7 +72,8 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 		}
 
 		const alarmData = event.alarmData;
-		let alertMessage = `Alarm for ${alarmData.alarmName} transitioned from ${alarmData.previousState.value} to ${alarmData.state.value}.\n\n`;
+		const transitionTime = new Date(event.time);
+		let alertMessage = `Alarm for ${alarmData.alarmName} transitioned from ${alarmData.previousState.value} to ${alarmData.state.value} at ${dateToTimeString(transitionTime)}.\n\n`;
 		if (alarmData.state.value !== 'OK')
 			alertMessage += `Impact: ${alarmData.configuration.description}\n\n`;
 		alertMessage += `Reason For Change: ${alarmData.state.reason}`;
@@ -105,7 +107,7 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 					!alarmCacheData.lastOkSent ||
 					alarmCacheData.lastOkSent > alarmCacheData.lastOk
 				) {
-					await sendAlertMessage(metricSource, alarmChange.type, alarmChange.reason);
+					await sendAlertMessage(alarmChange.type, alarmChange.reason);
 				}
 				break;
 		}
@@ -132,7 +134,7 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 
 			alarmData.lastOkSent = nowTime;
 			cacheChanged = true;
-			return sendAlertMessage(metricSource, alarmData.type, alarmData.lastReason);
+			return sendAlertMessage(alarmData.type, alarmData.lastReason);
 		}));
 
 	if (cacheChanged) {

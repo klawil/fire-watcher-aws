@@ -5,7 +5,7 @@ import { getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, save
 import { ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody } from './types/queue';
 import { getLogger } from '../../logic/logger';
 import { ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem } from '@/types/backend/queue';
-import { fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
+import { dateToTimeString, fNameToDate, formatPhone, parsePhone, randomString } from '@/logic/strings';
 import { getUserPermissions } from '../utils/user';
 import { getPageNumber, getUserRecipients, saveMessageData, sendMessage } from '../utils/texts';
 import { departmentConfig, pagingTalkgroupConfig, PhoneNumberTypes } from '@/types/backend/department';
@@ -42,28 +42,6 @@ const welcomeMessageParts: {
 };
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
-
-const timeZone = 'America/Denver';
-
-function dateToTimeString(d: Date): string {
-	logger.trace('dateToTimeString', ...arguments);
-	const dateString = d.toLocaleDateString('en-US', {
-		timeZone: timeZone,
-		weekday: 'short',
-		month: 'short',
-		day: '2-digit'
-	});
-	
-	const timeString = d.toLocaleTimeString('en-US', {
-		timeZone: timeZone,
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit'
-	});
-
-	return `on ${dateString} at ${timeString}`;
-}
 
 /**
  * @deprecated

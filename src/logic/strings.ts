@@ -45,3 +45,24 @@ export function randomString(len: number, numeric = false): string {
 
 	return str.join('');
 }
+
+const timeZone = 'America/Denver';
+
+export function dateToTimeString(d: Date): string {
+	const dateString = d.toLocaleDateString('en-US', {
+		timeZone: timeZone,
+		weekday: 'short',
+		month: 'short',
+		day: '2-digit'
+	});
+	
+	const timeString = d.toLocaleTimeString('en-US', {
+		timeZone: timeZone,
+		hour12: false,
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit'
+	});
+
+	return `on ${dateString} at ${timeString}`;
+}

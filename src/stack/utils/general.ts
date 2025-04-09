@@ -446,35 +446,6 @@ export async function sendMessage(
 		});
 }
 
-/**
- * @deprecated The method should not be used
- */
-export type AlertType = 'Api' | 'Dtr' | 'Vhf';
-
-/**
- * @deprecated The method should not be used
- */
-export async function sendAlertMessage(metricSource: string, alertType: AlertType, body: string) {
-	logger.trace('sendAlertMessage', ...arguments);
-	const messageId = Date.now().toString();
-	const recipients = (await getRecipients('all', null))
-		.filter(user => user[`get${alertType}Alerts`]?.BOOL);
-	await Promise.all([
-		saveMessageData('alert', messageId, recipients.length, body),
-		...recipients
-			.filter(user => typeof user.phone.N !== 'undefined')
-			.map(user => sendMessage(
-				metricSource,
-				'alert',
-				messageId,
-				user.phone.N as string,
-				'alert',
-				body,
-				[]
-			))
-	]);
-}
-
 interface CallMetric {
 	source: string;
 	action: string;
