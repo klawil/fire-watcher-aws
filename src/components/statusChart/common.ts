@@ -1,7 +1,9 @@
 'use client';
 
-import { ApiFrontendStatsResponse } from "@/common/frontendApi";
+import { ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess } from "@/common/frontendApi";
 import { AddAlertContext } from "@/logic/clientContexts";
+import { typeFetch } from "@/logic/typeFetch";
+import { GetMetricsApi } from "@/types/api/metrics";
 import { ChartDataset } from "chart.js";
 import { Dispatch, SetStateAction, useContext, useEffect, useState } from "react";
 
@@ -45,8 +47,60 @@ const periodFormatters: {
 	},
 ];
 
+async function getDataUrl(dataUrl: string): Promise<[
+  ApiFrontendStatsResponseSuccess['data']['names'],
+  ApiFrontendStatsResponseSuccess['data']['data'],
+  {
+    startTime: number;
+    endTime: number;
+    period: number;
+  }
+]> {
+  const newData: ApiFrontendStatsResponse = await fetch(`/api/frontend/?action=stats&${dataUrl}`)
+    .then(r => r.json());
+
+  if (newData.success) {
+    return [ newData.data.names, newData.data.data, newData ];
+  }
+
+  console.error(newData);
+  throw new Error(`Failed request`);
+}
+
+async function getDataBody(body: GetMetricsApi['body']): Promise<[
+  ApiFrontendStatsResponseSuccess['data']['names'],
+  ApiFrontendStatsResponseSuccess['data']['data'],
+  {
+    startTime: number;
+    endTime: number;
+    period: number;
+  },
+]> {
+  const [code, resp] = await typeFetch<GetMetricsApi>({
+    path: '/api/v2/metrics/',
+    method: 'POST',
+    body,
+  });
+
+  if (
+    code !== 200 ||
+    resp === null ||
+    'message' in resp
+  ) {
+    console.error(code, resp);
+    throw new Error(`Unable to fetch API`);
+  }
+
+  return [
+    resp.labels,
+    resp.data,
+    resp,
+  ];
+}
+
 export function useChartData(
-  dataUrl: string,
+  dataUrl: string | undefined,
+  body: GetMetricsApi['body'] | undefined,
   shouldLoad: boolean,
   setChartLoaded: Dispatch<SetStateAction<number>>,
   convertValue: (a: number) => number = v => v,
@@ -64,81 +118,90 @@ export function useChartData(
     (async () => {
       setIsLoading(true);
       try {
-        const newData: ApiFrontendStatsResponse = await fetch(`/api/frontend/?action=stats&${dataUrl}`)
-          .then(r => r.json());
-
-        if (newData.success) {
-          const data = newData.data;
-          const names = data.names;
-          const chartData: {
-            [key: string]: {
-              [key: string]: number;
-            };
-          } = {};
-          const labels: string[] = [];
-
-          for (let t = newData.startTime; t < newData.endTime; t += (newData.period * 1000)) {
-            const dateStr = new Date(t).toISOString();
-            chartData[dateStr] = {};
-            labels.push(dateStr);
-          }
-
-          data.data.forEach(item => {
-            Object.keys(names)
-              .forEach(key => chartData[item.ts][key] = item.values[key] || 0);
-          });
-
-          labels.forEach(label => Object.keys(names)
-            .forEach(key => {
-              chartData[label][key] = convertValue(chartData[label][key] || 0);
-            }));
-
-          const formatter = periodFormatters.reduce((f, val) => {
-            if (newData.period <= val.period) return val.formatter;
-      
-            return f;
-          }, periodFormatters[periodFormatters.length - 1].formatter);
-
-          const datasets: ChartDataset<"line", number[]>[] = Object.keys(names)
-            .map(key => ({
-              label: names[key],
-              stepped: true,
-              data: labels.map(label => chartData[label][key]),
-              fill: false,
-              tension: 0.1,
-              pointStyle: false,
-            }));
-
-          setData({
-            labels: labels.map(label => formatter(new Date(label))),
-            datasets,
-          });
+        let names: ApiFrontendStatsResponseSuccess['data']['names'];
+        let data: ApiFrontendStatsResponseSuccess['data']['data'];
+        let newData: {
+          startTime: number;
+          endTime: number;
+          period: number;
+        };
+        if (typeof dataUrl !== 'undefined') {
+          [ names, data, newData ] = await getDataUrl(dataUrl);
+        } else if (typeof body !== 'undefined') {
+          [ names, data, newData ] = await getDataBody(body);
         } else {
-          setData(null);
+          throw new Error('Need dataUrl or body');
         }
 
-        if (!newData.success) throw newData;
+        const chartData: {
+          [key: string]: {
+            [key: string]: number;
+          };
+        } = {};
+        const labels: string[] = [];
+
+        for (let t = newData.startTime; t < newData.endTime; t += (newData.period * 1000)) {
+          const dateStr = new Date(t).toISOString();
+          chartData[dateStr] = {};
+          labels.push(dateStr);
+        }
+
+        data.forEach(item => {
+          Object.keys(names)
+            .forEach(key => chartData[item.ts][key] = item.values[key] || 0);
+        });
+
+        labels.forEach(label => Object.keys(names)
+          .forEach(key => {
+            chartData[label][key] = convertValue(chartData[label][key] || 0);
+          }));
+
+        const formatter = periodFormatters.reduce((f, val) => {
+          if (newData.period <= val.period) return val.formatter;
+    
+          return f;
+        }, periodFormatters[periodFormatters.length - 1].formatter);
+
+        const datasets: ChartDataset<"line", number[]>[] = Object.keys(names)
+          .map(key => ({
+            label: names[key],
+            stepped: true,
+            data: labels.map(label => chartData[label][key]),
+            fill: false,
+            tension: 0.1,
+            pointStyle: false,
+          }));
+
+        setData({
+          labels: labels.map(label => formatter(new Date(label))),
+          datasets,
+        });
       } catch (e) {
+        setData(null);
         console.error(`Failed to load chart (${dataUrl})`, e);
         addAlert('danger', `Failed to load data for a chart`);
       }
       setChartLoaded(v => v + 1);
       setIsLoading(false);
     })();
-  }, [shouldLoad, data, isLoading, dataUrl, setChartLoaded, convertValue, addAlert]);
+  }, [shouldLoad, body, data, isLoading, dataUrl, setChartLoaded, convertValue, addAlert]);
 
   return data;
 }
 
-export function usePageWidth() {
+export function usePageSize() {
   const [winWidth, setWinWidth] = useState<null | number>(null);
+  const [winHeight, setWinHeight] = useState<null | number>(null);
 
   useEffect(() => {
-    const resizeListen = () => setWinWidth(window.document.documentElement.clientWidth);
+    const resizeListen = () => {
+      setWinWidth(window.document.documentElement.clientWidth);
+      setWinHeight(window.document.documentElement.clientHeight);
+    }
     window.addEventListener('resize', resizeListen);
     resizeListen();
     return () => window.removeEventListener('resize', resizeListen);
   }, []);
 
-  return winWidth;
+  return [ winWidth, winHeight ];
 }

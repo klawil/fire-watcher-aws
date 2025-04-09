@@ -1299,12 +1299,12 @@ async function getStats(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 			})
 		);
 
-
 	try {
-		response = {
+		(response as any) = { // eslint-disable-line
 			success: true,
 			errors: [],
 			metrics: metricsToInclude,
+			req: metricRequest,
 			startTime: Number(event.queryStringParameters.startTime),
 			endTime: Number(event.queryStringParameters.endTime),
 			period: Number(event.queryStringParameters.period),

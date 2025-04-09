@@ -610,6 +610,16 @@ export class FireWatcherAwsStack extends Stack {
     });
     weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));
 
+    // Store APIs that should get a list of URLs -> lambda functions and that mapping
+    const lambdaNameRecips: lambdanodejs.NodejsFunction[] = [];
+    const lambdaNames: { [key: string]: string } = {
+      'I_QUEUE': queueHandler.functionName,
+      'I_S3': s3Handler.functionName,
+      'I_ALARM_QUEUE': alarmQueueHandler.functionName,
+      'I_STATUS': statusHandler.functionName,
+      'I_WEATHER': weatherUpdater.functionName,
+    };
+
     // Create a rest API
     const api = new apigateway.RestApi(this, 'cvfd-api-gateway', {
       restApiName: 'CVFD API Gateway',
@@ -793,6 +803,12 @@ export class FireWatcherAwsStack extends Stack {
       const newApiResource = apiResource.addResource(config.name);
       newApiResource.addMethod('GET', apiIntegration);
       newApiResource.addMethod('POST', apiIntegration);
+      const envName = newApiResource.path
+        .replace(/[\{\}]/g, '')
+        .replace(/\//, '')
+        .replace(/\//g, '_')
+        .toUpperCase();
+      lambdaNames[`A_${envName}`] = apiHandler.functionName;
 
       if (config.byAccount) {
         validPhoneNumberAccounts.forEach(account => {
@@ -818,6 +834,7 @@ export class FireWatcherAwsStack extends Stack {
       sqsQueue?: true;
       twilioSecret?: true;
       sendsMetrics?: true;
+      getMetrics?: true;
       tables?: {
         table: keyof typeof tableMap;
         readOnly?: true;
@@ -830,6 +847,12 @@ export class FireWatcherAwsStack extends Stack {
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
+      {
+        pathPart: 'metrics',
+        fileName: 'metrics',
+        methods: [ 'POST' ],
+        getMetrics: true,
+      },
       {
         pathPart: 'files',
         fileName: 'files',
@@ -966,6 +989,7 @@ export class FireWatcherAwsStack extends Stack {
       config: V2ApiConfig,
     ) => {
       let resourceIntegration: apigateway.Integration | undefined = undefined;
+      let resourceHandler: lambdanodejs.NodejsFunction | undefined = undefined;
       if ('fileName' in config) {
         const initialPolicy: iam.PolicyStatement[] = [];
         if (config.sendsMetrics) {
@@ -975,8 +999,15 @@ export class FireWatcherAwsStack extends Stack {
             resources: [ '*' ],
           }));
         }
+        if (config.getMetrics) {
+          initialPolicy.push(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [ 'cloudwatch:*' ],
+            resources: [ '*' ],
+          }));
+        }
 
-        const resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
+        resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
           runtime: lambda.Runtime.NODEJS_20_X,
           entry: `${__dirname}/../resources/api/v2/${config.fileName}.ts`,
           handler: 'main',
@@ -991,6 +1022,9 @@ export class FireWatcherAwsStack extends Stack {
             'application/json': '{"statusCode":"200"}',
           },
         });
+        if (config.getMetrics) {
+          lambdaNameRecips.push(resourceHandler);
+        }
 
         // Add read ability to the users table if the API will need authentication
         if (
@@ -1011,6 +1045,7 @@ export class FireWatcherAwsStack extends Stack {
 
         // Add the table permissions
         config.tables?.forEach(table => {
+          if (!resourceHandler) return;
           if (table.readOnly) {
             tableMap[table.table].grantReadData(resourceHandler);
           } else {
@@ -1033,11 +1068,24 @@ export class FireWatcherAwsStack extends Stack {
       const apiResource = baseResource.addResource(config.pathPart);
       if ('fileName' in config && resourceIntegration)
         config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
+      if ('fileName' in config && resourceHandler) {
+        const envName = apiResource.path
+          .replace(/[\{\}]/g, '')
+          .replace(/\//, '')
+          .replace(/\//g, '_')
+          .toUpperCase();
+        lambdaNames[`A_${envName}`] = resourceHandler.functionName;
+      }
 
       // Handle the child APIs
       config.next?.forEach(conf => createApi(apiResource, conf));
     }
     v2Apis.forEach(conf => createApi(apiV2, conf));
+
+    // Add the environment to the metric APIs
+    Object.keys(lambdaNames).forEach(key => lambdaNameRecips.forEach(fn => {
+      fn.addEnvironment(`${key}_FN_NAME`, lambdaNames[key] === fn.functionName ? 'self' : lambdaNames[key]);
+    }));
 
     // Create a role for cloudfront to use to access s3
     const s3AccessIdentity = new cloudfront.OriginAccessIdentity(this, 'cvfd-cloudfront-identity');

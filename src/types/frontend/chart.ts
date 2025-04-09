@@ -1,10 +1,13 @@
 import { Dispatch, SetStateAction } from "react";
+import { GetMetricsApi } from "../api/metrics";
 
-type PossibleChartUnits = 'Count' | 'Milliseconds';
+type PossibleChartUnits = 'Count' | 'Milliseconds' | 'Seconds';
 
 interface BaseChart {
   title: string;
-  dataUrl: string;
+  dataUrl?: string;
+  body?: GetMetricsApi['body'];
+  lazyLoad?: boolean;
 }
 
 export interface TowerChart extends BaseChart {

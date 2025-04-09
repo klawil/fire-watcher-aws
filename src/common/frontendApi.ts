@@ -83,7 +83,7 @@ export interface ApiFrontendListTextsResponse extends ApiResponseBase {
 	data?: TextObject[];
 }
 
-interface ApiFrontendStatsResponseSuccess {
+export interface ApiFrontendStatsResponseSuccess {
 	success: true;
 	errors: string[];
 	startTime: number;

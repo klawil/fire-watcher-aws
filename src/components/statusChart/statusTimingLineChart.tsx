@@ -2,37 +2,54 @@
 
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Dispatch, SetStateAction } from "react";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
-import { useChartData, usePageWidth } from "./common";
+import { useChartData, usePageSize } from "./common";
 import { Line } from 'react-chartjs-2';
+import { ChartComponentParams, TimingChart } from "@/types/frontend/chart";
+import Button from "react-bootstrap/Button";
+import { useState } from "react";
 
 export default function StatusTimingLineChart({
   title,
   dataUrl,
+  body,
   shouldFetchData,
+  lazyLoad,
   setChartLoaded,
   convertValue = (v) => v,
-}: Readonly<{
-  title: string;
-  dataUrl: string;
-  shouldFetchData: boolean;
-  setChartLoaded: Dispatch<SetStateAction<number>>;
-  convertValue?: (a: number) => number;
-}>) {
+}: Readonly<ChartComponentParams<TimingChart>>) {
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  if (!lazyLoad && shouldFetchData && !shouldLoad) {
+    setShouldLoad(true);
+  }
+
   const data = useChartData(
     dataUrl,
+    body,
     shouldFetchData,
     setChartLoaded,
     convertValue,
   );
 
-  const pageWidth = usePageWidth();
+  const [ pageWidth, pageHeight ] = usePageSize();
 
   return (<>
     <h3 className="text-center mt-5">{title}</h3>
-    <Row><Col>
-      {typeof data === 'undefined' && <LoadingSpinner />}
+    <Row><Col style={{ height: 'calc(80vh - 60px)' }}>
+      {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%' }}><LoadingSpinner fullHeight={true} /></div>}
+      {typeof data === 'undefined' && lazyLoad && shouldLoad && <LoadingSpinner fullHeight={true} />}
+      {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
+        className="d-grid"
+        xs={{ span: 6, offset: 3 }}
+        style={{ height: '100%' }}
+      >
+        <Button
+          className="align-self-center"
+          variant="success"
+          onClick={() => setShouldLoad(true)}
+        >Load Chart</Button>
+      </Col>}
       {data === null && <h2 className="text-center">Error loading data</h2>}
       {data && <Line
         data={{
@@ -40,6 +57,7 @@ export default function StatusTimingLineChart({
           datasets: data.datasets,
         }}
         options={{
+          maintainAspectRatio: false,
           interaction: {
             mode: 'index',
           },
@@ -55,7 +73,7 @@ export default function StatusTimingLineChart({
           },
           plugins: {
             legend: {
-              position: pageWidth && pageWidth >= 992 ? 'right' : 'bottom',
+              position: pageWidth && pageHeight && pageWidth > pageHeight ? 'right' : 'bottom',
             },
             tooltip: {
               callbacks: {

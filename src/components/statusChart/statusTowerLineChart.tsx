@@ -2,11 +2,13 @@
 
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { Dispatch, SetStateAction, useContext } from "react";
+import { useContext, useState } from "react";
 import LoadingSpinner from "../loadingSpinner/loadingSpinner";
 import { useChartData } from "./common";
 import { DarkModeContext } from "@/logic/clientContexts";
 import { Line } from 'react-chartjs-2';
+import { ChartComponentParams, TowerChart } from "@/types/frontend/chart";
+import Button from "react-bootstrap/Button";
 
 interface ColorConfig {
 	backgroundColor: string;
@@ -25,23 +27,23 @@ const color2: ColorConfig = {
 export default function StatusTowerLineChart({
   title,
   dataUrl,
+  body,
+  lazyLoad,
   shouldFetchData,
   setChartLoaded,
-  convertValue = (v) => v,
-}: Readonly<{
-  title: string;
-  dataUrl: string;
-  shouldFetchData: boolean;
-  setChartLoaded: Dispatch<SetStateAction<number>>;
-  convertValue?: (a: number) => number;
-}>) {
+}: Readonly<ChartComponentParams<TowerChart>>) {
   const darkMode = useContext(DarkModeContext);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  if (!lazyLoad && shouldFetchData && !shouldLoad) {
+    setShouldLoad(true);
+  }
 
   const data = useChartData(
     dataUrl,
-    shouldFetchData,
+    body,
+    shouldLoad,
     setChartLoaded,
-    convertValue,
   );
 
   if (data && data.datasets.length === 3) {
@@ -65,15 +67,27 @@ export default function StatusTowerLineChart({
 
   return (<>
     <h3 className="text-center mt-5">{title}</h3>
-    <Row><Col>
-      {typeof data === 'undefined' && <LoadingSpinner />}
+    <Row><Col style={{ height: 'calc(80vh - 60px)' }}>
+      {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%' }}><LoadingSpinner fullHeight={true} /></div>}
+      {typeof data === 'undefined' && lazyLoad && shouldLoad && <LoadingSpinner fullHeight={true} />}
+      {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
+        className="d-grid"
+        xs={{ span: 6, offset: 3 }}
+        style={{ height: '100%' }}
+      >
+        <Button
+          className="align-self-center"
+          variant="success"
+          onClick={() => setShouldLoad(true)}
+        >Load Chart</Button>
+      </Col>}
       {data === null && <h2 className="text-center">Error loading data</h2>}
       {data && <Line
         data={{
           labels: data.labels,
           datasets: data.datasets
             .map((dataset, idx) => {
-              dataset.label = (dataset.label || '').split(' - ').pop();
+              dataset.label = (dataset.label || '');
 
               if (idx === 0) {
                 dataset.borderColor = color1.borderColor;
@@ -104,6 +118,7 @@ export default function StatusTowerLineChart({
             }),
         }}
         options={{
+          maintainAspectRatio: false,
           interaction: {
             mode: 'index',
           },
