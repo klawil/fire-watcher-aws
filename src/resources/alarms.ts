@@ -73,7 +73,7 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 
 		const alarmData = event.alarmData;
 		const transitionTime = new Date(event.time);
-		let alertMessage = `Alarm for ${alarmData.alarmName} transitioned from ${alarmData.previousState.value} to ${alarmData.state.value} at ${dateToTimeString(transitionTime)}.\n\n`;
+		let alertMessage = `Alarm for ${alarmData.alarmName} transitioned from ${alarmData.previousState.value} to ${alarmData.state.value} ${dateToTimeString(transitionTime)}.\n\n`;
 		if (alarmData.state.value !== 'OK')
 			alertMessage += `Impact: ${alarmData.configuration.description}\n\n`;
 		alertMessage += `Reason For Change: ${alarmData.state.reason}`;
