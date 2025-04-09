@@ -29,6 +29,7 @@ import { LambdaEnvironment } from '@/types/backend/environment';
 import { resolve } from "path";
 
 dotenv.config({ path: resolve(
+  __dirname,
   '..', // stack
   '..', //src
   '..', // root
@@ -36,6 +37,7 @@ dotenv.config({ path: resolve(
 ) });
 
 const resourceBase = resolve(
+  __dirname,
   '..', // stack
   '..', // src
   'resources',
@@ -1123,7 +1125,7 @@ export class FireWatcherAwsStack extends Stack {
     // Create a function that handles redirecting and index.html
     const redirectCfFunction = new cloudfront.Function(this, 'cofrn-cloudfront-redirect', {
       code: cloudfront.FunctionCode.fromFile({
-        filePath: __dirname + `/../resources/redirect_function.js`,
+        filePath: resolve(resourceBase, 'redirect_function.js'),
       }),
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
@@ -1194,7 +1196,15 @@ export class FireWatcherAwsStack extends Stack {
       value: cfDistro.domainName,
     });
     new s3Deploy.BucketDeployment(this, 'deploy-website', {
-      sources: [s3Deploy.Source.asset(`${__dirname}/../../../build`)],
+      sources: [s3Deploy.Source.asset(
+        resolve(
+          __dirname,
+          '..', // stack
+          '..', // src
+          '..', // root
+          'build',
+        ),
+      )],
       destinationBucket: reactBucket,
       distribution: cfDistro,
     });
