@@ -1,4 +1,4 @@
-import { GetAllHeartbeatsApi, Heartbeat } from "@/types/api/heartbeat";
+import { GetAllHeartbeatsApi, Heartbeat } from "@/types/api/heartbeats";
 import { getCurrentUser, handleResourceApi, LambdaApiFunction } from "./_base";
 import { getLogger } from "@/utils/common/logger";
 import { api401Body, api403Body } from "@/types/api/_shared";

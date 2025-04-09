@@ -2,7 +2,7 @@ import { getLogger } from '@/utils/common/logger';
 import { sendAlertMessage } from '@/utils/backend/texts';
 import { TABLE_STATUS, typedScan, typedUpdate } from '@/utils/backend/dynamoTyped';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
-import { Heartbeat } from '@/types/api/heartbeat';
+import { Heartbeat } from '@/types/api/heartbeats';
 
 const logger = getLogger('status');
 

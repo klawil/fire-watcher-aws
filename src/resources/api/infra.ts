@@ -8,7 +8,7 @@ import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
 import { PagingTalkgroup } from '@/types/api/users';
 import { SiteStatusQueueItem } from '@/types/backend/queue';
 import { TABLE_STATUS, typedScan, typedUpdate } from '@/utils/backend/dynamoTyped';
-import { Heartbeat } from '@/types/api/heartbeat';
+import { Heartbeat } from '@/types/api/heartbeats';
 
 const logger = getLogger('infra');
 
