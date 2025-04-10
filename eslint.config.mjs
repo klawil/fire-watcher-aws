@@ -1,5 +1,6 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+
 import { FlatCompat } from '@eslint/eslintrc';
 import stylistic from '@stylistic/eslint-plugin';
 import importPlugin from 'eslint-plugin-import';
@@ -138,7 +139,6 @@ const eslintConfig = [
        * } ],
        */
       '@stylistic/max-statements-per-line': 'error',
-      '@stylistic/multiline-comment-style': 'error',
       '@stylistic/multiline-ternary': [
         'error',
         'always-multiline',
