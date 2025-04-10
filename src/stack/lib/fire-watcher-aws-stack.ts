@@ -838,7 +838,7 @@ export class FireWatcherAwsStack extends Stack {
       }
     });
 
-    // Add the v2 APIs
+    // Maps for tables and buckets for the v2 APIs
     const tableMap = {
       FILE: dtrTable,
       USER: phoneNumberTable,
@@ -847,23 +847,34 @@ export class FireWatcherAwsStack extends Stack {
       TALKGROUP: talkgroupTable,
       STATUS: statusTable,
     } as const;
+    const bucketMap = {
+      FILE: bucket,
+      COSTS: costDataS3Bucket,
+    } as const;
+
+    // Add the v2 APIs
     const apiV2 = apiResource.addResource('v2');
     interface V2ApiConfigBase {
       pathPart: string;
-      authRequired?: true;
-      sqsQueue?: true;
-      twilioSecret?: true;
-      sendsMetrics?: true;
-      getMetrics?: true;
-      tables?: {
-        table: keyof typeof tableMap;
-        readOnly?: true;
-      }[];
       next?: V2ApiConfig[];
     }
     interface V2ApiConfigHandler extends V2ApiConfigBase {
       fileName: string;
       methods: (keyof typeof HTTPMethod)[];
+      authRequired?: true;
+      sqsQueue?: true;
+      twilioSecret?: true;
+      sendsMetrics?: true;
+      getMetrics?: true;
+      getCosts?: true;
+      tables?: {
+        table: keyof typeof tableMap;
+        readOnly?: true;
+      }[];
+      buckets?: {
+        bucket: keyof typeof bucketMap;
+        readOnly?: true;
+      }[];
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
@@ -1033,6 +1044,20 @@ export class FireWatcherAwsStack extends Stack {
           readOnly: true,
         }, ],
       },
+      {
+        pathPart: 'departments',
+        next: [ {
+          pathPart: '{id}',
+          fileName: 'department',
+          methods: [ 'GET', ],
+          buckets: [ {
+            bucket: 'COSTS',
+          }, ],
+          getCosts: true,
+          authRequired: true,
+          twilioSecret: true,
+        }, ],
+      },
     ];
     const createApi = (
       baseResource: apigateway.Resource,
@@ -1103,6 +1128,16 @@ export class FireWatcherAwsStack extends Stack {
           }
         });
 
+        // Add the bucket permissions
+        config.buckets?.forEach(bucket => {
+          if (!resourceHandler) return;
+          if (bucket.readOnly) {
+            bucketMap[bucket.bucket].grantRead(resourceHandler);
+          } else {
+            bucketMap[bucket.bucket].grantReadWrite(resourceHandler);
+          }
+        });
+
         // Grant access to the SQS queue if needed
         if (config.sqsQueue) {
           queue.grantSendMessages(resourceHandler);
@@ -1111,6 +1146,15 @@ export class FireWatcherAwsStack extends Stack {
         // Grant access to the Twilio secret if needed
         if (config.twilioSecret) {
           twilioSecret.grantRead(resourceHandler);
+        }
+
+        // Grant access to the billing information if needed
+        if (config.getCosts) {
+          resourceHandler.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            resources: [ '*', ],
+            actions: [ 'ce:GetCostAndUsage', ],
+          }));
         }
       }
 

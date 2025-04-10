@@ -1,11 +1,17 @@
-import TypescriptOAS, { createProgram, OpenApiSpecData } from "ts-oas";
-import { resolve } from "path";
-import { readdirSync, writeFileSync } from 'fs';
+import {
+  readdirSync, writeFileSync
+} from 'fs';
+import { resolve } from 'path';
+
+import TypescriptOAS, {
+  OpenApiSpecData,
+  createProgram
+} from 'ts-oas';
 
 const outputFileName = resolve('oas.json');
 const basePath = resolve('src', 'types', 'api');
 
-const baseOasSpec: OpenApiSpecData<"3.1.0"> = {
+const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
   components: {
     securitySchemes: {
       cookie: {
@@ -20,6 +26,10 @@ const baseOasSpec: OpenApiSpecData<"3.1.0"> = {
     {
       name: 'Authentication',
       description: 'APIs for Authentication',
+    },
+    {
+      name: 'Departments',
+      description: 'APIs about departments',
     },
     {
       name: 'Files',
@@ -57,11 +67,11 @@ const baseOasSpec: OpenApiSpecData<"3.1.0"> = {
       name: 'Users/Department',
       description: 'Modify User assocations with Departments',
     },
-  ]
+  ],
 };
 
 // Find all of the definition files
-const files = readdirSync(basePath)
+const files = readdirSync(basePath);
 
 // Build the functions to get typing
 const tsProgram = createProgram(
@@ -69,19 +79,19 @@ const tsProgram = createProgram(
   {
     strictNullChecks: true,
   },
-  basePath,
+  basePath
 );
 const tsoas = new TypescriptOAS(
   tsProgram,
   {
     ignoreErrors: true,
     defaultNumberType: 'integer',
-  },
+  }
 );
 
 // Build the OAS
 const specObject = tsoas.getOpenApiSpec(
-  [ /.Api$/ ],
-  baseOasSpec,
+  [ /.Api$/, ],
+  baseOasSpec
 );
 writeFileSync(outputFileName, JSON.stringify(specObject, null, 2));
