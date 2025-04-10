@@ -1,15 +1,16 @@
 'use client';
 
-import AdjacentSites from '@/components/adjacentSites/adjacentSites';
-import StatusMetricLineChart from '@/components/statusChart/statusMetricLineChart';
-import StatusTimingLineChart from '@/components/statusChart/statusTimingLineChart';
-import StatusTowerLineChart from '@/components/statusChart/statusTowerLineChart';
-import React, { useState } from 'react';
-import annotationPlugin from 'chartjs-plugin-annotation';
 import {
   Chart as ChartJS,
   registerables
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
+import React, { useState } from 'react';
+
+import AdjacentSites from '@/components/adjacentSites/adjacentSites';
+import StatusMetricLineChart from '@/components/statusChart/statusMetricLineChart';
+import StatusTimingLineChart from '@/components/statusChart/statusTimingLineChart';
+import StatusTowerLineChart from '@/components/statusChart/statusTowerLineChart';
 import { ChartConfig } from '@/types/frontend/chart';
 
 ChartJS.register(

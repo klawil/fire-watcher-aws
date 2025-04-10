@@ -1,5 +1,6 @@
-import CofrnLayout from '@/components/layout';
 import LoginPage from './loginPage';
+
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'Login | COFRN',

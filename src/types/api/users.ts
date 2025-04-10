@@ -1,12 +1,13 @@
 import {
+  api200Body, api400Body, api401Body, api403Body, api404Body, api500Body
+} from './_shared';
+
+import {
   PhoneNumberAccount, validPhoneNumberAccounts
 } from '@/types/backend/department';
 import {
   OrNull, Validator
 } from '@/types/backend/validation';
-import {
-  api200Body, api400Body, api401Body, api403Body, api404Body, api500Body
-} from './_shared';
 
 export const validDepartments = [
   'Baca',

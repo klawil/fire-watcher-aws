@@ -1,10 +1,10 @@
-import { getLogger } from '@/utils/common/logger';
-import { sendAlertMessage } from '@/utils/backend/texts';
+import { Heartbeat } from '@/types/api/heartbeats';
+import { TypedUpdateInput } from '@/types/backend/dynamo';
 import {
   TABLE_STATUS, typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { TypedUpdateInput } from '@/types/backend/dynamo';
-import { Heartbeat } from '@/types/api/heartbeats';
+import { sendAlertMessage } from '@/utils/backend/texts';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('status');
 

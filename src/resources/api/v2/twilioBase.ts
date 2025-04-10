@@ -1,23 +1,26 @@
 import * as AWS from 'aws-sdk';
+
 import {
-  CreateTextApi, createTextBodyValidator, createTextQueryValidator
-} from '@/types/api/twilio';
+  LambdaApiFunction,
+  handleResourceApi
+} from './_base';
+import { validateTwilioRequest } from './_twilio';
+
 import {
   getTwilioSecret, twilioPhoneNumbers
 } from '@/deprecated/utils/general';
-import { FullUserObject } from '@/types/api/users';
-import { TwilioTextQueueItem } from '@/types/backend/queue';
-import { validateTwilioRequest } from './_twilio';
 import {
-  handleResourceApi, LambdaApiFunction
-} from './_base';
-import { getLogger } from '@/utils/common/logger';
+  CreateTextApi, createTextBodyValidator, createTextQueryValidator
+} from '@/types/api/twilio';
+import { FullUserObject } from '@/types/api/users';
+import { departmentConfig } from '@/types/backend/department';
+import { TwilioTextQueueItem } from '@/types/backend/queue';
 import {
   TABLE_USER, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { getUserPermissions } from '@/utils/common/user';
-import { departmentConfig } from '@/types/backend/department';
 import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
+import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('twilioBase');
 

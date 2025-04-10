@@ -1,18 +1,20 @@
-import { getLogger } from '@/utils/common/logger';
 import {
-  getCurrentUser, handleResourceApi, LambdaApiFunction
+  LambdaApiFunction,
+  getCurrentUser, handleResourceApi
 } from './_base';
-import {
-  FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, allowedFrontendTextFields
-} from '@/types/api/texts';
+
 import {
   api401Body, api403Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
+  FullTextObject, GetAllTextsApi, allowedFrontendTextFields, getAllTextsApiQueryValidator
+} from '@/types/api/texts';
+import { TypedQueryInput } from '@/types/backend/dynamo';
+import {
   TABLE_TEXT, typedQuery
 } from '@/utils/backend/dynamoTyped';
-import { TypedQueryInput } from '@/types/backend/dynamo';
 import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('texts');
 

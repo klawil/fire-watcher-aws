@@ -1,24 +1,26 @@
-import { api403Response } from '@/types/api/_shared';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
-import { Api } from 'ts-oas';
 import * as AWS from 'aws-sdk';
-import { getLogger } from '@/utils/common/logger';
+import { verify } from 'jsonwebtoken';
+import { Api } from 'ts-oas';
+
+import { api403Response } from '@/types/api/_shared';
 import {
-  districtAdminUserKeys, FrontendUserObject, FullUserObject
+  FrontendUserObject, FullUserObject,
+  districtAdminUserKeys
 } from '@/types/api/users';
-import { UserPermissions } from '@/types/backend/user';
-import { getUserPermissions } from '@/utils/common/user';
-import {
-  TABLE_USER, typedGet, typedQuery
-} from '@/utils/backend/dynamoTyped';
 import {
   TypedQueryInput, TypedQueryOutput
 } from '@/types/backend/dynamo';
-import { validateObject } from '@/utils/backend/validation';
+import { UserPermissions } from '@/types/backend/user';
 import { Validator } from '@/types/backend/validation';
-import { verify } from 'jsonwebtoken';
+import {
+  TABLE_USER, typedGet, typedQuery
+} from '@/utils/backend/dynamoTyped';
+import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
+import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('api/v2/_base');
 const secretManager = new AWS.SecretsManager();

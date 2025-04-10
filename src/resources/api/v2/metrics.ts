@@ -1,15 +1,19 @@
-import { getLogger } from '@/utils/common/logger';
-import {
-  handleResourceApi, LambdaApiFunction, parseJsonBody
-} from './_base';
-import {
-  countMetricValidator, GetMetricsApi, getMetricsApiBodyValidator, LambdaMetric, lambdaMetricValidator, MetricToFetch, timingMetricValidator
-} from '@/types/api/metrics';
-import { generateApi400Body } from '@/types/api/_shared';
-import { validateObject } from '@/utils/backend/validation';
 import CloudWatch, {
   GetMetricDataInput, MetricDataQueries
 } from 'aws-sdk/clients/cloudwatch';
+
+import {
+  LambdaApiFunction,
+  handleResourceApi, parseJsonBody
+} from './_base';
+
+import { generateApi400Body } from '@/types/api/_shared';
+import {
+  GetMetricsApi, LambdaMetric, MetricToFetch,
+  countMetricValidator, getMetricsApiBodyValidator, lambdaMetricValidator, timingMetricValidator
+} from '@/types/api/metrics';
+import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('metrics');
 const cloudwatch = new CloudWatch();

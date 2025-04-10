@@ -1,17 +1,19 @@
 'use client';
 
-import Row from 'react-bootstrap/Row';
+import { useState } from 'react';
+import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import Row from 'react-bootstrap/Row';
+import { Line } from 'react-chartjs-2';
+
 import {
   useChartData, usePageSize
 } from './common';
-import { Line } from 'react-chartjs-2';
+
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   ChartComponentParams, TimingChart
 } from '@/types/frontend/chart';
-import Button from 'react-bootstrap/Button';
-import { useState } from 'react';
 
 export default function StatusTimingLineChart({
   title,

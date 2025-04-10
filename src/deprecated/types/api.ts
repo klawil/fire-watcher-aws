@@ -1,4 +1,5 @@
 import { APIGatewayProxyResult } from 'aws-lambda';
+
 import { ApiResponseBase } from '@/deprecated/common/common';
 
 /**

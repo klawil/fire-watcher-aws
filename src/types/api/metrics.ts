@@ -1,7 +1,8 @@
-import { Validator } from '@/types/backend/validation';
 import {
   api400Body, api401Body, api403Body, api500Body
 } from './_shared';
+
+import { Validator } from '@/types/backend/validation';
 
 export interface TimingMetric {
   type: 'timing';

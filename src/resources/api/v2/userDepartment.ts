@@ -1,19 +1,22 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '@/utils/common/logger';
+
 import {
-  getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest
+  LambdaApiFunction,
+  getCurrentUser, getFrontendUserObj, handleResourceApi, validateRequest
 } from './_base';
-import {
-  CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator
-} from '@/types/api/users';
+
 import {
   api401Body, api403Body, api404Body, api500Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
+  CreateUserDepartmentApi, DeleteUserDepartmentApi, FullUserObject, createUserDepartmentApiBodyValidator, userDepartmentApiParamsValidator
+} from '@/types/api/users';
+import { ActivateUserQueueItem } from '@/types/backend/queue';
+import {
   TABLE_USER, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
-import { ActivateUserQueueItem } from '@/types/backend/queue';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('userDepartment');
 const sqs = new AWS.SQS();

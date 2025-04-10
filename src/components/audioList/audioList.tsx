@@ -1,35 +1,37 @@
 'use client';
 
-import Table from 'react-bootstrap/Table';
-import Button from 'react-bootstrap/Button';
-import {
-  BsChevronDown, BsChevronUp, BsStar, BsStarFill
-} from 'react-icons/bs';
 import React, {
   useCallback, useContext, useEffect, useLayoutEffect, useReducer, useRef, useState
 } from 'react';
+import Button from 'react-bootstrap/Button';
+import Table from 'react-bootstrap/Table';
 import {
-  AudioAction, AudioState, filterPresets, FilterPresetUrlParams
+  BsChevronDown, BsChevronUp, BsStar, BsStarFill
+} from 'react-icons/bs';
+
+import styles from './audioList.module.css';
+
+import AudioFilter from '@/components/audioFilter/audioFilter';
+import AudioPlayerBar from '@/components/audioPlayerBar/audioPlayerBar';
+import CalendarModal from '@/components/calendarModal/calendarModal';
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import { GetAllFilesApi } from '@/types/api/files';
+import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
+import {
+  AudioAction, AudioState, FilterPresetUrlParams, filterPresets
 } from '@/types/frontend/audio';
-import {
-  audioReducer, defaultAudioState
-} from '@/utils/frontend/audioState';
 import {
   dateToStr, findClosestFileIdx
 } from '@/utils/common/dateAndFile';
-import styles from './audioList.module.css';
-import AudioPlayerBar from '@/components/audioPlayerBar/audioPlayerBar';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import { fNameToDate } from '@/utils/common/strings';
+import {
+  audioReducer, defaultAudioState
+} from '@/utils/frontend/audioState';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 import {
   isElemInView, useRefIntersection
 } from '@/utils/frontend/uiUtils';
-import AudioFilter from '@/components/audioFilter/audioFilter';
-import { fNameToDate } from '@/utils/common/strings';
-import CalendarModal from '@/components/calendarModal/calendarModal';
-import { AddAlertContext } from '@/utils/frontend/clientContexts';
-import { typeFetch } from '@/utils/frontend/typeFetch';
-import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
-import { GetAllFilesApi } from '@/types/api/files';
 
 const loadAfterAddedMinWait = 10000;
 

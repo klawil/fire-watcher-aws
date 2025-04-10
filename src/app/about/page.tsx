@@ -1,5 +1,6 @@
-import CofrnLayout from '@/components/layout';
 import Link from 'next/link';
+
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'About Us | COFRN',

@@ -1,24 +1,27 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '@/utils/common/logger';
+
 import {
-  getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody
+  LambdaApiFunction,
+  getCurrentUser, getFrontendUserObj, handleResourceApi, parseJsonBody
 } from './_base';
-import {
-  CreateUserApi, createUserApiBodyValidator, FrontendUserObject, FullUserObject, GetAllUsersApi
-} from '@/types/api/users';
+
 import {
   api401Body, api403Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  TABLE_USER, typedPutItem, typedScan
-} from '@/utils/backend/dynamoTyped';
+  CreateUserApi, FrontendUserObject, FullUserObject, GetAllUsersApi, createUserApiBodyValidator
+} from '@/types/api/users';
 import {
   TypedPutItemInput, TypedScanInput
 } from '@/types/backend/dynamo';
+import { ActivateUserQueueItem } from '@/types/backend/queue';
 import {
   ExceptSpecificKeys, OnlySpecificKeys
 } from '@/types/utility';
-import { ActivateUserQueueItem } from '@/types/backend/queue';
+import {
+  TABLE_USER, typedPutItem, typedScan
+} from '@/utils/backend/dynamoTyped';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('users');
 const sqs = new AWS.SQS();

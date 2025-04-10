@@ -1,15 +1,17 @@
 'use client';
 
-import { WeatherResultJson } from '@/deprecated/common/weather';
+import Link from 'next/link';
 import {
   useCallback, useContext, useEffect, useState
 } from 'react';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
-import styles from './weather.module.css';
 import {
   Col, Image, Row
 } from 'react-bootstrap';
-import Link from 'next/link';
+
+import styles from './weather.module.css';
+
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import { WeatherResultJson } from '@/deprecated/common/weather';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 
 export default function WeatherPage() {

@@ -1,17 +1,19 @@
 'use client';
 
-import Row from 'react-bootstrap/Row';
+import { useState } from 'react';
+import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import Row from 'react-bootstrap/Row';
+import { Line } from 'react-chartjs-2';
+
 import {
   useChartData, usePageSize
 } from './common';
-import { Line } from 'react-chartjs-2';
+
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   ChartComponentParams, MetricChart
 } from '@/types/frontend/chart';
-import { useState } from 'react';
-import Button from 'react-bootstrap/Button';
 
 const msToSFormat = (places: number = 1) => (v: string | number) => {
   if (typeof v === 'string') {

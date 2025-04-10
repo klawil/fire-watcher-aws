@@ -1,22 +1,24 @@
-import * as aws from 'aws-sdk';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
+import * as aws from 'aws-sdk';
+
+import { isUserActive } from '@/deprecated/types/auth';
+import { TwilioBody } from '@/deprecated/types/queue';
+import { getLoggedInUser } from '@/deprecated/utils/auth';
 import {
   getTwilioSecret, incrementMetric, twilioPhoneNumbers
 } from '@/deprecated/utils/general';
-import { TwilioBody } from '@/deprecated/types/queue';
-import { getLogger } from '@/utils/common/logger';
-import { isUserActive } from '@/deprecated/types/auth';
-import { getLoggedInUser } from '@/deprecated/utils/auth';
-import {
-  departmentConfig, PhoneNumberAccount, TwilioAccounts, validPhoneNumberAccounts
-} from '@/types/backend/department';
-import { validDepartments } from '@/types/api/users';
 import {
   api400Body, api401Body
 } from '@/types/api/_shared';
+import { validDepartments } from '@/types/api/users';
+import {
+  PhoneNumberAccount, TwilioAccounts,
+  departmentConfig, validPhoneNumberAccounts
+} from '@/types/backend/department';
 import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('twilio');
 

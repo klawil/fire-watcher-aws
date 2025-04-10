@@ -1,16 +1,18 @@
 import {
-  FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator, updateTextSeenApiParamsValidator
-} from '@/types/api/texts';
-import {
-  handleResourceApi, LambdaApiFunction, validateRequest
+  LambdaApiFunction,
+  handleResourceApi, validateRequest
 } from './_base';
-import { getLogger } from '@/utils/common/logger';
+
 import {
   api200Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
+  FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator, updateTextSeenApiParamsValidator
+} from '@/types/api/texts';
+import {
   TABLE_TEXT, typedUpdate
 } from '@/utils/backend/dynamoTyped';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('text');
 

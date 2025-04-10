@@ -1,8 +1,9 @@
+import { createContext } from 'react';
+
 import { FrontendUserObject } from '@/types/api/users';
 import {
   UserActions, UsersState
 } from '@/types/frontend/users';
-import { createContext } from 'react';
 
 export const UsersDispatchContext = createContext<React.ActionDispatch<[action: UserActions]>>(() => {});
 

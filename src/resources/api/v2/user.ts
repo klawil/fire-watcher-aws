@@ -1,18 +1,21 @@
-import { getLogger } from '@/utils/common/logger';
 import {
-  getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest
+  LambdaApiFunction,
+  getCurrentUser, getFrontendUserObj, handleResourceApi, validateRequest
 } from './_base';
-import {
-  adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
-} from '@/types/api/users';
+
 import {
   api200Body, api401Body, api403Body, api404Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
+  DeleteUserApi, FullUserObject, GetUserApi, UpdateUserApi,
+  adminUserKeys, districtAdminUserKeys, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
+} from '@/types/api/users';
+import { TypedUpdateInput } from '@/types/backend/dynamo';
+import {
   TABLE_USER, typedDeleteItem, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { TypedUpdateInput } from '@/types/backend/dynamo';
 import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('users');
 

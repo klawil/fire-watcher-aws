@@ -1,14 +1,16 @@
-import { getLogger } from '@/utils/common/logger';
 import {
-  getCookies, getDeleteCookieHeader, handleResourceApi, LambdaApiFunction
+  LambdaApiFunction,
+  getCookies, getDeleteCookieHeader, handleResourceApi
 } from './_base';
-import { validateObject } from '@/utils/backend/validation';
-import {
-  LogoutApi, logoutApiQueryValidator
-} from '@/types/api/auth';
+
 import {
   api302Body, generateApi400Body
 } from '@/types/api/_shared';
+import {
+  LogoutApi, logoutApiQueryValidator
+} from '@/types/api/auth';
+import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('stack/resources/api/v2/logout');
 

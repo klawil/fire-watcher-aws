@@ -1,7 +1,8 @@
-import * as aws from 'aws-sdk';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
+import * as aws from 'aws-sdk';
+
 import { validateBodyIsJson } from '@/deprecated/utils/general';
 import { getLogger } from '@/utils/common/logger';
 

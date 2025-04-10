@@ -6,16 +6,17 @@ import {
   useCallback, useEffect, useState
 } from 'react';
 import {
-  AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext
-} from '@/utils/frontend/clientContexts';
-import {
   Alert, Container
 } from 'react-bootstrap';
 import { Variant } from 'react-bootstrap/esm/types';
-import { typeFetch } from '@/utils/frontend/typeFetch';
+
 import {
   FrontendUserObject, FrontendUserState, GetUserApi, validDepartments
 } from '@/types/api/users';
+import {
+  AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext
+} from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 
 function useDarkMode() {
   const [

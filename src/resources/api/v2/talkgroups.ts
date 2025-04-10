@@ -1,14 +1,18 @@
-import { getLogger } from '@/utils/common/logger';
 import * as AWS from 'aws-sdk';
+
+import {
+  DocumentQueryConfig,
+  LambdaApiFunction,
+  handleResourceApi, mergeDynamoQueriesDocClient
+} from './_base';
+
+import { generateApi400Body } from '@/types/api/_shared';
 import {
   FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator
 } from '@/types/api/talkgroups';
-import {
-  handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient
-} from './_base';
 import { TABLE_TALKGROUP } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
-import { generateApi400Body } from '@/types/api/_shared';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('talkgroups');
 

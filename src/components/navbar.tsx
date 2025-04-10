@@ -1,14 +1,15 @@
 'use client';
 
+import { useContext } from 'react';
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
-import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
+import Navbar from 'react-bootstrap/Navbar';
+
 import { PageConfig } from '@/types/frontend/page';
-import { useContext } from 'react';
-import { LoggedInUserContext } from '@/utils/frontend/clientContexts';
 import {
-  DarkModeContext, LocationContext
+  DarkModeContext, LocationContext,
+  LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 
 export default function CofrnNavbar({

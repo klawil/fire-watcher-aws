@@ -1,5 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
+
 import { getCurrentUser } from './_base';
+
 import { api403Body } from '@/types/api/_shared';
 
 const lambdaNameEnvRegex = /^(A|I)_([0-9A-Z_]+)_FN_NAME$/;

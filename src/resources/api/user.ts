@@ -1,29 +1,30 @@
-import * as aws from 'aws-sdk';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
-import { validateBodyIsJson } from '@/deprecated/utils/general';
-import {
-  parseDynamoDbAttributeMap, parseDynamoDbAttributeValue
-} from '@/deprecated/utils/dynamodb';
-import {
-  getCookies, getLoggedInUser
-} from '@/deprecated/utils/auth';
-import {
-  authTokenCookie, authUserCookie, isUserActive
-} from '@/deprecated/types/auth';
+import * as aws from 'aws-sdk';
+import { sign } from 'jsonwebtoken';
+
 import {
   ApiUserAuthResponse, ApiUserGetUserResponse, ApiUserListResponse, ApiUserLoginResult, ApiUserUpdateBody, ApiUserUpdateGroupBody, ApiUserUpdateResponse, InternalUserObject, UserObject
 } from '@/deprecated/common/userApi';
 import { unauthorizedApiResponse } from '@/deprecated/types/api';
 import {
+  authTokenCookie, authUserCookie, isUserActive
+} from '@/deprecated/types/auth';
+import {
   ActivateBody, LoginBody
 } from '@/deprecated/types/queue';
-import { getLogger } from '@/utils/common/logger';
 import {
-  PagingTalkgroup, pagingTalkgroups, UserDepartment, validDepartments
+  getCookies, getLoggedInUser
+} from '@/deprecated/utils/auth';
+import {
+  parseDynamoDbAttributeMap, parseDynamoDbAttributeValue
+} from '@/deprecated/utils/dynamodb';
+import { validateBodyIsJson } from '@/deprecated/utils/general';
+import {
+  PagingTalkgroup, UserDepartment, pagingTalkgroups, validDepartments
 } from '@/types/api/users';
-import { sign } from 'jsonwebtoken';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('user');
 

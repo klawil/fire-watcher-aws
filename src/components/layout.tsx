@@ -1,16 +1,19 @@
 'use client';
 
-import { PageConfig } from '@/types/frontend/page';
-import CofrnNavbar from './navbar';
-import {
-  Container, Nav, Navbar
-} from 'react-bootstrap';
-import {
-  LoggedInUserContext, DarkModeContext
-} from '@/utils/frontend/clientContexts';
 import {
   useContext, useEffect
 } from 'react';
+import {
+  Container, Nav, Navbar
+} from 'react-bootstrap';
+
+import CofrnNavbar from './navbar';
+
+import { PageConfig } from '@/types/frontend/page';
+import {
+  DarkModeContext,
+  LoggedInUserContext
+} from '@/utils/frontend/clientContexts';
 
 export default function CofrnLayout({
   children,

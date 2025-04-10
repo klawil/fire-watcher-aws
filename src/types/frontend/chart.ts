@@ -1,6 +1,7 @@
 import {
   Dispatch, SetStateAction
 } from 'react';
+
 import { GetMetricsApi } from '@/types/api/metrics';
 
 type PossibleChartUnits = 'Count' | 'Milliseconds' | 'Seconds';

@@ -1,18 +1,20 @@
-import * as aws from 'aws-sdk';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
-import { validateBodyIsJson } from '@/deprecated/utils/general';
-import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
-import { getLoggedInUser } from '@/deprecated/utils/auth';
+import * as aws from 'aws-sdk';
+
 import {
-  ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, AnnouncementApiBody, TextObject
+  AnnouncementApiBody,
+  ApiFrontendListTextsResponse, ApiFrontendStatsResponse, MessageType, TextObject
 } from '@/deprecated/common/frontendApi';
-import { getLogger } from '@/utils/common/logger';
 import { AnnounceBody } from '@/deprecated/types/queue';
+import { getLoggedInUser } from '@/deprecated/utils/auth';
+import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
+import { validateBodyIsJson } from '@/deprecated/utils/general';
 import {
   pagingTalkgroups, validDepartments
 } from '@/types/api/users';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('frontend');
 

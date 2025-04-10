@@ -1,5 +1,5 @@
-import CofrnLayout from '@/components/layout';
 import WeatherPage from '@/app/weather/weatherPage';
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'Weather | COFRN',

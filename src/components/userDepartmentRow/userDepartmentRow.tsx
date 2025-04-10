@@ -1,18 +1,19 @@
-import { UsersDispatchContext } from '@/utils/frontend/usersState';
 import {
   useCallback, useContext, useState
 } from 'react';
-import Spinner from 'react-bootstrap/Spinner';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import Spinner from 'react-bootstrap/Spinner';
 import {
   BsArrowCounterclockwise, BsSave, BsTrash
 } from 'react-icons/bs';
-import { AddAlertContext } from '@/utils/frontend/clientContexts';
+
 import {
   CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi, UserDepartment
 } from '@/types/api/users';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+import { UsersDispatchContext } from '@/utils/frontend/usersState';
 
 const baseCallSign: {
   [key in UserDepartment]: string;

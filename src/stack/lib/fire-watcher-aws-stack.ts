@@ -1,36 +1,38 @@
+import { resolve } from 'path';
+
 import {
-  Stack, StackProps, Duration, Tags, CfnOutput
+  CfnOutput,
+  Duration,
+  Stack, StackProps, Tags
 } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
-import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
-import * as sqs from 'aws-cdk-lib/aws-sqs';
-import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as iam from 'aws-cdk-lib/aws-iam';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as cloudfrontOrigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
-import * as eventbridge from 'aws-cdk-lib/aws-events';
-import * as eventtarget from 'aws-cdk-lib/aws-events-targets';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as glue from 'aws-cdk-lib/aws-glue';
-import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
-import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { Construct } from 'constructs';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
+
 import {
   PhoneNumberAccount, validPhoneNumberAccounts
 } from '@/types/backend/department';
 import { LambdaEnvironment } from '@/types/backend/environment';
-import { resolve } from 'path';
 
 dotenv.config({ path: resolve(
   __dirname,
@@ -585,7 +587,7 @@ export class FireWatcherAwsStack extends Stack {
     );
 
     // Create the EventBridge link between the transcribe service and queue
-    const rule = new eventbridge.Rule(this, 'cvfd-event-rule', {
+    const rule = new events.Rule(this, 'cvfd-event-rule', {
       eventPattern: {
         source: [ 'aws.transcribe', ],
         detail: {
@@ -593,7 +595,7 @@ export class FireWatcherAwsStack extends Stack {
         },
       },
     });
-    rule.addTarget(new eventtarget.SqsQueue(queue));
+    rule.addTarget(new targets.SqsQueue(queue));
 
     // Create the status parser function
     const statusHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-status-lambda', {

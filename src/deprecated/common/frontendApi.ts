@@ -1,7 +1,8 @@
+import { ApiResponseBase } from './common';
+
 import {
   PagingTalkgroup, UserDepartment
 } from '@/types/api/users';
-import { ApiResponseBase } from './common';
 
 /**
  * @deprecated The method should not be used

@@ -1,12 +1,14 @@
-import * as aws from 'aws-sdk';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { getLogger } from '@/utils/common/logger';
+import * as aws from 'aws-sdk';
+import { verify } from 'jsonwebtoken';
+
 import { parseDynamoDbAttributeMap } from './dynamodb';
+
 import { InternalUserObject } from '@/deprecated/common/userApi';
 import {
   authTokenCookie, authUserCookie, isUserActive, isUserAdmin
 } from '@/deprecated/types/auth';
-import { verify } from 'jsonwebtoken';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('u-auth');
 

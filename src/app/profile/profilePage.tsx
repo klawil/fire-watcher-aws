@@ -1,28 +1,29 @@
 'use client';
 
-import { formatPhone } from '@/utils/common/strings';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
-import {
-  AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext
-} from '@/utils/frontend/clientContexts';
 import {
   useCallback, useContext, useState
 } from 'react';
-import Table from 'react-bootstrap/Table';
+import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
+import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
 import Row from 'react-bootstrap/Row';
+import Spinner from 'react-bootstrap/Spinner';
+import Table from 'react-bootstrap/Table';
 import {
   BsCheckCircleFill, BsXCircleFill
 } from 'react-icons/bs';
-import InputGroup from 'react-bootstrap/InputGroup';
-import Form from 'react-bootstrap/Form';
-import Button from 'react-bootstrap/Button';
-import Spinner from 'react-bootstrap/Spinner';
+
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
-  PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments
+  PagingTalkgroup, UpdateUserApi, pagingTalkgroups, validDepartments
 } from '@/types/api/users';
-import { typeFetch } from '@/utils/frontend/typeFetch';
 import { pagingTalkgroupConfig } from '@/types/backend/department';
+import { formatPhone } from '@/utils/common/strings';
+import {
+  AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext
+} from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 
 const userEditableFields: {
   key: 'fName' | 'lName';

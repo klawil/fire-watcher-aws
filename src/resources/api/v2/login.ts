@@ -1,22 +1,25 @@
 import * as AWS from 'aws-sdk';
-import { getLogger } from '@/utils/common/logger';
+import { sign } from 'jsonwebtoken';
+
 import {
-  getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody
+  LambdaApiFunction,
+  getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, parseJsonBody
 } from './_base';
-import {
-  GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi
-} from '@/types/api/auth';
+
 import {
   api200Body, generateApi400Body
 } from '@/types/api/_shared';
+import {
+  GetLoginCodeApi, SubmitLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator
+} from '@/types/api/auth';
 import { FullUserObject } from '@/types/api/users';
-import { getUserPermissions } from '@/utils/common/user';
+import { SendUserAuthCodeQueueItem } from '@/types/backend/queue';
 import {
   TABLE_USER, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
-import { sign } from 'jsonwebtoken';
-import { SendUserAuthCodeQueueItem } from '@/types/backend/queue';
+import { getLogger } from '@/utils/common/logger';
+import { getUserPermissions } from '@/utils/common/user';
 
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 

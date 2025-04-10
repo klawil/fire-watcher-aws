@@ -1,18 +1,20 @@
 'use client';
 
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
 import {
   useContext, useState
 } from 'react';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
-import { useChartData } from './common';
-import { DarkModeContext } from '@/utils/frontend/clientContexts';
+import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
+import Row from 'react-bootstrap/Row';
 import { Line } from 'react-chartjs-2';
+
+import { useChartData } from './common';
+
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   ChartComponentParams, TowerChart
 } from '@/types/frontend/chart';
-import Button from 'react-bootstrap/Button';
+import { DarkModeContext } from '@/utils/frontend/clientContexts';
 
 interface ColorConfig {
   backgroundColor: string;

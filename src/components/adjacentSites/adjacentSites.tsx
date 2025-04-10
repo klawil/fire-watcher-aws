@@ -1,25 +1,27 @@
 'use client';
 
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
+import L from 'leaflet';
+import {
+  useCallback, useContext, useEffect, useState
+} from 'react';
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
+import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 import {
   Circle, MapContainer, Marker, Popup, TileLayer
 } from 'react-leaflet';
-import styles from './adjacentSites.module.css';
 import 'leaflet/dist/leaflet.css';
-import {
-  useCallback, useContext, useEffect, useState
-} from 'react';
+
+import styles from './adjacentSites.module.css';
+
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
-import L from 'leaflet';
-import { AddAlertContext } from '@/utils/frontend/clientContexts';
-import { typeFetch } from '@/utils/frontend/typeFetch';
 import {
   DynamicSiteKeys, FullSiteObject, GetAllSitesApi
 } from '@/types/api/sites';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 
 const fadeSiteTime = 1000 * 60 * 15; // 15 minutes
 const localeTimeOptions: Intl.DateTimeFormatOptions = {

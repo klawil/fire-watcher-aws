@@ -1,39 +1,42 @@
-import * as AWS from 'aws-sdk';
-import * as lambda from 'aws-lambda';
 import * as https from 'https';
+
+import * as lambda from 'aws-lambda';
+import * as AWS from 'aws-sdk';
+
+import {
+  ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody
+} from '@/deprecated/types/queue';
 import {
   getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers
 } from '@/deprecated/utils/general';
 import {
-  ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody
-} from '@/deprecated/types/queue';
-import { getLogger } from '@/utils/common/logger';
-import {
-  ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
-} from '@/types/backend/queue';
-import {
-  dateToTimeString, fNameToDate, formatPhone, parsePhone, randomString
-} from '@/utils/common/strings';
-import { getUserPermissions } from '@/utils/common/user';
-import {
-  getPageNumber, getUserRecipients, saveMessageData, sendMessage
-} from '@/utils/backend/texts';
-import {
-  departmentConfig, pagingTalkgroupConfig, PhoneNumberTypes
-} from '@/types/backend/department';
+  FileTranslationObject, FullFileObject
+} from '@/types/api/files';
+import { FullSiteObject } from '@/types/api/sites';
 import {
   FullUserObject, PagingTalkgroup, UserDepartment
 } from '@/types/api/users';
 import {
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate
-} from '@/utils/backend/dynamoTyped';
-import {
-  FileTranslationObject, FullFileObject
-} from '@/types/api/files';
+  PhoneNumberTypes,
+  departmentConfig, pagingTalkgroupConfig
+} from '@/types/backend/department';
 import {
   TypedGetOutput, TypedUpdateInput
 } from '@/types/backend/dynamo';
-import { FullSiteObject } from '@/types/api/sites';
+import {
+  ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
+} from '@/types/backend/queue';
+import {
+  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate
+} from '@/utils/backend/dynamoTyped';
+import {
+  getPageNumber, getUserRecipients, saveMessageData, sendMessage
+} from '@/utils/backend/texts';
+import { getLogger } from '@/utils/common/logger';
+import {
+  dateToTimeString, fNameToDate, formatPhone, parsePhone, randomString
+} from '@/utils/common/strings';
+import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('queue');
 const dynamodb = new AWS.DynamoDB();

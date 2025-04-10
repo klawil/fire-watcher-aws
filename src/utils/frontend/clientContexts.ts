@@ -2,6 +2,7 @@
 
 import { createContext } from 'react';
 import { Variant } from 'react-bootstrap/esm/types';
+
 import { FrontendUserState } from '@/types/api/users';
 
 export const LoggedInUserContext = createContext<null | FrontendUserState>(null);

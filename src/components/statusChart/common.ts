@@ -1,15 +1,16 @@
 'use client';
 
-import {
-  ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess
-} from '@/deprecated/common/frontendApi';
-import { AddAlertContext } from '@/utils/frontend/clientContexts';
-import { typeFetch } from '@/utils/frontend/typeFetch';
-import { GetMetricsApi } from '@/types/api/metrics';
 import { ChartDataset } from 'chart.js';
 import {
   Dispatch, SetStateAction, useContext, useEffect, useState
 } from 'react';
+
+import {
+  ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess
+} from '@/deprecated/common/frontendApi';
+import { GetMetricsApi } from '@/types/api/metrics';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 
 type TimeFormatFn = (a: Date) => string;
 const formatDayHour: TimeFormatFn = date => {

@@ -1,20 +1,21 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
-import { incrementMetric } from '@/deprecated/utils/general';
+
 import { PageBody } from '@/deprecated/types/queue';
-import { getLogger } from '@/utils/common/logger';
-import { PhoneNumberAccount } from '@/types/backend/department';
+import { incrementMetric } from '@/deprecated/utils/general';
+import {
+  FileTranslationObject, FullFileObject
+} from '@/types/api/files';
+import { FullTalkgroupObject } from '@/types/api/talkgroups';
 import { PagingTalkgroup } from '@/types/api/users';
+import { PhoneNumberAccount } from '@/types/backend/department';
 import {
   TypedDeleteItemInput, TypedPutItemInput
 } from '@/types/backend/dynamo';
 import {
-  FileTranslationObject, FullFileObject
-} from '@/types/api/files';
-import {
   TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem, typedQuery, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { FullTalkgroupObject } from '@/types/api/talkgroups';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('s3');
 const s3 = new aws.S3();

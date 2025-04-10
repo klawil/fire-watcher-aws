@@ -1,4 +1,8 @@
-import { getLogger } from '@/utils/common/logger';
+import {
+  LambdaApiFunction,
+  getCurrentUser, handleResourceApi, validateRequest
+} from './_base';
+
 import {
   api401Body, api403Body, api404Body, generateApi400Body
 } from '@/types/api/_shared';
@@ -6,12 +10,10 @@ import {
   FullTalkgroupObject, GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator
 } from '@/types/api/talkgroups';
 import {
-  getCurrentUser, handleResourceApi, LambdaApiFunction, validateRequest
-} from './_base';
-import {
   TABLE_TALKGROUP, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('file');
 

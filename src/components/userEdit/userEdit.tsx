@@ -1,27 +1,30 @@
 import {
   Dispatch, SetStateAction, useCallback, useContext, useState
 } from 'react';
+import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
-import Button from 'react-bootstrap/Button';
-import {
-  AddAlertContext, LoggedInUserContext
-} from '@/utils/frontend/clientContexts';
 import Table from 'react-bootstrap/Table';
-import styles from './userEdit.module.css';
+
 import UserDepartmentRow from '../userDepartmentRow/userDepartmentRow';
-import { UsersDispatchContext } from '@/utils/frontend/usersState';
-import { formatPhone } from '@/utils/common/strings';
+
+import styles from './userEdit.module.css';
+
 import {
-  CreateUserApi, FrontendUserObject, PagingTalkgroup, pagingTalkgroups, UpdateUserApi, validDepartments
+  CreateUserApi, FrontendUserObject, PagingTalkgroup, UpdateUserApi, pagingTalkgroups, validDepartments
 } from '@/types/api/users';
-import { typeFetch } from '@/utils/frontend/typeFetch';
 import {
   departmentConfig, pagingTalkgroupConfig
 } from '@/types/backend/department';
 import { OrNull } from '@/types/backend/validation';
+import { formatPhone } from '@/utils/common/strings';
+import {
+  AddAlertContext, LoggedInUserContext
+} from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import { UsersDispatchContext } from '@/utils/frontend/usersState';
 
 interface CheckboxConfig {
   name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';

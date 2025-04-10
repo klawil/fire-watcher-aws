@@ -1,4 +1,5 @@
 import * as aws from 'aws-sdk';
+
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('dynamo');

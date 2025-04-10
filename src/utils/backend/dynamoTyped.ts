@@ -1,7 +1,11 @@
-import {
-  TypedUpdateInput, TypedGetOutput, TypedUpdateOutput, TypedGetInput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput, TypedDeleteItemInput, TypedDeleteItemOutput, TypedPutItemInput, TypedPutItemOutput
-} from '@/types/backend/dynamo';
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
+
+import {
+  TypedDeleteItemInput, TypedDeleteItemOutput,
+  TypedGetInput,
+  TypedGetOutput, TypedPutItemInput, TypedPutItemOutput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput,
+  TypedUpdateInput, TypedUpdateOutput
+} from '@/types/backend/dynamo';
 
 const docClient = new DocumentClient();
 

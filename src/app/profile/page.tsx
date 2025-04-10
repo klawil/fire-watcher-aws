@@ -1,5 +1,6 @@
-import CofrnLayout from '@/components/layout';
 import ProfilePage from './profilePage';
+
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'Profile | COFRN',

@@ -1,16 +1,18 @@
 import {
-  GetAllHeartbeatsApi, Heartbeat
-} from '@/types/api/heartbeats';
-import {
-  getCurrentUser, handleResourceApi, LambdaApiFunction
+  LambdaApiFunction,
+  getCurrentUser, handleResourceApi
 } from './_base';
-import { getLogger } from '@/utils/common/logger';
+
 import {
   api401Body, api403Body
 } from '@/types/api/_shared';
 import {
+  GetAllHeartbeatsApi, Heartbeat
+} from '@/types/api/heartbeats';
+import {
   TABLE_STATUS, typedScan
 } from '@/utils/backend/dynamoTyped';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/heartbeats');
 

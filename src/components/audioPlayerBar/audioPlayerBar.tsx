@@ -1,18 +1,20 @@
+import { useSearchParams } from 'next/navigation';
 import {
-  AudioAction, AudioState
-} from '@/types/frontend/audio';
-import Nav from 'react-bootstrap/Nav';
+  useEffect, useRef, useState
+} from 'react';
+import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
+import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import {
   BsArrowBarUp, BsCalendar, BsDownload, BsFilter, BsPauseFill, BsPlayFill
 } from 'react-icons/bs';
+
 import styles from './audioPlayerBar.module.css';
+
 import {
-  useEffect, useRef, useState
-} from 'react';
-import { useSearchParams } from 'next/navigation';
-import Button from 'react-bootstrap/Button';
+  AudioAction, AudioState
+} from '@/types/frontend/audio';
 import { findClosestFileIdx } from '@/utils/common/dateAndFile';
 
 function timeToStr(timestamp?: number, duration?: number) {

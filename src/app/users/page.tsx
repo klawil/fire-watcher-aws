@@ -1,5 +1,5 @@
-import CofrnLayout from '@/components/layout';
 import UserEditPage from '@/app/users/userEditPage';
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'Users | COFRN',

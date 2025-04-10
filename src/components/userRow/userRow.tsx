@@ -1,19 +1,21 @@
-import { UsersState } from '@/types/frontend/users';
-import styles from './userRow.module.css';
-import Button from 'react-bootstrap/Button';
-import Container from 'react-bootstrap/Container';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import { LoggedInUserContext } from '@/utils/frontend/clientContexts';
-import UserEdit from '@/components/userEdit/userEdit';
+import Link from 'next/link';
 import {
   useContext, useEffect, useState
 } from 'react';
+import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
+import Row from 'react-bootstrap/Row';
 import { BsTrash } from 'react-icons/bs';
-import { UsersDispatchContext } from '@/utils/frontend/usersState';
-import { formatPhone } from '@/utils/common/strings';
-import Link from 'next/link';
+
+import styles from './userRow.module.css';
+
+import UserEdit from '@/components/userEdit/userEdit';
 import { validDepartments } from '@/types/api/users';
+import { UsersState } from '@/types/frontend/users';
+import { formatPhone } from '@/utils/common/strings';
+import { LoggedInUserContext } from '@/utils/frontend/clientContexts';
+import { UsersDispatchContext } from '@/utils/frontend/usersState';
 
 export default function UserRow({
   user,

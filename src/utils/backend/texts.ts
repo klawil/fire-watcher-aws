@@ -1,24 +1,25 @@
-import { getLogger } from '@/utils/common/logger';
-import {
-  FullUserObject, PagingTalkgroup, UserDepartment
-} from '@/types/api/users';
-import {
-  FullTextObject, TextTypes
-} from '@/types/api/texts';
 import CloudWatch from 'aws-sdk/clients/cloudwatch';
-import { PhoneNumberTypes } from '@/types/backend/department';
-import { getUserPermissions } from '../common/user';
+import twilio from 'twilio';
+
 import {
   getTwilioSecret, twilioPhoneCategories
 } from '@/deprecated/utils/general';
-import twilio from 'twilio';
+import {
+  FullTextObject, TextTypes
+} from '@/types/api/texts';
+import {
+  FullUserObject, PagingTalkgroup, UserDepartment
+} from '@/types/api/users';
+import { AlertCategory } from '@/types/backend/alerts';
+import { PhoneNumberTypes } from '@/types/backend/department';
 import {
   TypedScanInput, TypedUpdateInput
 } from '@/types/backend/dynamo';
 import {
   TABLE_TEXT, TABLE_USER, typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { AlertCategory } from '@/types/backend/alerts';
+import { getLogger } from '@/utils/common/logger';
+import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('stack/resources/utils/texts');
 

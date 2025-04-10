@@ -1,5 +1,6 @@
-import CofrnLayout from '@/components/layout';
 import TextsPage from './textsPage';
+
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'Texts | COFRN',

@@ -1,12 +1,13 @@
-import * as aws from 'aws-sdk';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
-import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
-import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
+import * as aws from 'aws-sdk';
+
 import {
   ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject
 } from '@/deprecated/common/audioApi';
+import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
+import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('audio');

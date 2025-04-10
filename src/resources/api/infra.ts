@@ -1,20 +1,21 @@
-import * as aws from 'aws-sdk';
 import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
+import * as aws from 'aws-sdk';
+
+import { PageBody } from '@/deprecated/types/queue';
+import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
+import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
 import {
   getTwilioSecret, validateBodyIsJson
 } from '@/deprecated/utils/general';
-import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
-import { PageBody } from '@/deprecated/types/queue';
-import { getLogger } from '@/utils/common/logger';
-import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
+import { Heartbeat } from '@/types/api/heartbeats';
 import { PagingTalkgroup } from '@/types/api/users';
 import { SiteStatusQueueItem } from '@/types/backend/queue';
 import {
   TABLE_STATUS, typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { Heartbeat } from '@/types/api/heartbeats';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('infra');
 

@@ -1,10 +1,11 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import * as twilio from 'twilio';
+
 import {
   PhoneNumberConfig, TwilioConfig
 } from '@/deprecated/utils/general';
-import { getLogger } from '@/utils/common/logger';
 import { CreateTextApi } from '@/types/api/twilio';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('_twilio');
 

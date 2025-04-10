@@ -5,22 +5,24 @@ import React, {
 } from 'react';
 import Container from 'react-bootstrap/Container';
 import Table from 'react-bootstrap/Table';
-import styles from './textsPage.module.css';
-import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
-import { fNameToDate } from '@/utils/common/strings';
-import {
-  dateTimeToTimeStr, secondsToTime
-} from '@/utils/common/dateAndFile';
-import { useRefIntersection } from '@/utils/frontend/uiUtils';
-import {
-  AddAlertContext, LoggedInUserContext
-} from '@/utils/frontend/clientContexts';
 import { Variant } from 'react-bootstrap/esm/types';
-import { typeFetch } from '@/utils/frontend/typeFetch';
+
+import styles from './textsPage.module.css';
+
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   FrontendTextObject, GetAllTextsApi
 } from '@/types/api/texts';
 import { validDepartments } from '@/types/api/users';
+import {
+  dateTimeToTimeStr, secondsToTime
+} from '@/utils/common/dateAndFile';
+import { fNameToDate } from '@/utils/common/strings';
+import {
+  AddAlertContext, LoggedInUserContext
+} from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import { useRefIntersection } from '@/utils/frontend/uiUtils';
 
 const maxParallelTableLoads = 3;
 

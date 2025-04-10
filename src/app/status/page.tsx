@@ -1,5 +1,6 @@
-import CofrnLayout from '@/components/layout';
 import StatusPage from './statusPage';
+
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'System Status | COFRN',

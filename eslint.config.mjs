@@ -2,6 +2,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 import stylistic from '@stylistic/eslint-plugin';
+import importPlugin from 'eslint-plugin-import';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,8 +31,43 @@ const eslintConfig = [
   {
     plugins: {
       '@stylistic': stylistic,
+      '@import': importPlugin,
     },
     rules: {
+      '@import/no-named-as-default': 'warn',
+      '@import/no-named-as-default-member': 'warn',
+
+      '@import/default': 'error',
+      '@import/no-duplicates': 'error',
+      '@import/export': 'error',
+      '@import/extensions': [
+        'error',
+        'never',
+      ],
+      '@import/first': 'error',
+      '@import/namespace': 'error',
+      '@import/newline-after-import': 'error',
+      '@import/no-absolute-path': 'error',
+      '@import/no-extraneous-dependencies': 'error',
+      '@import/no-unresolved': 'error',
+      '@import/no-unused-modules': 'error',
+      '@import/no-useless-path-segments': 'error',
+      '@import/order': [
+        'error',
+        {
+          'newlines-between': 'always',
+          alphabetize: {
+            order: 'asc',
+          },
+          named: {
+            enabled: true,
+            import: true,
+            export: false,
+            require: true,
+            cjsExports: false,
+          },
+        },
+      ],
       '@stylistic/no-extra-parens': [
         'error',
         'all',

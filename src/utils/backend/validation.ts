@@ -1,5 +1,5 @@
-import { getLogger } from '@/utils/common/logger';
 import { Validator } from '@/types/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('stack/utils/validation');
 

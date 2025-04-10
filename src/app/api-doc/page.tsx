@@ -1,6 +1,8 @@
-import CofrnLayout from '@/components/layout';
-import ApiDocPage from './apiDocPage';
 import { readFileSync } from 'fs';
+
+import ApiDocPage from './apiDocPage';
+
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'API Documentation | COFRN',

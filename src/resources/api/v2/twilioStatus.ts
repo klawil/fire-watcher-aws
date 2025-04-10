@@ -1,24 +1,28 @@
 import * as AWS from 'aws-sdk';
-import { generateApi400Body } from '@/types/api/_shared';
-import { getLogger } from '@/utils/common/logger';
+
 import {
-  handleResourceApi, LambdaApiFunction, validateRequest
+  LambdaApiFunction,
+  handleResourceApi, validateRequest
 } from './_base';
-import {
-  createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator
-} from '@/types/api/twilio';
 import { validateTwilioRequest } from './_twilio';
+
 import {
   getTwilioSecret, twilioPhoneNumbers
 } from '@/deprecated/utils/general';
+import { generateApi400Body } from '@/types/api/_shared';
+import { FullTextObject } from '@/types/api/texts';
+import {
+  UpdateTextStatusApi,
+  createTextQueryValidator, updateTextStatusBodyValidator, updateTextStatusParamsValidator
+} from '@/types/api/twilio';
 import {
   FullUserObject, validDepartments
 } from '@/types/api/users';
+import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
 import {
   TABLE_TEXT, TABLE_USER, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { FullTextObject } from '@/types/api/texts';
-import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
+import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('twilioStatus');
 const sqs = new AWS.SQS();

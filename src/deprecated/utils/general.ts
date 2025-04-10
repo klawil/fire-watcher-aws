@@ -1,13 +1,14 @@
 import * as aws from 'aws-sdk';
-import { getLogger } from '@/utils/common/logger';
+
 import { MessageType } from '@/deprecated/common/frontendApi';
-import { parsePhone } from '@/utils/common/strings';
-import {
-  PhoneNumberAccount, PhoneNumberTypes, TwilioAccounts, TwilioNumberTypes
-} from '@/types/backend/department';
 import {
   UserDepartment, validDepartments
 } from '@/types/api/users';
+import {
+  PhoneNumberAccount, PhoneNumberTypes, TwilioAccounts, TwilioNumberTypes
+} from '@/types/backend/department';
+import { getLogger } from '@/utils/common/logger';
+import { parsePhone } from '@/utils/common/strings';
 
 const logger = getLogger('u-gen');
 const twilio = require('twilio'); // eslint-disable-line @typescript-eslint/no-require-imports
