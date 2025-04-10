@@ -35,7 +35,7 @@ export async function typeFetch<T extends Api>({
           value = [ value, ];
         }
 
-        value.forEach((v: unknown) => searchStr.set(key, String(v)));
+        value.forEach((v: unknown) => searchStr.append(key, String(v)));
       });
     apiPath += `?${searchStr.toString()}`;
   }
