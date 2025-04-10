@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect } from 'react';
-import { SwaggerUIBundle } from 'swagger-ui-dist'
+import { SwaggerUIBundle } from 'swagger-ui-dist';
 import 'swagger-ui-dist/swagger-ui.css';
 import 'swagger-themes/themes/dark.css';
 
@@ -22,5 +22,5 @@ export default function ApiDocPage({
     });
   });
 
-  return (<div id="myDomId"></div>)
-};
+  return <div id='myDomId'></div>;
+}

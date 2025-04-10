@@ -1,12 +1,18 @@
-import { UsersDispatchContext } from "@/utils/frontend/usersState";
-import { useCallback, useContext, useState } from "react";
-import Spinner from "react-bootstrap/Spinner";
-import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
-import { BsArrowCounterclockwise, BsSave, BsTrash } from "react-icons/bs";
-import { AddAlertContext } from "@/utils/frontend/clientContexts";
-import { CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi, UserDepartment } from "@/types/api/users";
-import { typeFetch } from "@/utils/frontend/typeFetch";
+import { UsersDispatchContext } from '@/utils/frontend/usersState';
+import {
+  useCallback, useContext, useState
+} from 'react';
+import Spinner from 'react-bootstrap/Spinner';
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
+import {
+  BsArrowCounterclockwise, BsSave, BsTrash
+} from 'react-icons/bs';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import {
+  CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi, UserDepartment
+} from '@/types/api/users';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 
 const baseCallSign: {
   [key in UserDepartment]: string;
@@ -28,7 +34,10 @@ export default function UserDepartmentRow({
   loggedInUserDepartments: UserDepartment[];
 }>) {
   const dispatch = useContext(UsersDispatchContext);
-  const [changes, setChangesRaw] = useState<UpdateUserDepartmentApi['body']>({});
+  const [
+    changes,
+    setChangesRaw,
+  ] = useState<UpdateUserDepartmentApi['body']>({});
   const setChanges = useCallback((vals: UpdateUserDepartmentApi['body']) => {
     setChangesRaw(oldValue => {
       const newValue = {
@@ -66,16 +75,25 @@ export default function UserDepartmentRow({
       }
 
       return newValue;
-    })
-  }, [dep, user]);
+    });
+  }, [
+    dep,
+    user,
+  ]);
   const addAlert = useContext(AddAlertContext);
 
   const hasChanges = (Object.keys(changes || {}) as (keyof typeof changes)[])
     .filter(key => typeof changes?.[key] !== 'undefined' && changes[key] !== '')
     .length > 0;
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorFields, setErrorFields] = useState<string[]>([]);
+  const [
+    isSaving,
+    setIsSaving,
+  ] = useState(false);
+  const [
+    errorFields,
+    setErrorFields,
+  ] = useState<string[]>([]);
   async function saveChanges() {
     if (!hasChanges) return;
 
@@ -93,14 +111,20 @@ export default function UserDepartmentRow({
       let code;
       let apiResult;
       if (!user[dep]) {
-        [ code, apiResult ] = await typeFetch<CreateUserDepartmentApi>({
+        [
+          code,
+          apiResult,
+        ] = await typeFetch<CreateUserDepartmentApi>({
           path: '/api/v2/users/{id}/{department}/',
           method: 'POST',
           params: apiParams,
           body: apiBody,
         });
       } else {
-        [ code, apiResult ] = await typeFetch<UpdateUserDepartmentApi>({
+        [
+          code,
+          apiResult,
+        ] = await typeFetch<UpdateUserDepartmentApi>({
           path: '/api/v2/users/{id}/{department}/',
           method: 'PATCH',
           params: apiParams,
@@ -110,19 +134,25 @@ export default function UserDepartmentRow({
       if (
         code !== 200 ||
         apiResult === null
-      ) throw { code, apiResult };
+      ) throw {
+        code, apiResult,
+      };
       if ('errors' in apiResult) {
         setErrorFields(apiResult.errors);
-        throw { code, apiResult };
+        throw {
+          code, apiResult,
+        };
       } else if ('message' in apiResult) {
-        throw { code, apiResult };
+        throw {
+          code, apiResult,
+        };
       } else {
         dispatch({
           action: 'UpdateUser',
           phone: user.phone,
           user: {
             [dep]: {
-              ...(apiResult[dep] || {}),
+              ...apiResult[dep] || {},
             },
           },
         });
@@ -135,7 +165,10 @@ export default function UserDepartmentRow({
     setIsSaving(false);
   }
 
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
   async function deleteDepartment() {
     if (!user[dep]) return;
 
@@ -145,7 +178,10 @@ export default function UserDepartmentRow({
         id: user.phone,
         department: dep,
       };
-      const [ code, apiResult ] = await typeFetch<DeleteUserDepartmentApi>({
+      const [
+        code,
+        apiResult,
+      ] = await typeFetch<DeleteUserDepartmentApi>({
         path: '/api/v2/users/{id}/{department}/',
         method: 'DELETE',
         params: apiParams,
@@ -154,7 +190,9 @@ export default function UserDepartmentRow({
         code !== 200 ||
         apiResult === null ||
         'message' in apiResult
-      ) throw { code, apiResult };
+      ) throw {
+        code, apiResult,
+      };
 
       dispatch({
         action: 'UpdateUser',
@@ -170,9 +208,9 @@ export default function UserDepartmentRow({
     setIsDeleting(false);
   }
 
-  return (<tr className="align-middle">
-    <td className="text-center ps-3"><Form.Check
-      type="switch"
+  return <tr className='align-middle'>
+    <td className='text-center ps-3'><Form.Check
+      type='switch'
       isInvalid={errorFields.includes('active')}
       checked={
         typeof changes?.active !== 'undefined'
@@ -184,9 +222,9 @@ export default function UserDepartmentRow({
         active: e.target.checked,
       })}
     /></td>
-    <td className="ps-3">
+    <td className='ps-3'>
       <Form.Control
-        type="text"
+        type='text'
         isInvalid={errorFields.includes('callSign')}
         value={
           typeof changes?.callSign !== 'undefined'
@@ -204,7 +242,7 @@ export default function UserDepartmentRow({
       />
     </td>
     <td><Form.Check
-      type="switch"
+      type='switch'
       checked={
         typeof changes?.admin !== 'undefined'
           ? changes.admin || false
@@ -218,22 +256,22 @@ export default function UserDepartmentRow({
     /></td>
     <td>
       <Button
-        variant="success"
-        className="m-1"
+        variant='success'
+        className='m-1'
         disabled={!hasChanges || isSaving}
         onClick={saveChanges}
-      >{isSaving ? (<Spinner size="sm" />) : (<BsSave />)}</Button>
+      >{isSaving ? <Spinner size='sm' /> : <BsSave />}</Button>
       {typeof user[dep] !== 'undefined' && <Button
-        variant="danger"
-        className="m-1"
+        variant='danger'
+        className='m-1'
         disabled={!loggedInUserDepartments.includes(dep)}
         onClick={deleteDepartment}
-      >{isDeleting ? (<Spinner size="sm" />) : (<BsTrash />)}</Button>}
+      >{isDeleting ? <Spinner size='sm' /> : <BsTrash />}</Button>}
       {hasChanges && <Button
-        variant="warning"
-        className="m-1"
+        variant='warning'
+        className='m-1'
         onClick={() => setChangesRaw({})}
       ><BsArrowCounterclockwise /></Button>}
     </td>
-  </tr>);
+  </tr>;
 }

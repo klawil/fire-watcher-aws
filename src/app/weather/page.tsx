@@ -1,5 +1,5 @@
-import CofrnLayout from "@/components/layout";
-import WeatherPage from "@/app/weather/weatherPage";
+import CofrnLayout from '@/components/layout';
+import WeatherPage from '@/app/weather/weatherPage';
 
 export const metadata = {
   title: 'Weather | COFRN',
@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <CofrnLayout pageConfig={{ title: 'Weather' }}>
+  return <CofrnLayout pageConfig={{ title: 'Weather', }}>
     <WeatherPage />
-  </CofrnLayout>
+  </CofrnLayout>;
 }

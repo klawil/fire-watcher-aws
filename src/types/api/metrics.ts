@@ -1,5 +1,7 @@
-import { Validator } from "@/types/backend/validation";
-import { api400Body, api401Body, api403Body, api500Body } from "./_shared";
+import { Validator } from '@/types/backend/validation';
+import {
+  api400Body, api401Body, api403Body, api500Body
+} from './_shared';
 
 export interface TimingMetric {
   type: 'timing';
@@ -35,32 +37,39 @@ export type GetMetricsApi = {
   path: '/api/v2/metrics/';
   method: 'POST';
   body: {
+
     /**
      * The list of metrics to retrieve
      */
     metrics: MetricToFetch[];
+
     /**
      * Start of the time window to gather metrics in
      */
     startTime?: number;
+
     /**
      * End of the time window to gather metrics in
      */
     endTime?: number;
+
     /**
      * The amount of time for each data point, in seconds
      */
     period?: number;
+
     /**
      * Amount of time to cover in the response, in seconds
      */
     timerange?: number;
+
     /**
      * Pass 'y' to retrieve the most recent data, even if it is not fully settled
      */
     live?: 'y' | 'n';
   };
   responses: {
+
     /**
      * @contentType application/json
      */
@@ -78,18 +87,22 @@ export type GetMetricsApi = {
         };
       }[];
     };
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
@@ -98,13 +111,13 @@ export type GetMetricsApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const getMetricsApiBodyValidator: Validator<GetMetricsApi['body']> = {
   metrics: {
     required: true,
     types: {
-      array: {}
+      array: {},
     },
   },
   startTime: {
@@ -135,7 +148,10 @@ export const getMetricsApiBodyValidator: Validator<GetMetricsApi['body']> = {
     required: false,
     types: {
       string: {
-        exact: [ 'y', 'n' ],
+        exact: [
+          'y',
+          'n',
+        ],
       },
     },
   },
@@ -146,19 +162,22 @@ export const timingMetricValidator: Validator<TimingMetric> = {
     required: true,
     types: {
       string: {
-        exact: [ 'timing' ],
+        exact: [ 'timing', ],
       },
     },
   },
   label: {
     required: true,
-    types: { string: {} },
+    types: { string: {}, },
   },
   namespace: {
     required: true,
     types: {
       string: {
-        exact: [ 'DTR Metrics', 'Twilio Health', ],
+        exact: [
+          'DTR Metrics',
+          'Twilio Health',
+        ],
       },
     },
   },
@@ -166,7 +185,14 @@ export const timingMetricValidator: Validator<TimingMetric> = {
     required: true,
     types: {
       string: {
-        exact: [ 'Decode Rate', 'DeliveredTime', 'PageDuration', 'PageToQueue', 'SentTime', 'UploadTime', ],
+        exact: [
+          'Decode Rate',
+          'DeliveredTime',
+          'PageDuration',
+          'PageToQueue',
+          'SentTime',
+          'UploadTime',
+        ],
       },
     },
   },
@@ -174,7 +200,11 @@ export const timingMetricValidator: Validator<TimingMetric> = {
     required: false,
     types: {
       string: {
-        exact: [ 'PoolTable', 'Saguache', 'SanAntonio', ],
+        exact: [
+          'PoolTable',
+          'Saguache',
+          'SanAntonio',
+        ],
       },
     },
   },
@@ -182,30 +212,40 @@ export const timingMetricValidator: Validator<TimingMetric> = {
     required: true,
     types: {
       string: {
-        exact: [ 'Minimum', 'Maximum', 'SampleCount', 'p50', 'p80', ],
+        exact: [
+          'Minimum',
+          'Maximum',
+          'SampleCount',
+          'p50',
+          'p80',
+        ],
       },
     },
   },
-}
+};
 
 export const countMetricValidator: Validator<CountMetric> = {
   type: {
     required: true,
     types: {
       string: {
-        exact: [ 'count' ],
+        exact: [ 'count', ],
       },
     },
   },
   label: {
     required: true,
-    types: { string: {} },
+    types: { string: {}, },
   },
   namespace: {
     required: true,
     types: {
       string: {
-        exact: [ 'CVFD API', 'Twilio Health', 'VHF Metrics', ],
+        exact: [
+          'CVFD API',
+          'Twilio Health',
+          'VHF Metrics',
+        ],
       },
     },
   },
@@ -213,7 +253,12 @@ export const countMetricValidator: Validator<CountMetric> = {
     required: true,
     types: {
       string: {
-        exact: [ '120-home', 'Call', 'Initiated', 'cvfd-station', ],
+        exact: [
+          '120-home',
+          'Call',
+          'Initiated',
+          'cvfd-station',
+        ],
       },
     },
   },
@@ -229,30 +274,37 @@ export const countMetricValidator: Validator<CountMetric> = {
     required: false,
     types: {
       string: {
-        exact: [ 'createDTR', 'createVHF', ],
+        exact: [
+          'createDTR',
+          'createVHF',
+        ],
       },
     },
   },
-}
+};
 
 export const lambdaMetricValidator: Validator<LambdaMetric> = {
   type: {
     required: true,
     types: {
       string: {
-        exact: [ 'lambda' ],
+        exact: [ 'lambda', ],
       },
     },
   },
   fn: {
     required: true,
-    types: { string: {} },
+    types: { string: {}, },
   },
   metric: {
     required: true,
     types: {
       string: {
-        exact: [ 'Duration', 'Errors', 'Invocations', ],
+        exact: [
+          'Duration',
+          'Errors',
+          'Invocations',
+        ],
       },
     },
   },
@@ -260,8 +312,13 @@ export const lambdaMetricValidator: Validator<LambdaMetric> = {
     required: true,
     types: {
       string: {
-        exact: [ 'p50', 'Maximum', 'Minimum', 'Sum', ],
+        exact: [
+          'p50',
+          'Maximum',
+          'Minimum',
+          'Sum',
+        ],
       },
     },
   },
-}
+};

@@ -1,5 +1,7 @@
-import { FrontendUserObject, validDepartments } from "@/types/api/users";
-import { UserPermissions } from "@/types/backend/user";
+import {
+  FrontendUserObject, validDepartments
+} from '@/types/api/users';
+import { UserPermissions } from '@/types/backend/user';
 
 export function getUserPermissions(user: FrontendUserObject | null): UserPermissions {
   const userPerms: UserPermissions = {

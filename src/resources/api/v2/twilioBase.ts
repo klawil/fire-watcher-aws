@@ -1,12 +1,20 @@
 import * as AWS from 'aws-sdk';
-import { CreateTextApi, createTextBodyValidator, createTextQueryValidator } from "@/types/api/twilio";
-import { getTwilioSecret, twilioPhoneNumbers } from '@/deprecated/utils/general';
+import {
+  CreateTextApi, createTextBodyValidator, createTextQueryValidator
+} from '@/types/api/twilio';
+import {
+  getTwilioSecret, twilioPhoneNumbers
+} from '@/deprecated/utils/general';
 import { FullUserObject } from '@/types/api/users';
 import { TwilioTextQueueItem } from '@/types/backend/queue';
 import { validateTwilioRequest } from './_twilio';
-import { handleResourceApi, LambdaApiFunction } from './_base';
+import {
+  handleResourceApi, LambdaApiFunction
+} from './_base';
 import { getLogger } from '@/utils/common/logger';
-import { TABLE_USER, typedGet, typedUpdate } from '@/utils/backend/dynamoTyped';
+import {
+  TABLE_USER, typedGet, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 import { getUserPermissions } from '@/utils/common/user';
 import { departmentConfig } from '@/types/backend/department';
 import { validateObject } from '@/utils/backend/validation';
@@ -18,7 +26,7 @@ const queueUrl = process.env.SQS_QUEUE;
 
 function buildTwilioResponse(
   statusCode: keyof CreateTextApi['responses'],
-  message?: string,
+  message?: string
 ): [ keyof CreateTextApi['responses'], string, null, string ] {
   const msgString = message
     ? `<Message>${message}</Message>`
@@ -74,12 +82,18 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   const bodyObj: {
     [key: string]: unknown;
   } = {};
-  for (const [key, value] of urlParamsBody.entries()) {
+  for (const [
+    key,
+    value,
+  ] of urlParamsBody.entries()) {
     bodyObj[key] = value;
   }
-  const [ body, bodyErrors ] = validateObject<CreateTextApi['body']>(
+  const [
+    body,
+    bodyErrors,
+  ] = validateObject<CreateTextApi['body']>(
     bodyObj,
-    createTextBodyValidator,
+    createTextBodyValidator
   );
   if (
     body === null ||
@@ -90,9 +104,12 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   }
 
   // Get and validate the query params
-  const [ query, queryErrors ] = validateObject(
+  const [
+    query,
+    queryErrors,
+  ] = validateObject(
     event.queryStringParameters || {},
-    createTextQueryValidator,
+    createTextQueryValidator
   );
   if (
     query === null ||
@@ -116,12 +133,15 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   }
 
   // Validate the signature
-  const [ isValid, isTest ] = validateTwilioRequest(
+  const [
+    isValid,
+    isTest,
+  ] = validateTwilioRequest(
     event,
     query,
     bodyObj,
     phoneNumberConf,
-    twilioConf,
+    twilioConf
   );
   if (!isValid) {
     return buildTwilioResponse(200);
@@ -154,13 +174,13 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   ) {
     return buildTwilioResponse(
       200,
-      'This number is not able to receive messages',
+      'This number is not able to receive messages'
     );
   }
   if (!sendingUser[phoneNumberConf.department]?.active) {
     return buildTwilioResponse(
       200,
-      `You are not an active member of the ${phoneNumberConf.department} department`,
+      `You are not an active member of the ${phoneNumberConf.department} department`
     );
   }
 
@@ -176,12 +196,12 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
     });
     return buildTwilioResponse(
       200,
-      textCommands[body.Body].response,
+      textCommands[body.Body].response
     );
   } else if (body.Body.startsWith('!')) {
     return buildTwilioResponse(
       200,
-      'Messages that begin with an exclamation mark are reserved for testing purposes',
+      'Messages that begin with an exclamation mark are reserved for testing purposes'
     );
   }
 
@@ -198,9 +218,9 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
     MessageBody: JSON.stringify(queueMessage),
     QueueUrl: queueUrl,
   }).promise();
-  
+
   return buildTwilioResponse(200);
-}
+};
 
 export const main = handleResourceApi.bind(null, {
   POST,

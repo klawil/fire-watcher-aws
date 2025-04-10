@@ -1,10 +1,13 @@
-import { Validator } from "@/types/backend/validation";
-import { api400Body, api401Body, api403Body, api404Body, api500Body } from "./_shared";
+import { Validator } from '@/types/backend/validation';
+import {
+  api400Body, api401Body, api403Body, api404Body, api500Body
+} from './_shared';
 
 export interface FullTalkgroupObject {
   ID: number;
   InUse?: 'Y' | 'N';
   Count?: number;
+
   /**
    * Map of device ID to number of times it has been seen transmitting on this talkgroup
    */
@@ -24,12 +27,14 @@ export type GetAllTalkgroupsApi = {
   path: '/api/v2/talkgroups/';
   method: 'GET';
   query: {
+
     /**
      * Pass 'y' to access all talkgroups. The default behavior is to only return talkgroups that have recordings associated with them
      */
     all?: 'y';
   };
   responses: {
+
     /**
      * @contentType application/json
      */
@@ -38,23 +43,25 @@ export type GetAllTalkgroupsApi = {
       loadedAll: boolean;
       talkgroups: SmallTalkgroupObject[];
     };
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
-}
+};
 
 export const getAllTalkgroupsApiQueryValidator: Validator<GetAllTalkgroupsApi['query']> = {
   all: {
     required: false,
     types: {
       string: {
-        exact: [ 'y' ],
+        exact: [ 'y', ],
       },
     },
   },
@@ -72,24 +79,28 @@ export type GetTalkgroupApi = {
     id: number;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FullTalkgroupObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
-}
+};
 
 /**
  * Update the name of a talkgroup
@@ -105,32 +116,39 @@ export type PatchTalkgroupApi = {
     id: number;
   };
   body: {
+
     /**
      * New name for the talkgroup. Pass null to delete the name. Name may not contain newline or tab characters
      */
     name: string | null;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FullTalkgroupObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
@@ -139,7 +157,7 @@ export type PatchTalkgroupApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const talkgroupParamsValidator: Validator<PatchTalkgroupApi['params']> = {
   id: {

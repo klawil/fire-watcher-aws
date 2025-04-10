@@ -1,4 +1,6 @@
-import { api401Body, api403Body, api500Body } from "./_shared";
+import {
+  api401Body, api403Body, api500Body
+} from './_shared';
 
 interface SiteObjectValue<T = boolean> {
   [tower: string]: T;
@@ -46,6 +48,7 @@ export type GetAllSitesApi = {
   path: '/api/v2/sites/';
   method: 'GET';
   responses: {
+
     /**
      * @contentType application/json
      */
@@ -53,14 +56,17 @@ export type GetAllSitesApi = {
       count: number;
       sites: FullSiteObject[];
     };
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */

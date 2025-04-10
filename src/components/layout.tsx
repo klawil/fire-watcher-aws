@@ -1,10 +1,16 @@
 'use client';
 
-import { PageConfig } from "@/types/frontend/page";
-import CofrnNavbar from "./navbar";
-import { Container, Nav, Navbar } from "react-bootstrap";
-import { LoggedInUserContext, DarkModeContext } from "@/utils/frontend/clientContexts";
-import { useContext, useEffect } from "react";
+import { PageConfig } from '@/types/frontend/page';
+import CofrnNavbar from './navbar';
+import {
+  Container, Nav, Navbar
+} from 'react-bootstrap';
+import {
+  LoggedInUserContext, DarkModeContext
+} from '@/utils/frontend/clientContexts';
+import {
+  useContext, useEffect
+} from 'react';
 
 export default function CofrnLayout({
   children,
@@ -36,9 +42,13 @@ export default function CofrnLayout({
     if (pageConfig.requireAdmin && !user.isAdmin) {
       window.location.replace('/');
     }
-  }, [user, pageConfig.requireAdmin, pageConfig.requireAuth]);
+  }, [
+    user,
+    pageConfig.requireAdmin,
+    pageConfig.requireAuth,
+  ]);
 
-  if (colorModeName === null) return (<></>);
+  if (colorModeName === null) return <></>;
 
   const containerClasses: string[] = [];
   if (pageConfig.centerAll) {
@@ -58,7 +68,7 @@ export default function CofrnLayout({
     <LoggedInUserContext.Provider value={user}>
       <CofrnNavbar pageConfig={pageConfig} />
 
-      {pageConfig.title && <h1 className="text-center">{pageConfig.title}</h1>}
+      {pageConfig.title && <h1 className='text-center'>{pageConfig.title}</h1>}
 
       <Container
         {...containerParams}
@@ -69,26 +79,26 @@ export default function CofrnLayout({
 
       <Navbar
         bg={colorModeName}
-        className="mt-4"
+        className='mt-4'
       >
         <Container
           fluid={true}
-          className="justify-content-center"
+          className='justify-content-center'
         >
-          <Navbar.Brand href="#">
+          <Navbar.Brand href='#'>
             <img // eslint-disable-line @next/next/no-img-element
-              src="/favicon.png"
-              width="30"
-              height="24"
-              className="d-inline-block align-top"
-              alt="COFRN"
+              src='/favicon.png'
+              width='30'
+              height='24'
+              className='d-inline-block align-top'
+              alt='COFRN'
               style={{
                 filter: `invert(${colorModeName === 'dark' ? 1 : 0})`,
               }}
             />
           </Navbar.Brand>
-          <Nav.Link className="mx-4" href="/about">About Us</Nav.Link>
-          <Navbar.Text className="mx-4">© 2025 First Responder Notifications, LLC</Navbar.Text>
+          <Nav.Link className='mx-4' href='/about'>About Us</Nav.Link>
+          <Navbar.Text className='mx-4'>© 2025 First Responder Notifications, LLC</Navbar.Text>
         </Container>
       </Navbar>
     </LoggedInUserContext.Provider>

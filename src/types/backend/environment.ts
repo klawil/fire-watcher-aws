@@ -13,7 +13,7 @@ export interface LambdaEnvironment {
   COSTS_BUCKET: string;
   FIREHOSE_NAME: string;
   SQS_QUEUE: string;
-};
+}
 
 declare global {
   namespace NodeJS { // eslint-disable-line @typescript-eslint/no-namespace

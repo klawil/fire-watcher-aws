@@ -1,6 +1,10 @@
-import { CreateTextApi } from "@/types/api/twilio";
-import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
-import { DynamicSiteKeys, FullSiteObject } from "@/types/api/sites";
+import { CreateTextApi } from '@/types/api/twilio';
+import {
+  FullUserObject, PagingTalkgroup, UserDepartment
+} from '@/types/api/users';
+import {
+  DynamicSiteKeys, FullSiteObject
+} from '@/types/api/sites';
 
 export interface ActivateUserQueueItem {
   action: 'activate-user';
@@ -48,8 +52,8 @@ export interface TranscribeJobResultQueueItem {
   action: 'transcribe';
   'detail-type': string;
   detail: {
-		TranscriptionJobName: string;
-		TranscriptionJobStatus: string;
+    TranscriptionJobName: string;
+    TranscriptionJobStatus: string;
   };
 }
 

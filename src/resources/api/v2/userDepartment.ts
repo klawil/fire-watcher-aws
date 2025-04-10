@@ -1,9 +1,17 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '@/utils/common/logger';
-import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
-import { CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator } from '@/types/api/users';
-import { api401Body, api403Body, api404Body, api500Body, generateApi400Body } from '@/types/api/_shared';
-import { TABLE_USER, typedGet, typedUpdate } from '@/utils/backend/dynamoTyped';
+import {
+  getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest
+} from './_base';
+import {
+  CreateUserDepartmentApi, createUserDepartmentApiBodyValidator, DeleteUserDepartmentApi, FullUserObject, userDepartmentApiParamsValidator
+} from '@/types/api/users';
+import {
+  api401Body, api403Body, api404Body, api500Body, generateApi400Body
+} from '@/types/api/_shared';
+import {
+  TABLE_USER, typedGet, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { ActivateUserQueueItem } from '@/types/backend/queue';
 
@@ -41,13 +49,29 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
   // Authorize the user
   const phoneToEdit = params.id;
   const departmentToEdit = params.department;
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
+  if (!userPerms.isAdmin) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
   if (
     !userPerms.isDistrictAdmin &&
     !userPerms.adminDepartments.includes(departmentToEdit)
-  ) return [ 403, api403Body, userHeaders ];
+  ) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
 
   // Make sure the phone exists
   const currentUser = await typedGet<FullUserObject>({
@@ -56,8 +80,11 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
       phone: phoneToEdit,
     },
   });
-  if (!currentUser.Item)
-    return [ 404, api404Body, userHeaders ];
+  if (!currentUser.Item) return [
+    404,
+    api404Body,
+    userHeaders,
+  ];
 
   // Build the update
   const currentDepConfig = currentUser.Item[departmentToEdit] || {};
@@ -113,32 +140,54 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     getFrontendUserObj(updateResult.Attributes as FullUserObject),
     userHeaders,
   ];
-}
+};
 
 const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event) {
   logger.trace('POST', ...arguments);
 
   // Validate the parameters
-  const [ params, paramsErrors ] = validateObject<CreateUserDepartmentApi['params']>(
+  const [
+    params,
+    paramsErrors,
+  ] = validateObject<CreateUserDepartmentApi['params']>(
     event.pathParameters,
-    userDepartmentApiParamsValidator,
+    userDepartmentApiParamsValidator
   );
   if (
     params === null ||
     paramsErrors.length > 0
-  )
-    return [ 400, generateApi400Body(paramsErrors), {} ];
+  ) return [
+    400,
+    generateApi400Body(paramsErrors),
+    {},
+  ];
 
   // Authorize the user
   const phoneToEdit = params.id;
   const departmentToEdit = params.department;
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
+  if (!userPerms.isAdmin) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
   if (
     !userPerms.isDistrictAdmin &&
     !userPerms.adminDepartments.includes(departmentToEdit)
-  ) return [ 403, api403Body, userHeaders ];
+  ) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
 
   // Run the deletion of the department
   const result = await typedUpdate<FullUserObject>({
@@ -163,7 +212,7 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     getFrontendUserObj(result.Attributes as FullUserObject),
     userHeaders,
   ];
-}
+};
 
 export const main = handleResourceApi.bind(null, {
   POST,

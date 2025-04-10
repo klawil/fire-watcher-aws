@@ -1,4 +1,6 @@
-import { Stack, StackProps, Duration, Tags, CfnOutput } from 'aws-cdk-lib';
+import {
+  Stack, StackProps, Duration, Tags, CfnOutput
+} from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -24,23 +26,25 @@ import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
-import { PhoneNumberAccount, validPhoneNumberAccounts } from '@/types/backend/department';
+import {
+  PhoneNumberAccount, validPhoneNumberAccounts
+} from '@/types/backend/department';
 import { LambdaEnvironment } from '@/types/backend/environment';
-import { resolve } from "path";
+import { resolve } from 'path';
 
 dotenv.config({ path: resolve(
   __dirname,
   '..', // stack
-  '..', //src
+  '..', // src
   '..', // root
-  '.env',
-) });
+  '.env'
+), });
 
 const resourceBase = resolve(
   __dirname,
   '..', // stack
   '..', // src
-  'resources',
+  'resources'
 );
 
 const bucketName = process.env.BUCKET_NAME as string;
@@ -69,26 +73,26 @@ export class FireWatcherAwsStack extends Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'phone',
-        type: dynamodb.AttributeType.NUMBER
+        type: dynamodb.AttributeType.NUMBER,
       },
     });
     const dtrTable = new dynamodb.Table(this, 'cvfd-dtr-added', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'Talkgroup',
-        type: dynamodb.AttributeType.NUMBER
+        type: dynamodb.AttributeType.NUMBER,
       },
       sortKey: {
         name: 'Added',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
     const textsTable = new dynamodb.Table(this, 'cvfd-messages', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'datetime',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
     const statusTable = new dynamodb.Table(this, 'cofrn-status', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -101,87 +105,87 @@ export class FireWatcherAwsStack extends Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'ID',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
     const siteTable = new dynamodb.Table(this, 'cvfd-sites', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'SiteId',
-        type: dynamodb.AttributeType.STRING
-      }
+        type: dynamodb.AttributeType.STRING,
+      },
     });
     const dtrTranslationTable = new dynamodb.Table(this, 'cvfd-dtr-translation', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
         name: 'Key',
-        type: dynamodb.AttributeType.STRING
+        type: dynamodb.AttributeType.STRING,
       },
-      timeToLiveAttribute: 'TTL'
+      timeToLiveAttribute: 'TTL',
     });
 
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'AddedIndex',
       partitionKey: {
         name: 'Emergency',
-        type: dynamodb.AttributeType.NUMBER
+        type: dynamodb.AttributeType.NUMBER,
       },
       sortKey: {
         name: 'Added',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'StartTimeTgIndex',
       partitionKey: {
         name: 'Talkgroup',
-        type: dynamodb.AttributeType.NUMBER
+        type: dynamodb.AttributeType.NUMBER,
       },
       sortKey: {
         name: 'StartTime',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'StartTimeEmergIndex',
       partitionKey: {
         name: 'Emergency',
-        type: dynamodb.AttributeType.NUMBER
+        type: dynamodb.AttributeType.NUMBER,
       },
       sortKey: {
         name: 'StartTime',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'KeyIndex',
       partitionKey: {
         name: 'Key',
-        type: dynamodb.AttributeType.STRING
-      }
+        type: dynamodb.AttributeType.STRING,
+      },
     });
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'ToneIndex',
       partitionKey: {
         name: 'ToneIndex',
-        type: dynamodb.AttributeType.STRING
+        type: dynamodb.AttributeType.STRING,
       },
       sortKey: {
         name: 'StartTime',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
 
     talkgroupTable.addGlobalSecondaryIndex({
       indexName: 'InUseIndex',
       partitionKey: {
         name: 'InUse',
-        type: dynamodb.AttributeType.STRING
+        type: dynamodb.AttributeType.STRING,
       },
       sortKey: {
         name: 'Count',
-        type: dynamodb.AttributeType.NUMBER
-      }
+        type: dynamodb.AttributeType.NUMBER,
+      },
     });
 
     textsTable.addGlobalSecondaryIndex({
@@ -222,8 +226,8 @@ export class FireWatcherAwsStack extends Stack {
       indexName: 'active',
       partitionKey: {
         name: 'IsActive',
-        type: dynamodb.AttributeType.STRING
-      }
+        type: dynamodb.AttributeType.STRING,
+      },
     });
 
     // Make the S3 bucket for the kinesis stuff
@@ -233,12 +237,12 @@ export class FireWatcherAwsStack extends Stack {
     eventsS3Bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       eventsS3BucketQueueDestination,
-      { prefix: 'data/' }
+      { prefix: 'data/', }
     );
     eventsS3Bucket.addEventNotification(
       s3.EventType.OBJECT_REMOVED,
       eventsS3BucketQueueDestination,
-      { prefix: 'data/' }
+      { prefix: 'data/', }
     );
 
     // Make the S3 bucket for caching cost data from AWS
@@ -250,8 +254,8 @@ export class FireWatcherAwsStack extends Stack {
     const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
       catalogId: glueCatalogId,
       databaseInput: {
-        name: glueDatabaseName
-      }
+        name: glueDatabaseName,
+      },
     });
     const eventsGlueTable = new glue.CfnTable(this, 'cvfd-events-table', {
       databaseName: glueDatabaseName,
@@ -260,35 +264,55 @@ export class FireWatcherAwsStack extends Stack {
         name: glueTableName,
         tableType: 'EXTERNAL_TABLE',
         partitionKeys: [
-          { name: 'year', type: 'int' },
-          { name: 'month', type: 'int' },
-          { name: 'day', type: 'int' },
-          { name: 'hour', type: 'int' },
-          { name: 'event', type: 'string' },
+          {
+            name: 'year', type: 'int',
+          },
+          {
+            name: 'month', type: 'int',
+          },
+          {
+            name: 'day', type: 'int',
+          },
+          {
+            name: 'hour', type: 'int',
+          },
+          {
+            name: 'event', type: 'string',
+          },
         ],
         storageDescriptor: {
           compressed: true,
           inputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat',
           outputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat',
           serdeInfo: {
-            serializationLibrary: 'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
+            serializationLibrary: 'org.apache.hadoop.hive.ql.io.orc.OrcSerde',
           },
           columns: [
-            { name: 'radioId', type: 'string' },
-            { name: 'talkgroup', type: 'string' },
-            { name: 'talkgroupList', type: 'string' },
-            { name: 'tower', type: 'string' },
-            { name: 'timestamp', type: 'bigint' },
+            {
+              name: 'radioId', type: 'string',
+            },
+            {
+              name: 'talkgroup', type: 'string',
+            },
+            {
+              name: 'talkgroupList', type: 'string',
+            },
+            {
+              name: 'tower', type: 'string',
+            },
+            {
+              name: 'timestamp', type: 'bigint',
+            },
           ],
-          location: eventsS3Bucket.s3UrlForObject() + '/data/'
-        }
-      }
+          location: eventsS3Bucket.s3UrlForObject() + '/data/',
+        },
+      },
     });
     eventsGlueTable.addDependency(eventsGlueDatabase);
 
     // Make the role
     const eventsFirehoseRole = new iam.Role(this, 'cvfd-events-firehose-role', {
-      assumedBy: new iam.ServicePrincipal('firehose.amazonaws.com')
+      assumedBy: new iam.ServicePrincipal('firehose.amazonaws.com'),
     });
     eventsS3Bucket.grantReadWrite(eventsFirehoseRole);
     eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
@@ -303,22 +327,26 @@ export class FireWatcherAwsStack extends Stack {
         'glue:GetTable',
         'glue:GetPartition*',
         'glue:GetTableVersions',
-      ]
+      ],
     }));
     eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
-      resources: [ '*' ],
+      resources: [ '*', ],
       actions: [
         'glue:GetDatabase',
         'glue:GetTable',
         'glue:GetPartition*',
         'glue:GetTableVersions',
-      ]
+      ],
     }));
     eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
-      resources: [ '*' ],
-      actions: [ 'logs:CreateLogGroup', 'logs:PutLogEvents', 'logs:CreateLogStream' ]
+      resources: [ '*', ],
+      actions: [
+        'logs:CreateLogGroup',
+        'logs:PutLogEvents',
+        'logs:CreateLogStream',
+      ],
     }));
 
     // Make the glue crawler
@@ -326,34 +354,30 @@ export class FireWatcherAwsStack extends Stack {
       assumedBy: new iam.ServicePrincipal('glue.amazonaws.com'),
       inlinePolicies: {
         all: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              effect: iam.Effect.ALLOW,
-              resources: [ eventsS3BucketQueue.queueArn ],
-              actions: [ 'SQS:SetQueueAttributes' ]
-            }),
-          ]
-        })
+          statements: [ new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            resources: [ eventsS3BucketQueue.queueArn, ],
+            actions: [ 'SQS:SetQueueAttributes', ],
+          }), ],
+        }),
       },
-      managedPolicies: [
-        iam.ManagedPolicy.fromManagedPolicyArn(this, 'glue-managed-policy', 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole')
-      ]
+      managedPolicies: [ iam.ManagedPolicy.fromManagedPolicyArn(this, 'glue-managed-policy', 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'), ],
     });
     new glue.CfnCrawler(this, 'cvfd-events-glue-crawler', {
       role: glueCrawlerRole.roleArn,
       targets: {
-        catalogTargets: [{
+        catalogTargets: [ {
           databaseName: glueDatabaseName,
-          tables: [ glueTableName ],
-          eventQueueArn: eventsS3BucketQueue.queueArn
-        }],
+          tables: [ glueTableName, ],
+          eventQueueArn: eventsS3BucketQueue.queueArn,
+        }, ],
       },
       recrawlPolicy: {
-        recrawlBehavior: 'CRAWL_EVENT_MODE'
+        recrawlBehavior: 'CRAWL_EVENT_MODE',
       },
       schemaChangePolicy: {
         deleteBehavior: 'LOG',
-        updateBehavior: 'LOG'
+        updateBehavior: 'LOG',
       },
       // schedule: {
       //   scheduleExpression: 'cron(15 */2 * * ? *)'
@@ -376,30 +400,34 @@ export class FireWatcherAwsStack extends Stack {
         dataFormatConversionConfiguration: {
           enabled: true,
           inputFormatConfiguration: {
-            deserializer: { openXJsonSerDe: { } }
+            deserializer: { openXJsonSerDe: { }, },
           },
           outputFormatConfiguration: {
-            serializer: { orcSerDe: { } }
+            serializer: { orcSerDe: { }, },
           },
           schemaConfiguration: {
             catalogId: eventsGlueTable.catalogId,
             roleArn: eventsFirehoseRole.roleArn,
             databaseName: eventsGlueTable.databaseName,
-            tableName: glueTableName
-          }
+            tableName: glueTableName,
+          },
         },
         processingConfiguration: {
           enabled: true,
-          processors: [{
+          processors: [ {
             type: 'MetadataExtraction',
             parameters: [
-              { parameterName: 'JsonParsingEngine', parameterValue: 'JQ-1.6' },
-              { parameterName: 'MetadataExtractionQuery', parameterValue: '{event:.event}' },
-            ]
-          }]
+              {
+                parameterName: 'JsonParsingEngine', parameterValue: 'JQ-1.6',
+              },
+              {
+                parameterName: 'MetadataExtractionQuery', parameterValue: '{event:.event}',
+              },
+            ],
+          }, ],
         },
-        dynamicPartitioningConfiguration: { enabled: true }
-      }
+        dynamicPartitioningConfiguration: { enabled: true, },
+      },
     });
 
     // Create the dead letter queue
@@ -409,8 +437,8 @@ export class FireWatcherAwsStack extends Stack {
     const queue = new sqs.Queue(this, 'cvfd-queue', {
       deadLetterQueue: {
         queue: deadLetterQueue,
-        maxReceiveCount: 2
-      }
+        maxReceiveCount: 2,
+      },
     });
 
     // Create the secret for JWT authentication
@@ -449,14 +477,14 @@ export class FireWatcherAwsStack extends Stack {
       initialPolicy: [
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
+          actions: [ 'cloudwatch:PutMetricData', ],
+          resources: [ '*', ],
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [ 'transcribe:*' ],
-          resources: [ '*' ]
-        })
+          actions: [ 'transcribe:*', ],
+          resources: [ '*', ],
+        }),
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: resolve(resourceBase, 's3.ts'),
@@ -464,9 +492,9 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         ...lambdaEnv,
       },
-      timeout: Duration.minutes(1)
+      timeout: Duration.minutes(1),
     });
-    
+
     // Grant access for the S3 handler
     bucket.grantRead(s3Handler);
     dtrTable.grantReadWriteData(s3Handler);
@@ -479,14 +507,14 @@ export class FireWatcherAwsStack extends Stack {
       initialPolicy: [
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
+          actions: [ 'cloudwatch:PutMetricData', ],
+          resources: [ '*', ],
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [ 'transcribe:*' ],
-          resources: [ '*' ]
-        })
+          actions: [ 'transcribe:*', ],
+          resources: [ '*', ],
+        }),
       ],
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: resolve(resourceBase, 'queue.ts'),
@@ -494,7 +522,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         ...lambdaEnv,
       },
-      timeout: Duration.minutes(1)
+      timeout: Duration.minutes(1),
     });
     queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
 
@@ -508,20 +536,21 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create a queue for cloudwatch alarms
     const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData', 'cloudwatch:ListTagsForResource' ],
-          resources: [ '*' ]
-        }),
-      ],
+      initialPolicy: [ new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cloudwatch:PutMetricData',
+          'cloudwatch:ListTagsForResource',
+        ],
+        resources: [ '*', ],
+      }), ],
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: resolve(resourceBase, 'alarms.ts'),
       handler: 'main',
       timeout: Duration.seconds(30),
       environment: {
         ...lambdaEnv,
-      }
+      },
     });
     textsTable.grantReadWriteData(alarmQueueHandler);
     phoneNumberTable.grantReadData(alarmQueueHandler);
@@ -531,7 +560,7 @@ export class FireWatcherAwsStack extends Stack {
     // Schedule the function for every 5 minutes
     const alarmEventRule = new events.Rule(this, 'alarm-rule', {
       schedule: events.Schedule.cron({
-        minute: '*/5'
+        minute: '*/5',
       }),
     });
     alarmEventRule.addTarget(new targets.LambdaFunction(alarmQueueHandler));
@@ -544,44 +573,42 @@ export class FireWatcherAwsStack extends Stack {
       s3.EventType.OBJECT_CREATED,
       s3Destination,
       {
-        prefix: 'audio/'
+        prefix: 'audio/',
       }
     );
     bucket.addEventNotification(
       s3.EventType.OBJECT_REMOVED,
       s3Destination,
       {
-        prefix: 'audio/'
+        prefix: 'audio/',
       }
     );
 
     // Create the EventBridge link between the transcribe service and queue
     const rule = new eventbridge.Rule(this, 'cvfd-event-rule', {
       eventPattern: {
-        source: [ 'aws.transcribe' ],
+        source: [ 'aws.transcribe', ],
         detail: {
-          TranscriptionJobStatus: [ 'COMPLETED' ]
-        }
-      }
+          TranscriptionJobStatus: [ 'COMPLETED', ],
+        },
+      },
     });
-    rule.addTarget(new eventtarget.SqsQueue(queue))
+    rule.addTarget(new eventtarget.SqsQueue(queue));
 
     // Create the status parser function
     const statusHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-status-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData' ],
-          resources: [ '*' ]
-        })
-      ],
+      initialPolicy: [ new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [ 'cloudwatch:PutMetricData', ],
+        resources: [ '*', ],
+      }), ],
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: resolve(resourceBase, 'status.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
       },
-      timeout: Duration.minutes(1)
+      timeout: Duration.minutes(1),
     });
 
     // Grant access for the status handler
@@ -593,8 +620,8 @@ export class FireWatcherAwsStack extends Stack {
     // Schedule the function for every minute
     const statusEventRule = new events.Rule(this, 'status-rule', {
       schedule: events.Schedule.cron({
-        minute: '*'
-      })
+        minute: '*',
+      }),
     });
     statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
 
@@ -606,7 +633,7 @@ export class FireWatcherAwsStack extends Stack {
       environment: {
         ...lambdaEnv,
       },
-      timeout: Duration.minutes(5)
+      timeout: Duration.minutes(5),
     });
 
     // Grant access for the status handler
@@ -615,8 +642,8 @@ export class FireWatcherAwsStack extends Stack {
     // Schedule the function for every 15 minutes
     const weatherEventRule = new events.Rule(this, '-rule', {
       schedule: events.Schedule.cron({
-        minute: '*/15'
-      })
+        minute: '*/15',
+      }),
     });
     weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));
 
@@ -633,7 +660,7 @@ export class FireWatcherAwsStack extends Stack {
     // Create a rest API
     const api = new apigateway.RestApi(this, 'cvfd-api-gateway', {
       restApiName: 'CVFD API Gateway',
-      description: 'Allow interaction from the CVFD radio website'
+      description: 'Allow interaction from the CVFD radio website',
     });
     const apiResource = api.root.addResource('api');
 
@@ -643,7 +670,7 @@ export class FireWatcherAwsStack extends Stack {
         api: apigateway.RestApi;
         resource: apigateway.Resource;
       };
-    }
+    };
     const billingApis: ApisByBilling = validPhoneNumberAccounts.reduce((agg: Partial<ApisByBilling>, account) => {
       const api = new apigateway.RestApi(this, `cvfd-api-gateway-${account}`, {
         restApiName: `CVFD ${account} API Gateway`,
@@ -686,13 +713,13 @@ export class FireWatcherAwsStack extends Stack {
         name: 'infra',
         read: [
           dtrTable,
-          textsTable
+          textsTable,
         ],
         readWrite: [
           phoneNumberTable,
           statusTable,
           siteTable,
-          textsTable
+          textsTable,
         ],
         bucket,
         queue,
@@ -701,9 +728,7 @@ export class FireWatcherAwsStack extends Stack {
       },
       {
         name: 'user',
-        readWrite: [
-          phoneNumberTable
-        ],
+        readWrite: [ phoneNumberTable, ],
         queue,
         secret2: jwtSecret,
       },
@@ -715,16 +740,14 @@ export class FireWatcherAwsStack extends Stack {
           phoneNumberTable,
           textsTable,
         ],
-        readWriteBucket: [
-          costDataS3Bucket,
-        ],
+        readWriteBucket: [ costDataS3Bucket, ],
         queue,
         secret: twilioSecret,
         secret2: jwtSecret,
       },
       {
         name: 'events',
-        firehose: eventsFirehose
+        firehose: eventsFirehose,
       },
       {
         name: 'audio',
@@ -737,11 +760,9 @@ export class FireWatcherAwsStack extends Stack {
         name: 'frontend',
         read: [
           phoneNumberTable,
-          siteTable
+          siteTable,
         ],
-        readWrite: [
-          textsTable
-        ],
+        readWrite: [ textsTable, ],
         queue,
         metrics: true,
         secret2: jwtSecret,
@@ -750,65 +771,51 @@ export class FireWatcherAwsStack extends Stack {
 
     cofrnApis.forEach(config => {
       const apiHandler = new lambdanodejs.NodejsFunction(this, `cvfd-api-${config.name}-lambda`, {
-        initialPolicy: [
-          new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [ config.metrics ? 'cloudwatch:*' : 'cloudwatch:PutMetricData' ],
-            resources: [ '*' ]
-          })
-        ],
+        initialPolicy: [ new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [ config.metrics ? 'cloudwatch:*' : 'cloudwatch:PutMetricData', ],
+          resources: [ '*', ],
+        }), ],
         runtime: lambda.Runtime.NODEJS_18_X,
         entry: resolve(resourceBase, 'api', `${config.name}.ts`),
         handler: 'main',
         environment: {
           ...lambdaEnv,
         },
-        timeout: Duration.seconds(10)
+        timeout: Duration.seconds(10),
       });
-      if (!config.metrics)
-        metricMappingEnv[`${config.name.toUpperCase()}_API_LAMBDA`] = apiHandler.functionName;
+      if (!config.metrics) metricMappingEnv[`${config.name.toUpperCase()}_API_LAMBDA`] = apiHandler.functionName;
 
-      if (config.read)
-        config.read.forEach(table => table.grantReadData(apiHandler));
-      if (config.readWrite)
-        config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
-      if (config.bucket)
-        config.bucket.grantRead(apiHandler);
-      if (config.readWriteBucket)
-        config.readWriteBucket.forEach(bucket => bucket.grantReadWrite(apiHandler));
-      if (config.queue)
-        config.queue.grantSendMessages(apiHandler);
-      if (config.firehose)
-        apiHandler.addToRolePolicy(new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          resources: [ config.firehose.attrArn ],
-          actions: [
-            'firehose:PutRecord',
-            'firehose:PutRecordBatch',
-          ]
-        }));
-      if (config.cost)
-        apiHandler.addToRolePolicy(new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          resources: [ '*' ],
-          actions: [
-            'ce:GetCostAndUsage',
-          ],
-        }));
-      if (config.secret)
-        config.secret.grantRead(apiHandler);
-      if (config.secret2)
-        config.secret2.grantRead(apiHandler);
+      if (config.read) config.read.forEach(table => table.grantReadData(apiHandler));
+      if (config.readWrite) config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
+      if (config.bucket) config.bucket.grantRead(apiHandler);
+      if (config.readWriteBucket) config.readWriteBucket.forEach(bucket => bucket.grantReadWrite(apiHandler));
+      if (config.queue) config.queue.grantSendMessages(apiHandler);
+      if (config.firehose) apiHandler.addToRolePolicy(new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        resources: [ config.firehose.attrArn, ],
+        actions: [
+          'firehose:PutRecord',
+          'firehose:PutRecordBatch',
+        ],
+      }));
+      if (config.cost) apiHandler.addToRolePolicy(new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        resources: [ '*', ],
+        actions: [ 'ce:GetCostAndUsage', ],
+      }));
+      if (config.secret) config.secret.grantRead(apiHandler);
+      if (config.secret2) config.secret2.grantRead(apiHandler);
       if (config.metrics) {
         Object.keys(metricMappingEnv).forEach(key => {
           apiHandler.addEnvironment(key, metricMappingEnv[key]);
         });
       }
-    
+
       const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
         requestTemplates: {
-          'application/json': '{"statusCode":"200"}'
-        }
+          'application/json': '{"statusCode":"200"}',
+        },
       });
       const newApiResource = apiResource.addResource(config.name);
       newApiResource.addMethod('GET', apiIntegration);
@@ -861,92 +868,106 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'metrics',
         fileName: 'metrics',
-        methods: [ 'POST' ],
+        methods: [ 'POST', ],
         getMetrics: true,
       },
       {
         pathPart: 'files',
         fileName: 'files',
-        methods: [ 'GET' ],
-        tables: [{
+        methods: [ 'GET', ],
+        tables: [ {
           table: 'FILE',
           readOnly: true,
-        }],
-        next: [{
+        }, ],
+        next: [ {
           pathPart: '{id}',
           fileName: 'file',
-          methods: [ 'GET' ],
-          tables: [{
+          methods: [ 'GET', ],
+          tables: [ {
             table: 'FILE',
             readOnly: true,
-          }],
-        }]
+          }, ],
+        }, ],
       },
       {
         pathPart: 'talkgroups',
         fileName: 'talkgroups',
-        methods: [ 'GET' ],
-        tables: [{
+        methods: [ 'GET', ],
+        tables: [ {
           table: 'TALKGROUP',
           readOnly: true,
-        }],
-        next: [{
+        }, ],
+        next: [ {
           pathPart: '{id}',
           fileName: 'talkgroup',
-          methods: [ 'GET', 'PATCH', ],
+          methods: [
+            'GET',
+            'PATCH',
+          ],
           authRequired: true,
-          tables: [{
+          tables: [ {
             table: 'TALKGROUP',
-          }],
-        }],
+          }, ],
+        }, ],
       },
       {
         pathPart: 'users',
         fileName: 'users',
-        methods: [ 'GET', 'POST', ],
+        methods: [
+          'GET',
+          'POST',
+        ],
         authRequired: true,
         sqsQueue: true,
-        tables: [{
+        tables: [ {
           table: 'USER',
-        }],
-        next: [{
+        }, ],
+        next: [ {
           pathPart: '{id}',
           fileName: 'user',
-          methods: [ 'GET', 'PATCH', 'DELETE', ],
+          methods: [
+            'GET',
+            'PATCH',
+            'DELETE',
+          ],
           authRequired: true,
           sqsQueue: true,
-          tables: [{
+          tables: [ {
             table: 'USER',
-          }],
-          next: [{
+          }, ],
+          next: [ {
             pathPart: '{department}',
             fileName: 'userDepartment',
-            methods: [ 'POST', 'PATCH', 'DELETE', ],
+            methods: [
+              'POST',
+              'PATCH',
+              'DELETE',
+            ],
             authRequired: true,
             sqsQueue: true,
-            tables: [{
+            tables: [ {
               table: 'USER',
-            }],
-          }]
-        }],
+            }, ],
+          }, ],
+        }, ],
       },
       {
         pathPart: 'texts',
         fileName: 'texts',
         methods: [ 'GET', ],
         authRequired: true,
-        tables: [{
+        tables: [ {
           table: 'TEXT',
           readOnly: true,
-        }],
-        next: [{
+        }, ],
+        next: [ {
           pathPart: '{id}',
           fileName: 'text',
           methods: [ 'PATCH', ],
-          tables: [{
+          tables: [ {
             table: 'TEXT',
-          }],
-        }],
+          }, ],
+        }, ],
       },
       {
         pathPart: 'twilio',
@@ -954,60 +975,66 @@ export class FireWatcherAwsStack extends Stack {
         methods: [ 'POST', ],
         twilioSecret: true,
         sqsQueue: true,
-        tables: [{
+        tables: [ {
           table: 'USER',
           readOnly: true,
-        }],
-        next: [{
+        }, ],
+        next: [ {
           pathPart: '{id}',
           fileName: 'twilioStatus',
-          methods: [ 'POST' ],
+          methods: [ 'POST', ],
           sqsQueue: true,
           twilioSecret: true,
           sendsMetrics: true,
-          tables: [{
-            table: 'TEXT',
-          }, {
-            table: 'USER',
-          }],
-        }],
+          tables: [
+            {
+              table: 'TEXT',
+            },
+            {
+              table: 'USER',
+            },
+          ],
+        }, ],
       },
       {
         pathPart: 'login',
-        next: [{
+        next: [ {
           pathPart: '{id}',
           fileName: 'login',
-          methods: [ 'GET', 'POST' ],
+          methods: [
+            'GET',
+            'POST',
+          ],
           authRequired: true,
           sqsQueue: true,
-          tables: [{
+          tables: [ {
             table: 'USER',
-          }],
-        }],
+          }, ],
+        }, ],
       },
       {
         pathPart: 'sites',
         fileName: 'sites',
-        methods: [ 'GET' ],
+        methods: [ 'GET', ],
         authRequired: true,
-        tables: [{
+        tables: [ {
           table: 'SITE',
-        }],
+        }, ],
       },
       {
         pathPart: 'heartbeats',
         fileName: 'heartbeats',
-        methods: [ 'GET' ],
+        methods: [ 'GET', ],
         authRequired: true,
-        tables: [{
+        tables: [ {
           table: 'STATUS',
           readOnly: true,
-        }],
+        }, ],
       },
     ];
     const createApi = (
       baseResource: apigateway.Resource,
-      config: V2ApiConfig,
+      config: V2ApiConfig
     ) => {
       let resourceIntegration: apigateway.Integration | undefined = undefined;
       let resourceHandler: lambdanodejs.NodejsFunction | undefined = undefined;
@@ -1016,15 +1043,15 @@ export class FireWatcherAwsStack extends Stack {
         if (config.sendsMetrics) {
           initialPolicy.push(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            actions: [ 'cloudwatch:PutMetricData' ],
-            resources: [ '*' ],
+            actions: [ 'cloudwatch:PutMetricData', ],
+            resources: [ '*', ],
           }));
         }
         if (config.getMetrics) {
           initialPolicy.push(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
-            actions: [ 'cloudwatch:*' ],
-            resources: [ '*' ],
+            actions: [ 'cloudwatch:*', ],
+            resources: [ '*', ],
           }));
         }
 
@@ -1073,7 +1100,7 @@ export class FireWatcherAwsStack extends Stack {
             tableMap[table.table].grantReadWriteData(resourceHandler);
           }
         });
-        
+
         // Grant access to the SQS queue if needed
         if (config.sqsQueue) {
           queue.grantSendMessages(resourceHandler);
@@ -1087,8 +1114,7 @@ export class FireWatcherAwsStack extends Stack {
 
       // Add the resource
       const apiResource = baseResource.addResource(config.pathPart);
-      if ('fileName' in config && resourceIntegration)
-        config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
+      if ('fileName' in config && resourceIntegration) config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
       if ('fileName' in config && resourceHandler) {
         const envName = apiResource.path
           .replace(/[\{\}]/g, '')
@@ -1100,7 +1126,7 @@ export class FireWatcherAwsStack extends Stack {
 
       // Handle the child APIs
       config.next?.forEach(conf => createApi(apiResource, conf));
-    }
+    };
     v2Apis.forEach(conf => createApi(apiV2, conf));
 
     // Add the environment to the metric APIs
@@ -1123,7 +1149,7 @@ export class FireWatcherAwsStack extends Stack {
     // Add the new policy to the bucket
     if (!bucket.policy) {
       new s3.BucketPolicy(this, 'cvfd-s3-policy', {
-        bucket
+        bucket,
       }).document.addStatements(s3ReadPolicy);
     } else {
       bucket.policy.document.addStatements(s3ReadPolicy);
@@ -1143,40 +1169,34 @@ export class FireWatcherAwsStack extends Stack {
     // Create the cloudfront distribution
     const cfDistro = new cloudfront.Distribution(this, 'cofrn-cloudfront', {
       certificate: acm.Certificate.fromCertificateArn(this, 'cofrn-cert', certArn),
-      domainNames: [ 'new.cofrn.org' ],
+      domainNames: [ 'new.cofrn.org', ],
       defaultBehavior: {
         origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(reactBucket),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        functionAssociations: [
-          {
-            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            function: redirectCfFunction,
-          },
-        ],
+        functionAssociations: [ {
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          function: redirectCfFunction,
+        }, ],
       },
       additionalBehaviors: {
         '/weather.json': {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-          functionAssociations: [
-            {
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              function: redirectCfFunction,
-            },
-          ],
+          functionAssociations: [ {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          }, ],
         },
         '/audio/*': {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-          functionAssociations: [
-            {
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              function: redirectCfFunction,
-            },
-          ],
+          functionAssociations: [ {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          }, ],
         },
         '/api/*': {
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
@@ -1185,16 +1205,14 @@ export class FireWatcherAwsStack extends Stack {
             `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
             {
               originPath: `/${api.deploymentStage.stageName}`,
-            },
+            }
           ),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          functionAssociations: [
-            {
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              function: redirectCfFunction,
-            },
-          ],
+          functionAssociations: [ {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          }, ],
         },
       },
     });
@@ -1203,100 +1221,110 @@ export class FireWatcherAwsStack extends Stack {
       value: cfDistro.domainName,
     });
     new s3Deploy.BucketDeployment(this, 'deploy-website', {
-      sources: [s3Deploy.Source.asset(
+      sources: [ s3Deploy.Source.asset(
         resolve(
           __dirname,
           '..', // stack
           '..', // src
           '..', // root
-          'build',
-        ),
-      )],
+          'build'
+        )
+      ), ],
       destinationBucket: reactBucket,
       distribution: cfDistro,
     });
 
     new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
       viewerCertificate: {
-        aliases: [ 'fire.klawil.net', 'cofrn.org', 'www.cofrn.org' ],
+        aliases: [
+          'fire.klawil.net',
+          'cofrn.org',
+          'www.cofrn.org',
+        ],
         props: {
           acmCertificateArn: certArn,
-          sslSupportMethod: 'sni-only'
-        }
+          sslSupportMethod: 'sni-only',
+        },
       },
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       originConfigs: [
         {
           s3OriginSource: {
             s3BucketSource: bucket,
-            originAccessIdentity: s3AccessIdentity
+            originAccessIdentity: s3AccessIdentity,
           },
-          behaviors: [{
+          behaviors: [ {
             isDefaultBehavior: true,
             defaultTtl: Duration.seconds(0),
             maxTtl: Duration.seconds(0),
-          }],
+          }, ],
         },
         ...validPhoneNumberAccounts
           .map(account => ({
             customOriginSource: {
               domainName: `${billingApis[account].api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
-              originPath: `/${billingApis[account].api.deploymentStage.stageName}`
+              originPath: `/${billingApis[account].api.deploymentStage.stageName}`,
             },
-            behaviors: [{
-              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-              pathPattern: `api/${account}`,
-              defaultTtl: Duration.seconds(0),
-              maxTtl: Duration.seconds(0),
-              forwardedValues: {
-                queryString: true,
-                cookies: {
-                  forward: 'all'
-                }
-              }
-            },{
-              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-              pathPattern: `api/${account}/*`,
-              defaultTtl: Duration.seconds(0),
-              maxTtl: Duration.seconds(0),
-              forwardedValues: {
-                queryString: true,
-                cookies: {
-                  forward: 'all'
-                }
-              }
-            }]
+            behaviors: [
+              {
+                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                pathPattern: `api/${account}`,
+                defaultTtl: Duration.seconds(0),
+                maxTtl: Duration.seconds(0),
+                forwardedValues: {
+                  queryString: true,
+                  cookies: {
+                    forward: 'all',
+                  },
+                },
+              },
+              {
+                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                pathPattern: `api/${account}/*`,
+                defaultTtl: Duration.seconds(0),
+                maxTtl: Duration.seconds(0),
+                forwardedValues: {
+                  queryString: true,
+                  cookies: {
+                    forward: 'all',
+                  },
+                },
+              },
+            ],
           })),
         {
           customOriginSource: {
             domainName: `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
-            originPath: `/${api.deploymentStage.stageName}`
+            originPath: `/${api.deploymentStage.stageName}`,
           },
-          behaviors: [{
-            allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-            pathPattern: 'api',
-            defaultTtl: Duration.seconds(0),
-            maxTtl: Duration.seconds(0),
-            forwardedValues: {
-              queryString: true,
-              cookies: {
-                forward: 'all'
-              }
-            }
-          },{
-            allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-            pathPattern: 'api/*',
-            defaultTtl: Duration.seconds(0),
-            maxTtl: Duration.seconds(0),
-            forwardedValues: {
-              queryString: true,
-              cookies: {
-                forward: 'all'
-              }
-            }
-          }]
+          behaviors: [
+            {
+              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+              pathPattern: 'api',
+              defaultTtl: Duration.seconds(0),
+              maxTtl: Duration.seconds(0),
+              forwardedValues: {
+                queryString: true,
+                cookies: {
+                  forward: 'all',
+                },
+              },
+            },
+            {
+              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+              pathPattern: 'api/*',
+              defaultTtl: Duration.seconds(0),
+              maxTtl: Duration.seconds(0),
+              forwardedValues: {
+                queryString: true,
+                cookies: {
+                  forward: 'all',
+                },
+              },
+            },
+          ],
         },
-      ]
+      ],
     });
 
     // Add the alarms
@@ -1309,14 +1337,14 @@ export class FireWatcherAwsStack extends Stack {
         period: Duration.minutes(5),
         statistic: cloudwatch.Stats.MINIMUM,
         dimensionsMap: {
-          Tower: 'Saguache'
-        }
+          Tower: 'Saguache',
+        },
       }),
       threshold: 30,
       alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
       alarmName: 'Saguache Tower Decode Rate',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
     };
     const baseUploadAlarmConfig: cloudwatch.AlarmProps = {
       evaluationPeriods: 18,
@@ -1327,22 +1355,22 @@ export class FireWatcherAwsStack extends Stack {
         period: Duration.hours(1),
         statistic: cloudwatch.Stats.SAMPLE_COUNT,
         dimensionsMap: {
-          Tower: 'Saguache'
-        }
+          Tower: 'Saguache',
+        },
       }),
       threshold: 0,
       alarmDescription: 'No files have been uploaded for Saguache Tower in the past 18 hours which may indicate the tower is not being recorded',
       alarmName: 'Saguache Tower Uploads',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
     };
     const alarms: CvfdAlarm[] = [
       { // Saguache tower not decoding
         tag: 'Dtr',
         codeName: 'saguache-tower',
         alarm: {
-          ...baseTowerAlarmConfig
-        }
+          ...baseTowerAlarmConfig,
+        },
       },
       { // Saguache tower down
         tag: 'Dtr',
@@ -1351,7 +1379,7 @@ export class FireWatcherAwsStack extends Stack {
           ...baseUploadAlarmConfig,
           evaluationPeriods: 18,
           datapointsToAlarm: 18,
-        }
+        },
       },
       { // Pool table tower down
         tag: 'Dtr',
@@ -1366,36 +1394,39 @@ export class FireWatcherAwsStack extends Stack {
             period: Duration.hours(3),
             statistic: cloudwatch.Stats.SAMPLE_COUNT,
             dimensionsMap: {
-              Tower: 'PoolTable'
+              Tower: 'PoolTable',
             },
           }),
           alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 12 hours which may indicate the tower is not being recorded',
           alarmName: 'Pool Table Uploads',
-        }
+        },
       },
-      // { // API 4XX errors
-      //   tag: 'Api',
-      //   codeName: 'api4xx',
-      //   okayAction: false,
-      //   alarm: {
-      //     evaluationPeriods: 1,
-      //     datapointsToAlarm: 1,
-      //     threshold: 0,
-      //     alarmDescription: 'COFRN API is giving 4XX responses',
-      //     alarmName: 'COFRN API 4XX',
-      //     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      //     treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      //     metric: new cloudwatch.Metric({
-      //       metricName: '4XXError',
-      //       namespace: 'AWS/ApiGateway',
-      //       period: Duration.minutes(15),
-      //       statistic: cloudwatch.Stats.SUM,
-      //       dimensionsMap: {
-      //         ApiName: api.restApiName,
-      //       },
-      //     }),
-      //   },
-      // },
+
+      /*
+       * { // API 4XX errors
+       *   tag: 'Api',
+       *   codeName: 'api4xx',
+       *   okayAction: false,
+       *   alarm: {
+       *     evaluationPeriods: 1,
+       *     datapointsToAlarm: 1,
+       *     threshold: 0,
+       *     alarmDescription: 'COFRN API is giving 4XX responses',
+       *     alarmName: 'COFRN API 4XX',
+       *     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+       *     treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+       *     metric: new cloudwatch.Metric({
+       *       metricName: '4XXError',
+       *       namespace: 'AWS/ApiGateway',
+       *       period: Duration.minutes(15),
+       *       statistic: cloudwatch.Stats.SUM,
+       *       dimensionsMap: {
+       *         ApiName: api.restApiName,
+       *       },
+       *     }),
+       *   },
+       * },
+       */
       { // API 5XX errors
         tag: 'Api',
         codeName: 'api5xx',
@@ -1468,11 +1499,10 @@ export class FireWatcherAwsStack extends Stack {
     ];
 
     alarms.forEach(alarmConfig => {
-      const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm)
+      const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm);
       alarm.addAlarmAction(alarmAction);
-      if (alarmConfig.okayAction !== false)
-        alarm.addOkAction(alarmAction);
-      
+      if (alarmConfig.okayAction !== false) alarm.addOkAction(alarmAction);
+
       Tags.of(alarm).add('cofrn-alarm-type', alarmConfig.tag);
     });
   }

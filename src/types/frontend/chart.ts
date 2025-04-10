@@ -1,5 +1,7 @@
-import { Dispatch, SetStateAction } from "react";
-import { GetMetricsApi } from "@/types/api/metrics";
+import {
+  Dispatch, SetStateAction
+} from 'react';
+import { GetMetricsApi } from '@/types/api/metrics';
 
 type PossibleChartUnits = 'Count' | 'Milliseconds' | 'Seconds';
 
@@ -29,4 +31,4 @@ export type ChartConfig = TowerChart | MetricChart | TimingChart;
 export type ChartComponentParams<T extends ChartConfig> = T & {
   shouldFetchData: boolean;
   setChartLoaded: Dispatch<SetStateAction<number>>;
-}
+};

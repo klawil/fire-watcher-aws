@@ -1,13 +1,17 @@
 'use client';
 
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { useChartData, usePageSize } from "./common";
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import {
+  useChartData, usePageSize
+} from './common';
 import { Line } from 'react-chartjs-2';
-import { ChartComponentParams, TimingChart } from "@/types/frontend/chart";
-import Button from "react-bootstrap/Button";
-import { useState } from "react";
+import {
+  ChartComponentParams, TimingChart
+} from '@/types/frontend/chart';
+import Button from 'react-bootstrap/Button';
+import { useState } from 'react';
 
 export default function StatusTimingLineChart({
   title,
@@ -16,9 +20,12 @@ export default function StatusTimingLineChart({
   shouldFetchData,
   lazyLoad,
   setChartLoaded,
-  convertValue = (v) => v,
+  convertValue = v => v,
 }: Readonly<ChartComponentParams<TimingChart>>) {
-  const [shouldLoad, setShouldLoad] = useState(false);
+  const [
+    shouldLoad,
+    setShouldLoad,
+  ] = useState(false);
 
   if (!lazyLoad && shouldFetchData && !shouldLoad) {
     setShouldLoad(true);
@@ -29,7 +36,7 @@ export default function StatusTimingLineChart({
     body,
     shouldFetchData,
     setChartLoaded,
-    convertValue,
+    convertValue
   );
 
   const datasets = data?.datasets.map((v, i, a) => {
@@ -41,25 +48,30 @@ export default function StatusTimingLineChart({
     };
   }) || [];
 
-  const [ pageWidth, pageHeight ] = usePageSize();
+  const [
+    pageWidth,
+    pageHeight,
+  ] = usePageSize();
 
-  return (<>
-    <h3 className="text-center mt-5">{title}</h3>
-    <Row><Col style={{ height: 'calc(80vh - 60px)' }}>
-      {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%' }}><LoadingSpinner fullHeight={true} /></div>}
+  return <>
+    <h3 className='text-center mt-5'>{title}</h3>
+    <Row><Col style={{ height: 'calc(80vh - 60px)', }}>
+      {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%', }}><LoadingSpinner fullHeight={true} /></div>}
       {typeof data === 'undefined' && lazyLoad && shouldLoad && <LoadingSpinner fullHeight={true} />}
       {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
-        className="d-grid"
-        xs={{ span: 6, offset: 3 }}
-        style={{ height: '100%' }}
+        className='d-grid'
+        xs={{
+          span: 6, offset: 3,
+        }}
+        style={{ height: '100%', }}
       >
         <Button
-          className="align-self-center"
-          variant="success"
+          className='align-self-center'
+          variant='success'
           onClick={() => setShouldLoad(true)}
         >Load Chart</Button>
       </Col>}
-      {data === null && <h2 className="text-center">Error loading data</h2>}
+      {data === null && <h2 className='text-center'>Error loading data</h2>}
       {data && <Line
         data={{
           labels: data.labels,
@@ -114,5 +126,5 @@ export default function StatusTimingLineChart({
         }}
       />}
     </Col></Row>
-  </>);
+  </>;
 }

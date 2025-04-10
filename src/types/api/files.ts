@@ -1,24 +1,30 @@
-import { Validator } from "@/types/backend/validation";
-import { api400Body, api404Body, api500Body } from "./_shared";
+import { Validator } from '@/types/backend/validation';
+import {
+  api400Body, api404Body, api500Body
+} from './_shared';
 
 export interface FullFileObject {
   Talkgroup: number;
+
   /**
    * Timestamp of when the file was added to S3
    */
   Added: number;
   Emergency?: 0 | 1;
+
   /**
    * Timestamp of the end of the recording (in seconds since epoch)
    */
   EndTime?: number;
   Freq?: number;
+
   /**
    * Location of the file in the S3 bucket
    */
   Key?: string;
   Len?: number;
   Sources?: number[];
+
   /**
    * Timestamp of the start of the recording (in seconds since epoch)
    */
@@ -45,28 +51,34 @@ export type GetAllFilesApi = {
   path: '/api/v2/files/';
   method: 'GET';
   query: {
+
     /**
      * The talkgroups to retrieve file from. This should be a pipe-separated list of integers
      */
     tg?: number[];
+
     /**
      * Whether to exclusively return traffic that is marked as "emergency"
      */
     emerg?: 'y' | 'n';
+
     /**
      * Return files with a start time less than this time
      */
     before?: number;
+
     /**
      * Return files with a start time greater than this time
      */
     after?: number;
+
     /**
      * Return files with an added time greater than this time
      */
     afterAdded?: number;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
@@ -76,10 +88,12 @@ export type GetAllFilesApi = {
       afterAdded: number | null;
       files: FullFileObject[];
     };
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
@@ -98,7 +112,10 @@ export const getAllFilesApiQueryValidator: Validator<GetAllFilesApi['query']> = 
     required: false,
     types: {
       string: {
-        exact: [ 'y', 'n' ],
+        exact: [
+          'y',
+          'n',
+        ],
       },
     },
   },
@@ -134,24 +151,29 @@ export type GetFileApi = {
   path: '/api/v2/files/{id}/';
   method: 'GET';
   params: {
+
     /**
      * File ID in the format {Talkgroup}-{Added}
      */
     id: string;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FullFileObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */

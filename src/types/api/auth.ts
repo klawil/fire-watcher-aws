@@ -1,6 +1,8 @@
-import { Validator } from "@/types/backend/validation";
-import { api200Body, api302Body, api400Body, api403Body, api500Body } from "./_shared";
-import { FrontendUserObject } from "@/types/api/users";
+import { Validator } from '@/types/backend/validation';
+import {
+  api200Body, api302Body, api400Body, api403Body, api500Body
+} from './_shared';
+import { FrontendUserObject } from '@/types/api/users';
 
 /**
  * Request that a login code be sent to the user's phone
@@ -11,26 +13,30 @@ export type GetLoginCodeApi = {
   path: '/api/v2/login/{id}/';
   method: 'GET';
   params: {
+
     /**
      * The user ID (10 digit phone number) to send the code for
      */
     id: number;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: typeof api200Body;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
-}
+};
 
 /**
  * Submit a login code to authenticate a user
@@ -42,6 +48,7 @@ export type SubmitLoginCodeApi = {
   path: '/api/v2/login/{id}/';
   method: 'POST';
   params: {
+
     /**
      * The user ID (10 digit phone number) to authenticate as
      */
@@ -51,24 +58,28 @@ export type SubmitLoginCodeApi = {
     code: string;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
-}
+};
 
 export const loginApiParamsValidator: Validator<GetLoginCodeApi['params']> = {
   id: {
@@ -80,7 +91,7 @@ export const loginApiParamsValidator: Validator<GetLoginCodeApi['params']> = {
       },
     },
   },
-}
+};
 
 export const loginApiCodeBodyValidator: Validator<SubmitLoginCodeApi['body']> = {
   code: {
@@ -102,26 +113,30 @@ export type LogoutApi = {
   path: '/api/v2/logout/';
   method: 'GET';
   query: {
+
     /**
      * The URL to redirect the user to after the logout is completed
      */
     redirectTo?: string;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     302: typeof api302Body;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
-}
+};
 
 export const logoutApiQueryValidator: Validator<LogoutApi['query']> = {
   redirectTo: {

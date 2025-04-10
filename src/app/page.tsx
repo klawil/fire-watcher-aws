@@ -1,5 +1,5 @@
-import AudioList from "@/components/audioList/audioList";
-import CofrnLayout from "@/components/layout";
+import AudioList from '@/components/audioList/audioList';
+import CofrnLayout from '@/components/layout';
 
 export const metadata = {
   title: 'Radio Traffic | COFRN',

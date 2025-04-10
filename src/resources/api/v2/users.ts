@@ -1,11 +1,23 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '@/utils/common/logger';
-import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
-import { CreateUserApi, createUserApiBodyValidator, FrontendUserObject, FullUserObject, GetAllUsersApi } from '@/types/api/users';
-import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
-import { TABLE_USER, typedPutItem, typedScan } from '@/utils/backend/dynamoTyped';
-import { TypedPutItemInput, TypedScanInput } from '@/types/backend/dynamo';
-import { ExceptSpecificKeys, OnlySpecificKeys } from '@/types/utility';
+import {
+  getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, parseJsonBody
+} from './_base';
+import {
+  CreateUserApi, createUserApiBodyValidator, FrontendUserObject, FullUserObject, GetAllUsersApi
+} from '@/types/api/users';
+import {
+  api401Body, api403Body, generateApi400Body
+} from '@/types/api/_shared';
+import {
+  TABLE_USER, typedPutItem, typedScan
+} from '@/utils/backend/dynamoTyped';
+import {
+  TypedPutItemInput, TypedScanInput
+} from '@/types/backend/dynamo';
+import {
+  ExceptSpecificKeys, OnlySpecificKeys
+} from '@/types/utility';
 import { ActivateUserQueueItem } from '@/types/backend/queue';
 
 const logger = getLogger('users');
@@ -20,7 +32,7 @@ type EditKeyConfig = {
 };
 const createUserKeys: EditKeyConfig[] = [
   {
-		name: 'phone',
+    name: 'phone',
   },
   {
     name: 'fName',
@@ -34,11 +46,11 @@ const createUserKeys: EditKeyConfig[] = [
   },
   {
     name: 'admin',
-		partOfDepartment: true,
+    partOfDepartment: true,
   },
   {
     name: 'callSign',
-		partOfDepartment: true,
+    partOfDepartment: true,
   },
   {
     name: 'talkgroups',
@@ -72,9 +84,21 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
   // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
+  if (!userPerms.isAdmin) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
 
   // Get the keys that should be returned
   const scanInput: TypedScanInput<FullUserObject> = {
@@ -84,7 +108,7 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
     userPerms.adminDepartments.forEach(dep => {
       scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
       scanInput.ExpressionAttributeNames = {
-        ...(scanInput.ExpressionAttributeNames || {}),
+        ...scanInput.ExpressionAttributeNames || {},
         [`#${dep}`]: dep,
       };
     });
@@ -102,30 +126,48 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
 
   return [
     200,
-    (scanResult.Items || []),
+    scanResult.Items || [],
     userHeaders,
   ];
-}
+};
 
 const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   logger.trace('POST', ...arguments);
 
   // Parse the body
-  const [ body, errorKeys ] = parseJsonBody<CreateUserApi['body']>(
+  const [
+    body,
+    errorKeys,
+  ] = parseJsonBody<CreateUserApi['body']>(
     event.body,
-    createUserApiBodyValidator,
+    createUserApiBodyValidator
   );
   if (
     body === null ||
     errorKeys.length > 0
   ) {
-    return [ 400, generateApi400Body(errorKeys) ];
+    return [
+      400,
+      generateApi400Body(errorKeys),
+    ];
   }
 
   // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
+  if (!userPerms.isAdmin) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
 
   // Validate the user keys and build the insert
   const putConfig: TypedPutItemInput<FullUserObject> = {
@@ -136,7 +178,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   };
   [
     ...createUserKeys,
-    ...(user.isDistrictAdmin ? districtAdminUserKeys : []),
+    ...user.isDistrictAdmin ? districtAdminUserKeys : [],
   ].forEach(item => {
     // Pull out the value
     const value = body[item.name];
@@ -156,7 +198,11 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
     }
   });
   if (errorKeys.length > 0) {
-    return [ 400, generateApi400Body(errorKeys), userHeaders ];
+    return [
+      400,
+      generateApi400Body(errorKeys),
+      userHeaders,
+    ];
   }
 
   // Run the actual update
@@ -170,7 +216,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   };
   await sqs.sendMessage({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: queueUrl
+    QueueUrl: queueUrl,
   }).promise();
 
   // Return the safed user object
@@ -180,7 +226,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
     returnBody,
     userHeaders,
   ];
-}
+};
 
 export const main = handleResourceApi.bind(null, {
   GET,

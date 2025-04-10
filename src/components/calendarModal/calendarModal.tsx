@@ -1,12 +1,18 @@
 'use client';
 
-import { fNameToDate } from "@/utils/common/strings";
-import { AudioAction, AudioState } from "@/types/frontend/audio";
-import { useCallback, useState } from "react";
-import { Button, Modal } from "react-bootstrap";
-import DatePicker from "react-datepicker";
+import { fNameToDate } from '@/utils/common/strings';
+import {
+  AudioAction, AudioState
+} from '@/types/frontend/audio';
+import {
+  useCallback, useState
+} from 'react';
+import {
+  Button, Modal
+} from 'react-bootstrap';
+import DatePicker from 'react-datepicker';
 
-import "react-datepicker/dist/react-datepicker.css";
+import 'react-datepicker/dist/react-datepicker.css';
 
 export default function CalendarModal({
   state,
@@ -15,9 +21,18 @@ export default function CalendarModal({
   state: AudioState,
   dispatch: React.ActionDispatch<[AudioAction]>;
 }>) {
-  const [hour, setHour] = useState(0);
-  const [minute, setMinute] = useState(0);
-  const [newDatetime, setNewDatetime] = useState<Date | null>(null);
+  const [
+    hour,
+    setHour,
+  ] = useState(0);
+  const [
+    minute,
+    setMinute,
+  ] = useState(0);
+  const [
+    newDatetime,
+    setNewDatetime,
+  ] = useState<Date | null>(null);
 
   const jumpToTime = useCallback(() => {
     if (newDatetime === null) return;
@@ -33,12 +48,23 @@ export default function CalendarModal({
     setNewDatetime(null);
     dispatch({
       action: 'JumpToTime',
-      f: `00-${Math.floor(newDate.getTime() / 1000).toString().padStart(10, '0')}_000000000-call_0.m4a`,
+      f: `00-${Math.floor(newDate.getTime() / 1000).toString()
+        .padStart(10, '0')}_000000000-call_0.m4a`,
     });
-  }, [newDatetime, dispatch, hour, minute]);
+  }, [
+    newDatetime,
+    dispatch,
+    hour,
+    minute,
+  ]);
 
   const hourOptions = Array.from(Array(24), (v, idx) => idx);
-  const minuteOptions = [0, 15, 30, 45];
+  const minuteOptions = [
+    0,
+    15,
+    30,
+    45,
+  ];
 
   const currentDatetime = newDatetime !== null
     ? newDatetime
@@ -46,7 +72,7 @@ export default function CalendarModal({
       ? fNameToDate(state.filter.f)
       : new Date();
 
-  return (<Modal
+  return <Modal
     show={state.calendarModalOpen}
     onHide={() => dispatch({
       action: 'CloseCalendarModal',
@@ -61,26 +87,26 @@ export default function CalendarModal({
         value={hour}
         onChange={e => setHour(Number(e.target.value))}
       >{hourOptions.map(h => <option
-        key={h}
-        value={h}
-      >{h.toString().padStart(2, '0')}</option>)}</select> :
+          key={h}
+          value={h}
+        >{h.toString().padStart(2, '0')}</option>)}</select> :
       <select
         value={minute}
         onChange={e => setMinute(Number(e.target.value))}
       >{minuteOptions.map(m => <option
-        key={m}
-        value={m}
-      >{m.toString().padStart(2, '0')}</option>)}</select>
+          key={m}
+          value={m}
+        >{m.toString().padStart(2, '0')}</option>)}</select>
     </Modal.Body>
 
-    <Modal.Footer className="justify-content-between">
+    <Modal.Footer className='justify-content-between'>
       <Button
-        variant="success"
+        variant='success'
         onClick={jumpToTime}
         disabled={newDatetime === null}
       >Go to Time</Button>
       <Button
-        variant="primary"
+        variant='primary'
         onClick={() => dispatch({
           action: 'SetNewFilters',
           ...state.filter,
@@ -88,9 +114,9 @@ export default function CalendarModal({
         })}
       >Go to Present</Button>
       <Button
-        variant="warning"
-        onClick={() => dispatch({ action: 'CloseCalendarModal' })}
+        variant='warning'
+        onClick={() => dispatch({ action: 'CloseCalendarModal', })}
       >Cancel</Button>
     </Modal.Footer>
-  </Modal>)
+  </Modal>;
 }

@@ -1,6 +1,12 @@
-import { PhoneNumberAccount, validPhoneNumberAccounts } from "@/types/backend/department";
-import { OrNull, Validator } from "@/types/backend/validation";
-import { api200Body, api400Body, api401Body, api403Body, api404Body, api500Body } from "./_shared";
+import {
+  PhoneNumberAccount, validPhoneNumberAccounts
+} from '@/types/backend/department';
+import {
+  OrNull, Validator
+} from '@/types/backend/validation';
+import {
+  api200Body, api400Body, api401Body, api403Body, api404Body, api500Body
+} from './_shared';
 
 export const validDepartments = [
   'Baca',
@@ -12,13 +18,13 @@ export const validDepartments = [
 export type UserDepartment = typeof validDepartments[number];
 
 export const pagingTalkgroups = [
-	8332,
-	18332,
-	18331,
-	8198,
-	8334,
-	8281,
-	8181,
+  8332,
+  18332,
+  18331,
+  8198,
+  8334,
+  8281,
+  8181,
 ] as const;
 export type PagingTalkgroup = typeof pagingTalkgroups[number];
 
@@ -26,6 +32,7 @@ export type FullUserObject = {
   phone: number;
   fName?: string;
   lName?: string;
+
   /**
    * The department the user's paging texts should be associated with
    */
@@ -40,6 +47,7 @@ export type FullUserObject = {
   isTest?: boolean;
 
   lastLogin?: number;
+
   /**
    * The last status for a text sent to this user's phone number
    */
@@ -73,7 +81,11 @@ interface MinimumUserState {
 }
 export interface FrontendUserState extends Partial<Omit<FrontendUserObject, keyof MinimumUserState>>, MinimumUserState {}
 
-declare global { interface ReadonlyArray<T> { includes<U>(searchElement: (T & U) extends never ? never : U, fromIndex?: number): boolean } }
+declare global {
+  interface ReadonlyArray<T> {
+    includes<U>(searchElement: (T & U) extends never ? never : U, fromIndex?: number): boolean
+  }
+}
 
 export const adminUserKeys = [
   'fName',
@@ -103,18 +115,22 @@ export type GetAllUsersApi = {
   path: '/api/v2/users/';
   method: 'GET';
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject[];
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
@@ -123,7 +139,7 @@ export type GetAllUsersApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 /**
  * Create a new user (or add a department to an existing user if this one exists)
@@ -146,22 +162,27 @@ export type CreateUserApi = {
     callSign: string;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
@@ -170,7 +191,7 @@ export type CreateUserApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 /**
  * Retrieve a specific user
@@ -181,32 +202,39 @@ export type GetUserApi = {
   path: '/api/v2/users/{id}/';
   method: 'GET';
   params: {
+
     /**
      * The user ID (10 digit phone number) or "current" to retrieve the current user's information
      */
     id: number | string;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
@@ -215,7 +243,7 @@ export type GetUserApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const userApiParamsValidator: Validator<GetUserApi['params']> = {
   id: {
@@ -223,14 +251,14 @@ export const userApiParamsValidator: Validator<GetUserApi['params']> = {
     parse: v => v === 'current' ? 'current' : Number(v),
     types: {
       string: {
-        exact: [ 'current' ],
+        exact: [ 'current', ],
       },
       number: {
         regex: /^[0-9]{10}$/,
       },
     },
   },
-}
+};
 
 /**
  * Update a user's core information (not department)
@@ -242,6 +270,7 @@ export type UpdateUserApi = {
   path: '/api/v2/users/{id}/';
   method: 'PATCH';
   params: {
+
     /**
      * The user ID (10 digit phone number) or "current" to update the current user's information
      */
@@ -253,26 +282,32 @@ export type UpdateUserApi = {
     | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone'
   >>;
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
@@ -281,7 +316,7 @@ export type UpdateUserApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
   fName: {
@@ -353,7 +388,9 @@ export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
   },
   getTranscriptOnly: {
     required: false,
-    types: { boolean: {}, null: {} },
+    types: {
+      boolean: {}, null: {},
+    },
   },
 };
 
@@ -448,7 +485,7 @@ export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
   },
   getTranscriptOnly: {
     required: false,
-    types: { boolean: {} },
+    types: { boolean: {}, },
   },
 };
 
@@ -461,32 +498,39 @@ export type DeleteUserApi = {
   path: '/api/v2/users/{id}/';
   method: 'DELETE';
   params: {
+
     /**
      * The user ID (10 digit phone number)
      */
     id: number;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: typeof api200Body;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
@@ -495,7 +539,7 @@ export type DeleteUserApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const userApiDeleteParamsValidator: Validator<DeleteUserApi['params']> = {
   id: {
@@ -507,9 +551,9 @@ export const userApiDeleteParamsValidator: Validator<DeleteUserApi['params']> = 
       },
     },
   },
-}
+};
 
-/**** DEPARTMENT APIS ****/
+/** ** DEPARTMENT APIS ****/
 
 /**
  * Add a user department
@@ -521,24 +565,29 @@ export type CreateUserDepartmentApi = {
   path: '/api/v2/users/{id}/{department}/';
   method: 'POST';
   params: {
+
     /**
      * The user ID (10 digit phone number)
      */
     id: number;
+
     /**
      * The department to make the association with
      */
     department: UserDepartment;
   };
   body: {
+
     /**
      * Is the user active in this department?
      */
     active?: boolean | null;
+
     /**
      * Is the user an administrator for this department?
      */
     admin?: boolean | null;
+
     /**
      * The user's call sign for this department. String without spaces or special characters except
      * dashes
@@ -546,26 +595,32 @@ export type CreateUserDepartmentApi = {
     callSign?: string;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
@@ -574,7 +629,7 @@ export type CreateUserDepartmentApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const userDepartmentApiParamsValidator: Validator<CreateUserDepartmentApi['params']> = {
   id: {
@@ -634,7 +689,7 @@ export type UpdateUserDepartmentApi = {
   body: CreateUserDepartmentApi['body'];
   responses: CreateUserDepartmentApi['responses'];
   security: CreateUserDepartmentApi['security'];
-}
+};
 
 /**
  * Delete a user's department affiliation
@@ -645,36 +700,44 @@ export type DeleteUserDepartmentApi = {
   path: '/api/v2/users/{id}/{department}/';
   method: 'DELETE';
   params: {
+
     /**
      * The user ID (10 digit phone number)
      */
     id: number;
+
     /**
      * The department to make the association with
      */
     department: UserDepartment;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: FrontendUserObject;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
     404: typeof api404Body;
+
     /**
      * @contentType application/json
      */
@@ -683,4 +746,4 @@ export type DeleteUserDepartmentApi = {
   security: [{
     cookie: [],
   }];
-}
+};

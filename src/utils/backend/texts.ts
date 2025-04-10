@@ -1,14 +1,24 @@
-import { getLogger } from "@/utils/common/logger";
-import { FullUserObject, PagingTalkgroup, UserDepartment } from "@/types/api/users";
-import { FullTextObject, TextTypes } from "@/types/api/texts";
-import CloudWatch from "aws-sdk/clients/cloudwatch";
-import { PhoneNumberTypes } from "@/types/backend/department";
-import { getUserPermissions } from "../common/user";
-import { getTwilioSecret, twilioPhoneCategories } from "@/deprecated/utils/general";
+import { getLogger } from '@/utils/common/logger';
+import {
+  FullUserObject, PagingTalkgroup, UserDepartment
+} from '@/types/api/users';
+import {
+  FullTextObject, TextTypes
+} from '@/types/api/texts';
+import CloudWatch from 'aws-sdk/clients/cloudwatch';
+import { PhoneNumberTypes } from '@/types/backend/department';
+import { getUserPermissions } from '../common/user';
+import {
+  getTwilioSecret, twilioPhoneCategories
+} from '@/deprecated/utils/general';
 import twilio from 'twilio';
-import { TypedScanInput, TypedUpdateInput } from "@/types/backend/dynamo";
-import { TABLE_TEXT, TABLE_USER, typedScan, typedUpdate } from "@/utils/backend/dynamoTyped";
-import { AlertCategory } from "@/types/backend/alerts";
+import {
+  TypedScanInput, TypedUpdateInput
+} from '@/types/backend/dynamo';
+import {
+  TABLE_TEXT, TABLE_USER, typedScan, typedUpdate
+} from '@/utils/backend/dynamoTyped';
+import { AlertCategory } from '@/types/backend/alerts';
 
 const logger = getLogger('stack/resources/utils/texts');
 
@@ -18,7 +28,7 @@ const testUser = Number(process.env.TESTING_USER);
 export async function getUserRecipients(
   department: UserDepartment | 'all',
   pageTg: PagingTalkgroup | null,
-  isTest: boolean = false,
+  isTest: boolean = false
 ): Promise<FullUserObject[]> {
   logger.trace('getRecipients', ...arguments);
 
@@ -30,31 +40,31 @@ export async function getUserRecipients(
   if (pageTg !== null) {
     scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
     scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-  
+
     filterExpressions.push('contains(#talkgroups, :talkgroup)');
     scanInput.ExpressionAttributeNames['#talkgroups'] = 'talkgroups';
     scanInput.ExpressionAttributeValues[':talkgroup'] = pageTg;
   }
   if (department !== 'all') {
     scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-  
+
     filterExpressions.push(`#${department}.#active = :active`);
     scanInput.ExpressionAttributeNames = {
-      ...(scanInput.ExpressionAttributeNames || {}),
+      ...scanInput.ExpressionAttributeNames || {},
       [`#${department}`]: department,
       '#active': 'active',
     };
-		scanInput.ExpressionAttributeValues[':active'] = true;
+    scanInput.ExpressionAttributeValues[':active'] = true;
   }
 
   // Handle test pages/notifications/etc
   if (isTest) {
     scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
     scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-  
+
     filterExpressions.push('#isTest = :isTest');
-		scanInput.ExpressionAttributeNames['#isTest'] = 'isTest';
-		scanInput.ExpressionAttributeValues[':isTest'] = true;
+    scanInput.ExpressionAttributeNames['#isTest'] = 'isTest';
+    scanInput.ExpressionAttributeValues[':isTest'] = true;
   }
 
   // Add the filter expressions to the query
@@ -63,7 +73,7 @@ export async function getUserRecipients(
   }
 
   const result = await typedScan(scanInput);
-  const users = (result.Items || []);
+  const users = result.Items || [];
   if (isTest && !users.some(u => u.phone === testUser)) {
     users.push({
       phone: testUser,
@@ -88,12 +98,12 @@ export async function saveMessageData(
   pageId: string | null = null,
   pageTg: PagingTalkgroup | null = null,
   department: UserDepartment | null = null,
-  isTest: boolean = false,
+  isTest: boolean = false
 ) {
   logger.trace('saveMessageData', ...arguments);
-	if (messageTypesThatRequireDepartment.includes(messageType) && department === null) {
-		department = 'PageOnly';
-	}
+  if (messageTypesThatRequireDepartment.includes(messageType) && department === null) {
+    department = 'PageOnly';
+  }
   const promises: Promise<unknown>[] = [];
 
   // Build the insert/update statement
@@ -154,15 +164,14 @@ export async function saveMessageData(
   const dataDate = new Date(messageId);
   promises.push(cloudWatch.putMetricData({
     Namespace: 'Twilio Health',
-    MetricData: [
-      {
-        MetricName: 'Initiated',
-        Timestamp: dataDate,
-        Unit: 'Count',
-        Value: recipients,
-      },
-    ],
-  }).promise().catch(e => logger.error('Error pushing metrics in saveMessageData', e)));
+    MetricData: [ {
+      MetricName: 'Initiated',
+      Timestamp: dataDate,
+      Unit: 'Count',
+      Value: recipients,
+    }, ],
+  }).promise()
+    .catch(e => logger.error('Error pushing metrics in saveMessageData', e)));
 
   await Promise.all(promises);
 }
@@ -174,7 +183,7 @@ export async function sendMessage(
   sendNumberCategory: PhoneNumberTypes,
   body: string,
   mediaUrls: string[] = [],
-  isTest: boolean = false,
+  isTest: boolean = false
 ) {
   logger.trace('sendMessage', ...arguments);
 
@@ -197,14 +206,13 @@ export async function sendMessage(
       null,
       null,
       null,
-      isTest,
+      isTest
     );
   }
 
   // Get the twilio configuration
   const twilioConf = await getTwilioSecret();
-  if (twilioConf === null)
-    throw new Error(`Unable to get twilio secret`);
+  if (twilioConf === null) throw new Error('Unable to get twilio secret');
 
   const fromNumber = numberConfig.number;
   const accountSid = twilioConf[`accountSid${numberConfig.account || ''}`];
@@ -233,7 +241,7 @@ export async function sendMessage(
 
 export async function sendAlertMessage(
   alertType: AlertCategory,
-  body: string,
+  body: string
 ) {
   logger.trace('sendAlertMessage', ...arguments);
 
@@ -249,7 +257,7 @@ export async function sendAlertMessage(
       messageId,
       user.phone,
       'alert',
-      body,
+      body
     )),
   ]);
 }
@@ -279,8 +287,10 @@ export async function getPageNumber(user: FullUserObject): Promise<PhoneNumberTy
     return `page${user.pagingPhone}`;
   }
 
-	// Use the global paging number if the user is:
-	// - a member of multiple departments without a paging number set
-	// - a member no departments
-	return DEFAULT_PAGE_NUMBER;
+  /*
+   * Use the global paging number if the user is:
+   * - a member of multiple departments without a paging number set
+   * - a member no departments
+   */
+  return DEFAULT_PAGE_NUMBER;
 }

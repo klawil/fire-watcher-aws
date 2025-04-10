@@ -1,15 +1,23 @@
-import { api403Response } from "@/types/api/_shared";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { Api } from "ts-oas";
+import { api403Response } from '@/types/api/_shared';
+import {
+  APIGatewayProxyEvent, APIGatewayProxyResult
+} from 'aws-lambda';
+import { Api } from 'ts-oas';
 import * as AWS from 'aws-sdk';
-import { getLogger } from "@/utils/common/logger";
-import { districtAdminUserKeys, FrontendUserObject, FullUserObject } from "@/types/api/users";
-import { UserPermissions } from "@/types/backend/user";
-import { getUserPermissions } from "@/utils/common/user";
-import { TABLE_USER, typedGet, typedQuery } from "@/utils/backend/dynamoTyped";
-import { TypedQueryInput, TypedQueryOutput } from "@/types/backend/dynamo";
-import { validateObject } from "@/utils/backend/validation";
-import { Validator } from "@/types/backend/validation";
+import { getLogger } from '@/utils/common/logger';
+import {
+  districtAdminUserKeys, FrontendUserObject, FullUserObject
+} from '@/types/api/users';
+import { UserPermissions } from '@/types/backend/user';
+import { getUserPermissions } from '@/utils/common/user';
+import {
+  TABLE_USER, typedGet, typedQuery
+} from '@/utils/backend/dynamoTyped';
+import {
+  TypedQueryInput, TypedQueryOutput
+} from '@/types/backend/dynamo';
+import { validateObject } from '@/utils/backend/validation';
+import { Validator } from '@/types/backend/validation';
 import { verify } from 'jsonwebtoken';
 
 const logger = getLogger('api/v2/_base');
@@ -30,10 +38,10 @@ export async function handleResourceApi(
       number,
       unknown,
       (APIGatewayProxyResult['multiValueHeaders'] | null)?,
-      string?,
+      string?
     ]>;
   },
-  event: APIGatewayProxyEvent,
+  event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
   logger.trace('handleResourceApi', ...arguments);
   const method = event.httpMethod as Api['method'];
@@ -70,154 +78,150 @@ export async function handleResourceApi(
 }
 
 interface DocClientListOutput<
-	ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
+  ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
 > extends TypedQueryOutput<ItemType> {
-	Items: ItemType[],
-	Count: number;
-	ScannedCount: number;
-	LastEvaluatedKeys: (AWS.DynamoDB.DocumentClient.Key | null)[];
-	MinSortKey: number | null;
-	MaxSortKey: number | null;
-	MaxAfterKey: number | null;
+  Items: ItemType[],
+  Count: number;
+  ScannedCount: number;
+  LastEvaluatedKeys: (AWS.DynamoDB.DocumentClient.Key | null)[];
+  MinSortKey: number | null;
+  MaxSortKey: number | null;
+  MaxAfterKey: number | null;
 }
 
 export type DocumentQueryConfig<T extends object> = Omit<
   TypedQueryInput<T>,
-	'TableName' | 'IndexName' | 'Limit' | 'ScanIndexForward' | 'ProjectionExpression'
-	| 'FilterExpression' | 'KeyConditionExpression'
+  'TableName' | 'IndexName' | 'Limit' | 'ScanIndexForward' | 'ProjectionExpression'
+  | 'FilterExpression' | 'KeyConditionExpression'
 > & Required<Pick<
   TypedQueryInput<T>,
-	'ExpressionAttributeValues'
->>
+  'ExpressionAttributeValues'
+>>;
 
 export async function mergeDynamoQueriesDocClient<
-	ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
+  ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
 >(
-	baseConfig: TypedQueryInput<ItemType>,
-	queryConfigs: DocumentQueryConfig<ItemType>[],
-	sortKey: keyof ItemType,
-	afterKey: (keyof ItemType | null) = null,
+  baseConfig: TypedQueryInput<ItemType>,
+  queryConfigs: DocumentQueryConfig<ItemType>[],
+  sortKey: keyof ItemType,
+  afterKey: (keyof ItemType | null) = null
 ) {
-	logger.trace('mergeDynamoQueriesDocClient', ...arguments);
-	if (afterKey === null) {
-		afterKey = sortKey;
-	}
+  logger.trace('mergeDynamoQueriesDocClient', ...arguments);
+  if (afterKey === null) {
+    afterKey = sortKey;
+  }
 
-	const scanForward = !!baseConfig.ScanIndexForward;
-	const sortDirGreater = scanForward ? 1 : -1;
-	const sortDirLesser = scanForward ? -1 : 1;
+  const scanForward = !!baseConfig.ScanIndexForward;
+  const sortDirGreater = scanForward ? 1 : -1;
+  const sortDirLesser = scanForward ? -1 : 1;
 
-	// Run the query and combine the items
-	const queryResults = await Promise.all(queryConfigs.map(config => typedQuery<ItemType>({
-		...baseConfig,
-		...config
-	})));
-	const combinedQueryResults = queryResults.reduce((agg: DocClientListOutput<ItemType>, result) => {
-		if (typeof result.Count !== 'undefined')
-			agg.Count += result.Count;
-		
-		if (typeof result.ScannedCount !== 'undefined')
-			agg.ScannedCount += result.ScannedCount;
-	
-		if (typeof result.Items !== 'undefined')
-			agg.Items = [
-				...agg.Items,
-				...(result.Items as ItemType[]),
-			];
-		
-		agg.LastEvaluatedKeys.push(result.LastEvaluatedKey || null);
+  // Run the query and combine the items
+  const queryResults = await Promise.all(queryConfigs.map(config => typedQuery<ItemType>({
+    ...baseConfig,
+    ...config,
+  })));
+  const combinedQueryResults = queryResults.reduce((agg: DocClientListOutput<ItemType>, result) => {
+    if (typeof result.Count !== 'undefined') agg.Count += result.Count;
 
-		return agg;
-	}, {
-		Items: [],
-		Count: 0,
-		ScannedCount: 0,
-		LastEvaluatedKeys: [],
-		MinSortKey: null,
-		MaxSortKey: null,
-		MaxAfterKey: null,
-	});
+    if (typeof result.ScannedCount !== 'undefined') agg.ScannedCount += result.ScannedCount;
 
-	// Sort the items
-	combinedQueryResults.Items = (combinedQueryResults.Items as ItemType[]).sort((a, b) => {
-		if (
-			typeof b[sortKey] === 'undefined'
-		) return sortDirGreater;
+    if (typeof result.Items !== 'undefined') agg.Items = [
+      ...agg.Items,
+      ...(result.Items as ItemType[]),
+    ];
 
-		if (
-			typeof a[sortKey] === 'undefined'
-		) return sortDirLesser;
+    agg.LastEvaluatedKeys.push(result.LastEvaluatedKey || null);
 
-		return a[sortKey] > b[sortKey] ? sortDirGreater : sortDirLesser;
-	});
+    return agg;
+  }, {
+    Items: [],
+    Count: 0,
+    ScannedCount: 0,
+    LastEvaluatedKeys: [],
+    MinSortKey: null,
+    MaxSortKey: null,
+    MaxAfterKey: null,
+  });
 
-	// Limit the returned results
-	if (typeof baseConfig.Limit !== 'undefined') {
-		combinedQueryResults.Items = combinedQueryResults.Items.slice(0, baseConfig.Limit);
-		combinedQueryResults.Count = combinedQueryResults.Items.length;
-	}
+  // Sort the items
+  combinedQueryResults.Items = (combinedQueryResults.Items as ItemType[]).sort((a, b) => {
+    if (
+      typeof b[sortKey] === 'undefined'
+    ) return sortDirGreater;
 
-	// Compute the sort key values
-	let minSortKey: null | number = null;
-	let maxSortKey: null | number = null;
-	let maxAfterKey: null | number = null;
-	combinedQueryResults.Items.forEach(item => {
-		const sortKeyValue = item[sortKey];
-		const afterKeyValue = item[afterKey];
+    if (
+      typeof a[sortKey] === 'undefined'
+    ) return sortDirLesser;
 
-		if (
-			!isNaN(sortKeyValue) &&
-			(
-				minSortKey === null ||
-				sortKeyValue < minSortKey
-			)
-		) minSortKey = sortKeyValue;
+    return a[sortKey] > b[sortKey] ? sortDirGreater : sortDirLesser;
+  });
 
-		if (
-			!isNaN(sortKeyValue) &&
-			(
-				maxSortKey === null ||
-				sortKeyValue > maxSortKey
-			)
-		) maxSortKey = sortKeyValue;
+  // Limit the returned results
+  if (typeof baseConfig.Limit !== 'undefined') {
+    combinedQueryResults.Items = combinedQueryResults.Items.slice(0, baseConfig.Limit);
+    combinedQueryResults.Count = combinedQueryResults.Items.length;
+  }
 
-		if (
-			!isNaN(afterKeyValue) &&
-			(
-				maxAfterKey === null ||
-				afterKeyValue > maxAfterKey
-			)
-		) maxAfterKey = afterKeyValue;
-	});
-	combinedQueryResults.MinSortKey = minSortKey;
-	combinedQueryResults.MaxSortKey = maxSortKey;
-	combinedQueryResults.MaxAfterKey = maxAfterKey;
+  // Compute the sort key values
+  let minSortKey: null | number = null;
+  let maxSortKey: null | number = null;
+  let maxAfterKey: null | number = null;
+  combinedQueryResults.Items.forEach(item => {
+    const sortKeyValue = item[sortKey];
+    const afterKeyValue = item[afterKey];
 
-	if (scanForward)
-		combinedQueryResults.Items.reverse();
+    if (
+      !isNaN(sortKeyValue) &&
+      (
+        minSortKey === null ||
+        sortKeyValue < minSortKey
+      )
+    ) minSortKey = sortKeyValue;
 
-	return combinedQueryResults;
+    if (
+      !isNaN(sortKeyValue) &&
+      (
+        maxSortKey === null ||
+        sortKeyValue > maxSortKey
+      )
+    ) maxSortKey = sortKeyValue;
+
+    if (
+      !isNaN(afterKeyValue) &&
+      (
+        maxAfterKey === null ||
+        afterKeyValue > maxAfterKey
+      )
+    ) maxAfterKey = afterKeyValue;
+  });
+  combinedQueryResults.MinSortKey = minSortKey;
+  combinedQueryResults.MaxSortKey = maxSortKey;
+  combinedQueryResults.MaxAfterKey = maxAfterKey;
+
+  if (scanForward) combinedQueryResults.Items.reverse();
+
+  return combinedQueryResults;
 }
 
 interface Cookies {
-	[key: string]: string;
+  [key: string]: string;
 }
 
 export function getCookies(event: APIGatewayProxyEvent): Cookies {
-	logger.trace('getCookies', event);
-	return (event.headers.Cookie || '')
-		.split('; ')
-		.reduce((agg: Cookies, val) => {
-			const valSplit = val.split('=');
-			if (valSplit[0] !== '') {
-				if (valSplit.length < 2) {
-					valSplit.push('');
-				}
+  logger.trace('getCookies', event);
+  return (event.headers.Cookie || '')
+    .split('; ')
+    .reduce((agg: Cookies, val) => {
+      const valSplit = val.split('=');
+      if (valSplit[0] !== '') {
+        if (valSplit.length < 2) {
+          valSplit.push('');
+        }
 
-				agg[valSplit[0]] = valSplit[1];
-			}
-			return agg;
-		}, {});
+        agg[valSplit[0]] = valSplit[1];
+      }
+      return agg;
+    }, {});
 }
 
 export function getFrontendUserObj(
@@ -251,17 +255,21 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
   UserPermissions,
   {
     'Set-Cookie'?: string[];
-  },
+  }
 ]> {
-	logger.trace('getCurrentUser', event);
+  logger.trace('getCurrentUser', event);
 
   const response: [
     FrontendUserObject | null,
     UserPermissions,
     {
       'Set-Cookie'?: string[];
-    },
-  ] = [ null, getUserPermissions(null), {} ];
+    }
+  ] = [
+    null,
+    getUserPermissions(null),
+    {},
+  ];
 
   try {
     const cookies = getCookies(event);
@@ -283,12 +291,12 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
     // Use JWT to validate the user (first pass)
     const jwtSecret = await secretManager.getSecretValue({
       SecretId: jwtSecretArn,
-    }).promise().then(data => data.SecretString);
-    if (typeof jwtSecret === 'undefined')
-      throw new Error(`Unable to get JWT secret`);
+    }).promise()
+      .then(data => data.SecretString);
+    if (typeof jwtSecret === 'undefined') throw new Error('Unable to get JWT secret');
     const userPayload = verify(
       cookies[authTokenCookie],
-      jwtSecret,
+      jwtSecret
     );
     if (
       typeof userPayload === 'string' ||
@@ -328,21 +336,26 @@ export function parseJsonBody<T extends object>(
   body: string | null,
   validator?: Validator<T>
 ): [T | null, (keyof T)[] ] {
-	logger.trace('validateBodyIsJson', ...arguments);
+  logger.trace('validateBodyIsJson', ...arguments);
   try {
     if (body === null) {
-      throw new Error(`Invalid JSON body - null`);
+      throw new Error('Invalid JSON body - null');
     }
 
     const parsed = JSON.parse(body);
 
-    if (validator)
-      return validateObject<T>(parsed, validator);
+    if (validator) return validateObject<T>(parsed, validator);
 
-    return [ parsed as T, [] ];
+    return [
+      parsed as T,
+      [],
+    ];
   } catch (e) {
-    logger.error(`Error parsing body`, body, e);
-    return [ null, [] ];
+    logger.error('Error parsing body', body, e);
+    return [
+      null,
+      [],
+    ];
   }
 }
 
@@ -359,11 +372,11 @@ export function validateRequest<A extends Api>({
   queryRaw?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   queryValidator?: Validator<A['query']>,
 }): {
-  params: A['params'] | null,
-  body: A['body'] | null,
-  query: A['query'] | null,
-  validationErrors: string[],
-} {
+    params: A['params'] | null,
+    body: A['body'] | null,
+    query: A['query'] | null,
+    validationErrors: string[],
+  } {
   const response: ReturnType<typeof validateRequest<A>> = {
     params: null,
     body: null,
@@ -373,9 +386,12 @@ export function validateRequest<A extends Api>({
 
   // Validate the params
   if (typeof paramsValidator !== 'undefined') {
-    const [ params, paramsErrors ] = validateObject(
+    const [
+      params,
+      paramsErrors,
+    ] = validateObject(
       paramsRaw,
-      paramsValidator,
+      paramsValidator
     );
     if (params !== null) {
       response.params = params;
@@ -390,9 +406,12 @@ export function validateRequest<A extends Api>({
 
   // Validate the query
   if (typeof queryValidator !== 'undefined') {
-    const [ query, queryErrors ] = validateObject(
+    const [
+      query,
+      queryErrors,
+    ] = validateObject(
       queryRaw,
-      queryValidator,
+      queryValidator
     );
     if (query !== null) {
       response.query = query;
@@ -411,14 +430,20 @@ export function validateRequest<A extends Api>({
     let body: typeof response['body'] = null;
     let bodyErrors: typeof response['validationErrors'] = [];
     if (bodyParser === 'json') {
-      [ body, bodyErrors ] = parseJsonBody(
+      [
+        body,
+        bodyErrors,
+      ] = parseJsonBody(
         bodyRaw,
-        bodyValidator,
+        bodyValidator
       );
     } else {
-      [ body, bodyErrors ] = validateObject(
+      [
+        body,
+        bodyErrors,
+      ] = validateObject(
         bodyRaw,
-        bodyValidator,
+        bodyValidator
       );
     }
     if (body !== null) {

@@ -1,6 +1,10 @@
 import { getLogger } from '@/utils/common/logger';
-import { FullFileObject, GetAllFilesApi, getAllFilesApiQueryValidator } from '@/types/api/files';
-import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
+import {
+  FullFileObject, GetAllFilesApi, getAllFilesApiQueryValidator
+} from '@/types/api/files';
+import {
+  handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient
+} from './_base';
 import { TABLE_FILE } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { generateApi400Body } from '@/types/api/_shared';
@@ -19,15 +23,21 @@ const afterAddedIndexNames: {
 const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
-  const [ query, queryErrors ] = validateObject<GetAllFilesApi['query']>(
+  const [
+    query,
+    queryErrors,
+  ] = validateObject<GetAllFilesApi['query']>(
     event.multiValueQueryStringParameters || {},
     getAllFilesApiQueryValidator,
-    true,
+    true
   );
   if (
     query === null ||
     queryErrors.length > 0
-  ) return [ 400, generateApi400Body(queryErrors) ];
+  ) return [
+    400,
+    generateApi400Body(queryErrors),
+  ];
 
   const baseQueryConfig: TypedQueryInput<FullFileObject> = {
     ScanIndexForward: false,
@@ -50,11 +60,14 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
         },
       }));
   } else {
-    let emergencyValues = [ 0, 1 ];
+    let emergencyValues = [
+      0,
+      1,
+    ];
     if (typeof query.emerg !== 'undefined') {
       emergencyValues = query.emerg === 'y'
-        ? [ 1 ]
-        : [ 0 ];
+        ? [ 1, ]
+        : [ 0, ];
     }
 
     baseQueryConfig.ExpressionAttributeNames = {
@@ -93,10 +106,8 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     baseQueryConfig.KeyConditionExpression += ' AND #added > :added';
 
     const newIndex = afterAddedIndexNames[baseQueryConfig.IndexName || ''];
-    if (typeof newIndex === 'undefined')
-      delete baseQueryConfig.IndexName;
-    else
-      baseQueryConfig.IndexName = newIndex;
+    if (typeof newIndex === 'undefined') delete baseQueryConfig.IndexName;
+    else baseQueryConfig.IndexName = newIndex;
 
     queryConfigs.forEach(queryConfig => {
       queryConfig.ExpressionAttributeValues[':added'] = query.afterAdded;
@@ -108,16 +119,19 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     baseQueryConfig,
     queryConfigs,
     'StartTime',
-    'Added',
+    'Added'
   );
 
-  return [ 200, {
-    before: data.MinSortKey,
-    after: data.MaxSortKey,
-    afterAdded: data.MaxAfterKey,
-    files: data.Items,
-  } ];
-}
+  return [
+    200,
+    {
+      before: data.MinSortKey,
+      after: data.MaxSortKey,
+      afterAdded: data.MaxAfterKey,
+      files: data.Items,
+    },
+  ];
+};
 
 export const main = handleResourceApi.bind(null, {
   GET,

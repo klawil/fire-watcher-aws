@@ -1,4 +1,4 @@
-import { Api } from "ts-oas";
+import { Api } from 'ts-oas';
 
 type TypeFetchApi<T extends Api> = Pick<T, 'path' | 'method' | 'responses'> & Partial<Pick<T, 'params' | 'query' | 'body'>>;
 type TypeFetchApiInput<T extends Api> = Omit<TypeFetchApi<T>, 'responses'>;
@@ -32,7 +32,7 @@ export async function typeFetch<T extends Api>({
       .forEach(key => {
         let value = query[key];
         if (!Array.isArray(value)) {
-          value = [ value ];
+          value = [ value, ];
         }
 
         value.forEach((v: unknown) => searchStr.set(key, String(v)));
@@ -55,7 +55,7 @@ export async function typeFetch<T extends Api>({
   try {
     responseBody = await fetchResponse.json();
   } catch (e) {
-    console.error(`Possible error fetching API`, e);
+    console.error('Possible error fetching API', e);
   }
 
   return [

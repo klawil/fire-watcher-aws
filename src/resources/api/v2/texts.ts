@@ -1,43 +1,72 @@
 import { getLogger } from '@/utils/common/logger';
-import { getCurrentUser, handleResourceApi, LambdaApiFunction } from './_base';
-import { FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, allowedFrontendTextFields } from '@/types/api/texts';
-import { api401Body, api403Body, generateApi400Body } from '@/types/api/_shared';
-import { TABLE_TEXT, typedQuery } from '@/utils/backend/dynamoTyped';
+import {
+  getCurrentUser, handleResourceApi, LambdaApiFunction
+} from './_base';
+import {
+  FullTextObject, GetAllTextsApi, getAllTextsApiQueryValidator, allowedFrontendTextFields
+} from '@/types/api/texts';
+import {
+  api401Body, api403Body, generateApi400Body
+} from '@/types/api/_shared';
+import {
+  TABLE_TEXT, typedQuery
+} from '@/utils/backend/dynamoTyped';
 import { TypedQueryInput } from '@/types/backend/dynamo';
 import { validateObject } from '@/utils/backend/validation';
 
 const logger = getLogger('texts');
 
-const anyAdminTextTypes: FullTextObject['type'][] = [ 'page', 'transcript', 'pageAnnounce', ];
+const anyAdminTextTypes: FullTextObject['type'][] = [
+  'page',
+  'transcript',
+  'pageAnnounce',
+];
 const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
   // Validate the query
-  const [ query, queryErrors ] = validateObject<GetAllTextsApi['query']>(
+  const [
+    query,
+    queryErrors,
+  ] = validateObject<GetAllTextsApi['query']>(
     event.queryStringParameters || {},
-    getAllTextsApiQueryValidator,
+    getAllTextsApiQueryValidator
   );
   if (
     query === null ||
     queryErrors.length > 0
-  )
-    return [
-      400,
-      generateApi400Body(queryErrors),
-    ];
+  ) return [
+    400,
+    generateApi400Body(queryErrors),
+  ];
 
   // Make sure either department or type is passed
   if (
     typeof query.type === typeof query.department
   ) return [
     400,
-    generateApi400Body([ 'type', 'department' ]),
+    generateApi400Body([
+      'type',
+      'department',
+    ]),
   ];
 
   // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  if (!userPerms.isAdmin) return [ 403, api403Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
+  if (!userPerms.isAdmin) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
 
   // Build the query input
   let queryInput: (TypedQueryInput<FullTextObject> & Required<Pick<
@@ -71,13 +100,13 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
       KeyConditionExpression: '#department = :department',
     };
   }
-  if (queryInput === null) throw new Error(`Not enough info to make query`);
-  
+  if (queryInput === null) throw new Error('Not enough info to make query');
+
   // Add the timing component
   if (typeof query.before !== 'undefined') {
-    queryInput.ExpressionAttributeNames['#datetime'] = 'datetime'
+    queryInput.ExpressionAttributeNames['#datetime'] = 'datetime';
     queryInput.ExpressionAttributeValues[':datetime'] = query.before;
-		queryInput.KeyConditionExpression += ' AND #datetime < :datetime';
+    queryInput.KeyConditionExpression += ' AND #datetime < :datetime';
   }
 
   // Run the query
@@ -121,7 +150,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
     },
     userHeaders,
   ];
-}
+};
 
 export const main = handleResourceApi.bind(null, {
   GET,

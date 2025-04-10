@@ -1,12 +1,12 @@
-import { getLogger } from "@/utils/common/logger";
-import { Validator } from "@/types/backend/validation";
+import { getLogger } from '@/utils/common/logger';
+import { Validator } from '@/types/backend/validation';
 
 const logger = getLogger('stack/utils/validation');
 
 export function validateObject<T extends object>(
   obj: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   validator: Validator<T>,
-  useMultiValue: boolean = false,
+  useMultiValue: boolean = false
 ): [T | null, (keyof T)[] ] {
   logger.trace('validateObject', ...arguments);
   const newObj: Partial<T> = {};
@@ -19,7 +19,10 @@ export function validateObject<T extends object>(
     Array.isArray(obj) ||
     obj === null
   ) {
-    return [ null, objKeys ];
+    return [
+      null,
+      objKeys,
+    ];
   }
 
   // Loop over the keys
@@ -54,8 +57,8 @@ export function validateObject<T extends object>(
           obj[key],
           value,
           conf,
-          (conf?.regex && !conf.regex.test(value)),
-          (conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])),
+          conf?.regex && !conf.regex.test(value),
+          conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])
         );
         badKeys.push(key);
         return;
@@ -78,8 +81,8 @@ export function validateObject<T extends object>(
           value,
           conf,
           Number.isNaN(value),
-          (conf?.regex && !conf.regex.test(value.toString())),
-          (conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])),
+          conf?.regex && !conf.regex.test(value.toString()),
+          conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])
         );
         badKeys.push(key);
         return;
@@ -100,8 +103,8 @@ export function validateObject<T extends object>(
           obj[key],
           value,
           conf,
-          (conf?.regex && !conf.regex.test(value.toString())),
-          (conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])),
+          conf?.regex && !conf.regex.test(value.toString()),
+          conf?.exact && !conf.exact.includes(value as typeof conf.exact[number])
         );
         badKeys.push(key);
         return;
@@ -122,8 +125,8 @@ export function validateObject<T extends object>(
           obj[key],
           value,
           conf,
-          (conf?.regex && value.some(v => !conf.regex?.test(v.toString()))),
-          (conf?.exact && value.some(v => !conf.exact?.includes(v))),
+          conf?.regex && value.some(v => !conf.regex?.test(v.toString())),
+          conf?.exact && value.some(v => !conf.exact?.includes(v))
         );
         badKeys.push(key);
         return;
@@ -139,7 +142,7 @@ export function validateObject<T extends object>(
           `Failed to validate ${String(key)} as null`,
           obj[key],
           value,
-          conf,
+          conf
         );
         badKeys.push(key);
         return;
@@ -152,13 +155,16 @@ export function validateObject<T extends object>(
       badKeys.push(key);
       return;
     }
-    
+
     // Add the key to the object
     newObj[key] = value;
   });
 
   if (badKeys.length > 0) {
-    return [ null, badKeys ];
+    return [
+      null,
+      badKeys,
+    ];
   }
 
   return [

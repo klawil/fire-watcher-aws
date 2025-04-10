@@ -1,4 +1,6 @@
-import { FullFileObject, GetAllFilesApi } from "@/types/api/files";
+import {
+  FullFileObject, GetAllFilesApi
+} from '@/types/api/files';
 
 type PlayerState = 'playing' | 'paused' | 'ended';
 type FileAddDirection = 'before' | 'after';
@@ -26,45 +28,92 @@ export const filterPresets: {
   };
 } = {
   NSCAD: {
-    talkgroups: [ 8198 ],
+    talkgroups: [ 8198, ],
   },
   NSCFPD: {
-    talkgroups: [ 8332, 8333, 18332 ],
+    talkgroups: [
+      8332,
+      8333,
+      18332,
+    ],
   },
   SagMac: {
-    talkgroups: [ 8330 ],
+    talkgroups: [ 8330, ],
     label: 'Saguache Mac',
   },
   BGES: {
-    talkgroups: [ 8090, 8331, 18331 ],
+    talkgroups: [
+      8090,
+      8331,
+      18331,
+    ],
     label: 'Baca Grande Emergency Services',
   },
   'BGFD/BGEMS': {
-    talkgroups: [ 8090, 8331, 18331 ],
+    talkgroups: [
+      8090,
+      8331,
+      18331,
+    ],
     hide: true,
   },
   SCSO: {
-    talkgroups: [ 8335, 8336 ],
+    talkgroups: [
+      8335,
+      8336,
+    ],
     label: 'Saguache County Sheriff',
   },
   NSCAll: {
-    talkgroups: [ 8198, 8330, 8332, 8333, 18332 ],
+    talkgroups: [
+      8198,
+      8330,
+      8332,
+      8333,
+      18332,
+    ],
     label: 'NSCAD and NSCFPD',
   },
   SCAll: {
-    talkgroups: [ 8090, 8198, 8330, 8331, 8332, 8333, 8335, 8336, 18331, 18332 ],
+    talkgroups: [
+      8090,
+      8198,
+      8330,
+      8331,
+      8332,
+      8333,
+      8335,
+      8336,
+      18331,
+      18332,
+    ],
     label: 'Saguache County All',
   },
   SCAllNA5: {
-    talkgroups: [ 8198, 8330, 8331, 8332, 8333, 8335, 8336, 18331, 18332 ],
+    talkgroups: [
+      8198,
+      8330,
+      8331,
+      8332,
+      8333,
+      8335,
+      8336,
+      18331,
+      18332,
+    ],
     label: 'Saguache County All (No ARCC 5)',
   },
   ACFE: {
-    talkgroups: [ 8181 ],
+    talkgroups: [ 8181, ],
     label: 'Alamosa EMS/Fire',
   },
   Hosp: {
-    talkgroups: [ 8150, 8151, 124, 8138 ],
+    talkgroups: [
+      8150,
+      8151,
+      124,
+      8138,
+    ],
     label: 'Hospitals',
   },
 };
@@ -105,7 +154,7 @@ export interface AudioState {
     timestamp?: number;
     fileUrl?: string;
   };
-};
+}
 
 interface QueryParamsParsedAction {
   action: 'QueryParamsParsed';
@@ -150,7 +199,7 @@ interface SetApiLastCallAction {
 }
 type AddApiResponseAction = AudioState['apiResponse'][number] & {
   action: 'AddApiResponse';
-}
+};
 interface ClearApiResponseAction {
   action: 'ClearApiResponse';
   direction?: FileAddDirection;

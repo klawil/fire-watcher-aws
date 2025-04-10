@@ -1,5 +1,7 @@
-import { TypedUpdateInput, TypedGetOutput, TypedUpdateOutput, TypedGetInput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput, TypedDeleteItemInput, TypedDeleteItemOutput, TypedPutItemInput, TypedPutItemOutput } from "@/types/backend/dynamo";
-import { DocumentClient } from "aws-sdk/clients/dynamodb";
+import {
+  TypedUpdateInput, TypedGetOutput, TypedUpdateOutput, TypedGetInput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput, TypedDeleteItemInput, TypedDeleteItemOutput, TypedPutItemInput, TypedPutItemOutput
+} from '@/types/backend/dynamo';
+import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 
 const docClient = new DocumentClient();
 
@@ -24,7 +26,7 @@ export async function typedGet<T extends object>(
 }
 
 export async function typedQuery<T extends object>(
- config: TypedQueryInput<T>
+  config: TypedQueryInput<T>
 ): Promise<TypedQueryOutput<T>> {
   return (await docClient.query(config).promise()) as TypedQueryOutput<T>;
 }

@@ -1,12 +1,22 @@
 import * as AWS from 'aws-sdk';
 import { generateApi400Body } from '@/types/api/_shared';
 import { getLogger } from '@/utils/common/logger';
-import { handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
-import { createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator } from '@/types/api/twilio';
+import {
+  handleResourceApi, LambdaApiFunction, validateRequest
+} from './_base';
+import {
+  createTextQueryValidator, UpdateTextStatusApi, updateTextStatusBodyValidator, updateTextStatusParamsValidator
+} from '@/types/api/twilio';
 import { validateTwilioRequest } from './_twilio';
-import { getTwilioSecret, twilioPhoneNumbers } from '@/deprecated/utils/general';
-import { FullUserObject, validDepartments } from '@/types/api/users';
-import { TABLE_TEXT, TABLE_USER, typedGet, typedUpdate } from '@/utils/backend/dynamoTyped';
+import {
+  getTwilioSecret, twilioPhoneNumbers
+} from '@/deprecated/utils/general';
+import {
+  FullUserObject, validDepartments
+} from '@/types/api/users';
+import {
+  TABLE_TEXT, TABLE_USER, typedGet, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 import { FullTextObject } from '@/types/api/texts';
 import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
 
@@ -24,7 +34,10 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   const bodyObj: {
     [key: string]: unknown;
   } = {};
-  for (const [key, value] of urlParamsBody.entries()) {
+  for (const [
+    key,
+    value,
+  ] of urlParamsBody.entries()) {
     bodyObj[key] = value;
   }
 
@@ -59,7 +72,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     logger.error(`Invalid phone number - ${body.From}`, body);
     return [
       400,
-      generateApi400Body([ 'From' ]),
+      generateApi400Body([ 'From', ]),
     ];
   }
   const phoneNumberConf = phoneNumberConfigs[body.From];
@@ -67,17 +80,17 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     logger.error(`Invalid phone number account - ${phoneNumberConf.account || 'undef'}`, body, phoneNumberConf);
     return [
       400,
-      generateApi400Body([ 'From' ]),
+      generateApi400Body([ 'From', ]),
     ];
   }
 
   // Validate the Twilio signature
-  const [ isValid ] = validateTwilioRequest(
+  const [ isValid, ] = validateTwilioRequest(
     event,
     query,
     bodyObj,
     phoneNumberConf,
-    twilioConf,
+    twilioConf
   );
   if (!isValid) {
     return [
@@ -95,7 +108,10 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   });
   if (!userGet.Item) {
     logger.error(`Invalid user ID - user ${body.To}`, userGet);
-    return [ 204, '' ];
+    return [
+      204,
+      '',
+    ];
   }
   const user = userGet.Item;
 
@@ -115,8 +131,8 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       '#fromNumber': 'fromNumber',
     },
     ExpressionAttributeValues: {
-      [`:${body.MessageStatus}`]: [ eventTime ],
-      [`:${body.MessageStatus}Phone`]: [ user.phone ],
+      [`:${body.MessageStatus}`]: [ eventTime, ],
+      [`:${body.MessageStatus}Phone`]: [ user.phone, ],
       ':fromNumber': body.From,
       ':blankList': [],
     },
@@ -128,7 +144,10 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   });
 
   // Update the user for delivered and undelivered messages
-  if ([ 'undelivered', 'delivered' ].includes(body.MessageStatus)) {
+  if ([
+    'undelivered',
+    'delivered',
+  ].includes(body.MessageStatus)) {
     const updateValues: AWS.DynamoDB.DocumentClient.ExpressionAttributeValueMap = {
       ':lastStatus': body.MessageStatus,
       ':lastStatusBase': 0,
@@ -182,32 +201,32 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   }
 
   // Update the metrics for the type of message status
-  const metricName = body.MessageStatus.slice(0, 1).toUpperCase()
-    + body.MessageStatus.slice(1) + 'Time';
+  const metricName = body.MessageStatus.slice(0, 1).toUpperCase() +
+    body.MessageStatus.slice(1) + 'Time';
   const messageTime = new Date(params.id);
   promises['metrics'] = cloudWatch.putMetricData({
     Namespace: 'Twilio Health',
-    MetricData: [
-      {
-        MetricName: metricName,
-        Timestamp: messageTime,
-        Unit: 'Milliseconds',
-        Value: eventTime - messageTime.getTime(),
-      },
-    ],
+    MetricData: [ {
+      MetricName: metricName,
+      Timestamp: messageTime,
+      Unit: 'Milliseconds',
+      Value: eventTime - messageTime.getTime(),
+    }, ],
   }).promise();
 
   let wasError = false;
   await Promise.all(Object.keys(promises)
     .map(name => promises[name].catch(e => {
       wasError = true;
-      logger.error(`Error on promise ${name}`, e)
-    }))
-  );
-  if (wasError) throw new Error(`Error in promises`);
+      logger.error(`Error on promise ${name}`, e);
+    })));
+  if (wasError) throw new Error('Error in promises');
 
-  return [ 204, '' ];
-}
+  return [
+    204,
+    '',
+  ];
+};
 
 export const main = handleResourceApi.bind(null, {
   POST,

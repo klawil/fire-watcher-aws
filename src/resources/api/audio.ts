@@ -1,8 +1,12 @@
 import * as aws from 'aws-sdk';
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import {
+  APIGatewayProxyEvent, APIGatewayProxyResult
+} from 'aws-lambda';
 import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
 import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
-import { ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject } from '@/deprecated/common/audioApi';
+import {
+  ApiAudioListResponse, ApiAudioTalkgroupsResponse, AudioFileObject, TalkgroupObject
+} from '@/deprecated/common/audioApi';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('audio');
@@ -12,10 +16,10 @@ const talkgroupTable = process.env.TABLE_TALKGROUP;
 
 const defaultListLimit = 100;
 const dtrTableIndexes: {
-	[key: string]: undefined | string;
+  [key: string]: undefined | string;
 } = {
-	StartTimeEmergIndex: 'AddedIndex',
-	StartTimeTgIndex: undefined
+  StartTimeEmergIndex: 'AddedIndex',
+  StartTimeTgIndex: undefined,
 };
 
 /**
@@ -27,186 +31,185 @@ const dtrTableIndexes: {
  * @param addedAfter Number The timestamp to get values added after (ms since epoch)
  */
 async function getList(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	logger.trace('getList', ...arguments);
-	const queryStringParameters: {
-		tg?: string;
-		emerg?: 'y' | 'n';
-		next?: string;
-		before?: string;
-		after?: string;
-		afterAdded?: string;
-	} = event.queryStringParameters || {};
-	const queryConfigs: aws.DynamoDB.QueryInput[] = [];
+  logger.trace('getList', ...arguments);
+  const queryStringParameters: {
+    tg?: string;
+    emerg?: 'y' | 'n';
+    next?: string;
+    before?: string;
+    after?: string;
+    afterAdded?: string;
+  } = event.queryStringParameters || {};
+  const queryConfigs: aws.DynamoDB.QueryInput[] = [];
 
-	// Determine which index to user and generate the base configs
-	if (typeof queryStringParameters.tg !== 'undefined') {
-		queryStringParameters.tg.split('|')
-			.forEach(tg => queryConfigs.push({
-				TableName: dtrTable,
-				IndexName: 'StartTimeTgIndex',
-				ScanIndexForward: false,
-				ExpressionAttributeNames: {
-					'#tg': 'Talkgroup',
-				},
-				ExpressionAttributeValues: {
-					':tg': { N: tg },
-				},
-				Limit: defaultListLimit,
-				KeyConditionExpression: '#tg = :tg',
-			}));
-	} else {
-		let emergencyValues = [ '0', '1' ];
-		if (typeof queryStringParameters.emerg !== 'undefined')
-			emergencyValues = queryStringParameters.emerg === 'y' ? [ '1' ] : [ '0' ];
+  // Determine which index to user and generate the base configs
+  if (typeof queryStringParameters.tg !== 'undefined') {
+    queryStringParameters.tg.split('|')
+      .forEach(tg => queryConfigs.push({
+        TableName: dtrTable,
+        IndexName: 'StartTimeTgIndex',
+        ScanIndexForward: false,
+        ExpressionAttributeNames: {
+          '#tg': 'Talkgroup',
+        },
+        ExpressionAttributeValues: {
+          ':tg': { N: tg, },
+        },
+        Limit: defaultListLimit,
+        KeyConditionExpression: '#tg = :tg',
+      }));
+  } else {
+    let emergencyValues = [
+      '0',
+      '1',
+    ];
+    if (typeof queryStringParameters.emerg !== 'undefined') emergencyValues = queryStringParameters.emerg === 'y' ? [ '1', ] : [ '0', ];
 
-		emergencyValues.forEach(emerg => queryConfigs.push({
-			TableName: dtrTable,
-			IndexName: 'StartTimeEmergIndex',
-			ScanIndexForward: false,
-			ExpressionAttributeNames: {
-				'#emerg': 'Emergency',
-			},
-			ExpressionAttributeValues: {
-				':emerg': { N: emerg },
-			},
-			Limit: defaultListLimit,
-			KeyConditionExpression: '#emerg = :emerg',
-		}));
-	}
+    emergencyValues.forEach(emerg => queryConfigs.push({
+      TableName: dtrTable,
+      IndexName: 'StartTimeEmergIndex',
+      ScanIndexForward: false,
+      ExpressionAttributeNames: {
+        '#emerg': 'Emergency',
+      },
+      ExpressionAttributeValues: {
+        ':emerg': { N: emerg, },
+      },
+      Limit: defaultListLimit,
+      KeyConditionExpression: '#emerg = :emerg',
+    }));
+  }
 
-	// Check for a timing filter
-	if (
-		typeof queryStringParameters.before !== 'undefined' &&
-		!isNaN(Number(queryStringParameters.before))
-	) {
-		const before = queryStringParameters.before;
+  // Check for a timing filter
+  if (
+    typeof queryStringParameters.before !== 'undefined' &&
+    !isNaN(Number(queryStringParameters.before))
+  ) {
+    const before = queryStringParameters.before;
 
-		queryConfigs.forEach(queryConfig => {
-			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
-			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+    queryConfigs.forEach(queryConfig => {
+      queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+      queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
-			queryConfig.ExpressionAttributeValues[':st'] = { N: before };
-			queryConfig.KeyConditionExpression += ' AND #st < :st';
-		});
-	} else if (
-		typeof queryStringParameters.after !== 'undefined' &&
-		!isNaN(Number(queryStringParameters.after))
-	) {
-		const after = queryStringParameters.after;
+      queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+      queryConfig.ExpressionAttributeValues[':st'] = { N: before, };
+      queryConfig.KeyConditionExpression += ' AND #st < :st';
+    });
+  } else if (
+    typeof queryStringParameters.after !== 'undefined' &&
+    !isNaN(Number(queryStringParameters.after))
+  ) {
+    const after = queryStringParameters.after;
 
-		queryConfigs.forEach(queryConfig => {
-			queryConfig.ScanIndexForward = true;
+    queryConfigs.forEach(queryConfig => {
+      queryConfig.ScanIndexForward = true;
 
-			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
-			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+      queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+      queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
-			queryConfig.ExpressionAttributeValues[':st'] = { N: after };
-			queryConfig.KeyConditionExpression += ' AND #st > :st';
-		});
-	} else if (
-		typeof queryStringParameters.afterAdded !== 'undefined' &&
-		!isNaN(Number(queryStringParameters.afterAdded))
-	) {
-		const afterAdded = queryStringParameters.afterAdded;
+      queryConfig.ExpressionAttributeNames['#st'] = 'StartTime';
+      queryConfig.ExpressionAttributeValues[':st'] = { N: after, };
+      queryConfig.KeyConditionExpression += ' AND #st > :st';
+    });
+  } else if (
+    typeof queryStringParameters.afterAdded !== 'undefined' &&
+    !isNaN(Number(queryStringParameters.afterAdded))
+  ) {
+    const afterAdded = queryStringParameters.afterAdded;
 
-		queryConfigs.forEach(queryConfig => {
-			const newIndexName = dtrTableIndexes[queryConfig.IndexName as string];
-			if (newIndexName === undefined)
-				delete queryConfig.IndexName;
-			else
-				queryConfig.IndexName = newIndexName;
+    queryConfigs.forEach(queryConfig => {
+      const newIndexName = dtrTableIndexes[queryConfig.IndexName as string];
+      if (newIndexName === undefined) delete queryConfig.IndexName;
+      else queryConfig.IndexName = newIndexName;
 
-			queryConfig.ScanIndexForward = true;
+      queryConfig.ScanIndexForward = true;
 
-			queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
-			queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
+      queryConfig.ExpressionAttributeNames = queryConfig.ExpressionAttributeNames || {};
+      queryConfig.ExpressionAttributeValues = queryConfig.ExpressionAttributeValues || {};
 
-			queryConfig.ExpressionAttributeNames['#added'] = 'Added';
-			queryConfig.ExpressionAttributeValues[':added'] = { N: afterAdded };
-			queryConfig.KeyConditionExpression += ' AND #added > :added';
-		});
-	}
+      queryConfig.ExpressionAttributeNames['#added'] = 'Added';
+      queryConfig.ExpressionAttributeValues[':added'] = { N: afterAdded, };
+      queryConfig.KeyConditionExpression += ' AND #added > :added';
+    });
+  }
 
-	// Get the data
-	const data = await mergeDynamoQueries(queryConfigs, 'StartTime', 'Added');
-	const body: ApiAudioListResponse = {
-		success: true,
-		before: data.MinSortKey,
-		after: data.MaxSortKey,
-		afterAdded: data.MaxAfterKey,
-		files: data.Items.map(parseDynamoDbAttributeMap)
-			.map(item => item as unknown as AudioFileObject),
-	};
+  // Get the data
+  const data = await mergeDynamoQueries(queryConfigs, 'StartTime', 'Added');
+  const body: ApiAudioListResponse = {
+    success: true,
+    before: data.MinSortKey,
+    after: data.MaxSortKey,
+    afterAdded: data.MaxAfterKey,
+    files: data.Items.map(parseDynamoDbAttributeMap)
+      .map(item => item as unknown as AudioFileObject),
+  };
 
-	return {
-		statusCode: 200,
-		body: JSON.stringify(body),
-	};
+  return {
+    statusCode: 200,
+    body: JSON.stringify(body),
+  };
 }
 
 async function getTalkgroups(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	logger.trace('getTalkgroups', ...arguments);
-	event.queryStringParameters = event.queryStringParameters || {};
-	const queryConfigs: aws.DynamoDB.QueryInput[] = [];
+  logger.trace('getTalkgroups', ...arguments);
+  event.queryStringParameters = event.queryStringParameters || {};
+  const queryConfigs: aws.DynamoDB.QueryInput[] = [];
 
-	// See which partitions we should look in
-	const partitions = [ 'Y' ];
-	if (event.queryStringParameters.all === 'y')
-		partitions.push('N');
+  // See which partitions we should look in
+  const partitions = [ 'Y', ];
+  if (event.queryStringParameters.all === 'y') partitions.push('N');
 
-	// Build the base query configs
-	partitions.forEach(partition => queryConfigs.push({
-		TableName: talkgroupTable,
-		IndexName: 'InUseIndex',
-		ExpressionAttributeNames: {
-			'#iu': 'InUse',
-			'#name': 'Name',
-			'#id': 'ID',
-		},
-		ExpressionAttributeValues: {
-			':iu': { S: partition, },
-		},
-		KeyConditionExpression: '#iu = :iu',
-		ProjectionExpression: '#id,#name,#iu',
-	}));
+  // Build the base query configs
+  partitions.forEach(partition => queryConfigs.push({
+    TableName: talkgroupTable,
+    IndexName: 'InUseIndex',
+    ExpressionAttributeNames: {
+      '#iu': 'InUse',
+      '#name': 'Name',
+      '#id': 'ID',
+    },
+    ExpressionAttributeValues: {
+      ':iu': { S: partition, },
+    },
+    KeyConditionExpression: '#iu = :iu',
+    ProjectionExpression: '#id,#name,#iu',
+  }));
 
-	// Retrieve the data
-	const data = await mergeDynamoQueries(queryConfigs, 'Count');
+  // Retrieve the data
+  const data = await mergeDynamoQueries(queryConfigs, 'Count');
 
-	const body: ApiAudioTalkgroupsResponse = {
-		success: true,
-		count: 0,
-		loadedAll: true,
-		talkgroups: data.Items
-			.map(parseDynamoDbAttributeMap)
-			.map(item => item as unknown as TalkgroupObject),
-	};
+  const body: ApiAudioTalkgroupsResponse = {
+    success: true,
+    count: 0,
+    loadedAll: true,
+    talkgroups: data.Items
+      .map(parseDynamoDbAttributeMap)
+      .map(item => item as unknown as TalkgroupObject),
+  };
 
-	return {
-		statusCode: 200,
-		body: JSON.stringify(body),
-	};
+  return {
+    statusCode: 200,
+    body: JSON.stringify(body),
+  };
 }
 
 export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-	logger.debug('main', ...arguments);
-	const action = event.queryStringParameters?.action || 'none';
-	switch (action) {
-		case 'list':
-			return await getList(event);
-		case 'talkgroups':
-			return await getTalkgroups(event);
-	}
+  logger.debug('main', ...arguments);
+  const action = event.queryStringParameters?.action || 'none';
+  switch (action) {
+    case 'list':
+      return await getList(event);
+    case 'talkgroups':
+      return await getTalkgroups(event);
+  }
 
-	logger.error('main', 'Invalid action', action);
-	return {
-		statusCode: 404,
-		headers: {},
-		body: JSON.stringify({
-			error: true,
-			message: `Invalid action '${action}'`
-		})
-	}
+  logger.error('main', 'Invalid action', action);
+  return {
+    statusCode: 404,
+    headers: {},
+    body: JSON.stringify({
+      error: true,
+      message: `Invalid action '${action}'`,
+    }),
+  };
 }

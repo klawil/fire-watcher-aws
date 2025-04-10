@@ -1,18 +1,26 @@
 'use client';
 
-import React, { useContext, useEffect, useRef, useState } from "react";
-import Container from "react-bootstrap/Container";
-import Table from "react-bootstrap/Table";
-import styles from "./textsPage.module.css";
-import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { fNameToDate } from "@/utils/common/strings";
-import { dateTimeToTimeStr, secondsToTime } from "@/utils/common/dateAndFile";
-import { useRefIntersection } from "@/utils/frontend/uiUtils";
-import { AddAlertContext, LoggedInUserContext } from "@/utils/frontend/clientContexts";
-import { Variant } from "react-bootstrap/esm/types";
-import { typeFetch } from "@/utils/frontend/typeFetch";
-import { FrontendTextObject, GetAllTextsApi } from "@/types/api/texts";
-import { validDepartments } from "@/types/api/users";
+import React, {
+  useContext, useEffect, useRef, useState
+} from 'react';
+import Container from 'react-bootstrap/Container';
+import Table from 'react-bootstrap/Table';
+import styles from './textsPage.module.css';
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import { fNameToDate } from '@/utils/common/strings';
+import {
+  dateTimeToTimeStr, secondsToTime
+} from '@/utils/common/dateAndFile';
+import { useRefIntersection } from '@/utils/frontend/uiUtils';
+import {
+  AddAlertContext, LoggedInUserContext
+} from '@/utils/frontend/clientContexts';
+import { Variant } from 'react-bootstrap/esm/types';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import {
+  FrontendTextObject, GetAllTextsApi
+} from '@/types/api/texts';
+import { validDepartments } from '@/types/api/users';
 
 const maxParallelTableLoads = 3;
 
@@ -21,24 +29,24 @@ interface TextObject extends FrontendTextObject {
 }
 
 function makePercentString(numerator: number, denominator: number) {
-	if (denominator === 0) return '';
-	const percentStr = `${Math.round(numerator * 100 / denominator)}%`;
+  if (denominator === 0) return '';
+  const percentStr = `${Math.round(numerator * 100 / denominator)}%`;
 
-	if (numerator !== denominator) {
-	  return <>{percentStr}<br />({numerator})</>;
-	}
+  if (numerator !== denominator) {
+    return <>{percentStr}<br />({numerator})</>;
+  }
 
-	return <>{percentStr}</>;
+  return <>{percentStr}</>;
 }
 
 function getPercentile(values: number[], percentile: number) {
-	if (values.length === 0) return '';
+  if (values.length === 0) return '';
 
-	values = values.sort((a, b) => a > b ? 1 : -1);
-	const index = Math.ceil(values.length * percentile / 100) - 1;
+  values = values.sort((a, b) => a > b ? 1 : -1);
+  const index = Math.ceil(values.length * percentile / 100) - 1;
 
-	const valueSeconds = Math.round(values[index] / 1000);
-	return secondsToTime(valueSeconds);
+  const valueSeconds = Math.round(values[index] / 1000);
+  return secondsToTime(valueSeconds);
 }
 
 async function getTexts(
@@ -47,7 +55,10 @@ async function getTexts(
   addAlert: (type: Variant, message: string) => void
 ) {
   try {
-    const [ code, apiResult ] = await typeFetch<GetAllTextsApi>({
+    const [
+      code,
+      apiResult,
+    ] = await typeFetch<GetAllTextsApi>({
       path: '/api/v2/texts/',
       method: 'GET',
       query: {
@@ -60,26 +71,27 @@ async function getTexts(
       code !== 200 ||
       apiResult === null ||
       'message' in apiResult
-    ) throw { code, apiResult };
+    ) throw {
+      code, apiResult,
+    };
 
     return (apiResult.texts as TextObject[])
       .map(text => {
-        if (text.isPage)
-          text.pageTime = fNameToDate(text.body || '').getTime();
-      
+        if (text.isPage) text.pageTime = fNameToDate(text.body || '').getTime();
+
         const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;
-      
+
         text.delivered = text.delivered || [];
         text.delivered = text.delivered.map(t => t - baselineTime);
-      
+
         text.sent = text.sent || [];
         text.sent = text.sent.map(t => t - baselineTime);
-      
+
         return text;
       });
   } catch (e) {
-    addAlert('danger', `Failed to get texts for one of the tables`);
-    console.error(`Failed to get texts`, queryBase, e);
+    addAlert('danger', 'Failed to get texts for one of the tables');
+    console.error('Failed to get texts', queryBase, e);
   }
   return [];
 }
@@ -97,12 +109,27 @@ function TextsTable({
   shouldLoad: boolean;
   setTableLoaded: React.Dispatch<React.SetStateAction<number>>;
 }>) {
-  const [texts, setTexts] = useState<TextObject[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastLoad, setLastLoad] = useState(0);
+  const [
+    texts,
+    setTexts,
+  ] = useState<TextObject[]>([]);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
+  const [
+    lastLoad,
+    setLastLoad,
+  ] = useState(0);
 
-  const [loadMoreRef, loadMoreRefInView] = useRefIntersection();
-  const [scrollIdx, setScrollIdx] = useState(0);
+  const [
+    loadMoreRef,
+    loadMoreRefInView,
+  ] = useRefIntersection();
+  const [
+    scrollIdx,
+    setScrollIdx,
+  ] = useState(0);
   const scrollRef = useRef<HTMLTableRowElement | null>(null);
   const addAlert = useContext(AddAlertContext);
 
@@ -124,16 +151,25 @@ function TextsTable({
       setLastLoad(Date.now());
       setIsLoading(false);
     })();
-  }, [shouldLoad, setTableLoaded, texts, isLoading, loadMoreRefInView, query, lastLoad, addAlert]);
+  }, [
+    shouldLoad,
+    setTableLoaded,
+    texts,
+    isLoading,
+    loadMoreRefInView,
+    query,
+    lastLoad,
+    addAlert,
+  ]);
 
   const loadNextBatchRefIdx = texts.length - 1;
 
-  return (<>
-    <h2 className="text-center">{title}</h2>
+  return <>
+    <h2 className='text-center'>{title}</h2>
 
     <Container fluid>
       {texts.length > 0 && <Table striped className={`align-middle ${styles.tableScrollY}`}>
-        <thead className="floatHead"><tr className="text-center">
+        <thead className='floatHead'><tr className='text-center'>
           <th>{isPage && 'Page '}Time</th>
           <th>Message</th>
           {!isPage && <th>Media</th>}
@@ -151,31 +187,31 @@ function TextsTable({
           {texts.map((text, idx) => <tr
             key={text.datetime}
             {...(idx === loadNextBatchRefIdx
-                ? { ref: loadMoreRef }
-                : idx === scrollIdx
-                  ? { ref: scrollRef }
-                  : {})}
+              ? { ref: loadMoreRef, }
+              : idx === scrollIdx
+                ? { ref: scrollRef, }
+                : {})}
           >
             <td>{dateTimeToTimeStr(text.datetime)}</td>
             <td>{text.body?.split(/\n/g).map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}</td>
             {!isPage && <td>{(typeof text.mediaUrls === 'string' ? text.mediaUrls.split(',') : text.mediaUrls || [])
               .filter(s => s !== '')
               .map((v, i) => <a key={i} href={v}>{i + 1}</a>)}</td>}
-            <td className="text-center">{text.recipients}</td>
-            <td className="text-center">{makePercentString((text.sent || []).length, text.recipients || 0)}</td>
-            <td className="text-center">{makePercentString((text.delivered || []).length, text.recipients || 0)}</td>
-            <td className="text-center">{makePercentString((text.undelivered || []).length, text.recipients || 0)}</td>
-            {isPage && <td className="text-center">{makePercentString((text.csLookedTime || []).length, text.recipients || 0)}</td>}
-            {isPage && <td className="text-center">{secondsToTime(Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000))}</td>}
-            <td className="text-center">
+            <td className='text-center'>{text.recipients}</td>
+            <td className='text-center'>{makePercentString((text.sent || []).length, text.recipients || 0)}</td>
+            <td className='text-center'>{makePercentString((text.delivered || []).length, text.recipients || 0)}</td>
+            <td className='text-center'>{makePercentString((text.undelivered || []).length, text.recipients || 0)}</td>
+            {isPage && <td className='text-center'>{makePercentString((text.csLookedTime || []).length, text.recipients || 0)}</td>}
+            {isPage && <td className='text-center'>{secondsToTime(Math.round((text.datetime - (text.pageTime || text.datetime)) / 1000))}</td>}
+            <td className='text-center'>
               {getPercentile(text.sent || [], 50)}<br />
               {getPercentile(text.delivered || [], 50)}
             </td>
-            <td className="text-center">
+            <td className='text-center'>
               {getPercentile(text.sent || [], 75)}<br />
               {getPercentile(text.delivered || [], 75)}
             </td>
-            <td className="text-center">
+            <td className='text-center'>
               {getPercentile(text.sent || [], 100)}<br />
               {getPercentile(text.delivered || [], 100)}
             </td>
@@ -183,14 +219,17 @@ function TextsTable({
         </tbody>
       </Table>}
       {texts.length === 0 && lastLoad === 0 && <LoadingSpinner />}
-      {texts.length === 0 && lastLoad > 0 && <h3 className="text-center">No Texts Found</h3>}
+      {texts.length === 0 && lastLoad > 0 && <h3 className='text-center'>No Texts Found</h3>}
     </Container>
-  </>)
+  </>;
 }
 
 export default function TextsPage() {
   const user = useContext(LoggedInUserContext);
-  const [tablesLoadedCount, setTablesLoadedCount] = useState(0);
+  const [
+    tablesLoadedCount,
+    setTablesLoadedCount,
+  ] = useState(0);
 
   if (user === null) {
     return <LoadingSpinner />;
@@ -236,17 +275,17 @@ export default function TextsPage() {
       },
     }));
 
-  return (<>
+  return <>
     {/* @TODO - Implement the form to send an announcement from the website */}
 
     {tablesToLoad.filter(table => !table.requireDistrictAdmin || user.isDistrictAdmin).map((table, i) =>
-      (<TextsTable
+      <TextsTable
         key={i}
         title={table.title}
         query={table.query}
         isPage={!!table.isPage}
         shouldLoad={i <= tablesLoadedCount + maxParallelTableLoads}
         setTableLoaded={setTablesLoadedCount}
-      />))}
-  </>);
+      />)}
+  </>;
 }

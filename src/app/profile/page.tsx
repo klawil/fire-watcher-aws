@@ -1,5 +1,5 @@
-import CofrnLayout from "@/components/layout";
-import ProfilePage from "./profilePage";
+import CofrnLayout from '@/components/layout';
+import ProfilePage from './profilePage';
 
 export const metadata = {
   title: 'Profile | COFRN',
@@ -7,12 +7,12 @@ export const metadata = {
 };
 
 export default function Page() {
-  return (<CofrnLayout
+  return <CofrnLayout
     pageConfig={{
       title: 'Profile',
       requireAuth: true,
     }}
   >
     <ProfilePage />
-  </CofrnLayout>);
+  </CofrnLayout>;
 }

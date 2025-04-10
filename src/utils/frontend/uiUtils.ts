@@ -1,20 +1,30 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback, useEffect, useState
+} from 'react';
 
 export function isElemInView(elem: HTMLElement) {
-  const { top, left, bottom, right } = elem.getBoundingClientRect();
+  const {
+    top, left, bottom, right,
+  } = elem.getBoundingClientRect();
   return top >= 0 && left >= 0 && bottom <= innerHeight && right <= innerWidth;
 }
 
 export function useRefIntersection(): [
   (node: HTMLElement | null) => void,
   boolean | null,
-  HTMLElement | null,
+  HTMLElement | null
 ] {
-  const [node, setNode] = useState<HTMLElement | null>(null);
+  const [
+    node,
+    setNode,
+  ] = useState<HTMLElement | null>(null);
 
-  const [refIntersecting, setRefIntersecting] = useState<boolean | null>(null);
+  const [
+    refIntersecting,
+    setRefIntersecting,
+  ] = useState<boolean | null>(null);
 
   const setRef = useCallback(
     (newNode: HTMLElement | null) => {
@@ -24,18 +34,22 @@ export function useRefIntersection(): [
         setNode(newNode);
       }
     },
-    [node],
+    [ node, ]
   );
 
   useEffect(() => {
     if (node === null) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => setRefIntersecting(entry.isIntersecting),
+      ([ entry, ]) => setRefIntersecting(entry.isIntersecting)
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [node]);
+  }, [ node, ]);
 
-  return [setRef, refIntersecting, node];
+  return [
+    setRef,
+    refIntersecting,
+    node,
+  ];
 }

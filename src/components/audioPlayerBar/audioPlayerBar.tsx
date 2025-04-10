@@ -1,13 +1,19 @@
-import { AudioAction, AudioState } from "@/types/frontend/audio";
-import Nav from "react-bootstrap/Nav";
-import Container from "react-bootstrap/Container";
-import Navbar from "react-bootstrap/Navbar";
-import { BsArrowBarUp, BsCalendar, BsDownload, BsFilter, BsPauseFill, BsPlayFill } from "react-icons/bs";
+import {
+  AudioAction, AudioState
+} from '@/types/frontend/audio';
+import Nav from 'react-bootstrap/Nav';
+import Container from 'react-bootstrap/Container';
+import Navbar from 'react-bootstrap/Navbar';
+import {
+  BsArrowBarUp, BsCalendar, BsDownload, BsFilter, BsPauseFill, BsPlayFill
+} from 'react-icons/bs';
 import styles from './audioPlayerBar.module.css';
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import Button from "react-bootstrap/Button";
-import { findClosestFileIdx } from "@/utils/common/dateAndFile";
+import {
+  useEffect, useRef, useState
+} from 'react';
+import { useSearchParams } from 'next/navigation';
+import Button from 'react-bootstrap/Button';
+import { findClosestFileIdx } from '@/utils/common/dateAndFile';
 
 function timeToStr(timestamp?: number, duration?: number) {
   if (
@@ -26,11 +32,11 @@ function timeToStr(timestamp?: number, duration?: number) {
   let timestampStr = '';
   if (includeMinutes) {
     const durationMinutes = Math.floor(durationVal / 60);
-    durationVal -= (durationMinutes * 60);
+    durationVal -= durationMinutes * 60;
     durationStr = `${durationMinutes}:`;
 
     const timestampMinutes = Math.floor(timestampVal / 60);
-    timestampVal -= (timestampMinutes * 60);
+    timestampVal -= timestampMinutes * 60;
     timestampStr = `${timestampMinutes}:`;
   }
   durationStr += `${durationVal.toFixed(1).padStart(4, '0')}`;
@@ -51,8 +57,11 @@ export default function AudioPlayerBar({
     ? 0
     : Math.round(100 * state.player.timestamp / state.player.duration);
   const playerDuration = timeToStr(state.player.timestamp, state.player.duration);
-  
-  const [autoPlay, setAutoPlay] = useState(true);
+
+  const [
+    autoPlay,
+    setAutoPlay,
+  ] = useState(true);
 
   function playPauseButtonPress() {
     dispatch({
@@ -65,7 +74,10 @@ export default function AudioPlayerBar({
 
   // Add listeners for duration, start, and stop
   const audioRef = useRef(new Audio());
-  const [ wasEnded, setWasEnded ] = useState(false);
+  const [
+    wasEnded,
+    setWasEnded,
+  ] = useState(false);
   useEffect(() => {
     // Callbacks
     const setPlayerTimes = () => {
@@ -111,7 +123,10 @@ export default function AudioPlayerBar({
       currentAudio.removeEventListener('play', playing);
       currentAudio.removeEventListener('paused', paused);
     };
-  }, [dispatch, wasEnded]);
+  }, [
+    dispatch,
+    wasEnded,
+  ]);
 
   // Add effects that process changes to the player
   useEffect(() => {
@@ -129,7 +144,7 @@ export default function AudioPlayerBar({
       if (state.filter.f) {
         closestIdx = findClosestFileIdx(
           state.files,
-          state.filter.f,
+          state.filter.f
         );
       }
       dispatch({
@@ -154,7 +169,7 @@ export default function AudioPlayerBar({
     ) {
       audioRef.current.play()
         .catch(e => {
-          console.log(`Failed to play file`, e);
+          console.log('Failed to play file', e);
           dispatch({
             action: 'SetPlayerState',
             state: 'paused',
@@ -184,13 +199,16 @@ export default function AudioPlayerBar({
     // Check for a change in the file URL
     if (!state.player.fileUrl.endsWith(searchParams.get('f') || 'NONE')) {
       const newParams = new URLSearchParams(searchParams.toString());
-      const newF = state.player.fileUrl?.split('/').pop()
+      const newF = state.player.fileUrl?.split('/').pop();
       if (typeof newF !== 'undefined') {
         newParams.set('f', newF);
         window.history.replaceState(null, '', `?${newParams.toString()}`);
       }
     }
-  }, [searchParams, state.player.fileUrl]);
+  }, [
+    searchParams,
+    state.player.fileUrl,
+  ]);
 
   // Auto play the next file
   useEffect(() => {
@@ -207,13 +225,19 @@ export default function AudioPlayerBar({
       action: 'SetPlayerFile',
       file: state.files[currentFileIndex - 1].Key,
     });
-  }, [autoPlay, dispatch, state.files, state.player.fileUrl, state.player.state]);
+  }, [
+    autoPlay,
+    dispatch,
+    state.files,
+    state.player.fileUrl,
+    state.player.state,
+  ]);
 
-  return (<>
+  return <>
     <Navbar
-      fixed="bottom"
-      expand="lg"
-      className="bg-body-tertiary"
+      fixed='bottom'
+      expand='lg'
+      className='bg-body-tertiary'
       style={{
         borderTop: 'solid 1px grey',
       }}
@@ -221,39 +245,39 @@ export default function AudioPlayerBar({
       <Container fluid={true}>
         <Button
           variant={autoPlay ? 'outline-primary' : 'outline-secondary'}
-          className="d-flex justify-content-center d-lg-none"
+          className='d-flex justify-content-center d-lg-none'
           disabled={!state.player.fileUrl}
           onClick={() => setAutoPlay(!autoPlay)}
         ><BsArrowBarUp /></Button>
         <Button
           onClick={playPauseButtonPress}
           variant={state.player.state === 'playing' ? 'outline-secondary' : 'outline-success'}
-          className="d-flex justify-content-center d-lg-none"
+          className='d-flex justify-content-center d-lg-none'
           disabled={!state.player.fileUrl}
         >{state.player.state !== 'playing' ? <BsPlayFill /> : <BsPauseFill />}</Button>
 
-        <Nav className="mb-2 mb-lg-0 justify-content-start d-none d-lg-flex">
+        <Nav className='mb-2 mb-lg-0 justify-content-start d-none d-lg-flex'>
           <Nav.Item
             onClick={() => setAutoPlay(!autoPlay)}
           ><Nav.Link
-            active={autoPlay}
-          >
-            <BsArrowBarUp /> Auto Play Next File
-          </Nav.Link></Nav.Item>
+              active={autoPlay}
+            >
+              <BsArrowBarUp /> Auto Play Next File
+            </Nav.Link></Nav.Item>
           <Nav.Item
             onClick={playPauseButtonPress}
           ><Nav.Link active={state.player.state === 'playing'}>
-            {state.player.state === 'playing'
-              ? <><BsPauseFill /> Pause</>
-              : <><BsPlayFill /> Play</>}
-          </Nav.Link></Nav.Item>
+              {state.player.state === 'playing'
+                ? <><BsPauseFill /> Pause</>
+                : <><BsPlayFill /> Play</>}
+            </Nav.Link></Nav.Item>
         </Nav>
 
         <Navbar.Text>
           <div className={`${styles.progressBarContainer} progress ms-1 mt-1`}>
             <div
-              className="progress-bar"
-              role="progressbar"
+              className='progress-bar'
+              role='progressbar'
               aria-valuemax={100}
               aria-valuemin={0}
               aria-valuenow={playerProgress}
@@ -263,11 +287,11 @@ export default function AudioPlayerBar({
             ></div>
           </div>
         </Navbar.Text>
-        <Navbar.Text className="ms-2 mt-1 d-none d-sm-block">{playerDuration}</Navbar.Text>
+        <Navbar.Text className='ms-2 mt-1 d-none d-sm-block'>{playerDuration}</Navbar.Text>
 
-        <Navbar.Toggle aria-controls="audio-navbar-collapse" />
-        <Navbar.Collapse id="audio-navbar-collapse">
-          <Nav className="ms-auto">
+        <Navbar.Toggle aria-controls='audio-navbar-collapse' />
+        <Navbar.Collapse id='audio-navbar-collapse'>
+          <Nav className='ms-auto'>
             <Nav.Link
               disabled={!state.player.fileUrl}
               href={state.player.fileUrl}
@@ -289,5 +313,5 @@ export default function AudioPlayerBar({
         </Navbar.Collapse>
       </Container>
     </Navbar>
-  </>)
+  </>;
 }

@@ -8,7 +8,7 @@ function getURLSearchParamsString(querystring) {
     var multiValue = query.multiValue;
 
     if (multiValue) {
-      str.push(multiValue.map((item) => param + '=' + item.value).join('&'));
+      str.push(multiValue.map(item => param + '=' + item.value).join('&'));
     } else if (query.value === '') {
       str.push(param);
     } else {
@@ -22,7 +22,7 @@ function getURLSearchParamsString(querystring) {
 function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const request = event.request;
   let hasRedirect = false;
-  let redirectUriBase = `https://cofrn.org`;
+  let redirectUriBase = 'https://cofrn.org';
 
   // Redirect fire.klawil.net and www.cofrn.org
   if (
@@ -31,7 +31,7 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
     typeof request.headers.host.value !== 'undefined'
   ) {
     const reqHost = request.headers.host.value;
-    request.headers['x-forwarded-host'] = { value: reqHost };
+    request.headers['x-forwarded-host'] = { value: reqHost, };
     if (reqHost === 'new.cofrn.org') {
       redirectUriBase = `https://${reqHost}`;
     } else if (reqHost !== targetDomain) {

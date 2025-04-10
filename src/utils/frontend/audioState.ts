@@ -1,4 +1,6 @@
-import { AudioAction, AudioState } from "@/types/frontend/audio";
+import {
+  AudioAction, AudioState
+} from '@/types/frontend/audio';
 
 export const defaultFilterPreset = 'NSCFPD';
 
@@ -19,7 +21,9 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
   switch (action.action) {
     // Filter
     case 'QueryParamsParsed': {
-      const { action: _, ...data } = action;
+      const {
+        action: _, ...data
+      } = action;
       return {
         ...state,
         queryParsed: true,
@@ -27,7 +31,9 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       };
     }
     case 'SetFilterValue': {
-      const { action: _, ...data } = action;
+      const {
+        action: _, ...data
+      } = action;
       return {
         ...state,
         filter: {
@@ -46,18 +52,20 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
     case 'SetNewFilters':
     case 'SetSomeNewFilters':
     case 'JumpToTime': {
-      const { action: _, ...data } = action;
+      const {
+        action: _, ...data
+      } = action;
       return {
         ...state,
         files: [],
         api: {},
         filter: {
-          ...(_ === 'SetNewFilters' ? {} : state.filter),
+          ..._ === 'SetNewFilters' ? {} : state.filter,
           ...data,
         },
         filterModalOpen: false,
         calendarModalOpen: false,
-        player: { state: 'ended' },
+        player: { state: 'ended', },
       };
     }
 
@@ -81,16 +89,18 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       return {
         ...state,
         files: [
-          ...(action.location === 'after' ? newFiles : []),
+          ...action.location === 'after' ? newFiles : [],
           ...state.files,
-          ...(action.location === 'before' ? newFiles : []),
+          ...action.location === 'before' ? newFiles : [],
         ],
       };
     }
 
     // API
     case 'SetApiKeys': {
-      const { action: _, ...data } = action;
+      const {
+        action: _, ...data
+      } = action;
       return {
         ...state,
         api: {
@@ -118,25 +128,32 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
       };
     }
     case 'AddApiResponse': {
-      const { action: _, ...data } = action;
+      const {
+        action: _, ...data
+      } = action;
       return {
         ...state,
         apiResponse: [
           ...state.apiResponse,
-          { ...data },
-        ]
+          { ...data, },
+        ],
       };
     }
     case 'ClearApiResponse': {
-      const [ _, ...rest ] = state.apiResponse;
+      const [
+        _,
+        ...rest
+      ] = state.apiResponse;
       return {
         ...state,
         apiResponse: rest,
         api: {
           ...state.api,
-          ...(action.direction ? {
-            [`${action.direction}LastCall`]: undefined,
-          } : {}),
+          ...action.direction
+            ? {
+              [`${action.direction}LastCall`]: undefined,
+            }
+            : {},
         },
       };
     }
@@ -176,7 +193,7 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
     case 'ClearPlayer': {
       return {
         ...state,
-        player: { state: 'ended' },
+        player: { state: 'ended', },
       };
     }
 
@@ -191,6 +208,6 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
   }
 
   return {
-    ...state
+    ...state,
   };
 }

@@ -1,5 +1,5 @@
-import CofrnLayout from "@/components/layout";
-import StatusPage from "./statusPage";
+import CofrnLayout from '@/components/layout';
+import StatusPage from './statusPage';
 
 export const metadata = {
   title: 'System Status | COFRN',
@@ -7,11 +7,11 @@ export const metadata = {
 };
 
 export default function Page() {
-  return (<CofrnLayout pageConfig={{
+  return <CofrnLayout pageConfig={{
     title: 'System Status',
     requireAdmin: true,
     fluid: true,
   }}>
     <StatusPage />
-  </CofrnLayout>)
+  </CofrnLayout>;
 }

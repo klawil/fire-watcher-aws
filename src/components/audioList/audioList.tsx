@@ -1,23 +1,35 @@
 'use client';
 
-import Table from "react-bootstrap/Table";
-import Button from "react-bootstrap/Button";
-import { BsChevronDown, BsChevronUp, BsStar, BsStarFill } from "react-icons/bs";
-import React, { useCallback, useContext, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
-import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams } from "@/types/frontend/audio";
-import { audioReducer, defaultAudioState } from "@/utils/frontend/audioState";
-import { dateToStr, findClosestFileIdx } from "@/utils/common/dateAndFile";
+import Table from 'react-bootstrap/Table';
+import Button from 'react-bootstrap/Button';
+import {
+  BsChevronDown, BsChevronUp, BsStar, BsStarFill
+} from 'react-icons/bs';
+import React, {
+  useCallback, useContext, useEffect, useLayoutEffect, useReducer, useRef, useState
+} from 'react';
+import {
+  AudioAction, AudioState, filterPresets, FilterPresetUrlParams
+} from '@/types/frontend/audio';
+import {
+  audioReducer, defaultAudioState
+} from '@/utils/frontend/audioState';
+import {
+  dateToStr, findClosestFileIdx
+} from '@/utils/common/dateAndFile';
 import styles from './audioList.module.css';
-import AudioPlayerBar from "@/components/audioPlayerBar/audioPlayerBar";
-import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import { isElemInView, useRefIntersection } from "@/utils/frontend/uiUtils";
-import AudioFilter from "@/components/audioFilter/audioFilter";
-import { fNameToDate } from "@/utils/common/strings";
-import CalendarModal from "@/components/calendarModal/calendarModal";
-import { AddAlertContext } from "@/utils/frontend/clientContexts";
-import { typeFetch } from "@/utils/frontend/typeFetch";
-import { GetAllTalkgroupsApi } from "@/types/api/talkgroups";
-import { GetAllFilesApi } from "@/types/api/files";
+import AudioPlayerBar from '@/components/audioPlayerBar/audioPlayerBar';
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import {
+  isElemInView, useRefIntersection
+} from '@/utils/frontend/uiUtils';
+import AudioFilter from '@/components/audioFilter/audioFilter';
+import { fNameToDate } from '@/utils/common/strings';
+import CalendarModal from '@/components/calendarModal/calendarModal';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
+import { GetAllFilesApi } from '@/types/api/files';
 
 const loadAfterAddedMinWait = 10000;
 
@@ -25,10 +37,16 @@ function useLoadFiles(
   state: AudioState,
   dispatch: React.ActionDispatch<[AudioAction]>,
   beforeRenderRows: (adding: number) => void,
-  scrollTop: number,
+  scrollTop: number
 ) {
-  const [afterRef, afterRefIntersecting] = useRefIntersection();
-  const [beforeRef, beforeRefIntersecting] = useRefIntersection();
+  const [
+    afterRef,
+    afterRefIntersecting,
+  ] = useRefIntersection();
+  const [
+    beforeRef,
+    beforeRefIntersecting,
+  ] = useRefIntersection();
   const addAlert = useContext(AddAlertContext);
 
   useEffect(() => {
@@ -88,7 +106,7 @@ function useLoadFiles(
       responseToParse.files.length === 0 &&
       responseToParse.direction === 'after'
     ) {
-      dispatch({ action: 'ApiLoadAfterAdded' });
+      dispatch({ action: 'ApiLoadAfterAdded', });
     }
 
     // Add the files
@@ -96,7 +114,7 @@ function useLoadFiles(
       if (state.files.length === 0 && state.filter.f) {
         const closestIdx = findClosestFileIdx(
           responseToParse.files,
-          state.filter.f,
+          state.filter.f
         );
         beforeRenderRows(closestIdx);
       } else if (
@@ -128,11 +146,24 @@ function useLoadFiles(
       action: 'ClearApiResponse',
       direction: responseToParse.direction,
     });
-  }, [state.apiResponse, state.api, state.files.length, state.filter.f, dispatch, beforeRenderRows]);
+  }, [
+    state.apiResponse,
+    state.api,
+    state.files.length,
+    state.filter.f,
+    dispatch,
+    beforeRenderRows,
+  ]);
 
   const afterAddedTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [afterAddedLastCall, setAfterAddedLastCall] = useState<number | null>(0);
-  const [afterAddedTrigger, setAfterAddedTrigger] = useState(false);
+  const [
+    afterAddedLastCall,
+    setAfterAddedLastCall,
+  ] = useState<number | null>(0);
+  const [
+    afterAddedTrigger,
+    setAfterAddedTrigger,
+  ] = useState(false);
 
   useEffect(() => {
     // Wait for the query to be parsed
@@ -178,7 +209,7 @@ function useLoadFiles(
       if (afterAddedLastCall !== null) {
         afterAddedTimeout.current = setTimeout(
           () => setAfterAddedTrigger(!afterAddedTrigger),
-          Date.now() - afterAddedLastCall + loadAfterAddedMinWait,
+          Date.now() - afterAddedLastCall + loadAfterAddedMinWait
         );
       }
       shouldLoadFiles = false;
@@ -230,7 +261,8 @@ function useLoadFiles(
         const tgFilter = state.filter.tg;
         let tgUrlValue: number[] = [];
         if (tgFilter.startsWith('tg')) {
-          tgUrlValue = tgFilter.slice(2).split('|').map(v => Number(v));
+          tgUrlValue = tgFilter.slice(2).split('|')
+            .map(v => Number(v));
         } else if (tgFilter.startsWith('p')) {
           tgUrlValue = filterPresets[tgFilter.slice(1) as FilterPresetUrlParams]
             .talkgroups;
@@ -248,12 +280,15 @@ function useLoadFiles(
         value: callId,
       });
       try {
-        const [ code, newData ] = await typeFetch<GetAllFilesApi>({
+        const [
+          code,
+          newData,
+        ] = await typeFetch<GetAllFilesApi>({
           path: '/api/v2/files/',
           method: 'GET',
           query: urlParams,
         });
-    
+
         // Save the after added timestamp
         if (
           loadFilesDirection === 'after' &&
@@ -293,11 +328,17 @@ function useLoadFiles(
     addAlert,
   ]);
 
-  return [afterRef, beforeRef];
+  return [
+    afterRef,
+    beforeRef,
+  ];
 }
 
 export default function AudioList() {
-  const [state, dispatch] = useReducer<
+  const [
+    state,
+    dispatch,
+  ] = useReducer<
     AudioState,
     [ AudioAction ]
   >(audioReducer, defaultAudioState);
@@ -305,7 +346,10 @@ export default function AudioList() {
   // Fetch the talkgroup information
   useEffect(() => {
     (async () => {
-      const [ code, tgData ] = await typeFetch<GetAllTalkgroupsApi>({
+      const [
+        code,
+        tgData,
+      ] = await typeFetch<GetAllTalkgroupsApi>({
         path: '/api/v2/talkgroups/',
         method: 'GET',
       });
@@ -335,20 +379,23 @@ export default function AudioList() {
         }, {}),
       });
     })();
-  }, [addAlert]);
+  }, [ addAlert, ]);
 
   const setFilePlaying = (file: string) => () => {
     dispatch({
       action: 'SetPlayerFile',
       file,
     });
-  }
+  };
 
-  const [scrollTop, setScrollTop] = useState<number>(-1);
+  const [
+    scrollTop,
+    setScrollTop,
+  ] = useState<number>(-1);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const beforeRenderRows = (num: number) => {
     if (tableRef.current) {
-      const firstVisibleRow = [ ...tableRef.current.querySelectorAll('tr') ]
+      const firstVisibleRow = [ ...tableRef.current.querySelectorAll('tr'), ]
         .findIndex(isElemInView);
       if (firstVisibleRow !== -1) {
         setScrollTop(firstVisibleRow + num);
@@ -356,7 +403,7 @@ export default function AudioList() {
     } else {
       setScrollTop(num);
     }
-  }
+  };
 
   const [
     loadAfter,
@@ -369,12 +416,17 @@ export default function AudioList() {
     currentRefInView,
     currentRefValue,
   ] = useRefIntersection();
-  const [showUpArrow, setShowUpArrow] = useState(false);
-  const [showDownArrow, setShowDownArrow] = useState(false);
+  const [
+    showUpArrow,
+    setShowUpArrow,
+  ] = useState(false);
+  const [
+    showDownArrow,
+    setShowDownArrow,
+  ] = useState(false);
   useEffect(() => {
     // Exit early for null
-    if (currentRefInView === null || currentRefValue === null)
-      return;
+    if (currentRefInView === null || currentRefValue === null) return;
 
     // If the row is in view, don't show arrows
     if (currentRefInView) {
@@ -384,7 +436,7 @@ export default function AudioList() {
     }
 
     // Show the arrows if the ref is not in view
-    const { top } = currentRefValue.getBoundingClientRect();
+    const { top, } = currentRefValue.getBoundingClientRect();
     if (top < 0) {
       setShowUpArrow(true);
       setShowDownArrow(false);
@@ -392,32 +444,38 @@ export default function AudioList() {
       setShowUpArrow(false);
       setShowDownArrow(true);
     }
-  }, [currentRefInView, currentRefValue]);
+  }, [
+    currentRefInView,
+    currentRefValue,
+  ]);
   const scrollCurrentIntoView = useCallback(() => {
     if (currentRefValue === null) return;
 
-    currentRefValue.scrollIntoView({ block: 'center' });
-  }, [currentRefValue]);
+    currentRefValue.scrollIntoView({ block: 'center', });
+  }, [ currentRefValue, ]);
 
   const scrollToRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     if (
-      scrollToRef.current
-      && !isElemInView(scrollToRef.current)
-      && scrollTop !== -1
+      scrollToRef.current &&
+      !isElemInView(scrollToRef.current) &&
+      scrollTop !== -1
     ) {
       addEventListener(
-        "scrollend",
+        'scrollend',
         () => setScrollTop(-1),
-        { once: true }
+        { once: true, }
       );
-      scrollToRef.current.scrollIntoView({ block: 'center' });
+      scrollToRef.current.scrollIntoView({ block: 'center', });
     } else if (scrollTop !== -1) {
       setScrollTop(-1);
     }
-  }, [scrollTop]);
+  }, [ scrollTop, ]);
 
-  const [winWidth, setWinWidth] = useState<null | number>(null);
+  const [
+    winWidth,
+    setWinWidth,
+  ] = useState<null | number>(null);
   useEffect(() => {
     const resizeListen = () => setWinWidth(window.document.documentElement.clientWidth);
     window.addEventListener('resize', resizeListen);
@@ -426,7 +484,7 @@ export default function AudioList() {
   }, []);
   const hideTower = winWidth && winWidth < 576;
 
-  return (<>
+  return <>
     {showUpArrow && <Button
       className={styles.upArrowButton}
       onClick={scrollCurrentIntoView}
@@ -445,7 +503,7 @@ export default function AudioList() {
           <th>Len</th>
           <th>Talkgroup</th>
           <th>Date</th>
-          <th className="d-none d-sm-table-cell">Tower</th>
+          <th className='d-none d-sm-table-cell'>Tower</th>
           <th><BsStarFill /></th>
         </tr>
       </thead>
@@ -473,11 +531,11 @@ export default function AudioList() {
 
               return () => {
                 refs.forEach(ref => ref(null));
-              }
+              };
             };
           }
 
-          return (<React.Fragment key={file.Key}>
+          return <React.Fragment key={file.Key}>
             <tr
               {...params}
               className={
@@ -491,9 +549,9 @@ export default function AudioList() {
               onClick={setFilePlaying(file.Key || '')}
             >
               <td>{file.Len}</td>
-              <td className="text-start">{state.talkgroups[file.Talkgroup]?.name || file.Talkgroup}</td>
+              <td className='text-start'>{state.talkgroups[file.Talkgroup]?.name || file.Talkgroup}</td>
               <td>{dateToStr(new Date((file.StartTime || 0) * 1000))}</td>
-              <td className="d-none d-sm-table-cell">{file.Tower === 'vhf'
+              <td className='d-none d-sm-table-cell'>{file.Tower === 'vhf'
                 ? 'VHF'
                 : file.Tower || 'N/A'
               }</td>
@@ -515,13 +573,13 @@ export default function AudioList() {
             >
               <td></td>
               <td
-                className="text-start"
+                className='text-start'
                 colSpan={hideTower ? 2 : 3}
               ><b>Approximate Transcript:</b> {file.Transcript}</td>
               <td></td>
             </tr>}
-          </React.Fragment>)
-      })}
+          </React.Fragment>;
+        })}
       </tbody>
     </Table>}
     {state.files.length === 0 && <LoadingSpinner />}
@@ -540,5 +598,5 @@ export default function AudioList() {
       state={state}
       dispatch={dispatch}
     />
-  </>);
+  </>;
 }

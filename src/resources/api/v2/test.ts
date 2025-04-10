@@ -1,6 +1,6 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
-import { getCurrentUser } from "./_base";
-import { api403Body } from "@/types/api/_shared";
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { getCurrentUser } from './_base';
+import { api403Body } from '@/types/api/_shared';
 
 const lambdaNameEnvRegex = /^(A|I)_([0-9A-Z_]+)_FN_NAME$/;
 const lambdaNames: {
@@ -31,7 +31,10 @@ const lambdaNames: {
   }, {});
 
 export async function main(event: APIGatewayProxyEvent) {
-  const [ user, userPerms ] = await getCurrentUser(event);
+  const [
+    user,
+    userPerms,
+  ] = await getCurrentUser(event);
   console.log(user, userPerms);
   if (
     user === null ||

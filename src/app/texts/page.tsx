@@ -1,5 +1,5 @@
-import CofrnLayout from "@/components/layout";
-import TextsPage from "./textsPage";
+import CofrnLayout from '@/components/layout';
+import TextsPage from './textsPage';
 
 export const metadata = {
   title: 'Texts | COFRN',
@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default function Page() {
-  return (<CofrnLayout
+  return <CofrnLayout
     pageConfig={{
       title: 'Texts',
       requireAdmin: true,
@@ -15,5 +15,5 @@ export default function Page() {
     }}
   >
     <TextsPage />
-  </CofrnLayout>);
+  </CofrnLayout>;
 }

@@ -1,16 +1,21 @@
-import { AudioAction, AudioState, filterPresets, FilterPresetUrlParams, filterPresetValues } from "@/types/frontend/audio";
-import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import Modal from "react-bootstrap/Modal";
-import Button from "react-bootstrap/Button";
-import Tabs from "react-bootstrap/Tabs";
-import Tab from "react-bootstrap/Tab";
-import Form from "react-bootstrap/Form";
-import { defaultFilterPreset } from "@/utils/frontend/audioState";
-import { Col, Container, Row, Table } from "react-bootstrap";
-import { typeFetch } from "@/utils/frontend/typeFetch";
-import { UpdateTextSeenApi } from "@/types/api/texts";
-
+import {
+  AudioAction, AudioState, filterPresets, FilterPresetUrlParams, filterPresetValues
+} from '@/types/frontend/audio';
+import { useSearchParams } from 'next/navigation';
+import {
+  useCallback, useEffect, useState
+} from 'react';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
+import Tabs from 'react-bootstrap/Tabs';
+import Tab from 'react-bootstrap/Tab';
+import Form from 'react-bootstrap/Form';
+import { defaultFilterPreset } from '@/utils/frontend/audioState';
+import {
+  Col, Container, Row, Table
+} from 'react-bootstrap';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import { UpdateTextSeenApi } from '@/types/api/texts';
 
 export default function AudioFilter({
   state,
@@ -20,10 +25,16 @@ export default function AudioFilter({
   dispatch: React.ActionDispatch<[AudioAction]>;
 }>) {
   const searchParams = useSearchParams();
-  const [noStart, setNoStart] = useState(false);
+  const [
+    noStart,
+    setNoStart,
+  ] = useState(false);
   useEffect(() => {
-    // If `nostart` is present in the URL, don't load any data. This is to allow a link to the
-    // specific filter set that automatically jumps to the present to be saved on a mobile device
+
+    /*
+     * If `nostart` is present in the URL, don't load any data. This is to allow a link to the
+     * specific filter set that automatically jumps to the present to be saved on a mobile device
+     */
     if (
       !noStart &&
       searchParams.get('nostart') !== null
@@ -53,7 +64,7 @@ export default function AudioFilter({
           throw new Error('Invalid phone or message');
         }
 
-        const [ code ] = await typeFetch<UpdateTextSeenApi>({
+        const [ code, ] = await typeFetch<UpdateTextSeenApi>({
           path: '/api/v2/texts/{id}/',
           method: 'PATCH',
           params: {
@@ -67,7 +78,7 @@ export default function AudioFilter({
           throw new Error(`Failed to update text seen - ${code}`);
         }
       })(Number(searchParams.get('p')), Number(searchParams.get('m')));
-      
+
       const newParams = new URLSearchParams(searchParams.toString());
       newParams.delete('p');
       newParams.delete('m');
@@ -107,39 +118,48 @@ export default function AudioFilter({
     if (wasChange) {
       window.history.pushState(null, '', `?${newSearchParams.toString()}`);
     }
-  }, [noStart, searchParams, state.filter, state.queryParsed, dispatch]);
+  }, [
+    noStart,
+    searchParams,
+    state.filter,
+    state.queryParsed,
+    dispatch,
+  ]);
 
-  const [filterChanges, setFilterChangesRaw] = useState<Partial<
+  const [
+    filterChanges,
+    setFilterChangesRaw,
+  ] = useState<Partial<
     Pick<AudioState['filter'], 'tg'> &
     Pick<AudioState['filter'], 'emerg'>
   >>({});
   const setFilterChanges = useCallback((changes: typeof filterChanges) =>
-      setFilterChangesRaw(current => {
-        const newValues = {
-          ...current,
-          ...changes,
-        };
+    setFilterChangesRaw(current => {
+      const newValues = {
+        ...current,
+        ...changes,
+      };
 
-        (Object.keys(newValues) as (keyof typeof newValues)[])
-          .forEach((key) => {
-            if (typeof newValues[key] === 'undefined') {
-              delete newValues[key];
-              return;
-            }
+      (Object.keys(newValues) as (keyof typeof newValues)[])
+        .forEach(key => {
+          if (typeof newValues[key] === 'undefined') {
+            delete newValues[key];
+            return;
+          }
 
-            if (newValues[key] === state.filter[key]) {
-              delete newValues[key];
-            }
-          });
-        if (
-          typeof newValues.emerg !== 'undefined' &&
+          if (newValues[key] === state.filter[key]) {
+            delete newValues[key];
+          }
+        });
+      if (
+        typeof newValues.emerg !== 'undefined' &&
           newValues.tg !== 'all'
-        ) {
-          delete newValues.emerg;
-        }
+      ) {
+        delete newValues.emerg;
+      }
 
-        return newValues;
-      }), [state.filter]);
+      return newValues;
+    }), [ state.filter, ]);
 
   const setCurrentTab = useCallback((tab: string) => {
     if (tab === 'all') {
@@ -152,10 +172,10 @@ export default function AudioFilter({
       });
     } else if (tab === 'talkgroup') {
       setFilterChanges({
-        tg: `tg`,
+        tg: 'tg',
       });
     }
-  }, [setFilterChanges]);
+  }, [ setFilterChanges, ]);
 
   const hasChanges = (Object.keys(filterChanges) as (keyof typeof filterChanges)[])
     .filter(key => typeof filterChanges[key] !== 'undefined')
@@ -181,9 +201,16 @@ export default function AudioFilter({
         ? searchParams.get('f') || undefined
         : undefined,
     });
-  }, [dispatch, filterChanges, searchParams]);
+  }, [
+    dispatch,
+    filterChanges,
+    searchParams,
+  ]);
 
-  const [tgFilter, setTgFilter] = useState('');
+  const [
+    tgFilter,
+    setTgFilter,
+  ] = useState('');
 
   // Exit early if we haven't parsed the search string yet
   if (!state.queryParsed) return <></>;
@@ -222,28 +249,31 @@ export default function AudioFilter({
         .map(s => Number(s)),
     };
   } else if (presetValue === 'all') {
-    tgValueParsed = { type: 'all' };
+    tgValueParsed = { type: 'all', };
   }
 
   const addTg = (tg: string) => {
     if (tgValueParsed.type !== 'talkgroup') return;
 
     setFilterChanges({
-      tg: `tg${[ ...tgValueParsed.value, tg ].join('|')}`,
+      tg: `tg${[
+        ...tgValueParsed.value,
+        tg,
+      ].join('|')}`,
     });
-  }
+  };
   const rmTg = (tg: string) => {
     if (tgValueParsed.type !== 'talkgroup') return;
 
     setFilterChanges({
       tg: `tg${tgValueParsed.value.filter(v => v.toString() !== tg).join('|')}`,
     });
-  }
+  };
 
-  return (<Modal
+  return <Modal
     show={state.filterModalOpen}
     onHide={() => closeFilter(false, false)}
-    size="lg"
+    size='lg'
   >
     <Modal.Header closeButton>Filters</Modal.Header>
 
@@ -251,21 +281,21 @@ export default function AudioFilter({
       <Tabs
         activeKey={tgValueParsed.type}
         onSelect={k => setCurrentTab(k || 'presets')}
-        className="mb-3"
+        className='mb-3'
       >
-        <Tab title="All" eventKey="all">
+        <Tab title='All' eventKey='all'>
           All recorded DTR traffic will be displayed
 
           <Form.Check
-            type="switch"
+            type='switch'
             checked={state.filter.emerg === 'y'}
             onChange={e => setFilterChanges({
               emerg: e.target.checked ? 'y' : undefined,
             })}
-            label="Only show emergency traffic"
+            label='Only show emergency traffic'
           />
         </Tab>
-        <Tab title="Presets" eventKey="presets">
+        <Tab title='Presets' eventKey='presets'>
           <Form.Select
             onChange={e => setFilterChanges({
               tg: `p${e.target.value}`,
@@ -278,21 +308,21 @@ export default function AudioFilter({
             {filterPresetValues
               .filter(preset => !filterPresets[preset].hide)
               .sort((a, b) => a.localeCompare(b))
-              .map(preset => (<option
+              .map(preset => <option
                 key={preset}
                 value={preset}
-              >{filterPresets[preset].label || preset}</option>))}
+              >{filterPresets[preset].label || preset}</option>)}
           </Form.Select>
         </Tab>
-        <Tab as={Container} title="Talkgroups" eventKey="talkgroup">
+        <Tab as={Container} title='Talkgroups' eventKey='talkgroup'>
           {tgValueParsed.type === 'talkgroup' && <Row>
             <Col md={6} xs={12}>
-              <h5 className="text-center">Talkgroups</h5>
+              <h5 className='text-center'>Talkgroups</h5>
               <Form.Control
-                type="text"
+                type='text'
                 value={tgFilter}
                 onChange={e => setTgFilter(e.target.value)}
-                placeholder="Filter Talkgroups"
+                placeholder='Filter Talkgroups'
               />
               <div style={{
                 height: '200px',
@@ -328,7 +358,7 @@ export default function AudioFilter({
               </div>
             </Col>
             <Col md={6} xs={12}>
-              <h5 className="text-center">Selected</h5>
+              <h5 className='text-center'>Selected</h5>
               <div style={{
                 height: '200px',
                 overflowY: 'scroll',
@@ -359,18 +389,18 @@ export default function AudioFilter({
     </Modal.Body>
 
     <Modal.Footer
-      className="justify-content-between"
+      className='justify-content-between'
     >
       <Button
-        variant="success"
+        variant='success'
         onClick={() => closeFilter(true, false)}
         disabled={!hasChanges}
       >Apply</Button>
       <Button
-        variant="warning"
+        variant='warning'
         onClick={() => closeFilter(true, true)}
         disabled={!hasChanges}
       >Apply and Jump to Present</Button>
     </Modal.Footer>
-  </Modal>);
+  </Modal>;
 }

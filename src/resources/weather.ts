@@ -1,45 +1,45 @@
 import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 import * as AWS from 'aws-sdk';
-import { FireTypes, WeatherResultJson } from '@/deprecated/common/weather';
+import {
+  FireTypes, WeatherResultJson
+} from '@/deprecated/common/weather';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('weather');
 
 interface GaccUrlObject {
-	new: string;
-	ongoing: string;
-	rx: string;
+  new: string;
+  ongoing: string;
+  rx: string;
 }
 
 interface GaccJson {
-	features: {
-		properties: {
-			POOState: string;
-			POOCounty: string;
-		}
-	}[];
+  features: {
+    properties: {
+      POOState: string;
+      POOCounty: string;
+    }
+  }[];
 }
 
 interface NwsAlert {
-	onset: string;
-	ends: string;
+  onset: string;
+  ends: string;
   expires: string;
-	description: string;
-	associated: NwsAlert[];
-	headline: string;
-	event: string;
+  description: string;
+  associated: NwsAlert[];
+  headline: string;
+  event: string;
 }
 
 interface NwsJson {
-	features: {
-		properties: NwsAlert;
-	}[]
-};
+  features: {
+    properties: NwsAlert;
+  }[]
+}
 
-const allowedCounties: string[] = [
-  'Saguache'
-];
+const allowedCounties: string[] = [ 'Saguache', ];
 const currentFireUrls: GaccUrlObject = {
   new: 'https://gbcc.us/rmcc_newfires.geojson',
   ongoing: 'https://gbcc.us/rmcc_ongoingfires.geojson',
@@ -62,16 +62,21 @@ async function processGaccUrl(url: string): Promise<number[]> {
       .filter(f => f.properties.POOState === 'US-CO')
       .reduce((agg: number[], feature) => {
         if (agg.length < 2) {
-          agg = [ 0, 0 ];
+          agg = [
+            0,
+            0,
+          ];
         }
         agg[1]++;
-        if (allowedCounties.includes(feature.properties.POOCounty))
-          agg[0]++;
+        if (allowedCounties.includes(feature.properties.POOCounty)) agg[0]++;
         return agg;
       }, []);
   } catch (e) {
     logger.error('processGaccUrl', e);
-    return [ -1, -1 ];
+    return [
+      -1,
+      -1,
+    ];
   }
 }
 
@@ -86,16 +91,34 @@ async function getStateFires(): Promise<WeatherResultJson['stateFires']> {
       agg[keys[ind]] = data;
       return agg;
     }, {
-      new: [ -1, -1 ],
-      ongoing: [ -1, -1 ],
-      rx: [ -1, -1 ],
+      new: [
+        -1,
+        -1,
+      ],
+      ongoing: [
+        -1,
+        -1,
+      ],
+      rx: [
+        -1,
+        -1,
+      ],
     });
   } catch (e) {
     logger.error('getStateFires', e);
     return {
-      new: [ -1, -1 ],
-      ongoing: [ -1, -1 ],
-      rx: [ -1, -1 ],
+      new: [
+        -1,
+        -1,
+      ],
+      ongoing: [
+        -1,
+        -1,
+      ],
+      rx: [
+        -1,
+        -1,
+      ],
     };
   }
 }
@@ -126,24 +149,24 @@ async function getReadinessInfo(): Promise<WeatherResultJson['readiness']> {
 
 function dateToLocalString(d: Date): string[] {
   logger.trace('dateToLocalString', ...arguments);
-	const dateString = d.toLocaleDateString('en-US', {
-		timeZone: 'America/Denver',
-		weekday: 'short',
-		month: 'short',
-		day: '2-digit'
-	});
-  
-	const timeString = d.toLocaleTimeString('en-US', {
-		timeZone: 'America/Denver',
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit'
-	})
-		.replace(/:/g, '');
+  const dateString = d.toLocaleDateString('en-US', {
+    timeZone: 'America/Denver',
+    weekday: 'short',
+    month: 'short',
+    day: '2-digit',
+  });
 
-	return [
+  const timeString = d.toLocaleTimeString('en-US', {
+    timeZone: 'America/Denver',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .replace(/:/g, '');
+
+  return [
     dateString,
-    timeString
+    timeString,
   ];
 }
 
@@ -173,7 +196,7 @@ async function getAreaAlerts(): Promise<WeatherResultJson['weather']> {
       headers: {
         'User-Agent': 'klawil willyk95@gmail.com',
         Accept: 'application/geo+json',
-      }
+      },
     }).then(r => r.json());
 
     const featuresToReturn: NwsAlert[] = [];
@@ -223,9 +246,8 @@ async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
       .split('\n')
       .filter(line => line.indexOf('var _pageData = ') !== -1)[0]
       .match(/_pageData = (".*?");<\/script>/);
-    
-    if (!json)
-      throw new Error('Cannot find page data');
+
+    if (!json) throw new Error('Cannot find page data');
 
     const _pageData = JSON.parse(eval(json[1]));
 
@@ -233,7 +255,7 @@ async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
       .filter((f: any) => f[5][0][1][0] === 'Saguache') // eslint-disable-line @typescript-eslint/no-explicit-any
       .map((f: any) => f[5][3][0][1][0]) // eslint-disable-line @typescript-eslint/no-explicit-any
       .join('\n\n\n')
-      .replace(/\n/g, '<br>')
+      .replace(/\n/g, '<br>');
   } catch (e) {
     logger.error('getCountyRestrictions', e);
     return '';
@@ -247,7 +269,7 @@ async function uploadFile(text: string) {
   const uploadParams = {
     Bucket: s3Bucket,
     Key: s3File,
-    Body: text
+    Body: text,
   };
 
   return await s3.upload(uploadParams).promise();
@@ -261,7 +283,7 @@ export async function main() {
       getReadinessInfo(),
       getAreaAlerts(),
       getCountyRestrictions(),
-    ])
+    ]);
     const data: WeatherResultJson = {
       stateFires: dataRaw[0],
       readiness: dataRaw[1],

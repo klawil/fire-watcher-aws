@@ -1,6 +1,8 @@
-import { FrontendUserObject } from "@/types/api/users";
-import { UserActions, UsersState } from "@/types/frontend/users";
-import { createContext } from "react";
+import { FrontendUserObject } from '@/types/api/users';
+import {
+  UserActions, UsersState
+} from '@/types/frontend/users';
+import { createContext } from 'react';
 
 export const UsersDispatchContext = createContext<React.ActionDispatch<[action: UserActions]>>(() => {});
 
@@ -10,8 +12,7 @@ export const defaultUsersState: UsersState = {
 
 function sortUsers(users: FrontendUserObject[]): FrontendUserObject[] {
   return users.sort((a, b) => {
-    if (a.lName === b.lName)
-      return (a.fName || '') > (b.fName || '') ? 1 : -1;
+    if (a.lName === b.lName) return (a.fName || '') > (b.fName || '') ? 1 : -1;
 
     return (a.lName || '') > (b.lName || '') ? 1 : -1;
   });
@@ -33,10 +34,10 @@ export function usersStateReducer(
         ...state,
         users: sortUsers(state.users.map(u => ({
           ...u,
-          ...(u.phone === action.phone
+          ...u.phone === action.phone
             ? action.user
-            : {}
-          )
+            : {},
+
         }))),
       };
     }

@@ -1,8 +1,10 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import * as twilio from 'twilio';
-import { PhoneNumberConfig, TwilioConfig } from "@/deprecated/utils/general";
-import { getLogger } from "@/utils/common/logger";
-import { CreateTextApi } from "@/types/api/twilio";
+import {
+  PhoneNumberConfig, TwilioConfig
+} from '@/deprecated/utils/general';
+import { getLogger } from '@/utils/common/logger';
+import { CreateTextApi } from '@/types/api/twilio';
 
 const logger = getLogger('_twilio');
 
@@ -13,7 +15,7 @@ export function validateTwilioRequest(
     [key: string]: unknown;
   },
   phoneNumberConf: PhoneNumberConfig,
-  twilioConf: TwilioConfig,
+  twilioConf: TwilioConfig
 ): [ boolean, boolean ] {
   // Get the information needed out of the request
   const signature = event.headers['X-Twilio-Signature'];
@@ -27,7 +29,7 @@ export function validateTwilioRequest(
       twilioConf[`authToken${phoneNumberConf.account || ''}`],
       signature || '',
       url,
-      bodyObj,
+      bodyObj
     )
   ) {
     logger.error('Not Verified');
@@ -36,7 +38,7 @@ export function validateTwilioRequest(
       isTest,
     ];
   }
-  
+
   // Validate a test request
   if (
     isTest &&

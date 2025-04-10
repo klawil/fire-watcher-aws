@@ -3,5 +3,5 @@ import { FireWatcherAwsStack } from '../lib/fire-watcher-aws-stack';
 
 const app = new cdk.App();
 new FireWatcherAwsStack(app, 'FireWatcherAwsStack', {
-  env: { region: 'us-east-2' },
+  env: { region: 'us-east-2', },
 });

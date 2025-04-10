@@ -1,50 +1,54 @@
 'use client';
 
-import { ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess } from "@/deprecated/common/frontendApi";
-import { AddAlertContext } from "@/utils/frontend/clientContexts";
-import { typeFetch } from "@/utils/frontend/typeFetch";
-import { GetMetricsApi } from "@/types/api/metrics";
-import { ChartDataset } from "chart.js";
-import { Dispatch, SetStateAction, useContext, useEffect, useState } from "react";
+import {
+  ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess
+} from '@/deprecated/common/frontendApi';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import { GetMetricsApi } from '@/types/api/metrics';
+import { ChartDataset } from 'chart.js';
+import {
+  Dispatch, SetStateAction, useContext, useEffect, useState
+} from 'react';
 
 type TimeFormatFn = (a: Date) => string;
 const formatDayHour: TimeFormatFn = date => {
-	const dateString = date.toLocaleDateString('en-us', {
-		timeZone: 'America/Denver',
-		weekday: 'short'
-	});
-	let timeString = date.toLocaleTimeString('en-US', {
-		timeZone: 'America/Denver',
-		hour12: false,
-		hour: '2-digit',
-		minute: '2-digit'
-	});
+  const dateString = date.toLocaleDateString('en-us', {
+    timeZone: 'America/Denver',
+    weekday: 'short',
+  });
+  let timeString = date.toLocaleTimeString('en-US', {
+    timeZone: 'America/Denver',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-	if (timeString === '24:00') {
-		timeString = `00:00`;
-	}
+  if (timeString === '24:00') {
+    timeString = '00:00';
+  }
 
-	return `${dateString} ${timeString}`;
-}
+  return `${dateString} ${timeString}`;
+};
 const formatDay: TimeFormatFn = date => date.toLocaleDateString('en-us', {
-	timeZone: 'America/Denver',
-	weekday: 'short',
-	month: 'short',
-	day: '2-digit',
+  timeZone: 'America/Denver',
+  weekday: 'short',
+  month: 'short',
+  day: '2-digit',
 });
 
 const periodFormatters: {
-	period: number;
-	formatter: TimeFormatFn
+  period: number;
+  formatter: TimeFormatFn
 }[] = [
-	{
-		period: 24 * 60 * 60,
-		formatter: formatDay,
-	},
-	{
-		period: 6 * 60 * 60,
-		formatter: formatDayHour,
-	},
+  {
+    period: 24 * 60 * 60,
+    formatter: formatDay,
+  },
+  {
+    period: 6 * 60 * 60,
+    formatter: formatDayHour,
+  },
 ];
 
 async function getDataUrl(dataUrl: string): Promise<[
@@ -60,11 +64,15 @@ async function getDataUrl(dataUrl: string): Promise<[
     .then(r => r.json());
 
   if (newData.success) {
-    return [ newData.data.names, newData.data.data, newData ];
+    return [
+      newData.data.names,
+      newData.data.data,
+      newData,
+    ];
   }
 
   console.error(newData);
-  throw new Error(`Failed request`);
+  throw new Error('Failed request');
 }
 
 async function getDataBody(body: GetMetricsApi['body']): Promise<[
@@ -74,9 +82,12 @@ async function getDataBody(body: GetMetricsApi['body']): Promise<[
     startTime: number;
     endTime: number;
     period: number;
-  },
+  }
 ]> {
-  const [code, resp] = await typeFetch<GetMetricsApi>({
+  const [
+    code,
+    resp,
+  ] = await typeFetch<GetMetricsApi>({
     path: '/api/v2/metrics/',
     method: 'POST',
     body,
@@ -88,7 +99,7 @@ async function getDataBody(body: GetMetricsApi['body']): Promise<[
     'message' in resp
   ) {
     console.error(code, resp);
-    throw new Error(`Unable to fetch API`);
+    throw new Error('Unable to fetch API');
   }
 
   return [
@@ -103,15 +114,21 @@ export function useChartData(
   body: GetMetricsApi['body'] | undefined,
   shouldLoad: boolean,
   setChartLoaded: Dispatch<SetStateAction<number>>,
-  convertValue: (a: number) => number = v => v,
+  convertValue: (a: number) => number = v => v
 ) {
-  const [data, setData] = useState<{
+  const [
+    data,
+    setData,
+  ] = useState<{
     labels: string[];
-    datasets: ChartDataset<"line", number[]>[];
+    datasets: ChartDataset<'line', number[]>[];
   } | null | undefined>(undefined);
   const addAlert = useContext(AddAlertContext);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
   useEffect(() => {
     if (typeof data !== 'undefined' || isLoading || !shouldLoad) return;
 
@@ -126,9 +143,17 @@ export function useChartData(
           period: number;
         };
         if (typeof dataUrl !== 'undefined') {
-          [ names, data, newData ] = await getDataUrl(dataUrl);
+          [
+            names,
+            data,
+            newData,
+          ] = await getDataUrl(dataUrl);
         } else if (typeof body !== 'undefined') {
-          [ names, data, newData ] = await getDataBody(body);
+          [
+            names,
+            data,
+            newData,
+          ] = await getDataBody(body);
         } else {
           throw new Error('Need dataUrl or body');
         }
@@ -140,7 +165,7 @@ export function useChartData(
         } = {};
         const labels: string[] = [];
 
-        for (let t = newData.startTime; t < newData.endTime; t += (newData.period * 1000)) {
+        for (let t = newData.startTime; t < newData.endTime; t += newData.period * 1000) {
           const dateStr = new Date(t).toISOString();
           chartData[dateStr] = {};
           labels.push(dateStr);
@@ -158,11 +183,11 @@ export function useChartData(
 
         const formatter = periodFormatters.reduce((f, val) => {
           if (newData.period <= val.period) return val.formatter;
-    
+
           return f;
         }, periodFormatters[periodFormatters.length - 1].formatter);
 
-        const datasets: ChartDataset<"line", number[]>[] = Object.keys(names)
+        const datasets: ChartDataset<'line', number[]>[] = Object.keys(names)
           .map(key => ({
             label: names[key],
             stepped: true,
@@ -179,29 +204,47 @@ export function useChartData(
       } catch (e) {
         setData(null);
         console.error(`Failed to load chart (${dataUrl})`, e);
-        addAlert('danger', `Failed to load data for a chart`);
+        addAlert('danger', 'Failed to load data for a chart');
       }
       setChartLoaded(v => v + 1);
       setIsLoading(false);
     })();
-  }, [shouldLoad, body, data, isLoading, dataUrl, setChartLoaded, convertValue, addAlert]);
+  }, [
+    shouldLoad,
+    body,
+    data,
+    isLoading,
+    dataUrl,
+    setChartLoaded,
+    convertValue,
+    addAlert,
+  ]);
 
   return data;
 }
 
 export function usePageSize() {
-  const [winWidth, setWinWidth] = useState<null | number>(null);
-  const [winHeight, setWinHeight] = useState<null | number>(null);
+  const [
+    winWidth,
+    setWinWidth,
+  ] = useState<null | number>(null);
+  const [
+    winHeight,
+    setWinHeight,
+  ] = useState<null | number>(null);
 
   useEffect(() => {
     const resizeListen = () => {
       setWinWidth(window.document.documentElement.clientWidth);
       setWinHeight(window.document.documentElement.clientHeight);
-    }
+    };
     window.addEventListener('resize', resizeListen);
     resizeListen();
     return () => window.removeEventListener('resize', resizeListen);
   }, []);
 
-  return [ winWidth, winHeight ];
+  return [
+    winWidth,
+    winHeight,
+  ];
 }

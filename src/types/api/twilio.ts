@@ -1,5 +1,7 @@
-import { Validator } from "@/types/backend/validation";
-import { api400Body, api500Body } from "./_shared";
+import { Validator } from '@/types/backend/validation';
+import {
+  api400Body, api500Body
+} from './_shared';
 
 /**
  * Create a text (this endpoint is used by Twilio)
@@ -11,77 +13,92 @@ export type CreateTextApi = {
   path: '/api/v2/twilio/';
   method: 'POST';
   query: {
+
     /**
      * The API code to authenticate the request in the test environment
      */
     code?: string;
   };
   body: {
+
     /**
      * The phone number the message was received from, format +1XXXXXXXXXX
      */
     From: string;
+
     /**
      * The phone number the message was sent to, format +1XXXXXXXXXX
      */
     To: string;
+
     /**
      * The body of the text
      */
     Body: string;
+
     /**
      * The number of media files associated with the message
      */
     NumMedia: number;
+
     /**
      * The number of segments associated with the message
      */
     NumSegments: number;
+
     /**
      * URL to any media attached to the message
      */
     MediaUrl0?: string;
+
     /**
      * URL to any media attached to the message
      */
     MediaUrl1?: string;
+
     /**
      * URL to any media attached to the message
      */
     MediaUrl2?: string;
+
     /**
      * URL to any media attached to the message
      */
     MediaUrl3?: string;
+
     /**
      * URL to any media attached to the message
      */
     MediaUrl4?: string;
+
     /**
      * URL to any media attached to the message
      */
     MediaUrl5?: string;
   };
   responses: {
+
     /**
      * @contentType application/xml
      */
     200: string;
+
     /**
      * @contentType application/xml
      */
     400: string;
+
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
-}
+};
 
 export const createTextQueryValidator: Validator<CreateTextApi['query']> = {
   code: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
 };
 
@@ -104,41 +121,41 @@ export const createTextBodyValidator: Validator<CreateTextApi['body']> = {
   },
   Body: {
     required: true,
-    types: { string: {} },
+    types: { string: {}, },
   },
   NumMedia: {
     required: true,
     parse: v => Number(v),
-    types: { number: {} },
+    types: { number: {}, },
   },
   NumSegments: {
     required: true,
     parse: v => Number(v),
-    types: { number: {} },
+    types: { number: {}, },
   },
   MediaUrl0: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
   MediaUrl1: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
   MediaUrl2: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
   MediaUrl3: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
   MediaUrl4: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
   MediaUrl5: {
     required: false,
-    types: { string: {} },
+    types: { string: {}, },
   },
 };
 
@@ -152,12 +169,14 @@ export type UpdateTextStatusApi = {
   path: '/api/v2/twilio/{id}/';
   method: 'POST';
   params: {
+
     /**
      * The message ID (timestamp that the message was sent)
      */
     id: number;
   };
   query: {
+
     /**
      * The API code to authenticate the request
      */
@@ -165,10 +184,12 @@ export type UpdateTextStatusApi = {
   };
   body: {
     MessageStatus: 'delivered' | 'undelivered' | 'sent';
+
     /**
      * The phone number the message was sent to in the format +1XXXXXXXXXX
      */
     To: string;
+
     /**
      * The phone number the message was sent from in the format +1XXXXXXXXXX
      */
@@ -176,10 +197,12 @@ export type UpdateTextStatusApi = {
   };
   responses: {
     204: '';
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
@@ -206,7 +229,11 @@ export const updateTextStatusBodyValidator: Validator<UpdateTextStatusApi['body'
     required: true,
     types: {
       string: {
-        exact: [ 'delivered', 'undelivered', 'sent', ],
+        exact: [
+          'delivered',
+          'undelivered',
+          'sent',
+        ],
       },
     },
   },

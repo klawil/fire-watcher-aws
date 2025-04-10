@@ -1,9 +1,21 @@
-import { Validator } from "@/types/backend/validation";
-import { api200Body, api400Body, api401Body, api403Body, api500Body } from "./_shared";
-import { UserDepartment, validDepartments } from "./users";
+import { Validator } from '@/types/backend/validation';
+import {
+  api200Body, api400Body, api401Body, api403Body, api500Body
+} from './_shared';
+import {
+  UserDepartment, validDepartments
+} from './users';
 
-export const textTypes = [ 'page', 'alert', 'account', 'transcript', 'pageAnnounce',
-  'department', 'departmentAnnounce', 'departmentAlert' ] as const;
+export const textTypes = [
+  'page',
+  'alert',
+  'account',
+  'transcript',
+  'pageAnnounce',
+  'department',
+  'departmentAnnounce',
+  'departmentAlert',
+] as const;
 export type TextTypes = typeof textTypes[number];
 export interface FullTextObject {
   datetime: number;
@@ -11,10 +23,12 @@ export interface FullTextObject {
 
   // Only on pages section
   pageId?: string;
+
   /**
    * The phone numbers of the users who have opened the link to the page
    */
   csLooked?: number[];
+
   /**
    * Timestamps of when each person clicked the link the first time
    */
@@ -27,6 +41,7 @@ export interface FullTextObject {
   testPageIndex?: 'yy' | 'yn' | 'ny' | 'nn';
   type?: TextTypes;
   department?: UserDepartment;
+
   /**
    * Comma separated list of URLs that can be used to view media sent with the text
    */
@@ -75,20 +90,24 @@ export type GetAllTextsApi = {
   path: '/api/v2/texts/';
   method: 'GET';
   query: {
+
     /**
      * The type of texts to retrieve
      */
     type?: TextTypes;
+
     /**
      * The department to retrieve texts from
      */
     department?: UserDepartment;
+
     /**
      * The timestamp to return messages before, in ms since epoch
      */
     before?: number;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
@@ -97,18 +116,22 @@ export type GetAllTextsApi = {
       scanned: number;
       texts: FrontendTextObject[];
     };
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */
     401: typeof api401Body;
+
     /**
      * @contentType application/json
      */
     403: typeof api403Body;
+
     /**
      * @contentType application/json
      */
@@ -117,7 +140,7 @@ export type GetAllTextsApi = {
   security: [{
     cookie: [],
   }];
-}
+};
 
 export const getAllTextsApiQueryValidator: Validator<GetAllTextsApi['query']> = {
   before: {
@@ -155,26 +178,31 @@ export type UpdateTextSeenApi = {
   path: '/api/v2/texts/{id}/';
   method: 'PATCH';
   params: {
+
     /**
      * The text ID that was opened
      */
     id: number;
   };
   body: {
+
     /**
      * The phone number that opened the message
      */
     phone: number;
   };
   responses: {
+
     /**
      * @contentType application/json
      */
     200: typeof api200Body;
+
     /**
      * @contentType application/json
      */
     400: typeof api400Body;
+
     /**
      * @contentType application/json
      */

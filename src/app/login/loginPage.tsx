@@ -1,16 +1,22 @@
 'use client';
 
-import { formatPhone } from "@/utils/common/strings";
-import { AddAlertContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext } from "@/utils/frontend/clientContexts";
-import { useCallback, useContext, useEffect, useState } from "react";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
-import Button from "react-bootstrap/Button";
-import Spinner from "react-bootstrap/Spinner";
-import { GetLoginCodeApi, SubmitLoginCodeApi } from "@/types/api/auth";
-import { typeFetch } from "@/utils/frontend/typeFetch";
+import { formatPhone } from '@/utils/common/strings';
+import {
+  AddAlertContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext
+} from '@/utils/frontend/clientContexts';
+import {
+  useCallback, useContext, useEffect, useState
+} from 'react';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
+import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
+import {
+  GetLoginCodeApi, SubmitLoginCodeApi
+} from '@/types/api/auth';
+import { typeFetch } from '@/utils/frontend/typeFetch';
 
 export default function LoginPage() {
   const user = useContext(LoggedInUserContext);
@@ -18,7 +24,10 @@ export default function LoginPage() {
   const reCheckUser = useContext(RefreshLoggedInUserContext);
   const addAlert = useContext(AddAlertContext);
 
-  const [loginState, setLoginState] = useState<{
+  const [
+    loginState,
+    setLoginState,
+  ] = useState<{
     phone?: string;
     authCode?: string;
     stage: 'phone' | 'code';
@@ -26,7 +35,10 @@ export default function LoginPage() {
     stage: 'phone',
   });
 
-  const [errorFields, setErrorFields] = useState<string[]>([]);
+  const [
+    errorFields,
+    setErrorFields,
+  ] = useState<string[]>([]);
 
   const handleRedirectAction = useCallback(async () => {
     if (loc === null) return;
@@ -38,16 +50,22 @@ export default function LoginPage() {
     const urlParams = new URLSearchParams(loc.search);
     const destination = urlParams.get('redirectTo') || '/';
     window.location.assign(destination);
-  }, [loc, reCheckUser]);
+  }, [
+    loc,
+    reCheckUser,
+  ]);
 
-  const [isCodeLoading, setIsCodeLoading] = useState(false);
+  const [
+    isCodeLoading,
+    setIsCodeLoading,
+  ] = useState(false);
   const getCode = useCallback(async () => {
     // Check for a valid phone number
     if (
       !loginState.phone ||
-      !/^[0-9]{10}$/.test(loginState.phone)
+      !(/^[0-9]{10}$/).test(loginState.phone)
     ) {
-      setErrorFields([ 'phone' ]);
+      setErrorFields([ 'phone', ]);
       return;
     }
 
@@ -57,7 +75,10 @@ export default function LoginPage() {
       const apiParams: GetLoginCodeApi['params'] = {
         id: Number(loginState.phone),
       };
-      const [ code, apiResult ] = await typeFetch<GetLoginCodeApi>({
+      const [
+        code,
+        apiResult,
+      ] = await typeFetch<GetLoginCodeApi>({
         path: '/api/v2/login/{id}/',
         method: 'GET',
         params: apiParams,
@@ -70,7 +91,9 @@ export default function LoginPage() {
           apiResult.message !== 'Success'
         )
       ) {
-        throw { code, apiResult };
+        throw {
+          code, apiResult,
+        };
       }
 
       setLoginState(state => ({
@@ -80,12 +103,18 @@ export default function LoginPage() {
     } catch (e) {
       console.error(`Failed to get code for ${loginState}`, e);
       addAlert('danger', 'Failed to get a code for this user');
-      setErrorFields([ 'phone' ]);
+      setErrorFields([ 'phone', ]);
     }
     setIsCodeLoading(false);
-  }, [loginState, addAlert]);
+  }, [
+    loginState,
+    addAlert,
+  ]);
 
-  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [
+    isLoginLoading,
+    setIsLoginLoading,
+  ] = useState(false);
   const submitCode = useCallback(async () => {
     // Validate the phone number and code
     const invalidFields: string[] = [];
@@ -109,7 +138,10 @@ export default function LoginPage() {
       const body: SubmitLoginCodeApi['body'] = {
         code: loginState.authCode || '',
       };
-      const [ code, apiResult ] = await typeFetch<SubmitLoginCodeApi>({
+      const [
+        code,
+        apiResult,
+      ] = await typeFetch<SubmitLoginCodeApi>({
         path: '/api/v2/login/{id}/',
         method: 'POST',
         params: apiParams,
@@ -120,32 +152,41 @@ export default function LoginPage() {
         apiResult === null ||
         'message' in apiResult
       ) {
-        throw { code, apiResult };
+        throw {
+          code, apiResult,
+        };
       }
 
       handleRedirectAction();
     } catch (e) {
       console.error(`Failed to login with ${loginState}`, e);
       addAlert('danger', 'Authentication failed');
-      setErrorFields([ 'code' ]);
+      setErrorFields([ 'code', ]);
     }
     setIsLoginLoading(false);
-  }, [loginState, handleRedirectAction, addAlert]);
+  }, [
+    loginState,
+    handleRedirectAction,
+    addAlert,
+  ]);
 
   useEffect(() => {
     if (user && user.isUser) {
       handleRedirectAction();
     }
-  }, [user, handleRedirectAction]);
+  }, [
+    user,
+    handleRedirectAction,
+  ]);
 
-  return (<>
-    {user && user.isUser && <h1 className="text-center">You are already logged in</h1>}
+  return <>
+    {user && user.isUser && <h1 className='text-center'>You are already logged in</h1>}
     {user && !user.isUser && loc && <>
-      <Row className="justify-content-center my-3">
+      <Row className='justify-content-center my-3'>
         <Col md={6}><InputGroup>
           <InputGroup.Text>Phone Number</InputGroup.Text>
           <Form.Control
-            type="text"
+            type='text'
             value={formatPhone(loginState.phone || '')}
             onChange={e => setLoginState(state => ({
               ...state,
@@ -160,11 +201,11 @@ export default function LoginPage() {
           />
         </InputGroup></Col>
       </Row>
-      {loginState.stage === 'code' && <Row className="justify-content-center my-3">
+      {loginState.stage === 'code' && <Row className='justify-content-center my-3'>
         <Col md={6}><InputGroup>
           <InputGroup.Text>Authentication Code</InputGroup.Text>
           <Form.Control
-            type="text"
+            type='text'
             value={loginState.authCode || ''}
             onChange={e => setLoginState(state => ({
               ...state,
@@ -179,33 +220,33 @@ export default function LoginPage() {
           />
         </InputGroup></Col>
       </Row>}
-      <Row className="justify-content-center my-3">
+      <Row className='justify-content-center my-3'>
         <Col as={Row} md={6}>
-          {loginState.stage === 'phone' && <Col className="d-grid">
+          {loginState.stage === 'phone' && <Col className='d-grid'>
             <Button
-              variant="success"
+              variant='success'
               onClick={getCode}
               disabled={isCodeLoading}
-            >{isLoginLoading && <Spinner size="sm" />} Request Code</Button>
+            >{isLoginLoading && <Spinner size='sm' />} Request Code</Button>
           </Col>}
           {loginState.stage === 'code' && <>
-            <Col className="d-grid" xs={6}>
+            <Col className='d-grid' xs={6}>
               <Button
-                variant="success"
+                variant='success'
                 onClick={submitCode}
                 disabled={isLoginLoading}
-              >{isLoginLoading && <Spinner size="sm" />} Submit Code</Button>
+              >{isLoginLoading && <Spinner size='sm' />} Submit Code</Button>
             </Col>
-            <Col className="d-grid" xs={6}>
+            <Col className='d-grid' xs={6}>
               <Button
-                variant="warning"
+                variant='warning'
                 onClick={getCode}
                 disabled={isCodeLoading}
-              >{isCodeLoading && <Spinner size="sm" />} Get New Code</Button>
+              >{isCodeLoading && <Spinner size='sm' />} Get New Code</Button>
             </Col>
           </>}
         </Col>
       </Row>
     </>}
-  </>)
+  </>;
 }

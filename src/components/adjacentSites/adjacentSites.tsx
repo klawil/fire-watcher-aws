@@ -1,57 +1,61 @@
 'use client';
 
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Button from "react-bootstrap/Button";
-import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
-import { Circle, MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-import styles from "./adjacentSites.module.css";
-import "leaflet/dist/leaflet.css";
-import { useCallback, useContext, useEffect, useState } from "react";
-import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
+import Table from 'react-bootstrap/Table';
+import {
+  Circle, MapContainer, Marker, Popup, TileLayer
+} from 'react-leaflet';
+import styles from './adjacentSites.module.css';
+import 'leaflet/dist/leaflet.css';
+import {
+  useCallback, useContext, useEffect, useState
+} from 'react';
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import L from 'leaflet';
-import { AddAlertContext } from "@/utils/frontend/clientContexts";
-import { typeFetch } from "@/utils/frontend/typeFetch";
-import { DynamicSiteKeys, FullSiteObject, GetAllSitesApi } from "@/types/api/sites";
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import {
+  DynamicSiteKeys, FullSiteObject, GetAllSitesApi
+} from '@/types/api/sites';
 
 const fadeSiteTime = 1000 * 60 * 15; // 15 minutes
 const localeTimeOptions: Intl.DateTimeFormatOptions = {
-	hour: '2-digit',
-	minute: '2-digit',
-	second: '2-digit',
-	hour12: false
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
 };
 
 const makeSiteStringFn = (keysAndNames: {
-	[key in DynamicSiteKeys]?: string;
+  [key in DynamicSiteKeys]?: string;
 }) => (site: FullSiteObject) => {
-	const flags: string[] = [];
-	(Object.keys(keysAndNames) as (keyof typeof keysAndNames)[]).forEach((key) => {
-		const siteData = site[key];
-		if (typeof siteData === 'undefined') return;
-		let flagStr = keysAndNames[key] as string;
-		const numTrue = Object.keys(siteData).filter(seen => siteData[seen]).length;
-		if (numTrue !== Object.keys(siteData).length)
-			flagStr += '?';
-		if (numTrue > 0)
-			flags.push(flagStr);
-	});
-	return flags.join(', ');
-}
+  const flags: string[] = [];
+  (Object.keys(keysAndNames) as (keyof typeof keysAndNames)[]).forEach(key => {
+    const siteData = site[key];
+    if (typeof siteData === 'undefined') return;
+    let flagStr = keysAndNames[key] as string;
+    const numTrue = Object.keys(siteData).filter(seen => siteData[seen]).length;
+    if (numTrue !== Object.keys(siteData).length) flagStr += '?';
+    if (numTrue > 0) flags.push(flagStr);
+  });
+  return flags.join(', ');
+};
 const makeSiteFlags = makeSiteStringFn({
-	'ActiveConn': 'Active Conn',
-	'ConvChannel': 'Conv Channels',
-	'ValidInfo': 'Valid Info',
-	'CompositeCtrl': 'Composite Ctrl',
-	'NoServReq': 'No Serv Req',
-	'BackupCtrl': 'Backup Ctrl',
+  'ActiveConn': 'Active Conn',
+  'ConvChannel': 'Conv Channels',
+  'ValidInfo': 'Valid Info',
+  'CompositeCtrl': 'Composite Ctrl',
+  'NoServReq': 'No Serv Req',
+  'BackupCtrl': 'Backup Ctrl',
 });
 const makeSiteServices = makeSiteStringFn({
-	'SupportData': 'Data',
-	'SupportVoice': 'Voice',
-	'SupportReg': 'Registration',
-	'SupportAuth': 'Auth'
+  'SupportData': 'Data',
+  'SupportVoice': 'Voice',
+  'SupportReg': 'Registration',
+  'SupportAuth': 'Auth',
 });
 
 function SiteMapMarker({
@@ -61,50 +65,76 @@ function SiteMapMarker({
   site: FullSiteObject;
   minUpdateTime: number;
 }>) {
-  if (typeof site.SiteLat === 'undefined' || typeof site.SiteLon === 'undefined') return (<></>);
+  if (typeof site.SiteLat === 'undefined' || typeof site.SiteLon === 'undefined') return <></>;
 
   const siteUpdateTime = Math.max.apply(null, Object.keys(site.UpdateTime || {}).map(key => (site.UpdateTime?.[key] || 0) * 1000));
   const markerOpacity = Date.now() - siteUpdateTime >= fadeSiteTime ? 0.5 : 1;
   const siteFailed = Object.keys(site.SiteFailed || {}).filter(key => site.SiteFailed?.[key]).length > 0;
-  const seenBy = Object.keys(site.UpdateTime || {}).filter(key => (site.UpdateTime?.[key] || 0) >= minUpdateTime).sort().join(', ');
+  const seenBy = Object.keys(site.UpdateTime || {}).filter(key => (site.UpdateTime?.[key] || 0) >= minUpdateTime)
+    .sort()
+    .join(', ');
   const updateTime = new Date(Math.max.apply(null, Object.keys(site.UpdateTime || {}).map(key => (site.UpdateTime?.[key] || 0) * 1000)))
     .toLocaleTimeString('en-US', localeTimeOptions);
 
-  return (<>
+  return <>
     <Marker
       opacity={markerOpacity}
-      position={[ site.SiteLat, site.SiteLon ]}
+      position={[
+        site.SiteLat,
+        site.SiteLon,
+      ]}
       icon={L.icon({
         iconUrl: `/icons/${siteFailed ? 'red' : 'black'}.png`,
-        iconSize: [ 32, 32 ],
-        iconAnchor: [ 16, 32 ],
-        popupAnchor: [ 0, -32 ],
+        iconSize: [
+          32,
+          32,
+        ],
+        iconAnchor: [
+          16,
+          32,
+        ],
+        popupAnchor: [
+          0,
+          -32,
+        ],
       })}
     >
       <Popup><b>{site.SiteName}</b><br />Failed: {siteFailed ? 'FAILED' : 'N'}<br />Seen By: {seenBy}<br />Updated: {updateTime}</Popup>
     </Marker>
 
     {site.SiteRng && <Circle
-      center={[ site.SiteLat, site.SiteLon ]}
+      center={[
+        site.SiteLat,
+        site.SiteLon,
+      ]}
       radius={site.SiteRng * 1609.34}
       opacity={0.2}
       fillOpacity={0.05}
       color={siteFailed ? '#ff5733' : '#3388ff'}
     />}
-  </>);
+  </>;
 }
 
 export default function AdjacentSites() {
-  const [sites, setSites] = useState<FullSiteObject[]>([]);
+  const [
+    sites,
+    setSites,
+  ] = useState<FullSiteObject[]>([]);
   const addAlert = useContext(AddAlertContext);
-  
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
   const updateSites = useCallback(async () => {
     if (isLoading) return;
 
     setIsLoading(true);
     try {
-      const [ code, siteData ] = await typeFetch<GetAllSitesApi>({
+      const [
+        code,
+        siteData,
+      ] = await typeFetch<GetAllSitesApi>({
         path: '/api/v2/sites/',
         method: 'GET',
       });
@@ -113,36 +143,47 @@ export default function AdjacentSites() {
         code !== 200 ||
         siteData === null ||
         'message' in siteData
-      ) throw { code, siteData };
+      ) throw {
+        code, siteData,
+      };
 
       setSites(siteData.sites);
     } catch (e) {
-      console.error(`Failed to get site data`, e);
+      console.error('Failed to get site data', e);
       addAlert('danger', 'Failed to retrieve DTR site data');
     }
     setIsLoading(false);
-  }, [isLoading, addAlert]);
+  }, [
+    isLoading,
+    addAlert,
+  ]);
   useEffect(() => {
     if (sites.length === 0) {
       updateSites();
     }
-  }, [sites, updateSites]);
-   
-	const minUpdateTime = Math.floor(Date.now() / 1000) - (60 * 15);
+  }, [
+    sites,
+    updateSites,
+  ]);
 
-  return (<>
-    <h3 className="text-center">Adjacent Sites (Updates Every 5m)</h3>
+  const minUpdateTime = Math.floor(Date.now() / 1000) - (60 * 15);
 
-    <Row className="justify-content-center"><Col md={6}>
+  return <>
+    <h3 className='text-center'>Adjacent Sites (Updates Every 5m)</h3>
+
+    <Row className='justify-content-center'><Col md={6}>
       <MapContainer
         className={styles.map}
-        center={[ 37.749, -106.073]}
+        center={[
+          37.749,
+          -106.073,
+        ]}
         zoom={8}
       >
         <TileLayer
           maxZoom={19}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
         />
         {sites
           .filter(site => typeof site.UpdateTime !== 'undefined' && typeof site.SiteFailed !== 'undefined')
@@ -155,16 +196,16 @@ export default function AdjacentSites() {
       </MapContainer>
     </Col></Row>
 
-    <Row className="m-3 justify-content-center"><Col className="d-grid" md={6}>
+    <Row className='m-3 justify-content-center'><Col className='d-grid' md={6}>
       <Button
-        variant="info"
+        variant='info'
         onClick={updateSites}
         disabled={isLoading}
-      >{isLoading && <Spinner size="sm" />} Update</Button>
+      >{isLoading && <Spinner size='sm' />} Update</Button>
     </Col></Row>
 
     {sites.length > 0 && <Table responsive striped>
-      <thead><tr className="text-center">
+      <thead><tr className='text-center'>
         <th>Site</th>
         <th>Name</th>
         <th>County</th>
@@ -174,18 +215,20 @@ export default function AdjacentSites() {
         <th>Seen By</th>
         <th>Updated</th>
       </tr></thead>
-      <tbody className="font-monospace">{sites
+      <tbody className='font-monospace'>{sites
         .filter(site => typeof site.UpdateTime !== 'undefined' && typeof site.SiteFailed !== 'undefined')
         .sort((a, b) => a.SiteId > b.SiteId ? 1 : -1)
         .map(site => <tr key={site.SiteId}>
           <td>{site.SiteId}</td>
           <td>{site.SiteName || 'N/A'}</td>
-          <td className="text-end">{site.SiteCounty || 'N/A'}</td>
-          <td className="text-center">{Object.keys(site.SiteFailed || {}).filter(key => site.SiteFailed?.[key]).length > 0 ? 'FAILED' : 'N'}</td>
-          <td className="text-center">{makeSiteFlags(site)}</td>
-          <td className="text-center">{makeSiteServices(site)}</td>
-          <td className="text-center">{Object.keys(site.UpdateTime || {}).filter(key => (site.UpdateTime?.[key] || 0) >= minUpdateTime).sort().join(', ')}</td>
-          <td className="text-center">{
+          <td className='text-end'>{site.SiteCounty || 'N/A'}</td>
+          <td className='text-center'>{Object.keys(site.SiteFailed || {}).filter(key => site.SiteFailed?.[key]).length > 0 ? 'FAILED' : 'N'}</td>
+          <td className='text-center'>{makeSiteFlags(site)}</td>
+          <td className='text-center'>{makeSiteServices(site)}</td>
+          <td className='text-center'>{Object.keys(site.UpdateTime || {}).filter(key => (site.UpdateTime?.[key] || 0) >= minUpdateTime)
+            .sort()
+            .join(', ')}</td>
+          <td className='text-center'>{
             new Date(Math.max.apply(null, Object.keys(site.UpdateTime || {}).map(key => (site.UpdateTime?.[key] || 0) * 1000)))
               .toLocaleTimeString('en-US', localeTimeOptions)
           }</td>
@@ -193,5 +236,5 @@ export default function AdjacentSites() {
       }</tbody>
     </Table>}
     {sites.length === 0 && <LoadingSpinner />}
-  </>);
+  </>;
 }

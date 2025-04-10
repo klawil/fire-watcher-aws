@@ -1,7 +1,11 @@
 import { getLogger } from '@/utils/common/logger';
 import * as AWS from 'aws-sdk';
-import { FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator } from '@/types/api/talkgroups';
-import { handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient } from './_base';
+import {
+  FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator
+} from '@/types/api/talkgroups';
+import {
+  handleResourceApi, LambdaApiFunction, DocumentQueryConfig, mergeDynamoQueriesDocClient
+} from './_base';
 import { TABLE_TALKGROUP } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { generateApi400Body } from '@/types/api/_shared';
@@ -11,19 +15,25 @@ const logger = getLogger('talkgroups');
 const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
-  const [ query, queryErrors ] = validateObject<GetAllTalkgroupsApi['query']>(
+  const [
+    query,
+    queryErrors,
+  ] = validateObject<GetAllTalkgroupsApi['query']>(
     event.queryStringParameters || {},
-    getAllTalkgroupsApiQueryValidator,
+    getAllTalkgroupsApiQueryValidator
   );
   if (
     query === null ||
     queryErrors.length > 0
-  ) return [ 400, generateApi400Body(queryErrors) ];
+  ) return [
+    400,
+    generateApi400Body(queryErrors),
+  ];
 
   const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
     AWS.DynamoDB.DocumentClient.QueryInput,
     'ExpressionAttributeNames'
-  >>= {
+  >> = {
     TableName: TABLE_TALKGROUP,
     IndexName: 'InUseIndex',
     ExpressionAttributeNames: {
@@ -36,7 +46,7 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
     ProjectionExpression: '#id,#name,#count,#inUse',
   };
 
-  const partitions: ('Y' | 'N')[] = [ 'Y' ];
+  const partitions: ('Y' | 'N')[] = [ 'Y', ];
   if (query.all === 'y') {
     partitions.push('N');
   }
@@ -51,15 +61,18 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   const data = await mergeDynamoQueriesDocClient<GetAllTalkgroupsApi['responses']['200']['talkgroups'][number]>(
     baseQueryConfig,
     queryConfigs,
-    'Count',
+    'Count'
   );
 
-  return [ 200, {
-    count: data.Items.length,
-    loadedAll: !data.LastEvaluatedKeys.reduce((agg, key) => agg || key !== null, false),
-    talkgroups: data.Items,
-  } ];
-}
+  return [
+    200,
+    {
+      count: data.Items.length,
+      loadedAll: !data.LastEvaluatedKeys.reduce((agg, key) => agg || key !== null, false),
+      talkgroups: data.Items,
+    },
+  ];
+};
 
 export const main = handleResourceApi.bind(null, {
   GET,

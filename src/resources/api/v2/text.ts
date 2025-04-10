@@ -1,8 +1,16 @@
-import { FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator, updateTextSeenApiParamsValidator } from "@/types/api/texts";
-import { handleResourceApi, LambdaApiFunction, validateRequest } from "./_base";
-import { getLogger } from "@/utils/common/logger";
-import { api200Body, generateApi400Body } from "@/types/api/_shared";
-import { TABLE_TEXT, typedUpdate } from "@/utils/backend/dynamoTyped";
+import {
+  FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator, updateTextSeenApiParamsValidator
+} from '@/types/api/texts';
+import {
+  handleResourceApi, LambdaApiFunction, validateRequest
+} from './_base';
+import { getLogger } from '@/utils/common/logger';
+import {
+  api200Body, generateApi400Body
+} from '@/types/api/_shared';
+import {
+  TABLE_TEXT, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 
 const logger = getLogger('text');
 
@@ -25,7 +33,10 @@ const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
     params === null ||
     body === null ||
     validationErrors.length > 0
-  ) return [ 400, generateApi400Body(validationErrors), ];
+  ) return [
+    400,
+    generateApi400Body(validationErrors),
+  ];
 
   // Update the message
   try {
@@ -39,15 +50,15 @@ const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
         '#csLookedTime': 'csLookedTime',
       },
       ExpressionAttributeValues: {
-        ':csLooked': [ body.phone ],
-        ':csLookedTime': [ Date.now() ],
+        ':csLooked': [ body.phone, ],
+        ':csLookedTime': [ Date.now(), ],
         ':csLookedPhone': body.phone,
         ':blankList': [],
       },
       ConditionExpression: 'NOT contains(#csLooked, :csLookedPhone)',
       UpdateExpression: 'SET #csLooked = list_append(if_not_exists(#csLooked, :blankList), :csLooked), #csLookedTime = list_append(if_not_exists(#csLookedTime, :blankList), :csLookedTime)',
     });
-  } catch (e: any) {  // eslint-disable-line @typescript-eslint/no-explicit-any
+  } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (
       !('code' in e) ||
       e.code !== 'ConditionalCheckFailedException'
@@ -56,8 +67,11 @@ const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
     }
   }
 
-  return [ 200, api200Body ];
-}
+  return [
+    200,
+    api200Body,
+  ];
+};
 
 export const main = handleResourceApi.bind(null, {
   PATCH,

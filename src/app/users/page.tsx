@@ -1,5 +1,5 @@
-import CofrnLayout from "@/components/layout";
-import UserEditPage from "@/app/users/userEditPage";
+import CofrnLayout from '@/components/layout';
+import UserEditPage from '@/app/users/userEditPage';
 
 export const metadata = {
   title: 'Users | COFRN',
@@ -7,14 +7,14 @@ export const metadata = {
 };
 
 export default function Page() {
-  return (<CofrnLayout
+  return <CofrnLayout
     pageConfig={{
       title: 'User Management',
       requireAdmin: true,
       fluid: true,
       containerClass: 'container-md',
     }}>
-      <UserEditPage />
-    </CofrnLayout>
-  )
+    <UserEditPage />
+  </CofrnLayout>;
+
 }

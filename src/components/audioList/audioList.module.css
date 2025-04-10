@@ -4,7 +4,7 @@
 
 .fileRow {
   cursor: pointer;
-	-webkit-transition: background-color 0.2s linear;
+  -webkit-transition: background-color 0.2s linear;
   -moz-transition: background-color 0.2s linear;
   -o-transition: background-color 0.2s linear;
   transition: background-color 0.2s linear;

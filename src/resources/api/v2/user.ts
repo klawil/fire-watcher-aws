@@ -1,8 +1,16 @@
 import { getLogger } from '@/utils/common/logger';
-import { getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest } from './_base';
-import { adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments } from '@/types/api/users';
-import { api200Body, api401Body, api403Body, api404Body, generateApi400Body } from '@/types/api/_shared';
-import { TABLE_USER, typedDeleteItem, typedGet, typedUpdate } from '@/utils/backend/dynamoTyped';
+import {
+  getCurrentUser, getFrontendUserObj, handleResourceApi, LambdaApiFunction, validateRequest
+} from './_base';
+import {
+  adminUserKeys, DeleteUserApi, districtAdminUserKeys, FullUserObject, GetUserApi, UpdateUserApi, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
+} from '@/types/api/users';
+import {
+  api200Body, api401Body, api403Body, api404Body, generateApi400Body
+} from '@/types/api/_shared';
+import {
+  TABLE_USER, typedDeleteItem, typedGet, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
 import { validateObject } from '@/utils/backend/validation';
 
@@ -12,21 +20,31 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
   logger.debug('GET', ...arguments);
 
   // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
-  const [ params, paramsErrors ] = validateObject<GetUserApi['params']>(
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
+  const [
+    params,
+    paramsErrors,
+  ] = validateObject<GetUserApi['params']>(
     event.pathParameters,
-    userApiParamsValidator,
+    userApiParamsValidator
   );
   if (
     params === null ||
     paramsErrors.length > 0
-  )
-    return [
-      400,
-      generateApi400Body(paramsErrors),
-      userHeaders,
-    ];
+  ) return [
+    400,
+    generateApi400Body(paramsErrors),
+    userHeaders,
+  ];
 
   if (typeof params.id === 'string') {
     return [
@@ -36,7 +54,11 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
     ];
   }
   if (!userPerms.isAdmin) {
-    return [ 403, api403Body, userHeaders ];
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
   }
 
   // Fetch the user
@@ -46,15 +68,18 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
       phone: params.id,
     },
   });
-  if (!userInfo.Item)
-    return [ 404, api404Body, userHeaders ];
+  if (!userInfo.Item) return [
+    404,
+    api404Body,
+    userHeaders,
+  ];
 
   return [
     200,
     getFrontendUserObj(userInfo.Item),
     userHeaders,
   ];
-}
+};
 
 const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   logger.debug('GET', ...arguments);
@@ -80,20 +105,31 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     return [
       400,
       generateApi400Body(validationErrors),
-    ]
+    ];
   }
 
   // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
   const updateType = typeof params.id === 'string'
     ? 'SELF'
     : 'OTHER';
   if (
     !userPerms.isAdmin &&
     updateType === 'OTHER'
-  )
-    return [ 403, api403Body, userHeaders ];
+  ) return [
+    403,
+    api403Body,
+    userHeaders,
+  ];
 
   // Validate the user exists and can be edited by the authenticated user
   const phoneToUpdate = updateType === 'SELF'
@@ -108,14 +144,22 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
       },
     });
     if (!userToEdit.Item) {
-      return [ 404, api404Body, userHeaders ];
+      return [
+        404,
+        api404Body,
+        userHeaders,
+      ];
     }
 
     if (
       !user.isDistrictAdmin &&
       !userPerms.adminDepartments.some(dep => userToEdit.Item?.[dep]?.active)
     ) {
-      return [ 403, api403Body, userHeaders ];
+      return [
+        403,
+        api403Body,
+        userHeaders,
+      ];
     }
   }
 
@@ -143,7 +187,7 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
           deleteStrings.push(`#${key}`);
         } else {
           updateConfig.ExpressionAttributeValues = {
-            ...(updateConfig.ExpressionAttributeValues || {}),
+            ...updateConfig.ExpressionAttributeValues || {},
             [`:${key}`]: body[key],
           };
           updateStrings.push(`#${key} = :${key}`);
@@ -161,8 +205,8 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   }
   const updateResult = await typedUpdate<FullUserObject>(updateConfig);
   if (!updateResult.Attributes) {
-    logger.error(`Failed to update user`, body, updateResult);
-    throw new Error(`Failed to create user`);
+    logger.error('Failed to update user', body, updateResult);
+    throw new Error('Failed to create user');
   }
 
   return [
@@ -170,28 +214,46 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     getFrontendUserObj(updateResult.Attributes as FullUserObject),
     userHeaders,
   ];
-}
+};
 
 const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   logger.trace('DELETE', ...arguments);
 
   // Make sure the path parameter is valid
-  const [ params, paramsErrors ] = validateObject(
+  const [
+    params,
+    paramsErrors,
+  ] = validateObject(
     event.pathParameters,
-    userApiDeleteParamsValidator,
+    userApiDeleteParamsValidator
   );
   if (
     params === null ||
     paramsErrors.length > 0
   ) {
-    return [ 404, api404Body ];
+    return [
+      404,
+      api404Body,
+    ];
   }
 
   // Authorize the user
-  const [ user, userPerms, userHeaders ] = await getCurrentUser(event);
-  if (user === null) return [ 401, api401Body, userHeaders ];
+  const [
+    user,
+    userPerms,
+    userHeaders,
+  ] = await getCurrentUser(event);
+  if (user === null) return [
+    401,
+    api401Body,
+    userHeaders,
+  ];
   if (!userPerms.isAdmin) {
-    return [ 403, api403Body, userHeaders ];
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
   }
 
   // Validate the user exists
@@ -203,7 +265,11 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
     },
   });
   if (!changeUserGet.Item) {
-    return [ 404, api404Body, userHeaders ];
+    return [
+      404,
+      api404Body,
+      userHeaders,
+    ];
   }
   const changeUser = changeUserGet.Item;
 
@@ -216,7 +282,11 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
       .filter(dep => !userPerms.adminDepartments.includes(dep))
       .length > 0
   ) {
-    return [ 403, api403Body, userHeaders ];
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
   }
 
   // Delete the user
@@ -232,7 +302,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
     api200Body,
     userHeaders,
   ];
-}
+};
 
 export const main = handleResourceApi.bind(null, {
   GET,

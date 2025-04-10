@@ -1,11 +1,19 @@
 import * as AWS from 'aws-sdk';
 import { getLogger } from '@/utils/common/logger';
-import { getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody } from './_base';
-import { GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi } from '@/types/api/auth';
-import { api200Body, generateApi400Body } from '@/types/api/_shared';
+import {
+  getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, LambdaApiFunction, parseJsonBody
+} from './_base';
+import {
+  GetLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator, SubmitLoginCodeApi
+} from '@/types/api/auth';
+import {
+  api200Body, generateApi400Body
+} from '@/types/api/_shared';
 import { FullUserObject } from '@/types/api/users';
 import { getUserPermissions } from '@/utils/common/user';
-import { TABLE_USER, typedGet, typedUpdate } from '@/utils/backend/dynamoTyped';
+import {
+  TABLE_USER, typedGet, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { sign } from 'jsonwebtoken';
 import { SendUserAuthCodeQueueItem } from '@/types/backend/queue';
@@ -22,21 +30,27 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   logger.trace('GET', ...arguments);
 
   // Validate the path parameters
-  const [ params, paramsErrors ] = validateObject<GetLoginCodeApi['params']>(
+  const [
+    params,
+    paramsErrors,
+  ] = validateObject<GetLoginCodeApi['params']>(
     event.pathParameters,
-    loginApiParamsValidator,
+    loginApiParamsValidator
   );
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [ 400, generateApi400Body(paramsErrors) ];
+  ) return [
+    400,
+    generateApi400Body(paramsErrors),
+  ];
 
   // Make sure the user is not already logged in
-  const [ user ] = await getCurrentUser(event);
+  const [ user, ] = await getCurrentUser(event);
   if (user !== null) {
     return [
       400,
-      generateApi400Body([ 'user' ]),
+      generateApi400Body([ 'user', ]),
     ];
   }
 
@@ -75,37 +89,45 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
     200,
     api200Body,
   ];
-}
+};
 
 const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   logger.trace('POST', ...arguments);
 
   // Validate the path parameters
-  const [ params, paramsErrors ] = validateObject<GetLoginCodeApi['params']>(
+  const [
+    params,
+    paramsErrors,
+  ] = validateObject<GetLoginCodeApi['params']>(
     event.pathParameters,
-    loginApiParamsValidator,
+    loginApiParamsValidator
   );
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [ 400, generateApi400Body(paramsErrors) ];
+  ) return [
+    400,
+    generateApi400Body(paramsErrors),
+  ];
 
   // Validate the body
-  const [ body, bodyErrors ] = parseJsonBody<SubmitLoginCodeApi['body']>(
+  const [
+    body,
+    bodyErrors,
+  ] = parseJsonBody<SubmitLoginCodeApi['body']>(
     event.body,
-    loginApiCodeBodyValidator,
+    loginApiCodeBodyValidator
   );
   if (
     body === null ||
     bodyErrors.length > 0
-  )
-    return [
-      400,
-      generateApi400Body(bodyErrors),
-    ];
+  ) return [
+    400,
+    generateApi400Body(bodyErrors),
+  ];
 
   // Make sure the user is not already logged in
-  const [ user ] = await getCurrentUser(event);
+  const [ user, ] = await getCurrentUser(event);
   if (user !== null) {
     return [
       400,
@@ -123,14 +145,14 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   if (!userObjGet.Item) {
     return [
       400,
-      generateApi400Body([ 'code' ]),
+      generateApi400Body([ 'code', ]),
     ];
   }
   const userPerms = getUserPermissions(userObjGet.Item);
   if (!userPerms.isUser) {
     return [
       400,
-      generateApi400Body([ 'code' ]),
+      generateApi400Body([ 'code', ]),
     ];
   }
 
@@ -144,16 +166,16 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
     body.code !== userObj.code
   ) return [
     400,
-    generateApi400Body([ 'code' ]),
+    generateApi400Body([ 'code', ]),
   ];
 
   // Generate the authentication token for the user
   const jwtSecret = await secretsManager.getSecretValue({
     SecretId: jwtSecretArn,
-  }).promise().then(data => data.SecretString);
-  if (typeof jwtSecret === 'undefined')
-    throw new Error(`Unable to get JWT secret`);
-  const token = sign({ phone: userObj.phone }, jwtSecret, {
+  }).promise()
+    .then(data => data.SecretString);
+  if (typeof jwtSecret === 'undefined') throw new Error('Unable to get JWT secret');
+  const token = sign({ phone: userObj.phone, }, jwtSecret, {
     expiresIn: `${loginDuration}s`,
   });
   await typedUpdate<FullUserObject>({
@@ -178,7 +200,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
       ],
     },
   ];
-}
+};
 
 export const main = handleResourceApi.bind(null, {
   GET,

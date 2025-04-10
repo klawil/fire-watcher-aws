@@ -8,13 +8,13 @@ type ExpressionAttributeValues<T extends object> = {
   [key in StringExcept<Extract<keyof T, string>> as `:${key}`]: any; // eslint-disable-line
 } & {
   [key in Extract<keyof T, string> as `:${key}`]?: T[key];
-}
+};
 
 type ExpressionAttributeNames<T extends object> = {
   [key in StringExcept<Extract<keyof T, string>> as `#${key}`]: string;
 } & {
   [key in Extract<keyof T, string> as `#${key}`]?: key;
-}
+};
 
 export interface TypedUpdateInput<
   T extends object
@@ -24,7 +24,7 @@ export interface TypedUpdateInput<
   Key: {
     [key in RequiredKeys<T>]: T[key];
   };
-};
+}
 export interface TypedUpdateOutput<
   T extends object
 > extends AWS.DynamoDB.DocumentClient.UpdateItemOutput {

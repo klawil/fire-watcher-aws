@@ -1,4 +1,4 @@
-import { FrontendUserObject } from "@/types/api/users";
+import { FrontendUserObject } from '@/types/api/users';
 
 export interface UsersState {
   users: FrontendUserObject[];

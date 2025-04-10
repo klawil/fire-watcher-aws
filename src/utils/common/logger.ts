@@ -5,8 +5,8 @@ export enum LogLevel {
   Log,
   Warn,
   Error,
-  Silent,
-};
+  Silent
+}
 export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'error';
 
 let globalLogLevel: LogLevel = LogLevel.Error;
@@ -46,7 +46,7 @@ const maxLevelStringLen: number = levelStrings.reduce(
 );
 const resetStyleString = '\x1B[m';
 const baseLevelStyleString = 'color:{color};font-weight:bold;';
-const nameStyleString = `color:white;`;
+const nameStyleString = 'color:white;';
 const levelStyles: string[] = [
   'grey',
   'white',
@@ -94,13 +94,13 @@ class Logger {
     ];
 
     // Build the first portion of the log
-    let logPrefix = ''; 
+    let logPrefix = '';
     if (!isNodeEnv) {
       logPrefix = `${level < LogLevel.Error ? '  ' : ''}[ ${stylePlaceholder}${levelStrings[level].padEnd(maxLevelStringLen, ' ')}${stylePlaceholder} ]`;
       if (level !== LogLevel.Trace) {
         styles.push(
           nameStyleString,
-          resetStyleString,
+          resetStyleString
         );
       }
     } else {
@@ -111,7 +111,7 @@ class Logger {
     // Build the argument array
     const consoleArgs: [
       string,
-      ...unknown[],
+      ...unknown[]
     ] = [
       logPrefix,
       ...styles,

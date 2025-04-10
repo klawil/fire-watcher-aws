@@ -1,24 +1,36 @@
 'use client';
 
-import React, { useCallback, useContext, useEffect, useReducer, useState } from "react";
-import LoadingSpinner from "@/components/loadingSpinner/loadingSpinner";
-import Table from "react-bootstrap/Table";
-import { defaultUsersState, UsersDispatchContext, usersStateReducer } from "@/utils/frontend/usersState";
-import UserRow from "@/components/userRow/userRow";
-import Modal from "react-bootstrap/Modal";
-import Button from "react-bootstrap/Button";
-import Spinner from "react-bootstrap/Spinner";
-import { AddAlertContext } from "@/utils/frontend/clientContexts";
-import { typeFetch } from "@/utils/frontend/typeFetch";
-import { DeleteUserApi, GetAllUsersApi, validDepartments } from "@/types/api/users";
+import React, {
+  useCallback, useContext, useEffect, useReducer, useState
+} from 'react';
+import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
+import Table from 'react-bootstrap/Table';
+import {
+  defaultUsersState, UsersDispatchContext, usersStateReducer
+} from '@/utils/frontend/usersState';
+import UserRow from '@/components/userRow/userRow';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import { typeFetch } from '@/utils/frontend/typeFetch';
+import {
+  DeleteUserApi, GetAllUsersApi, validDepartments
+} from '@/types/api/users';
 
 export default function UserEditPage() {
-  const [ state, dispatch ] = useReducer(usersStateReducer, defaultUsersState);
+  const [
+    state,
+    dispatch,
+  ] = useReducer(usersStateReducer, defaultUsersState);
   const addAlert = useContext(AddAlertContext);
 
   useEffect(() => {
     (async () => {
-      const [ code, apiResult ] = await typeFetch<GetAllUsersApi>({
+      const [
+        code,
+        apiResult,
+      ] = await typeFetch<GetAllUsersApi>({
         path: '/api/v2/users/',
         method: 'GET',
       });
@@ -28,7 +40,7 @@ export default function UserEditPage() {
         apiResult === null ||
         'message' in apiResult
       ) {
-        console.error(`Failed to get users`, code, apiResult);
+        console.error('Failed to get users', code, apiResult);
         return;
       }
 
@@ -39,7 +51,10 @@ export default function UserEditPage() {
     })();
   }, []);
 
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
   const deleteModalUser = useCallback(async () => {
     if (!state.deleteUserModal) return;
     setIsDeleting(true);
@@ -48,7 +63,10 @@ export default function UserEditPage() {
       id: state.deleteUserModal.phone,
     };
     try {
-      const [ code, apiResponse ] = await typeFetch<DeleteUserApi>({
+      const [
+        code,
+        apiResponse,
+      ] = await typeFetch<DeleteUserApi>({
         path: '/api/v2/users/{id}/',
         method: 'DELETE',
         params: apiBody,
@@ -62,7 +80,9 @@ export default function UserEditPage() {
           apiResponse.message !== 'Success'
         )
       ) {
-        throw { code, apiResponse };
+        throw {
+          code, apiResponse,
+        };
       }
 
       dispatch({
@@ -77,63 +97,66 @@ export default function UserEditPage() {
       console.error(`Failed to delete user ${state.deleteUserModal}`, e);
       addAlert('danger', `Failed to delete ${state.deleteUserModal.fName} ${state.deleteUserModal.lName}`);
     }
-  }, [state.deleteUserModal, addAlert]);
+  }, [
+    state.deleteUserModal,
+    addAlert,
+  ]);
 
   const deleteModalDeps = validDepartments
     .filter(dep => state.deleteUserModal?.[dep]?.active)
     .map(dep => `${dep} ${state.deleteUserModal?.[dep]?.callSign}`);
 
-  return (<>
-      {!state.users || state.users.length === 0
-        ? <LoadingSpinner />
-        : <UsersDispatchContext.Provider value={dispatch}>
-          <Table responsive={true}>
-            <tbody>
-              {state.users
-                .map((user, idx) => (<UserRow
-                  key={user.phone}
-                  user={user}
-                  idx={idx}
-                />))}
-              <UserRow
-                user={null}
-                idx={state.users.length}
-              />
-            </tbody>
-          </Table>
+  return <>
+    {!state.users || state.users.length === 0
+      ? <LoadingSpinner />
+      : <UsersDispatchContext.Provider value={dispatch}>
+        <Table responsive={true}>
+          <tbody>
+            {state.users
+              .map((user, idx) => <UserRow
+                key={user.phone}
+                user={user}
+                idx={idx}
+              />)}
+            <UserRow
+              user={null}
+              idx={state.users.length}
+            />
+          </tbody>
+        </Table>
 
-          <Modal
-            show={!!state.deleteUserModal}
-            onHide={() => dispatch({
+        <Modal
+          show={!!state.deleteUserModal}
+          onHide={() => dispatch({
+            action: 'ClearDeleteModal',
+          })}
+          size='lg'
+        >
+          <Modal.Header closeButton>Are you sure?</Modal.Header>
+
+          <Modal.Body>
+            Are you sure you want to delete <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
+              deleteModalDeps.length === 0
+                ? 'No Department'
+                : deleteModalDeps.join(', ')
+            })</b>?
+          </Modal.Body>
+
+          <Modal.Footer className='justify-content-between'>
+            <Button onClick={() => dispatch({
               action: 'ClearDeleteModal',
-            })}
-            size="lg"
-          >
-            <Modal.Header closeButton>Are you sure?</Modal.Header>
-
-            <Modal.Body>
-              Are you sure you want to delete <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
-                deleteModalDeps.length === 0
-                  ? 'No Department'
-                  : deleteModalDeps.join(', ')
-              })</b>?
-            </Modal.Body>
-
-            <Modal.Footer className="justify-content-between">
-              <Button onClick={() => dispatch({
-                action: 'ClearDeleteModal',
-              })}>No, do not delete</Button>
-              <Button
-                variant="danger"
-                onClick={() => deleteModalUser()}
-              >{
+            })}>No, do not delete</Button>
+            <Button
+              variant='danger'
+              onClick={() => deleteModalUser()}
+            >{
                 isDeleting
-                  ? (<><Spinner size="sm" /> Deleting User</>)
+                  ? <><Spinner size='sm' /> Deleting User</>
                   : 'Yes, delete this user'
               }</Button>
-            </Modal.Footer>
-          </Modal>
-        </UsersDispatchContext.Provider>}
-    </>
-  )
+          </Modal.Footer>
+        </Modal>
+      </UsersDispatchContext.Provider>}
+  </>;
+
 }
