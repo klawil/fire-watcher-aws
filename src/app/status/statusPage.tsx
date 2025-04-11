@@ -440,6 +440,7 @@ export default function StatusPage() {
         ...chart,
       };
       return <React.Fragment key={idx}>
+        {idx > 0 && <hr />}
         {config.type === 'Tower' && <StatusTowerLineChart {...config} />}
         {config.type === 'Metric' && <StatusMetricLineChart {...config} />}
         {config.type === 'Timing' && <StatusTimingLineChart {...config} />}

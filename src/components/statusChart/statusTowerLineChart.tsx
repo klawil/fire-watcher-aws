@@ -52,7 +52,8 @@ export default function StatusTowerLineChart({
     dataUrl,
     body,
     shouldLoad,
-    setChartLoaded
+    setChartLoaded,
+    true
   );
 
   if (data && data.datasets.length === 3) {

@@ -38,6 +38,7 @@ export default function StatusTimingLineChart({
     body,
     shouldFetchData,
     setChartLoaded,
+    false,
     convertValue
   );
 
@@ -74,7 +75,14 @@ export default function StatusTimingLineChart({
         >Load Chart</Button>
       </Col>}
       {data === null && <h2 className='text-center'>Error loading data</h2>}
-      {data && <Line
+      {data && data.datasets.length === 0 && <Col
+        className='d-grid'
+        xs={{
+          span: 6, offset: 3,
+        }}
+        style={{ height: '75%', }}
+      ><h2 className='text-center align-self-center'>No Data Found</h2></Col>}
+      {data && data.datasets.length > 0 && <Line
         data={{
           labels: data.labels,
           datasets,

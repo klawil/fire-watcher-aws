@@ -115,6 +115,7 @@ export function useChartData(
   body: GetMetricsApi['body'] | undefined,
   shouldLoad: boolean,
   setChartLoaded: Dispatch<SetStateAction<number>>,
+  returnNonData: boolean,
   convertValue: (a: number) => number = v => v
 ) {
   const [
@@ -196,7 +197,8 @@ export function useChartData(
             fill: false,
             tension: 0.1,
             pointStyle: false,
-          }));
+          } as const))
+          .filter(dataset => returnNonData || dataset.data.some(v => v !== 0));
 
         setData({
           labels: labels.map(label => formatter(new Date(label))),
@@ -219,6 +221,7 @@ export function useChartData(
     setChartLoaded,
     convertValue,
     addAlert,
+    returnNonData,
   ]);
 
   return data;
