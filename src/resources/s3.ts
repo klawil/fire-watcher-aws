@@ -256,6 +256,14 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
               Added: item.Added,
             },
           })));
+          promises['delete-s3-dups'] = Promise.all(itemsToDelete.map(item => {
+            if (typeof item.Key === 'undefined') return;
+
+            return s3.deleteObject({
+              Bucket,
+              Key: item.Key,
+            }).promise();
+          }));
           if (shouldDoTranscript && !keepingCurrentItem) {
             promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
               TableName: TABLE_FILE_TRANSLATION,

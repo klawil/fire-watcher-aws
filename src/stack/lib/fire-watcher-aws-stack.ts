@@ -498,7 +498,7 @@ export class FireWatcherAwsStack extends Stack {
     });
 
     // Grant access for the S3 handler
-    bucket.grantRead(s3Handler);
+    bucket.grantReadWrite(s3Handler);
     dtrTable.grantReadWriteData(s3Handler);
     talkgroupTable.grantReadWriteData(s3Handler);
     queue.grantSendMessages(s3Handler);
