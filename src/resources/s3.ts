@@ -472,7 +472,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       logger.info('parseRecord', 'delete', body);
       await typedDeleteItem<FullFileObject>(body);
     } else {
-      logger.error('parseRecord', 'delete', 'not found', Key);
+      logger.info('parseRecord', 'delete', 'not found', Key);
     }
   }
 }
