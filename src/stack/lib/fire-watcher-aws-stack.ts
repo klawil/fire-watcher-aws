@@ -29,9 +29,6 @@ import { Construct } from 'constructs';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
 
-import {
-  PhoneNumberAccount, validPhoneNumberAccounts
-} from '@/types/backend/department';
 import { LambdaEnvironment } from '@/types/backend/environment';
 
 dotenv.config({ path: resolve(
@@ -666,49 +663,16 @@ export class FireWatcherAwsStack extends Stack {
     });
     const apiResource = api.root.addResource('api');
 
-    // Create rest APIs for each billing department
-    type ApisByBilling = {
-      [key in PhoneNumberAccount]: {
-        api: apigateway.RestApi;
-        resource: apigateway.Resource;
-      };
-    };
-    const billingApis: ApisByBilling = validPhoneNumberAccounts.reduce((agg: Partial<ApisByBilling>, account) => {
-      const api = new apigateway.RestApi(this, `cvfd-api-gateway-${account}`, {
-        restApiName: `CVFD ${account} API Gateway`,
-        description: `API gateway for the ${account} billing account`,
-      });
-      Tags.of(api).add('CostCenter', account);
-      const resource = api.root.addResource('api').addResource(account);
-      agg[account] = {
-        api,
-        resource,
-      };
-      return agg;
-    }, {}) as ApisByBilling;
-
     interface ApiDefinition {
       name: string;
       read?: dynamodb.Table[];
       readWrite?: dynamodb.Table[];
-      readWriteBucket?: s3.Bucket[];
       bucket?: s3.IBucket;
       queue?: sqs.Queue;
-      cost?: boolean;
       firehose?: kinesisfirehose.CfnDeliveryStream,
       secret?: secretsManager.ISecret;
       secret2?: secretsManager.ISecret;
-      metrics?: boolean;
-      byAccount?: boolean;
     }
-
-    const metricMappingEnv: { [key: string]: string } = {
-      S3_LAMBDA: s3Handler.functionName,
-      QUEUE_LAMBDA: queueHandler.functionName,
-      ALARM_QUEUE_LAMBDA: alarmQueueHandler.functionName,
-      STATUS_LAMBDA: statusHandler.functionName,
-      WEATHER_LAMBDA: weatherUpdater.functionName,
-    };
 
     const cofrnApis: ApiDefinition[] = [
       {
@@ -729,45 +693,8 @@ export class FireWatcherAwsStack extends Stack {
         secret2: jwtSecret,
       },
       {
-        name: 'user',
-        readWrite: [ phoneNumberTable, ],
-        queue,
-        secret2: jwtSecret,
-      },
-      {
-        name: 'twilio',
-        byAccount: true,
-        cost: true,
-        readWrite: [
-          phoneNumberTable,
-          textsTable,
-        ],
-        readWriteBucket: [ costDataS3Bucket, ],
-        queue,
-        secret: twilioSecret,
-        secret2: jwtSecret,
-      },
-      {
         name: 'events',
         firehose: eventsFirehose,
-      },
-      {
-        name: 'audio',
-        read: [
-          dtrTable,
-          talkgroupTable,
-        ],
-      },
-      {
-        name: 'frontend',
-        read: [
-          phoneNumberTable,
-          siteTable,
-        ],
-        readWrite: [ textsTable, ],
-        queue,
-        metrics: true,
-        secret2: jwtSecret,
       },
     ];
 
@@ -775,7 +702,7 @@ export class FireWatcherAwsStack extends Stack {
       const apiHandler = new lambdanodejs.NodejsFunction(this, `cvfd-api-${config.name}-lambda`, {
         initialPolicy: [ new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: [ config.metrics ? 'cloudwatch:*' : 'cloudwatch:PutMetricData', ],
+          actions: [ 'cloudwatch:PutMetricData', ],
           resources: [ '*', ],
         }), ],
         runtime: lambda.Runtime.NODEJS_18_X,
@@ -786,12 +713,10 @@ export class FireWatcherAwsStack extends Stack {
         },
         timeout: Duration.seconds(10),
       });
-      if (!config.metrics) metricMappingEnv[`${config.name.toUpperCase()}_API_LAMBDA`] = apiHandler.functionName;
 
       if (config.read) config.read.forEach(table => table.grantReadData(apiHandler));
       if (config.readWrite) config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
       if (config.bucket) config.bucket.grantRead(apiHandler);
-      if (config.readWriteBucket) config.readWriteBucket.forEach(bucket => bucket.grantReadWrite(apiHandler));
       if (config.queue) config.queue.grantSendMessages(apiHandler);
       if (config.firehose) apiHandler.addToRolePolicy(new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -801,18 +726,8 @@ export class FireWatcherAwsStack extends Stack {
           'firehose:PutRecordBatch',
         ],
       }));
-      if (config.cost) apiHandler.addToRolePolicy(new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        resources: [ '*', ],
-        actions: [ 'ce:GetCostAndUsage', ],
-      }));
       if (config.secret) config.secret.grantRead(apiHandler);
       if (config.secret2) config.secret2.grantRead(apiHandler);
-      if (config.metrics) {
-        Object.keys(metricMappingEnv).forEach(key => {
-          apiHandler.addEnvironment(key, metricMappingEnv[key]);
-        });
-      }
 
       const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
         requestTemplates: {
@@ -828,14 +743,6 @@ export class FireWatcherAwsStack extends Stack {
         .replace(/\//g, '_')
         .toUpperCase();
       lambdaNames[`A_${envName}`] = apiHandler.functionName;
-
-      if (config.byAccount) {
-        validPhoneNumberAccounts.forEach(account => {
-          const newApiResource = billingApis[account].resource.addResource(config.name);
-          newApiResource.addMethod('GET', apiIntegration);
-          newApiResource.addMethod('POST', apiIntegration);
-        });
-      }
     });
 
     // Maps for tables and buckets for the v2 APIs
@@ -1219,7 +1126,12 @@ export class FireWatcherAwsStack extends Stack {
     // Create the cloudfront distribution
     const cfDistro = new cloudfront.Distribution(this, 'cofrn-cloudfront', {
       certificate: acm.Certificate.fromCertificateArn(this, 'cofrn-cert', certArn),
-      domainNames: [ 'new.cofrn.org', ],
+      domainNames: [
+        'new.cofrn.org',
+        'cofrn.org',
+        'www.cofrn.org',
+        'fire.klawil.net',
+      ],
       defaultBehavior: {
         origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(reactBucket),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
@@ -1282,99 +1194,6 @@ export class FireWatcherAwsStack extends Stack {
       ), ],
       destinationBucket: reactBucket,
       distribution: cfDistro,
-    });
-
-    new cloudfront.CloudFrontWebDistribution(this, 'cvfd-cloudfront', {
-      viewerCertificate: {
-        aliases: [
-          'fire.klawil.net',
-          'cofrn.org',
-          'www.cofrn.org',
-        ],
-        props: {
-          acmCertificateArn: certArn,
-          sslSupportMethod: 'sni-only',
-        },
-      },
-      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      originConfigs: [
-        {
-          s3OriginSource: {
-            s3BucketSource: bucket,
-            originAccessIdentity: s3AccessIdentity,
-          },
-          behaviors: [ {
-            isDefaultBehavior: true,
-            defaultTtl: Duration.seconds(0),
-            maxTtl: Duration.seconds(0),
-          }, ],
-        },
-        ...validPhoneNumberAccounts
-          .map(account => ({
-            customOriginSource: {
-              domainName: `${billingApis[account].api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
-              originPath: `/${billingApis[account].api.deploymentStage.stageName}`,
-            },
-            behaviors: [
-              {
-                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-                pathPattern: `api/${account}`,
-                defaultTtl: Duration.seconds(0),
-                maxTtl: Duration.seconds(0),
-                forwardedValues: {
-                  queryString: true,
-                  cookies: {
-                    forward: 'all',
-                  },
-                },
-              },
-              {
-                allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-                pathPattern: `api/${account}/*`,
-                defaultTtl: Duration.seconds(0),
-                maxTtl: Duration.seconds(0),
-                forwardedValues: {
-                  queryString: true,
-                  cookies: {
-                    forward: 'all',
-                  },
-                },
-              },
-            ],
-          })),
-        {
-          customOriginSource: {
-            domainName: `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
-            originPath: `/${api.deploymentStage.stageName}`,
-          },
-          behaviors: [
-            {
-              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-              pathPattern: 'api',
-              defaultTtl: Duration.seconds(0),
-              maxTtl: Duration.seconds(0),
-              forwardedValues: {
-                queryString: true,
-                cookies: {
-                  forward: 'all',
-                },
-              },
-            },
-            {
-              allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-              pathPattern: 'api/*',
-              defaultTtl: Duration.seconds(0),
-              maxTtl: Duration.seconds(0),
-              forwardedValues: {
-                queryString: true,
-                cookies: {
-                  forward: 'all',
-                },
-              },
-            },
-          ],
-        },
-      ],
     });
 
     // Add the alarms

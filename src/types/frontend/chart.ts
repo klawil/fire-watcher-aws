@@ -8,8 +8,7 @@ type PossibleChartUnits = 'Count' | 'Milliseconds' | 'Seconds';
 
 interface BaseChart {
   title: string;
-  dataUrl?: string;
-  body?: GetMetricsApi['body'];
+  body: GetMetricsApi['body'];
   lazyLoad?: boolean;
 }
 

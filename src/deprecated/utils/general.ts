@@ -1,6 +1,5 @@
 import * as aws from 'aws-sdk';
 
-import { MessageType } from '@/deprecated/common/frontendApi';
 import {
   UserDepartment, validDepartments
 } from '@/types/api/users';
@@ -8,12 +7,9 @@ import {
   PhoneNumberAccount, PhoneNumberTypes, TwilioAccounts, TwilioNumberTypes
 } from '@/types/backend/department';
 import { getLogger } from '@/utils/common/logger';
-import { parsePhone } from '@/utils/common/strings';
 
 const logger = getLogger('u-gen');
-const twilio = require('twilio'); // eslint-disable-line @typescript-eslint/no-require-imports
 
-const messagesTable = process.env.TABLE_TEXT;
 const phoneTable = process.env.TABLE_USER;
 
 const secretManager = new aws.SecretsManager();
@@ -226,115 +222,6 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
   return twilioSecret;
 }
 
-/*
- * group and groupAnnounce need a department associated with them
- * page announce should have a pageTg associated
- */
-const departmentRequired: MessageType[] = [
-  'department',
-  'departmentAnnounce',
-  'departmentAlert',
-];
-
-/**
- * @deprecated The method should not be used
- */
-export async function saveMessageData(
-  messageType: MessageType,
-  messageId: string,
-  recipients: number,
-  body: string,
-  mediaUrls: string[] = [],
-  pageId: string | null = null,
-  pageTg: number | null = null,
-  department: UserDepartment | null = null,
-  isTest: boolean = false
-) {
-  logger.trace('saveMessageData', ...arguments);
-  const promises: Promise<unknown>[] = [];
-  if (departmentRequired.includes(messageType) && department === null) {
-    department = 'PageOnly';
-  }
-  const updateItemParams: aws.DynamoDB.UpdateItemInput & Required<Pick<aws.DynamoDB.UpdateItemInput, 'ExpressionAttributeNames' | 'ExpressionAttributeValues' | 'UpdateExpression'>> = {
-    TableName: messagesTable,
-    Key: {
-      datetime: {
-        N: messageId,
-      },
-    },
-    ExpressionAttributeNames: {
-      '#r': 'recipients',
-      '#b': 'body',
-      '#tpi': 'testPageIndex',
-      '#p': 'isPage',
-      '#t': 'isTest',
-      '#ts': 'isTestString',
-      '#mt': 'type',
-    },
-    ExpressionAttributeValues: {
-      ':r': {
-        N: recipients.toString(),
-      },
-      ':b': {
-        S: body,
-      },
-      ':p': {
-        BOOL: pageId !== null,
-      },
-      ':t': {
-        BOOL: isTest,
-      },
-      ':ts': {
-        S: isTest ? 'y' : 'n',
-      },
-      ':tpi': {
-        S: `${isTest ? 'y' : 'n'}${pageId !== null ? 'y' : 'n'}`,
-      },
-      ':mt': {
-        S: messageType,
-      },
-    },
-    UpdateExpression: 'SET #r = :r, #b = :b, #p = :p, #t = :t, #ts = :ts, #mt = :mt, #tpi = :tpi',
-  };
-  if (department !== null) {
-    updateItemParams.ExpressionAttributeNames['#dep'] = 'department';
-    updateItemParams.ExpressionAttributeValues[':dep'] = { S: department, };
-    updateItemParams.UpdateExpression += ', #dep = :dep';
-  }
-  if (pageTg !== null) {
-    updateItemParams.ExpressionAttributeNames['#tg'] = 'talkgroup';
-    updateItemParams.ExpressionAttributeValues[':tg'] = { S: pageTg.toString(), };
-    updateItemParams.UpdateExpression += ', #tg = :tg';
-  }
-  if (pageId !== null) {
-    updateItemParams.ExpressionAttributeNames['#pid'] = 'pageId';
-    updateItemParams.ExpressionAttributeValues[':pid'] = { S: pageId, };
-    updateItemParams.UpdateExpression += ', #pid = :pid';
-  }
-  if (mediaUrls.length > 0) {
-    updateItemParams.ExpressionAttributeNames['#mu'] = 'mediaUrls';
-    updateItemParams.ExpressionAttributeValues[':mu'] = { S: mediaUrls.join(', '), };
-    updateItemParams.UpdateExpression += ', #mu = :mu';
-  }
-  promises.push(dynamodb.updateItem(updateItemParams).promise());
-
-  const dataDate = new Date(Number(messageId));
-  promises.push(cloudWatch.putMetricData({
-    Namespace: 'Twilio Health',
-    MetricData: [ {
-      MetricName: 'Initiated',
-      Timestamp: dataDate,
-      Unit: 'Count',
-      Value: recipients,
-    }, ],
-  }).promise()
-    .catch(e => {
-      logger.error('saveMesageData', 'twilio metrics', e);
-    }));
-
-  await Promise.all(promises);
-}
-
 const DEFAULT_PAGE_NUMBER = 'page';
 
 /**
@@ -374,83 +261,6 @@ export async function getPageNumber(user: AWS.DynamoDB.AttributeMap): Promise<Ph
    * - a member no departments
    */
   return DEFAULT_PAGE_NUMBER;
-}
-
-interface TwilioMessageConfig {
-  body: string;
-  mediaUrl?: string[];
-  from: string;
-  to: string;
-  statusCallback?: string;
-}
-
-/**
- * @deprecated The method should not be used
- */
-export async function sendMessage(
-  metricSource: string,
-  messageType: MessageType,
-  messageId: string | null,
-  phone: string,
-  sendNumberCategory: PhoneNumberTypes,
-  body: string,
-  mediaUrl: string[] = []
-) {
-  logger.trace('sendMessage', ...arguments);
-
-  const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
-  if (typeof resolvedTwilioPhoneCategories[sendNumberCategory] === 'undefined') {
-    logger.error('sendMessage', `Invalid number category - ${sendNumberCategory}`);
-    throw new Error(`Invalid number category - ${sendNumberCategory}`);
-  }
-  const numberConfig = resolvedTwilioPhoneCategories[sendNumberCategory];
-
-  let saveMessageDataPromise: Promise<unknown> = new Promise(res => res(null));
-  if (messageId === null) {
-    messageId = Date.now().toString();
-    saveMessageDataPromise = saveMessageData(
-      messageType,
-      messageId,
-      1,
-      body,
-      mediaUrl,
-      null,
-      null,
-      null,
-      true
-    );
-  }
-
-  const twilioConf = await getTwilioSecret();
-  if (twilioConf === null) throw new Error('Cannot get twilio secret');
-
-  const fromNumber = numberConfig.number;
-  const accountSid: string = twilioConf[`accountSid${numberConfig.account || ''}`];
-  const authToken: string = twilioConf[`authToken${numberConfig.account || ''}`];
-  if (
-    typeof fromNumber === 'undefined' ||
-    typeof accountSid === 'undefined' ||
-    typeof authToken === 'undefined'
-  ) {
-    logger.error('Invalid phone information', fromNumber, accountSid, authToken);
-    throw new Error('Invalid phone information');
-  }
-
-  const messageConfig: TwilioMessageConfig = {
-    body,
-    mediaUrl,
-    from: fromNumber,
-    to: `+1${parsePhone(phone)}`,
-    statusCallback: `https://cofrn.org/api${numberConfig.account ? `/${numberConfig.account}` : ''}/twilio?action=textStatus&code=${encodeURIComponent(twilioConf.apiCode)}&msg=${encodeURIComponent(messageId)}`,
-  };
-  return Promise.all([
-    twilio(accountSid, authToken)
-      .messages.create(messageConfig),
-    saveMessageDataPromise,
-  ])
-    .catch((e: unknown) => {
-      logger.error('sendMessage', e);
-    });
 }
 
 interface CallMetric {

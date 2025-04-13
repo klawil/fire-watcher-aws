@@ -17,7 +17,6 @@ import {
 
 export default function StatusTimingLineChart({
   title,
-  dataUrl,
   body,
   shouldFetchData,
   lazyLoad,
@@ -34,7 +33,6 @@ export default function StatusTimingLineChart({
   }
 
   const data = useChartData(
-    dataUrl,
     body,
     shouldFetchData,
     setChartLoaded,

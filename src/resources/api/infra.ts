@@ -3,7 +3,6 @@ import {
 } from 'aws-lambda';
 import * as aws from 'aws-sdk';
 
-import { PageBody } from '@/deprecated/types/queue';
 import { mergeDynamoQueries } from '@/deprecated/utils/dynamo';
 import { parseDynamoDbAttributeMap } from '@/deprecated/utils/dynamodb';
 import {
@@ -11,7 +10,9 @@ import {
 } from '@/deprecated/utils/general';
 import { Heartbeat } from '@/types/api/heartbeats';
 import { PagingTalkgroup } from '@/types/api/users';
-import { SiteStatusQueueItem } from '@/types/backend/queue';
+import {
+  SendPageQueueItem, SiteStatusQueueItem
+} from '@/types/backend/queue';
 import {
   TABLE_STATUS, typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
@@ -91,7 +92,7 @@ async function handlePage(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
     body.key.indexOf('BG_FIRE') === -1 &&
     event.queryStringParameters?.action === 'dtrPage'
   ) {
-    const sqsEvent: PageBody = {
+    const sqsEvent: SendPageQueueItem = {
       action: 'page',
       key: body.key,
       tg: body.tg,

@@ -30,7 +30,6 @@ const secondFormat = (places: number = 1) => (v: string | number) => {
 
 export default function StatusMetricLineChart({
   title,
-  dataUrl,
   body,
   shouldFetchData,
   lazyLoad,
@@ -47,7 +46,6 @@ export default function StatusMetricLineChart({
   }
 
   const data = useChartData(
-    dataUrl,
     body,
     shouldLoad,
     setChartLoaded,

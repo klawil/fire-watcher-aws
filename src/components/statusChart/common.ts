@@ -5,12 +5,12 @@ import {
   Dispatch, SetStateAction, useContext, useEffect, useState
 } from 'react';
 
-import {
-  ApiFrontendStatsResponse, ApiFrontendStatsResponseSuccess
-} from '@/deprecated/common/frontendApi';
 import { GetMetricsApi } from '@/types/api/metrics';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+type ApiLabels = GetMetricsApi['responses'][200]['labels'];
+type ApiData = GetMetricsApi['responses'][200]['data'];
 
 type TimeFormatFn = (a: Date) => string;
 const formatDayHour: TimeFormatFn = date => {
@@ -52,33 +52,9 @@ const periodFormatters: {
   },
 ];
 
-async function getDataUrl(dataUrl: string): Promise<[
-  ApiFrontendStatsResponseSuccess['data']['names'],
-  ApiFrontendStatsResponseSuccess['data']['data'],
-  {
-    startTime: number;
-    endTime: number;
-    period: number;
-  }
-]> {
-  const newData: ApiFrontendStatsResponse = await fetch(`/api/frontend/?action=stats&${dataUrl}`)
-    .then(r => r.json());
-
-  if (newData.success) {
-    return [
-      newData.data.names,
-      newData.data.data,
-      newData,
-    ];
-  }
-
-  console.error(newData);
-  throw new Error('Failed request');
-}
-
 async function getDataBody(body: GetMetricsApi['body']): Promise<[
-  ApiFrontendStatsResponseSuccess['data']['names'],
-  ApiFrontendStatsResponseSuccess['data']['data'],
+  ApiLabels,
+  ApiData,
   {
     startTime: number;
     endTime: number;
@@ -111,8 +87,7 @@ async function getDataBody(body: GetMetricsApi['body']): Promise<[
 }
 
 export function useChartData(
-  dataUrl: string | undefined,
-  body: GetMetricsApi['body'] | undefined,
+  body: GetMetricsApi['body'],
   shouldLoad: boolean,
   setChartLoaded: Dispatch<SetStateAction<number>>,
   returnNonData: boolean,
@@ -137,28 +112,11 @@ export function useChartData(
     (async () => {
       setIsLoading(true);
       try {
-        let names: ApiFrontendStatsResponseSuccess['data']['names'];
-        let data: ApiFrontendStatsResponseSuccess['data']['data'];
-        let newData: {
-          startTime: number;
-          endTime: number;
-          period: number;
-        };
-        if (typeof dataUrl !== 'undefined') {
-          [
-            names,
-            data,
-            newData,
-          ] = await getDataUrl(dataUrl);
-        } else if (typeof body !== 'undefined') {
-          [
-            names,
-            data,
-            newData,
-          ] = await getDataBody(body);
-        } else {
-          throw new Error('Need dataUrl or body');
-        }
+        const [
+          names,
+          data,
+          newData,
+        ] = await getDataBody(body);
 
         const chartData: {
           [key: string]: {
@@ -206,7 +164,7 @@ export function useChartData(
         });
       } catch (e) {
         setData(null);
-        console.error(`Failed to load chart (${dataUrl})`, e);
+        console.error(`Failed to load chart (${body})`, e);
         addAlert('danger', 'Failed to load data for a chart');
       }
       setChartLoaded(v => v + 1);
@@ -217,7 +175,6 @@ export function useChartData(
     body,
     data,
     isLoading,
-    dataUrl,
     setChartLoaded,
     convertValue,
     addAlert,

@@ -32,7 +32,6 @@ const color2: ColorConfig = {
 
 export default function StatusTowerLineChart({
   title,
-  dataUrl,
   body,
   lazyLoad,
   shouldFetchData,
@@ -49,7 +48,6 @@ export default function StatusTowerLineChart({
   }
 
   const data = useChartData(
-    dataUrl,
     body,
     shouldLoad,
     setChartLoaded,

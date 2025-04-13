@@ -1,7 +1,6 @@
 import * as lambda from 'aws-lambda';
 import * as aws from 'aws-sdk';
 
-import { PageBody } from '@/deprecated/types/queue';
 import { incrementMetric } from '@/deprecated/utils/general';
 import {
   FileTranslationObject, FullFileObject
@@ -12,6 +11,7 @@ import { PhoneNumberAccount } from '@/types/backend/department';
 import {
   TypedDeleteItemInput, TypedPutItemInput
 } from '@/types/backend/dynamo';
+import { SendPageQueueItem } from '@/types/backend/queue';
 import {
   TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem, typedQuery, typedUpdate
 } from '@/utils/backend/dynamoTyped';
@@ -388,11 +388,12 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 
       if (!doTranscriptOnly && body.Item.Tone) {
         logger.debug('Transcript and page');
-        const queueMessage: PageBody = {
+        const queueMessage: SendPageQueueItem = {
           action: 'page',
           tg: body.Item.Talkgroup as PagingTalkgroup,
           key: toneFile,
           len: body.Item.Len,
+          isTest: false,
         };
         promises['page-sqs'] = sqs.sendMessage({
           MessageBody: JSON.stringify(queueMessage),
