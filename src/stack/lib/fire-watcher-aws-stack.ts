@@ -1026,6 +1026,11 @@ export class FireWatcherAwsStack extends Stack {
         }, ],
       },
       {
+        pathPart: 'logout',
+        fileName: 'logout',
+        methods: [ 'GET', ],
+      },
+      {
         pathPart: 'sites',
         fileName: 'sites',
         methods: [ 'GET', ],
