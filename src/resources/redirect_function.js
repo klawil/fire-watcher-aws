@@ -24,6 +24,12 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   let hasRedirect = false;
   let redirectUriBase = 'https://cofrn.org';
 
+  // Ignore the 2 old APIs
+  if (
+    request.uri.includes('/api/infra') ||
+    request.uri.includes('/api/events')
+  ) return request;
+
   // Redirect fire.klawil.net and www.cofrn.org
   if (
     typeof request.headers !== 'undefined' &&
