@@ -4,7 +4,7 @@ import * as lambda from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 
 import {
-  ActivateBody, AnnounceBody, LoginBody, PageBody, TwilioBody
+  ActivateBody, AnnounceBody, LoginBody, TwilioBody
 } from '@/deprecated/types/queue';
 import {
   getPageNumber as getPageNumberOld, getRecipients, getTwilioSecret, saveMessageData as saveMessageDataOld, sendMessage as sendMessageOld, twilioPhoneCategories, twilioPhoneNumbers
@@ -24,7 +24,7 @@ import {
   TypedGetOutput, TypedUpdateInput
 } from '@/types/backend/dynamo';
 import {
-  ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
+  ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendPageQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
 } from '@/types/backend/queue';
 import {
   TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate
@@ -469,90 +469,6 @@ async function handleAnnounce(body: AnnounceBody) {
       []
     )));
   await insertMessage;
-}
-
-/**
- * @deprecated @TODO
- */
-async function handlePage(body: PageBody) {
-  logger.trace('handlePage', ...arguments);
-  // Build the message body
-  const pageInitTime = new Date();
-  const messageBody = createPageMessageOld(body.key, body.tg);
-  const recipients = (await getRecipients('all', body.tg, !!body.isTest))
-    .filter(v => !v.getTranscriptOnly?.BOOL);
-
-  body.len = body.len || 0;
-
-  let metricPromise: Promise<unknown> = new Promise(res => res(null));
-  const pageTime = fNameToDate(body.key);
-  const lenMs = body.len * 1000;
-  if (body.isTest) {
-    logger.info('handlePage', [
-      {
-        MetricName: 'PageDuration',
-        Timestamp: pageTime,
-        Unit: 'Milliseconds',
-        Value: lenMs,
-      },
-      {
-        MetricName: 'PageToQueue',
-        Timestamp: pageTime,
-        Unit: 'Milliseconds',
-        Value: pageInitTime.getTime() - pageTime.getTime() - lenMs,
-      },
-    ]);
-  } else {
-    metricPromise = cloudWatch.putMetricData({
-      Namespace: 'Twilio Health',
-      MetricData: [
-        {
-          MetricName: 'PageDuration',
-          Timestamp: pageTime,
-          Unit: 'Milliseconds',
-          Value: lenMs,
-        },
-        {
-          MetricName: 'PageToQueue',
-          Timestamp: pageTime,
-          Unit: 'Milliseconds',
-          Value: pageInitTime.getTime() - pageTime.getTime() - lenMs,
-        },
-      ],
-    }).promise()
-      .catch(e => {
-        logger.error('handlePage', 'metrics', e);
-      });
-  }
-
-  const messageId = Date.now().toString();
-  const insertMessage = saveMessageDataOld(
-    'page',
-    messageId,
-    recipients.length,
-    messageBody,
-    [],
-    body.key,
-    body.tg,
-    null,
-    !!body.isTest
-  );
-
-  // Send the messages
-  await Promise.all(recipients
-    .filter(phone => typeof phone.phone?.N !== 'undefined')
-    .map(async phone => sendMessageOld(
-      metricSource,
-      'page',
-      messageId,
-      phone.phone.N as string,
-      await getPageNumberOld(phone),
-      createPageMessageOld(body.key, body.tg, phone.phone.N),
-      []
-    )));
-
-  await insertMessage;
-  await metricPromise;
 }
 
 /**
@@ -1169,6 +1085,68 @@ async function handleAuthCode(body: SendUserAuthCodeQueueItem) {
   );
 }
 
+async function handlePage(body: SendPageQueueItem) {
+  logger.trace('handlePage');
+
+  // Build the message body
+  const pageInitTime = new Date();
+  const messageBody = createPageMessage(body.key, body.tg);
+  const recipients = (await getUserRecipients('all', body.tg, !!body.isTest))
+    .filter(v => !v.getTranscriptOnly);
+
+  body.len = body.len || 0;
+
+  // Increment the metrics looking at twilio health
+  let metricPromise: Promise<unknown> = new Promise(res => res(null));
+  const pageTime = fNameToDate(body.key);
+  const lenMs = body.len * 1000;
+  if (!body.isTest) {
+    metricPromise = cloudWatch.putMetricData({
+      Namespace: 'Twilio Health',
+      MetricData: [
+        {
+          MetricName: 'PageDuration',
+          Timestamp: pageTime,
+          Unit: 'Milliseconds',
+          Value: lenMs,
+        },
+        {
+          MetricName: 'PageToQueue',
+          Timestamp: pageTime,
+          Unit: 'Milliseconds',
+          Value: pageInitTime.getTime() - pageTime.getTime() - lenMs,
+        },
+      ],
+    }).promise();
+  }
+
+  // Save the message data
+  const messageId = Date.now();
+  const insertMessagePromise = saveMessageData(
+    'page',
+    messageId,
+    recipients.length,
+    messageBody,
+    [],
+    body.key,
+    body.tg,
+    null,
+    !!body.isTest
+  );
+
+  // Send the messages
+  await Promise.all(recipients
+    .map(async phone => sendMessage(
+      'page',
+      messageId,
+      phone.phone,
+      await getPageNumber(phone),
+      createPageMessage(body.key, body.tg, phone.phone, messageId)
+    )));
+  await insertMessagePromise;
+  await metricPromise;
+}
+
 async function parseRecord(event: lambda.SQSRecord) {
   logger.debug('parseRecord', ...arguments);
   const body = JSON.parse(event.body);
@@ -1185,9 +1163,6 @@ async function parseRecord(event: lambda.SQSRecord) {
       break;
     case 'announce':
       response = await handleAnnounce(body);
-      break;
-    case 'page':
-      response = await handlePage(body);
       break;
     case 'login':
       response = await handleLogin(body);
@@ -1211,6 +1186,9 @@ async function parseRecord(event: lambda.SQSRecord) {
       break;
     case 'auth-code':
       response = await handleAuthCode(body);
+      break;
+    case 'page':
+      response = await handlePage(body);
       break;
     default:
       throw new Error(`Unkown body - ${JSON.stringify(body)}`);
