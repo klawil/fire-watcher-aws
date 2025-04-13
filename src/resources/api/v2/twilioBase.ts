@@ -14,6 +14,7 @@ import {
 } from '@/types/api/twilio';
 import { FullUserObject } from '@/types/api/users';
 import { departmentConfig } from '@/types/backend/department';
+import { TypedUpdateInput } from '@/types/backend/dynamo';
 import { TwilioTextQueueItem } from '@/types/backend/queue';
 import {
   TABLE_USER, typedGet, typedUpdate
@@ -44,17 +45,16 @@ function buildTwilioResponse(
 
 interface TextCommand {
   response: string;
-  update: {
-    ExpressionAttributeNames: AWS.DynamoDB.DocumentClient.ExpressionAttributeNameMap;
-    ExpressionAttributeValues?: AWS.DynamoDB.DocumentClient.ExpressionAttributeValueMap;
-    UpdateExpression: string;
-  };
+  update: Pick<
+    TypedUpdateInput<FullUserObject>,
+    'ExpressionAttributeNames' | 'ExpressionAttributeValues' | 'UpdateExpression'
+  >;
 }
 
 const textCommands: {
   [key: string]: TextCommand;
 } = {
-  startTest: {
+  '!startTest': {
     response: 'Testing mode enabled',
     update: {
       ExpressionAttributeNames: {
@@ -63,16 +63,16 @@ const textCommands: {
       ExpressionAttributeValues: {
         ':isTest': true,
       },
-      UpdateExpression: 'SET #it = :it',
+      UpdateExpression: 'SET #isTest = :isTest',
     },
   },
-  endTest: {
+  '!endTest': {
     response: 'Testing mode disabled',
     update: {
       ExpressionAttributeNames: {
         '#isTest': 'isTest',
       },
-      UpdateExpression: 'REMOVE #it',
+      UpdateExpression: 'REMOVE #isTest',
     },
   },
 };

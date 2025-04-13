@@ -990,7 +990,6 @@ export class FireWatcherAwsStack extends Stack {
         sqsQueue: true,
         tables: [ {
           table: 'USER',
-          readOnly: true,
         }, ],
         next: [ {
           pathPart: '{id}',
