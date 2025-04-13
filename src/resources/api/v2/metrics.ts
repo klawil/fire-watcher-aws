@@ -454,6 +454,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
               Dimensions: ([
                 'action',
                 'source',
+                'ApiName',
               ] as const).map(v => {
                 if (typeof metric[v] === 'undefined') return null;
 

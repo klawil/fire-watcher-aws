@@ -27,7 +27,7 @@ const maxParallelCharts = 5;
 const lineChartsToShow: ChartConfig[] = [
 
   /** Recorder Metrics **/
-  {
+  { // Saguache Tower
     type: 'Tower',
     title: 'Saguache Tower Status',
     body: {
@@ -62,7 +62,7 @@ const lineChartsToShow: ChartConfig[] = [
       live: 'y',
     },
   },
-  {
+  { // Pool Table
     type: 'Tower',
     title: 'Pool Table Status',
     body: {
@@ -97,7 +97,7 @@ const lineChartsToShow: ChartConfig[] = [
       live: 'y',
     },
   },
-  {
+  { // San Antonio Peak
     type: 'Tower',
     title: 'San Antonio Peak Status',
     lazyLoad: true,
@@ -133,7 +133,7 @@ const lineChartsToShow: ChartConfig[] = [
       live: 'y',
     },
   },
-  {
+  { // VHF Pings
     type: 'Metric',
     title: 'VHF Recorder Pings',
     unit: 'Count',
@@ -156,7 +156,7 @@ const lineChartsToShow: ChartConfig[] = [
       ],
     },
   },
-  {
+  { // Upload Count
     type: 'Metric',
     title: 'Files Uploaded',
     lazyLoad: true,
@@ -199,7 +199,7 @@ const lineChartsToShow: ChartConfig[] = [
       live: 'y',
     },
   },
-  {
+  { // Upload Delay
     type: 'Metric',
     unit: 'Seconds',
     title: 'Upload Delay',
@@ -234,7 +234,7 @@ const lineChartsToShow: ChartConfig[] = [
   },
 
   /** Twilio Metrics **/
-  {
+  { // Text Counts
     type: 'Metric',
     title: 'Text Counts',
     unit: 'Count',
@@ -266,7 +266,7 @@ const lineChartsToShow: ChartConfig[] = [
       live: 'y',
     },
   },
-  {
+  { // Text Times
     type: 'Timing',
     title: 'Text Times',
     body: {
@@ -308,10 +308,11 @@ const lineChartsToShow: ChartConfig[] = [
   },
 
   /** Lambda Metrics **/
-  {
+  { // Infra Errors
     type: 'Metric',
     title: 'Infrastructure Errors',
     body: {
+      live: 'y',
       metrics: [ {
         type: 'lambda',
         fn: 'all_I',
@@ -321,20 +322,37 @@ const lineChartsToShow: ChartConfig[] = [
     },
     unit: 'Count',
   },
-  {
+  { // API Errors
     type: 'Metric',
     title: 'API Errors',
     body: {
-      metrics: [ {
-        type: 'lambda',
-        fn: 'all_A',
-        metric: 'Errors',
-        stat: 'Sum',
-      }, ],
+      live: 'y',
+      metrics: [
+        {
+          type: 'count',
+          label: 'API 5XX Errors',
+          namespace: 'AWS/ApiGateway',
+          metricName: '5XXError',
+          ApiName: 'CVFD API Gateway',
+        },
+        {
+          type: 'count',
+          label: 'API 4XX Errors',
+          namespace: 'AWS/ApiGateway',
+          metricName: '4XXError',
+          ApiName: 'CVFD API Gateway',
+        },
+        {
+          type: 'lambda',
+          fn: 'all_A',
+          metric: 'Errors',
+          stat: 'Sum',
+        },
+      ],
     },
     unit: 'Count',
   },
-  {
+  { // Infra Calls
     type: 'Metric',
     title: 'Infrastructure Calls',
     body: {
@@ -347,7 +365,7 @@ const lineChartsToShow: ChartConfig[] = [
     },
     unit: 'Count',
   },
-  {
+  { // API Calls
     type: 'Metric',
     title: 'API Calls',
     lazyLoad: true,
@@ -361,7 +379,7 @@ const lineChartsToShow: ChartConfig[] = [
     },
     unit: 'Count',
   },
-  {
+  { // Infra Duration Avg
     type: 'Metric',
     title: 'Infrastructure Durations (average)',
     lazyLoad: true,
@@ -375,7 +393,7 @@ const lineChartsToShow: ChartConfig[] = [
     },
     unit: 'Milliseconds',
   },
-  {
+  { // API Duration Avg
     type: 'Metric',
     lazyLoad: true,
     title: 'API Durations (average)',
@@ -389,7 +407,7 @@ const lineChartsToShow: ChartConfig[] = [
     },
     unit: 'Milliseconds',
   },
-  {
+  { // Infra Duration Max
     type: 'Metric',
     title: 'Infrastructure Durations (max)',
     lazyLoad: true,
@@ -403,7 +421,7 @@ const lineChartsToShow: ChartConfig[] = [
     },
     unit: 'Milliseconds',
   },
-  {
+  { // API Duration Max
     type: 'Metric',
     lazyLoad: true,
     title: 'API Durations (max)',

@@ -1,3 +1,8 @@
+const changeDomains = [
+  'www.cofrn.org',
+  'fire.klawil.net',
+];
+
 const targetDomain = 'cofrn.org';
 
 function getURLSearchParamsString(querystring) {
@@ -22,7 +27,7 @@ function getURLSearchParamsString(querystring) {
 function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const request = event.request;
   let hasRedirect = false;
-  let redirectUriBase = 'https://cofrn.org';
+  let redirectUriBase = `https://${targetDomain}`;
 
   // Ignore the 2 old APIs
   if (
@@ -38,7 +43,7 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   ) {
     const reqHost = request.headers.host.value;
     request.headers['x-forwarded-host'] = { value: reqHost, };
-    if (reqHost === 'new.cofrn.org') {
+    if (!changeDomains.includes(reqHost)) {
       redirectUriBase = `https://${reqHost}`;
     } else if (reqHost !== targetDomain) {
       hasRedirect = true;
@@ -55,15 +60,6 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   if (request.uri.endsWith('.html')) {
     hasRedirect = true;
     request.uri = request.uri.replace('.html', '/');
-  }
-
-  // Make sure the URI has a trailing slash
-  if (
-    !request.uri.endsWith('/') &&
-    !request.uri.includes('.')
-  ) {
-    hasRedirect = true;
-    request.uri = request.uri + '/';
   }
 
   // Redirect to the correct URL

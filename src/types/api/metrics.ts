@@ -15,8 +15,9 @@ export interface TimingMetric {
 export interface CountMetric {
   type: 'count';
   label: string;
-  namespace: 'CVFD API' | 'VHF Metrics' | 'Twilio Health';
-  metricName: 'Call' | '120-home' | 'cvfd-station' | 'Initiated';
+  namespace: 'CVFD API' | 'VHF Metrics' | 'Twilio Health' | 'AWS/ApiGateway';
+  metricName: 'Call' | '120-home' | 'cvfd-station' | 'Initiated' | '4XXError' | '5XXError';
+  ApiName?: 'CVFD API Gateway';
   source?: 'S3';
   action?: 'createDTR' | 'createVHF';
 }
@@ -243,6 +244,7 @@ export const countMetricValidator: Validator<CountMetric> = {
     types: {
       string: {
         exact: [
+          'AWS/ApiGateway',
           'CVFD API',
           'Twilio Health',
           'VHF Metrics',
@@ -255,11 +257,21 @@ export const countMetricValidator: Validator<CountMetric> = {
     types: {
       string: {
         exact: [
+          '4XXError',
+          '5XXError',
           '120-home',
           'Call',
           'Initiated',
           'cvfd-station',
         ],
+      },
+    },
+  },
+  ApiName: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'CVFD API Gateway', ],
       },
     },
   },
