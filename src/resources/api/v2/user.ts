@@ -269,8 +269,8 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   });
   if (!changeUserGet.Item) {
     return [
-      404,
-      api404Body,
+      403,
+      api403Body,
       userHeaders,
     ];
   }

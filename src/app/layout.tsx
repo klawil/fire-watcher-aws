@@ -96,6 +96,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
       localStorage.setItem(localStorageUserKey, JSON.stringify(apiResult));
       setUser({
         fromApi: true,
+        isFinal: true,
         isUser: true,
         isDistrictAdmin: false,
         isAdmin: validDepartments.some(dep => apiResult[dep]?.active && apiResult[dep].admin),
@@ -132,6 +133,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
       localStorage.removeItem(localStorageUserKey);
       setUser({
         fromApi: false,
+        isFinal: true,
         isUser: false,
         isAdmin: false,
         isDistrictAdmin: false,
@@ -147,6 +149,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
     if (lsUserStr === null) {
       setUser({
         fromApi: false,
+        isFinal: false,
         isUser: false,
         isAdmin: false,
         isDistrictAdmin: false,
@@ -159,6 +162,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
       console.log('Initial User:', initUser);
       setUser({
         fromApi: false,
+        isFinal: false,
         isUser: true,
         isDistrictAdmin: true,
         isAdmin: validDepartments.some(dep => initUser[dep]?.active && initUser[dep].admin),

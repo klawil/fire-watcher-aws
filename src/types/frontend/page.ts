@@ -3,8 +3,8 @@ export interface PageConfig {
   navTitle?: string;
   hasAudio?: boolean;
   centerAll?: boolean;
-  requireAuth?: boolean;
-  requireAdmin?: boolean;
+  requireAuth: boolean;
+  requireAdmin: boolean;
   fluid?: boolean;
   containerClass?: string;
 }

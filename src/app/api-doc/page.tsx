@@ -14,7 +14,11 @@ export default function Page() {
     JSON.parse(readFileSync(__dirname + '/../../../../oas.json', 'utf-8'));
 
   return <CofrnLayout
-    pageConfig={{ title: 'API Docs', }}
+    pageConfig={{
+      title: 'API Docs',
+      requireAuth: true,
+      requireAdmin: true,
+    }}
   >
     <ApiDocPage
       spec={spec}

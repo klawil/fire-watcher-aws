@@ -11,6 +11,7 @@ export default function Page() {
   return <CofrnLayout
     pageConfig={{
       title: 'Texts',
+      requireAuth: true,
       requireAdmin: true,
       fluid: true,
     }}

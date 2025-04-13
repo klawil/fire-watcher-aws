@@ -11,6 +11,8 @@ export default function Home() {
     <CofrnLayout
       pageConfig={{
         title: 'Radio Traffic',
+        requireAuth: false,
+        requireAdmin: false,
         hasAudio: true,
         centerAll: true,
         fluid: true,

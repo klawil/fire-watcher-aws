@@ -7,7 +7,11 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <CofrnLayout pageConfig={{ title: 'Weather', }}>
+  return <CofrnLayout pageConfig={{
+    title: 'Weather',
+    requireAuth: false,
+    requireAdmin: false,
+  }}>
     <WeatherPage />
   </CofrnLayout>;
 }

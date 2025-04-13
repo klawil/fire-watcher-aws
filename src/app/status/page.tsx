@@ -10,6 +10,7 @@ export const metadata = {
 export default function Page() {
   return <CofrnLayout pageConfig={{
     title: 'System Status',
+    requireAuth: true,
     requireAdmin: true,
     fluid: true,
   }}>

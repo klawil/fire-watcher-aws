@@ -76,6 +76,7 @@ export type FrontendUserObject = Omit<
 >;
 interface MinimumUserState {
   fromApi: boolean;
+  isFinal: boolean;
   isUser: boolean;
   isAdmin: boolean;
   isDistrictAdmin: boolean;

@@ -27,6 +27,17 @@ export default function UserRow({
   const dispatch = useContext(UsersDispatchContext);
   const loggedInUser = useContext(LoggedInUserContext);
 
+  const userDepartments = user === null
+    ? []
+    : validDepartments.filter(dep => user[dep]?.active);
+  const adminDepartments = loggedInUser === null
+    ? []
+    : validDepartments.filter(dep => loggedInUser[dep]?.active && loggedInUser[dep].admin);
+  const canDeleteUser = loggedInUser !== null && (
+    loggedInUser?.isDistrictAdmin ||
+    userDepartments.filter(dep => adminDepartments.includes(dep))
+  );
+
   const rowClasses = [
     'text-center',
     'align-middle',
@@ -73,7 +84,7 @@ export default function UserRow({
           variant={editOpen ? 'secondary' : 'primary'}
           className='m-1'
         >{editOpen ? 'Close' : 'Edit'}</Button>
-        {loggedInUser?.isDistrictAdmin && <Button
+        {canDeleteUser && <Button
           variant='danger'
           className='m-1'
           onClick={() => deleteUser()}

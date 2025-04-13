@@ -12,6 +12,7 @@ export default function Page() {
     pageConfig={{
       title: 'Profile',
       requireAuth: true,
+      requireAdmin: false,
     }}
   >
     <ProfilePage />

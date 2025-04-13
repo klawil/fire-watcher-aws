@@ -11,6 +11,8 @@ export default function Page() {
   return <CofrnLayout
     pageConfig={{
       title: 'Login',
+      requireAuth: false,
+      requireAdmin: false,
     }}
   >
     <LoginPage />

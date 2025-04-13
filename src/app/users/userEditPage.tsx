@@ -13,7 +13,9 @@ import UserRow from '@/components/userRow/userRow';
 import {
   DeleteUserApi, GetAllUsersApi, validDepartments
 } from '@/types/api/users';
-import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import {
+  AddAlertContext
+} from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import {
   UsersDispatchContext,
@@ -25,10 +27,16 @@ export default function UserEditPage() {
     state,
     dispatch,
   ] = useReducer(usersStateReducer, defaultUsersState);
+
   const addAlert = useContext(AddAlertContext);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
 
   useEffect(() => {
     (async () => {
+      setIsLoading(true);
       const [
         code,
         apiResult,
@@ -50,6 +58,7 @@ export default function UserEditPage() {
         action: 'SetUsers',
         users: apiResult,
       });
+      setIsLoading(false);
     })();
   }, []);
 
@@ -109,56 +118,56 @@ export default function UserEditPage() {
     .map(dep => `${dep} ${state.deleteUserModal?.[dep]?.callSign}`);
 
   return <>
-    {!state.users || state.users.length === 0
-      ? <LoadingSpinner />
-      : <UsersDispatchContext.Provider value={dispatch}>
-        <Table responsive={true}>
-          <tbody>
-            {state.users
-              .map((user, idx) => <UserRow
-                key={user.phone}
-                user={user}
-                idx={idx}
-              />)}
-            <UserRow
-              user={null}
-              idx={state.users.length}
-            />
-          </tbody>
-        </Table>
+    {isLoading && <LoadingSpinner />}
+    {!isLoading && (!state.users || state.users.length === 0) && <h1 className='text-center'>No users found</h1>}
+    {state.users && state.users.length > 0 && <UsersDispatchContext.Provider value={dispatch}>
+      <Table responsive={true}>
+        <tbody>
+          {state.users
+            .map((user, idx) => <UserRow
+              key={user.phone}
+              user={user}
+              idx={idx}
+            />)}
+          <UserRow
+            user={null}
+            idx={state.users.length}
+          />
+        </tbody>
+      </Table>
 
-        <Modal
-          show={!!state.deleteUserModal}
-          onHide={() => dispatch({
+      <Modal
+        show={!!state.deleteUserModal}
+        onHide={() => dispatch({
+          action: 'ClearDeleteModal',
+        })}
+        size='lg'
+      >
+        <Modal.Header closeButton>Are you sure?</Modal.Header>
+
+        <Modal.Body>
+          Are you sure you want to delete <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
+            deleteModalDeps.length === 0
+              ? 'No Department'
+              : deleteModalDeps.join(', ')
+          })</b>?
+        </Modal.Body>
+
+        <Modal.Footer className='justify-content-between'>
+          <Button onClick={() => dispatch({
             action: 'ClearDeleteModal',
-          })}
-          size='lg'
-        >
-          <Modal.Header closeButton>Are you sure?</Modal.Header>
-
-          <Modal.Body>
-            Are you sure you want to delete <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
-              deleteModalDeps.length === 0
-                ? 'No Department'
-                : deleteModalDeps.join(', ')
-            })</b>?
-          </Modal.Body>
-
-          <Modal.Footer className='justify-content-between'>
-            <Button onClick={() => dispatch({
-              action: 'ClearDeleteModal',
-            })}>No, do not delete</Button>
-            <Button
-              variant='danger'
-              onClick={() => deleteModalUser()}
-            >{
-                isDeleting
-                  ? <><Spinner size='sm' /> Deleting User</>
-                  : 'Yes, delete this user'
-              }</Button>
-          </Modal.Footer>
-        </Modal>
-      </UsersDispatchContext.Provider>}
+          })}>No, do not delete</Button>
+          <Button
+            variant='danger'
+            onClick={() => deleteModalUser()}
+          >{
+              isDeleting
+                ? <><Spinner size='sm' /> Deleting User</>
+                : 'Yes, delete this user'
+            }</Button>
+        </Modal.Footer>
+      </Modal>
+    </UsersDispatchContext.Provider>}
   </>;
 
 }

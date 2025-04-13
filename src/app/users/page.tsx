@@ -10,6 +10,7 @@ export default function Page() {
   return <CofrnLayout
     pageConfig={{
       title: 'User Management',
+      requireAuth: true,
       requireAdmin: true,
       fluid: true,
       containerClass: 'container-md',

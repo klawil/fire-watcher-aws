@@ -11,6 +11,8 @@ export default function Page() {
   return <CofrnLayout
     pageConfig={{
       title: 'About Us',
+      requireAuth: false,
+      requireAdmin: false,
     }}
   >
     <p className='text-center'>First Responder Notifications, LLC provides text-based notifications of requests for emergency responses.

@@ -28,7 +28,7 @@ export default function CofrnLayout({
   useEffect(() => {
     if (
       user === null ||
-      !user.fromApi ||
+      !user.isFinal ||
       (
         !pageConfig.requireAuth &&
         !pageConfig.requireAdmin

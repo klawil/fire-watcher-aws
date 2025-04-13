@@ -134,8 +134,8 @@ export default function ProfilePage() {
   }
 
   return <>
-    {(user === null || !user.fromApi) && <LoadingSpinner />}
-    {user !== null && user.fromApi && <>
+    {(user === null || !user.isFinal) && <LoadingSpinner />}
+    {user !== null && user.isFinal && <>
       <h2 className='text-center'>Information Only an Admin Can Edit:</h2>
       <Row className='justify-content-center my-3'>
         <Col md={6}><InputGroup>
