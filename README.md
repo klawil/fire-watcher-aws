@@ -12,5 +12,5 @@ Shared type and function definitions - `./common`
 # Deployment
 
 ```bash
-./dpeloy.sh
+npm run deploy
 ```

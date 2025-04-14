@@ -1,0 +1,42 @@
+.noBottomBorder td {
+  border-bottom: none !important;
+}
+
+.fileRow {
+  cursor: pointer;
+  -webkit-transition: background-color 0.2s linear;
+  -moz-transition: background-color 0.2s linear;
+  -o-transition: background-color 0.2s linear;
+  transition: background-color 0.2s linear;
+}
+
+[data-bs-theme=dark] .fileRowActive td {
+  background-color: #300b03;
+}
+
+.fileRowActive td {
+  background-color: #cff4fc;
+}
+
+.upArrowButton {
+  position: fixed;
+  top: 65px;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.downArrowButton {
+  position: fixed;
+  bottom: 65px;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.upArrowButton svg, .downArrowButton svg {
+  display: block;
+  margin: auto;
+}

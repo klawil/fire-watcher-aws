@@ -1,0 +1,8 @@
+.progressBarContainer {
+  width: 50vw;
+  max-width: 150px;
+}
+
+.playerButtonActive {
+  box-shadow: 0 0 0 0.25rem;
+}

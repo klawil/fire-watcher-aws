@@ -1,6 +1,0 @@
-node_modules
-*.js
-
-# CDK directories
-.cdk.staging
-cdk.out
