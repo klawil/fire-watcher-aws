@@ -1299,7 +1299,7 @@ export class FireWatcherAwsStack extends Stack {
       { // API 5XX errors
         tag: 'Api',
         codeName: 'api5xx',
-        okayAction: false,
+        okayAction: true,
         alarm: {
           evaluationPeriods: 1,
           datapointsToAlarm: 1,
