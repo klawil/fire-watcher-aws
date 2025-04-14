@@ -50,7 +50,14 @@ export default function LoginPage() {
     // Check for the query string
     const urlParams = new URLSearchParams(loc.search);
     const destination = urlParams.get('redirectTo') || '/';
-    if (destination.startsWith('/')) window.location.assign(destination);
+
+    // Validate that we are redirecting to a frontend page (starts with /, ends with /, max 2 slashes)
+    const validPathRegex = /^\/([a-zA-Z0-9]+\/|)(\?|$)/;
+    if (validPathRegex.test(destination)) {
+      window.location.assign(destination);
+    } else {
+      window.location.assign('/');
+    }
   }, [
     loc,
     reCheckUser,
