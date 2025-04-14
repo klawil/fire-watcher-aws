@@ -62,7 +62,7 @@ function validateEventBody(body: EventBody, index: number, response: GenericApiR
   }
   if (
     typeof body.talkgroupList !== 'string' ||
-    !(/^([0-9]*,?)+$/).test(body.talkgroupList)
+    !(/^[0-9]+(,[0-9]+|)*$/).test(body.talkgroupList)
   ) {
     response.success = false;
     response.errors.push(`${index}-talkgroupList`);

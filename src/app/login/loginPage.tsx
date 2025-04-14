@@ -50,7 +50,7 @@ export default function LoginPage() {
     // Check for the query string
     const urlParams = new URLSearchParams(loc.search);
     const destination = urlParams.get('redirectTo') || '/';
-    window.location.assign(destination);
+    if (destination.startsWith('/')) window.location.assign(destination);
   }, [
     loc,
     reCheckUser,
