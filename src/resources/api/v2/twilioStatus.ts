@@ -161,7 +161,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       updateExpr = '#lastStatusCount = :lastStatusBase';
     } else {
       updateValues[':lastStatusIncrement'] = 1;
-      updateExpr = '#lastStatusCount = if_not_exists(#lastStatus, :lastStatusBase) + :lastStatusIncrement';
+      updateExpr = '#lastStatusCount = if_not_exists(#lastStatusCount, :lastStatusBase) + :lastStatusIncrement';
     }
 
     promises['user-update'] = typedUpdate<FullUserObject>({
