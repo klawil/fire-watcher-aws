@@ -59,7 +59,6 @@ const lineChartsToShow: ChartConfig[] = [
       ],
       period: FIVE_MINUTES,
       timerange: ONE_DAY,
-      live: 'y',
     },
   },
   { // Pool Table
@@ -94,7 +93,6 @@ const lineChartsToShow: ChartConfig[] = [
       ],
       period: FIVE_MINUTES,
       timerange: ONE_DAY,
-      live: 'y',
     },
   },
   { // San Antonio Peak
@@ -130,7 +128,6 @@ const lineChartsToShow: ChartConfig[] = [
       ],
       period: FIVE_MINUTES,
       timerange: ONE_DAY,
-      live: 'y',
     },
   },
   { // VHF Pings
@@ -196,7 +193,6 @@ const lineChartsToShow: ChartConfig[] = [
           action: 'createVHF',
         },
       ],
-      live: 'y',
     },
   },
   { // Upload Delay
@@ -263,7 +259,6 @@ const lineChartsToShow: ChartConfig[] = [
       ],
       period: ONE_DAY,
       timerange: ONE_MONTH,
-      live: 'y',
     },
   },
   { // Text Times
@@ -302,7 +297,6 @@ const lineChartsToShow: ChartConfig[] = [
       ],
       period: ONE_DAY,
       timerange: ONE_MONTH,
-      live: 'y',
     },
     convertValue: v => v > 300000 ? 300000 : v,
   },
@@ -312,7 +306,6 @@ const lineChartsToShow: ChartConfig[] = [
     type: 'Metric',
     title: 'Infrastructure Errors',
     body: {
-      live: 'y',
       metrics: [ {
         type: 'lambda',
         fn: 'all_I',
@@ -326,7 +319,6 @@ const lineChartsToShow: ChartConfig[] = [
     type: 'Metric',
     title: 'API Errors',
     body: {
-      live: 'y',
       metrics: [
         {
           type: 'count',

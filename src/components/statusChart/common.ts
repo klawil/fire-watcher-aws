@@ -67,7 +67,10 @@ async function getDataBody(body: GetMetricsApi['body']): Promise<[
   ] = await typeFetch<GetMetricsApi>({
     path: '/api/v2/metrics/',
     method: 'POST',
-    body,
+    body: {
+      ...body,
+      live: 'y',
+    },
   });
 
   if (
