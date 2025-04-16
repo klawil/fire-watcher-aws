@@ -711,7 +711,7 @@ export class FireWatcherAwsStack extends Stack {
         environment: {
           ...lambdaEnv,
         },
-        timeout: Duration.seconds(10),
+        timeout: Duration.seconds(20),
       });
 
       if (config.read) config.read.forEach(table => table.grantReadData(apiHandler));
@@ -997,7 +997,7 @@ export class FireWatcherAwsStack extends Stack {
           runtime: lambda.Runtime.NODEJS_20_X,
           entry: resolve(resourceBase, 'api', 'v2', `${config.fileName}.ts`),
           handler: 'main',
-          timeout: Duration.seconds(10),
+          timeout: Duration.seconds(20),
           initialPolicy,
           environment: {
             ...lambdaEnv,
