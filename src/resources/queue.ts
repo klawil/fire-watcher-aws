@@ -39,8 +39,6 @@ const logger = getLogger('queue');
 const transcribe = new AWS.TranscribeService();
 const cloudWatch = new AWS.CloudWatch();
 
-const testingUser = process.env.TESTING_USER;
-
 type WelcomeMessageConfigKeys = 'name' | 'type' | 'pageNumber';
 const welcomeMessageParts: {
   welcome: string;
@@ -82,9 +80,6 @@ function createPageMessage(
   }
   if (messageId !== null) {
     pageStr += `&m=${messageId}`;
-  }
-  if (number && number.toString() === testingUser) {
-    pageStr = pageStr.replace(/cofrn\.org/g, 'new.cofrn.org');
   }
   return pageStr;
 }

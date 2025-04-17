@@ -234,7 +234,7 @@ export async function sendMessage(
         mediaUrl: mediaUrls,
         from: fromNumber,
         to: `+1${phone}`,
-        statusCallback: `https://new.cofrn.org/api/v2/twilio/${messageId}/`,
+        statusCallback: `https://cofrn.org/api/v2/twilio/${messageId}/`,
       }),
     saveMessageDataPromise,
   ]);
