@@ -1285,32 +1285,6 @@ export class FireWatcherAwsStack extends Stack {
           alarmName: 'Pool Table Uploads',
         },
       },
-
-      /*
-       * { // API 4XX errors
-       *   tag: 'Api',
-       *   codeName: 'api4xx',
-       *   okayAction: false,
-       *   alarm: {
-       *     evaluationPeriods: 1,
-       *     datapointsToAlarm: 1,
-       *     threshold: 0,
-       *     alarmDescription: 'COFRN API is giving 4XX responses',
-       *     alarmName: 'COFRN API 4XX',
-       *     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-       *     treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-       *     metric: new cloudwatch.Metric({
-       *       metricName: '4XXError',
-       *       namespace: 'AWS/ApiGateway',
-       *       period: Duration.minutes(15),
-       *       statistic: cloudwatch.Stats.SUM,
-       *       dimensionsMap: {
-       *         ApiName: api.restApiName,
-       *       },
-       *     }),
-       *   },
-       * },
-       */
       { // API 5XX errors
         tag: 'Api',
         codeName: 'api5xx',
