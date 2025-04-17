@@ -181,6 +181,10 @@ export default function AdjacentSites() {
           -106.073,
         ]}
         zoom={8}
+        dragging={false}
+        zoomControl={false}
+        maxZoom={8}
+        minZoom={8}
       >
         <TileLayer
           maxZoom={19}
