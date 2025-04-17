@@ -232,17 +232,7 @@ export class FireWatcherAwsStack extends Stack {
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
     const eventsS3BucketQueue = new sqs.Queue(this, 'cvfd-events-queue');
-    const eventsS3BucketQueueDestination = new s3Notifications.SqsDestination(eventsS3BucketQueue);
-    eventsS3Bucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      eventsS3BucketQueueDestination,
-      { prefix: 'data/', }
-    );
-    eventsS3Bucket.addEventNotification(
-      s3.EventType.OBJECT_REMOVED,
-      eventsS3BucketQueueDestination,
-      { prefix: 'data/', }
-    );
+    new s3Notifications.SqsDestination(eventsS3BucketQueue);
 
     // Make the S3 bucket for caching cost data from AWS
     const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
@@ -351,15 +341,6 @@ export class FireWatcherAwsStack extends Stack {
     // Make the glue crawler
     const glueCrawlerRole = new iam.Role(this, 'cvfd-events-glue-role', {
       assumedBy: new iam.ServicePrincipal('glue.amazonaws.com'),
-      inlinePolicies: {
-        all: new iam.PolicyDocument({
-          statements: [ new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            resources: [ eventsS3BucketQueue.queueArn, ],
-            actions: [ 'SQS:SetQueueAttributes', ],
-          }), ],
-        }),
-      },
       managedPolicies: [ iam.ManagedPolicy.fromManagedPolicyArn(this, 'glue-managed-policy', 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'), ],
     });
     new glue.CfnCrawler(this, 'cvfd-events-glue-crawler', {
@@ -382,7 +363,6 @@ export class FireWatcherAwsStack extends Stack {
       //   scheduleExpression: 'cron(15 */2 * * ? *)'
       // }
     });
-    eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
     eventsS3Bucket.grantReadWrite(glueCrawlerRole);
 
     // Make the kinesis firehose
