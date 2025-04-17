@@ -706,6 +706,9 @@ export class FireWatcherAwsStack extends Stack {
         name: 'events',
         firehose: eventsFirehose,
       },
+      {
+        name: 'frontend',
+      },
     ];
 
     cofrnApis.forEach(config => {
