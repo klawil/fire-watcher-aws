@@ -20,6 +20,7 @@ import * as kinesisfirehose from 'aws-cdk-lib/aws-kinesisfirehose';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as lambdanodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
@@ -471,13 +472,14 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*', ],
         }),
       ],
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       entry: resolve(resourceBase, 's3.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
       },
       timeout: Duration.minutes(1),
+      logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
     // Grant access for the S3 handler
@@ -501,13 +503,14 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*', ],
         }),
       ],
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       entry: resolve(resourceBase, 'queue.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
       },
       timeout: Duration.minutes(1),
+      logRetention: logs.RetentionDays.ONE_MONTH,
     });
     queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
 
@@ -546,10 +549,11 @@ export class FireWatcherAwsStack extends Stack {
         ],
         resources: [ '*', ],
       }), ],
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       entry: resolve(resourceBase, 'alarms.ts'),
       handler: 'main',
       timeout: Duration.seconds(30),
+      logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         ...lambdaEnv,
       },
@@ -604,13 +608,14 @@ export class FireWatcherAwsStack extends Stack {
         actions: [ 'cloudwatch:PutMetricData', ],
         resources: [ '*', ],
       }), ],
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       entry: resolve(resourceBase, 'status.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
       },
       timeout: Duration.minutes(1),
+      logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
     // Grant access for the status handler
@@ -629,13 +634,14 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the weather updater
     const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       entry: resolve(resourceBase, 'weather.ts'),
       handler: 'main',
       environment: {
         ...lambdaEnv,
       },
       timeout: Duration.minutes(5),
+      logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
     // Grant access for the status handler
@@ -709,13 +715,14 @@ export class FireWatcherAwsStack extends Stack {
           actions: [ 'cloudwatch:PutMetricData', ],
           resources: [ '*', ],
         }), ],
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_20_X,
         entry: resolve(resourceBase, 'api', `${config.name}.ts`),
         handler: 'main',
         environment: {
           ...lambdaEnv,
         },
         timeout: Duration.seconds(20),
+        logRetention: logs.RetentionDays.ONE_MONTH,
       });
 
       if (config.read) config.read.forEach(table => table.grantReadData(apiHandler));
@@ -1005,6 +1012,7 @@ export class FireWatcherAwsStack extends Stack {
           entry: resolve(resourceBase, 'api', 'v2', `${config.fileName}.ts`),
           handler: 'main',
           timeout: Duration.seconds(20),
+          logRetention: logs.RetentionDays.ONE_MONTH,
           initialPolicy,
           environment: {
             ...lambdaEnv,
