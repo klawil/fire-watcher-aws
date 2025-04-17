@@ -10,7 +10,6 @@ import {
   getTwilioSecret, twilioPhoneNumbers
 } from '@/deprecated/utils/general';
 import { generateApi400Body } from '@/types/api/_shared';
-import { FullTextObject } from '@/types/api/texts';
 import {
   UpdateTextStatusApi,
   createTextQueryValidator, updateTextStatusBodyValidator, updateTextStatusParamsValidator
@@ -19,8 +18,9 @@ import {
   FullUserObject, validDepartments
 } from '@/types/api/users';
 import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
+import { TwilioQueueEvent } from '@/types/backend/twilioQueue';
 import {
-  TABLE_TEXT, TABLE_USER, typedGet, typedUpdate
+  TABLE_USER, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
@@ -28,6 +28,7 @@ const logger = getLogger('twilioStatus');
 const sqs = new AWS.SQS();
 const cloudWatch = new AWS.CloudWatch();
 const queueUrl = process.env.SQS_QUEUE;
+const twilioQueueUrl = process.env.TWILIO_QUEUE;
 
 const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   logger.trace('GET', ...arguments);
@@ -124,28 +125,16 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   } = {};
 
   // Update the message table
-  promises['text-update'] = typedUpdate<FullTextObject>({
-    TableName: TABLE_TEXT,
-    Key: {
-      datetime: params.id,
-    },
-    ExpressionAttributeNames: {
-      [`#${body.MessageStatus}`]: body.MessageStatus,
-      [`#${body.MessageStatus}Phone`]: `${body.MessageStatus}Phone`,
-      '#fromNumber': 'fromNumber',
-    },
-    ExpressionAttributeValues: {
-      [`:${body.MessageStatus}`]: [ eventTime, ],
-      [`:${body.MessageStatus}Phone`]: [ user.phone, ],
-      ':fromNumber': body.From,
-      ':blankList': [],
-    },
-    UpdateExpression: 'SET ' + [
-      `#${body.MessageStatus} = list_append(if_not_exists(#${body.MessageStatus}, :blankList), :${body.MessageStatus})`,
-      `#${body.MessageStatus}Phone = list_append(if_not_exists(#${body.MessageStatus}Phone, :blankList), :${body.MessageStatus}Phone)`,
-      '#fromNumber = :fromNumber',
-    ].join(', '),
-  });
+  const twilioQueueBody: TwilioQueueEvent = {
+    datetime: params.id,
+    status: body.MessageStatus,
+    phone: user.phone,
+    eventTime,
+  };
+  promises['text-update'] = sqs.sendMessage({
+    QueueUrl: twilioQueueUrl,
+    MessageBody: JSON.stringify(twilioQueueBody),
+  }).promise();
 
   // Update the user for delivered and undelivered messages
   if ([

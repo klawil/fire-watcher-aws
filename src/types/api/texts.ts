@@ -50,7 +50,7 @@ export interface FullTextObject {
 
   recipients?: number;
   sent?: number[];
-  sentPhone?: number;
+  sentPhone?: number[];
   delivered?: number[]; // Timestamp
   deliveredPhone?: number[]; // Phone #
   undelivered?: number[]; // Timestamp

@@ -440,6 +440,11 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
 
+    // Create a queue for twilio status events
+    const twilioStatusQueue = new sqs.Queue(this, 'cofrn-twilio-status', {
+      visibilityTimeout: Duration.minutes(5),
+    });
+
     // Create the secret for JWT authentication
     const jwtSecret = new secretsManager.Secret(this, 'cofrn-jwt-secret', {
       description: 'The secret used for signing and verifying JWTs',
@@ -460,6 +465,7 @@ export class FireWatcherAwsStack extends Stack {
       JWT_SECRET: jwtSecret.secretArn,
       TESTING_USER: process.env.TESTING_USER as string,
       SQS_QUEUE: queue.queueUrl,
+      TWILIO_QUEUE: twilioStatusQueue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
 
       TABLE_USER: phoneNumberTable.tableName,
@@ -524,6 +530,23 @@ export class FireWatcherAwsStack extends Stack {
       timeout: Duration.minutes(1),
     });
     queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
+
+    // Create a queue and handler that handles Twilio status updates
+    const twilioQueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-twilio-queue-lambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: resolve(resourceBase, 'twilioQueueHandler.ts'),
+      handler: 'main',
+      environment: {
+        ...lambdaEnv,
+      },
+      timeout: Duration.minutes(1),
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    twilioQueueHandler.addEventSource(new lambdaEventSources.SqsEventSource(twilioStatusQueue, {
+      batchSize: 10,
+      maxBatchingWindow: Duration.minutes(1),
+    }));
+    textsTable.grantReadWriteData(twilioQueueHandler);
 
     // Grant access for the queue handler
     phoneNumberTable.grantReadWriteData(queueHandler);
@@ -654,6 +677,7 @@ export class FireWatcherAwsStack extends Stack {
       'I_ALARM_QUEUE': alarmQueueHandler.functionName,
       'I_STATUS': statusHandler.functionName,
       'I_WEATHER': weatherUpdater.functionName,
+      'I_TWILIO_QUEUE': twilioQueueHandler.functionName,
     };
 
     // Create a rest API
@@ -769,7 +793,6 @@ export class FireWatcherAwsStack extends Stack {
       fileName: string;
       methods: (keyof typeof HTTPMethod)[];
       authRequired?: true;
-      sqsQueue?: true;
       twilioSecret?: true;
       sendsMetrics?: true;
       getMetrics?: true;
@@ -782,6 +805,7 @@ export class FireWatcherAwsStack extends Stack {
         bucket: keyof typeof bucketMap;
         readOnly?: true;
       }[];
+      queues?: sqs.Queue[];
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
@@ -838,10 +862,10 @@ export class FireWatcherAwsStack extends Stack {
           'POST',
         ],
         authRequired: true,
-        sqsQueue: true,
         tables: [ {
           table: 'USER',
         }, ],
+        queues: [ queue, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'user',
@@ -851,10 +875,10 @@ export class FireWatcherAwsStack extends Stack {
             'DELETE',
           ],
           authRequired: true,
-          sqsQueue: true,
           tables: [ {
             table: 'USER',
           }, ],
+          queues: [ queue, ],
           next: [ {
             pathPart: '{department}',
             fileName: 'userDepartment',
@@ -864,10 +888,10 @@ export class FireWatcherAwsStack extends Stack {
               'DELETE',
             ],
             authRequired: true,
-            sqsQueue: true,
             tables: [ {
               table: 'USER',
             }, ],
+            queues: [ queue, ],
           }, ],
         }, ],
       },
@@ -894,15 +918,14 @@ export class FireWatcherAwsStack extends Stack {
         fileName: 'twilioBase',
         methods: [ 'POST', ],
         twilioSecret: true,
-        sqsQueue: true,
         tables: [ {
           table: 'USER',
         }, ],
+        queues: [ queue, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'twilioStatus',
           methods: [ 'POST', ],
-          sqsQueue: true,
           twilioSecret: true,
           sendsMetrics: true,
           tables: [
@@ -912,6 +935,10 @@ export class FireWatcherAwsStack extends Stack {
             {
               table: 'USER',
             },
+          ],
+          queues: [
+            queue,
+            twilioStatusQueue,
           ],
         }, ],
       },
@@ -925,10 +952,10 @@ export class FireWatcherAwsStack extends Stack {
             'POST',
           ],
           authRequired: true,
-          sqsQueue: true,
           tables: [ {
             table: 'USER',
           }, ],
+          queues: [ queue, ],
         }, ],
       },
       {
@@ -1050,8 +1077,8 @@ export class FireWatcherAwsStack extends Stack {
         });
 
         // Grant access to the SQS queue if needed
-        if (config.sqsQueue) {
-          queue.grantSendMessages(resourceHandler);
+        if (config.queues) {
+          config.queues.forEach(q => q.grantSendMessages(resourceHandler as lambdanodejs.NodejsFunction));
         }
 
         // Grant access to the Twilio secret if needed
