@@ -1,12 +1,9 @@
 import {
-  APIGatewayProxyEvent, APIGatewayProxyResult
+  APIGatewayProxyResult
 } from 'aws-lambda';
 
-export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-  console.log(event);
+import { api403Response } from '@/types/api/_shared';
 
-  return {
-    statusCode: 500,
-    body: 'Incorrect endpoint',
-  };
+export async function main(): Promise<APIGatewayProxyResult> {
+  return api403Response;
 }
