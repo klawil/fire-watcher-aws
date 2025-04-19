@@ -106,6 +106,11 @@ export type GetAllTextsApi = {
      * The timestamp to return messages before, in ms since epoch
      */
     before?: number;
+
+    /**
+     * Pass 'y' to return texts with 0 recipients
+     */
+    all?: 'y';
   };
   responses: {
 
@@ -164,6 +169,14 @@ export const getAllTextsApiQueryValidator: Validator<GetAllTextsApi['query']> = 
     types: {
       string: {
         exact: validDepartments,
+      },
+    },
+  },
+  all: {
+    required: false,
+    types: {
+      string: {
+        exact: [ 'y', ],
       },
     },
   },

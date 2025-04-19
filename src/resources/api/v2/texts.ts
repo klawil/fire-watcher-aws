@@ -123,7 +123,10 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
       if (text.type === 'account') return false;
 
       // Don't show texts that aren't sent to anyone
-      if (text.recipients === 0) return false;
+      if (
+        text.recipients === 0 &&
+        query.all !== 'y'
+      ) return false;
 
       // Show all remaining texts to the district admin
       if (user.isDistrictAdmin) return true;
