@@ -66,7 +66,6 @@ async function getTexts(
       query: {
         ...queryBase,
         before: loadBefore === null ? undefined : loadBefore - 1,
-        all: 'y',
       },
     });
 
@@ -284,6 +283,7 @@ export default function TextsPage() {
       requireDistrictAdmin: true,
       query: {
         type: 'alert',
+        all: 'y',
       },
     },
   ];
@@ -296,6 +296,7 @@ export default function TextsPage() {
       title: `${dep} Texts`,
       query: {
         department: dep,
+        all: 'y',
       },
     }));
 
