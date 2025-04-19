@@ -16,7 +16,7 @@ import {
   CreateUserApi, FrontendUserObject, PagingTalkgroup, UpdateUserApi, pagingTalkgroups, validDepartments
 } from '@/types/api/users';
 import {
-  departmentConfig, pagingTalkgroupConfig
+  pagingTalkgroupConfig
 } from '@/types/backend/department';
 import { OrNull } from '@/types/backend/validation';
 import { formatPhone } from '@/utils/common/strings';
@@ -172,13 +172,20 @@ export default function UserEdit({
   }), [ user, ]);
 
   const userDepartments = validDepartments.filter(dep => user && user[dep]);
-  const userDepartment = 'department' in updateState
-    ? updateState.department
-    : userDepartments[0];
 
   const loggedInUserDepartments = validDepartments
     .filter(dep => loggedInUser?.isDistrictAdmin ||
       (loggedInUser && loggedInUser[dep]?.active && loggedInUser[dep]?.admin));
+
+  // Set the default department for a user being created
+  if (
+    user === null &&
+    !updateState.department
+  ) {
+    setUpdateState({
+      department: loggedInUserDepartments[0],
+    });
+  }
 
   const hasChanges = user === null ||
     (Object.keys(updateState) as (keyof typeof updateState)[])
@@ -255,7 +262,6 @@ export default function UserEdit({
           apiResult,
         ] = await saveUserApi(updateState);
       }
-      setUpdateStateRaw({});
       if (
         code !== 200 ||
         apiResult === null ||
@@ -264,6 +270,7 @@ export default function UserEdit({
         console.error(code, apiResult, updateState);
         throw new Error('Failed to create or save user');
       }
+      setUpdateStateRaw({});
       dispatch(user === null
         ? {
           action: 'AddUser',
@@ -303,8 +310,6 @@ export default function UserEdit({
     checkedTalkgroups = updateState.talkgroups || [];
   } else if (user !== null) {
     checkedTalkgroups = user.talkgroups || [];
-  } else {
-    checkedTalkgroups = (userDepartment && departmentConfig[userDepartment]?.defaultTalkgroups) || [];
   }
 
   return <Row>
@@ -348,7 +353,7 @@ export default function UserEdit({
             onChange={e => setUpdateState({
               department: e.target.value as CreateUserApi['body']['department'],
             })}
-            value={'department' in updateState ? updateState.department || '' : ''}
+            value={'department' in updateState ? updateState.department || loggedInUserDepartments[0] : loggedInUserDepartments[0]}
             className='p-2'
           >
             {loggedInUserDepartments.map(dep => <option
