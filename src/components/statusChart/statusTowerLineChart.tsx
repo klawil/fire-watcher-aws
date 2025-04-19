@@ -59,9 +59,7 @@ export default function StatusTowerLineChart({
       backgroundColor: 'rgba(0,0,0,0)',
       fill: false,
       pointStyle: false,
-      tension: 0.0,
       label: 'none',
-      stepped: true,
       data: data.labels.map((label, i) => {
         const dataA = data.datasets[0].data[i];
         const dataB = data.datasets[1].data[i] as number;

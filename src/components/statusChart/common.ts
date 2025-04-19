@@ -157,10 +157,8 @@ export function useChartData(
         const datasets: ChartDataset<'line', number[]>[] = Object.keys(names)
           .map(key => ({
             label: names[key],
-            stepped: true,
             data: labels.map(label => chartData[label][key]),
             fill: false,
-            tension: 0.1,
             pointStyle: false,
           } as const))
           .filter(dataset => returnNonData || dataset.data.some(v => v !== 0));
