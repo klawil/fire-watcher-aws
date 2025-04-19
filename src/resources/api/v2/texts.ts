@@ -87,6 +87,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
         ':type': query.type,
       },
       KeyConditionExpression: '#type = :type',
+      Limit: 100,
     };
   } else if (typeof query.department !== 'undefined') {
     queryInput = {
@@ -100,6 +101,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
         ':department': query.department,
       },
       KeyConditionExpression: '#department = :department',
+      Limit: 100,
     };
   }
   if (queryInput === null) throw new Error('Not enough info to make query');
