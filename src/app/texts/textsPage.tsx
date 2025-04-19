@@ -65,7 +65,8 @@ async function getTexts(
       method: 'GET',
       query: {
         ...queryBase,
-        before: loadBefore === null ? undefined : loadBefore,
+        before: loadBefore === null ? undefined : loadBefore - 1,
+        all: 'y',
       },
     });
 
@@ -120,6 +121,10 @@ function TextsTable({
     setIsLoading,
   ] = useState(false);
   const [
+    allLoaded,
+    setAllLoaded,
+  ] = useState(false);
+  const [
     lastLoad,
     setLastLoad,
   ] = useState(0);
@@ -137,6 +142,7 @@ function TextsTable({
 
   useEffect(() => {
     if (
+      allLoaded ||
       !shouldLoad ||
       (texts.length > 0 && loadMoreRefInView === false) ||
       isLoading ||
@@ -146,11 +152,22 @@ function TextsTable({
     setIsLoading(true);
     setScrollIdx(texts.length - 1);
     (async () => {
-      const newTexts = await getTexts(query, texts[texts.length - 1]?.datetime || null, addAlert);
-      setTexts(old => [
-        ...old,
-        ...newTexts,
-      ]);
+      const newTexts = await getTexts(
+        query,
+        texts[texts.length - 1]?.datetime || null,
+        addAlert
+      );
+      if (newTexts.length === 0) {
+        setAllLoaded(true);
+      } else {
+        setTexts(old => {
+          const result = [
+            ...old,
+            ...newTexts.filter(t => !old.some(t2 => t2.datetime === t.datetime)),
+          ];
+          return result.sort((a, b) => a.datetime > b.datetime ? -1 : 1);
+        });
+      }
       if (lastLoad === 0) {
         setTableLoaded(v => v + 1);
       }
@@ -158,6 +175,7 @@ function TextsTable({
       setIsLoading(false);
     })();
   }, [
+    allLoaded,
     shouldLoad,
     setTableLoaded,
     texts,
@@ -173,7 +191,7 @@ function TextsTable({
   return <>
     <h2 className='text-center'>{title}</h2>
 
-    <Container fluid>
+    <Container fluid style={{ height: '400px', }}>
       {texts.length > 0 && <Table striped className={`align-middle ${styles.tableScrollY}`}>
         <thead className='floatHead'><tr className='text-center'>
           <th>{isPage && 'Page '}Time</th>
