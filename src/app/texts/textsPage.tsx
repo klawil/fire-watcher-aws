@@ -146,7 +146,11 @@ function TextsTable({
     setIsLoading(true);
     setScrollIdx(texts.length - 1);
     (async () => {
-      setTexts(await getTexts(query, texts[texts.length - 1]?.datetime || null, addAlert));
+      const newTexts = await getTexts(query, texts[texts.length - 1]?.datetime || null, addAlert);
+      setTexts(old => [
+        ...old,
+        ...newTexts,
+      ]);
       if (lastLoad === 0) {
         setTableLoaded(v => v + 1);
       }
