@@ -65,6 +65,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
     },
   });
   if (!userObj.Item) {
+    logger.error('GET validation error - 200', params, userObj);
     return [
       200,
       api200Body,
@@ -72,6 +73,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   }
   const userPerms = getUserPermissions(userObj.Item);
   if (!userPerms.isUser) {
+    logger.error('GET validation error - 200', userObj.Item, userPerms);
     return [
       200,
       api200Body,

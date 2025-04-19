@@ -56,6 +56,11 @@ export async function handleResourceApi(
       contentType = 'application/json',
     ] = await handlers[method](event);
 
+    // Log details for any errors
+    if (statusCode !== 200 && statusCode !== 204) {
+      logger.error(`${method} Error - ${statusCode}`, responseBody, event);
+    }
+
     // Build the response
     const response: APIGatewayProxyResult = {
       statusCode,
