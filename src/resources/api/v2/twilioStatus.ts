@@ -65,10 +65,12 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     query === null ||
     body === null ||
     validationErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(validationErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(validationErrors),
+    ];
+  }
 
   // Get the information about the phone number
   const phoneNumberConfigs = await twilioPhoneNumbers();
@@ -168,7 +170,9 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     })
       .then(result => {
         // Check for enough undelivered messages to alert the admins of the department
-        if (result === null) return null;
+        if (result === null) {
+          return null;
+        }
 
         if (
           result.Attributes?.lastStatus === 'undelivered' &&
@@ -182,7 +186,8 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
             count: result.Attributes.lastStatusCount,
             name: `${result.Attributes.fName} ${result.Attributes.lName}`,
             number: result.Attributes.phone,
-            department: validDepartments.filter(dep => result.Attributes && result.Attributes[dep]?.active),
+            department: validDepartments
+              .filter(dep => result.Attributes && result.Attributes[dep]?.active),
           };
           return sqs.sendMessage({
             QueueUrl: queueUrl,
@@ -213,7 +218,9 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       wasError = true;
       logger.error(`Error on promise ${name}`, e);
     })));
-  if (wasError) throw new Error('Error in promises');
+  if (wasError) {
+    throw new Error('Error in promises');
+  }
 
   return [
     204,

@@ -66,8 +66,12 @@ export default function StatusTowerLineChart({
         const dataA = data.datasets[0].data[i];
         const dataB = data.datasets[1].data[i] as number;
 
-        if (dataA < 30 && dataB < 30) return dataA;
-        if (dataA > 30 && dataB > 30) return dataB;
+        if (dataA < 30 && dataB < 30) {
+          return dataA;
+        }
+        if (dataA > 30 && dataB > 30) {
+          return dataB;
+        }
         return 30;
       }),
     });

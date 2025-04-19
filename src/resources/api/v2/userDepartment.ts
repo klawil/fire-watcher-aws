@@ -9,7 +9,8 @@ import {
   api401Body, api403Body, api404Body, api500Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  CreateUserDepartmentApi, DeleteUserDepartmentApi, FullUserObject, createUserDepartmentApiBodyValidator, userDepartmentApiParamsValidator
+  CreateUserDepartmentApi, DeleteUserDepartmentApi, FullUserObject,
+  createUserDepartmentApiBodyValidator, userDepartmentApiParamsValidator
 } from '@/types/api/users';
 import { ActivateUserQueueItem } from '@/types/backend/queue';
 import {
@@ -57,24 +58,30 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
   if (
     !userPerms.isDistrictAdmin &&
     !userPerms.adminDepartments.includes(departmentToEdit)
-  ) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  ) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Make sure the phone exists
   const currentUser = await typedGet<FullUserObject>({
@@ -83,11 +90,13 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
       phone: phoneToEdit,
     },
   });
-  if (!currentUser.Item) return [
-    404,
-    api404Body,
-    userHeaders,
-  ];
+  if (!currentUser.Item) {
+    return [
+      404,
+      api404Body,
+      userHeaders,
+    ];
+  }
 
   // Build the update
   const currentDepConfig = currentUser.Item[departmentToEdit] || {};
@@ -115,11 +124,13 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     UpdateExpression: `SET #${departmentToEdit} = :${departmentToEdit}`,
     ReturnValues: 'ALL_NEW',
   });
-  if (!updateResult.Attributes) return [
-    500,
-    api500Body,
-    userHeaders,
-  ];
+  if (!updateResult.Attributes) {
+    return [
+      500,
+      api500Body,
+      userHeaders,
+    ];
+  }
 
   // Send the activation message (if needed)
   if (
@@ -159,11 +170,13 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(paramsErrors),
-    {},
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+      {},
+    ];
+  }
 
   // Authorize the user
   const phoneToEdit = params.id;
@@ -173,24 +186,30 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
   if (
     !userPerms.isDistrictAdmin &&
     !userPerms.adminDepartments.includes(departmentToEdit)
-  ) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  ) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Run the deletion of the department
   const result = await typedUpdate<FullUserObject>({
@@ -204,11 +223,13 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     UpdateExpression: `REMOVE #${departmentToEdit}`,
     ReturnValues: 'ALL_NEW',
   });
-  if (!result.Attributes) return [
-    500,
-    api500Body,
-    userHeaders,
-  ];
+  if (!result.Attributes) {
+    return [
+      500,
+      api500Body,
+      userHeaders,
+    ];
+  }
 
   return [
     200,

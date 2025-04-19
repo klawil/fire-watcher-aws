@@ -60,18 +60,26 @@ export interface TypedScanOutput<T extends object> extends AWS.DynamoDB.Document
   Items?: T[];
 }
 
-export interface TypedDeleteItemInput<T extends object> extends AWS.DynamoDB.DocumentClient.DeleteItemInput {
+export interface TypedDeleteItemInput<
+  T extends object
+> extends AWS.DynamoDB.DocumentClient.DeleteItemInput {
   Key: {
     [key in RequiredKeys<T>]: T[key];
   };
 }
-export interface TypedDeleteItemOutput<T extends object> extends AWS.DynamoDB.DocumentClient.DeleteItemOutput {
+export interface TypedDeleteItemOutput<
+  T extends object
+> extends AWS.DynamoDB.DocumentClient.DeleteItemOutput {
   Attributes?: Partial<T>;
 }
 
-export interface TypedPutItemInput<T extends object> extends AWS.DynamoDB.DocumentClient.PutItemInput {
+export interface TypedPutItemInput<
+  T extends object
+> extends AWS.DynamoDB.DocumentClient.PutItemInput {
   Item: T;
 }
-export interface TypedPutItemOutput<T extends object> extends AWS.DynamoDB.DocumentClient.PutItemOutput {
+export interface TypedPutItemOutput<
+  T extends object
+> extends AWS.DynamoDB.DocumentClient.PutItemOutput {
   Attributes?: Partial<T>;
 }

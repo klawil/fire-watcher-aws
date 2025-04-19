@@ -36,7 +36,9 @@ export default function CalendarModal({
   ] = useState<Date | null>(null);
 
   const jumpToTime = useCallback(() => {
-    if (newDatetime === null) return;
+    if (newDatetime === null) {
+      return;
+    }
 
     const newDate = new Date(newDatetime.getTime());
     newDate.setMilliseconds(0);

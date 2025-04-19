@@ -109,7 +109,9 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
   }
 
   useEffect(() => {
-    if (user?.fromApi) return;
+    if (user?.fromApi) {
+      return;
+    }
 
     // Parse information out of the cookies
     const cookies: {
@@ -229,7 +231,9 @@ export default function RootLayout({
     typeof isDarkMode === 'undefined' ||
     typeof location === 'undefined' ||
     user === null
-  ) return <html><body></body></html>;
+  ) {
+    return <html><body></body></html>;
+  }
 
   const modeName = isDarkMode ? 'dark' : 'light';
   return (

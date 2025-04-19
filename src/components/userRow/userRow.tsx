@@ -42,7 +42,9 @@ export default function UserRow({
     'text-center',
     'align-middle',
   ];
-  if (idx % 2 === 0) rowClasses.push(styles.highlightRow);
+  if (idx % 2 === 0) {
+    rowClasses.push(styles.highlightRow);
+  }
 
   const [
     editOpen,
@@ -50,7 +52,9 @@ export default function UserRow({
   ] = useState(false);
 
   async function deleteUser() {
-    if (user === null) return;
+    if (user === null) {
+      return;
+    }
     dispatch({
       action: 'SetDeleteModal',
       user,

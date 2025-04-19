@@ -52,7 +52,9 @@ function useLoadFiles(
   const addAlert = useContext(AddAlertContext);
 
   useEffect(() => {
-    if (state.apiResponse.length === 0) return;
+    if (state.apiResponse.length === 0) {
+      return;
+    }
 
     const responseToParse = state.apiResponse[0];
 
@@ -216,7 +218,9 @@ function useLoadFiles(
       }
       shouldLoadFiles = false;
     }
-    if (!shouldLoadFiles) return;
+    if (!shouldLoadFiles) {
+      return;
+    }
     if (
       loadFilesDirection === 'after' &&
       state.api.loadAfterAdded
@@ -304,7 +308,9 @@ function useLoadFiles(
           code !== 200 ||
           newData === null ||
           'message' in newData
-        ) throw new Error('Failed to get file information');
+        ) {
+          throw new Error('Failed to get file information');
+        }
 
         dispatch({
           action: 'AddApiResponse',
@@ -428,7 +434,9 @@ export default function AudioList() {
   ] = useState(false);
   useEffect(() => {
     // Exit early for null
-    if (currentRefInView === null || currentRefValue === null) return;
+    if (currentRefInView === null || currentRefValue === null) {
+      return;
+    }
 
     // If the row is in view, don't show arrows
     if (currentRefInView) {
@@ -451,7 +459,9 @@ export default function AudioList() {
     currentRefValue,
   ]);
   const scrollCurrentIntoView = useCallback(() => {
-    if (currentRefValue === null) return;
+    if (currentRefValue === null) {
+      return;
+    }
 
     currentRefValue.scrollIntoView({ block: 'center', });
   }, [ currentRefValue, ]);

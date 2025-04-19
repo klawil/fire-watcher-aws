@@ -42,7 +42,9 @@ export default function LoginPage() {
   ] = useState<string[]>([]);
 
   const handleRedirectAction = useCallback(async () => {
-    if (loc === null) return;
+    if (loc === null) {
+      return;
+    }
 
     // Refresh the user
     await reCheckUser();

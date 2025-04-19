@@ -33,16 +33,20 @@ const GET: LambdaApiFunction<GetFileApi> = async function (event) {
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(paramsErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+    ];
+  }
 
   const idParts = params.id.match(dtrIdRegex);
-  if (idParts === null) return [
-    404,
-    api404Body,
-  ];
+  if (idParts === null) {
+    return [
+      404,
+      api404Body,
+    ];
+  }
 
   const file = await typedGet<FullFileObject>({
     TableName: TABLE_FILE,
@@ -52,10 +56,12 @@ const GET: LambdaApiFunction<GetFileApi> = async function (event) {
     },
   });
 
-  if (!file.Item) return [
-    404,
-    api404Body,
-  ];
+  if (!file.Item) {
+    return [
+      404,
+      api404Body,
+    ];
+  }
 
   return [
     200,

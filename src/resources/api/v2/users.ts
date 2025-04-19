@@ -92,16 +92,20 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Get the keys that should be returned
   const scanInput: TypedScanInput<FullUserObject> = {
@@ -161,16 +165,20 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Validate the user keys and build the insert
   const putConfig: TypedPutItemInput<FullUserObject> = {

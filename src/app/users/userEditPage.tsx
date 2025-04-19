@@ -67,7 +67,9 @@ export default function UserEditPage() {
     setIsDeleting,
   ] = useState(false);
   const deleteModalUser = useCallback(async () => {
-    if (!state.deleteUserModal) return;
+    if (!state.deleteUserModal) {
+      return;
+    }
     setIsDeleting(true);
 
     const apiBody: DeleteUserApi['params'] = {
@@ -146,7 +148,8 @@ export default function UserEditPage() {
         <Modal.Header closeButton>Are you sure?</Modal.Header>
 
         <Modal.Body>
-          Are you sure you want to delete <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
+          Are you sure you want to delete
+          <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
             deleteModalDeps.length === 0
               ? 'No Department'
               : deleteModalDeps.join(', ')

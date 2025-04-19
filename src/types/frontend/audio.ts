@@ -238,7 +238,8 @@ interface SetPlayerTimesAction {
 interface ClearPlayer {
   action: 'ClearPlayer';
 }
-type PlayerActions = SetPlayerStateAction | SetPlayerFileAction | SetPlayerTimesAction | ClearPlayer;
+type PlayerActions = SetPlayerStateAction | SetPlayerFileAction
+  | SetPlayerTimesAction | ClearPlayer;
 
 interface OpenCloseCalendarModalAction {
   action: 'OpenCalendarModal' | 'CloseCalendarModal';

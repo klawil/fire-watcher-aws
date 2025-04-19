@@ -25,7 +25,9 @@ export default function CofrnNavbar({
   const logoutLink = `/api/v2/logout/?redirectTo=${redirectTo}`;
 
   const user = useContext(LoggedInUserContext);
-  if (user === null || colorModeName === null) return null;
+  if (user === null || colorModeName === null) {
+    return null;
+  }
 
   return (
     <Navbar

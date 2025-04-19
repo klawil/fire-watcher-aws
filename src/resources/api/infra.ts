@@ -285,14 +285,15 @@ async function handleSiteStatus(event: APIGatewayProxyEvent): Promise<APIGateway
   } else {
     body.adjacent
       .filter(adjacent => adjacent !== '')
-      .forEach((adjacentItems, i1) => (adjacentItems as AdjacentSitesBodyItem[]).forEach((item, i2) => {
-        (Object.keys(neededFields) as (keyof AdjacentSitesBodyItem)[]).forEach(key => {
-          if (typeof item[key] !== neededFields[key]) {
-            response.errors.push(`${i1}-${i2}-${key}`);
-            response.success = false;
-          }
-        });
-      }));
+      .forEach((adjacentItems, i1) => (adjacentItems as AdjacentSitesBodyItem[])
+        .forEach((item, i2) => {
+          (Object.keys(neededFields) as (keyof AdjacentSitesBodyItem)[]).forEach(key => {
+            if (typeof item[key] !== neededFields[key]) {
+              response.errors.push(`${i1}-${i2}-${key}`);
+              response.success = false;
+            }
+          });
+        }));
   }
 
   if (!response.success) {
@@ -441,7 +442,10 @@ async function handleDtrExistsSingle(event: APIGatewayProxyEvent): Promise<APIGa
 }
 
 const testingUser = process.env.TESTING_USER as string;
-async function handleTestState(event: APIGatewayProxyEvent, testOn: boolean): Promise<APIGatewayProxyResult> {
+async function handleTestState(
+  event: APIGatewayProxyEvent,
+  testOn: boolean
+): Promise<APIGatewayProxyResult> {
   logger.trace('handleTestState', ...arguments);
   const response: GenericApiResponse = {
     success: true,

@@ -83,7 +83,9 @@ export default function AudioPlayerBar({
   useEffect(() => {
     // Callbacks
     const setPlayerTimes = () => {
-      if (wasEnded) return;
+      if (wasEnded) {
+        return;
+      }
       if (audioRef.current.ended) {
         setWasEnded(true);
       }
@@ -196,7 +198,9 @@ export default function AudioPlayerBar({
   // Keep the URL updated
   const searchParams = useSearchParams();
   useEffect(() => {
-    if (!state.player.fileUrl) return;
+    if (!state.player.fileUrl) {
+      return;
+    }
 
     // Check for a change in the file URL
     if (!state.player.fileUrl.endsWith(searchParams.get('f') || 'NONE')) {
@@ -218,10 +222,14 @@ export default function AudioPlayerBar({
       !autoPlay ||
       state.player.state !== 'ended' ||
       state.files.length === 0
-    ) return;
+    ) {
+      return;
+    }
 
     const currentFileIndex = state.files.findIndex(f => f.Key === state.player.fileUrl);
-    if (currentFileIndex <= 0) return;
+    if (currentFileIndex <= 0) {
+      return;
+    }
 
     dispatch({
       action: 'SetPlayerFile',

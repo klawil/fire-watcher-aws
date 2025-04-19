@@ -107,7 +107,9 @@ export default function AudioFilter({
     const newSearchParams = new URLSearchParams(searchParams.toString());
     (Object.keys(searchParamValues) as (keyof typeof searchParamValues)[])
       .forEach(key => {
-        if (key === 'f') return;
+        if (key === 'f') {
+          return;
+        }
 
         if (typeof state.filter[key] === 'undefined') {
           newSearchParams.delete(key);
@@ -214,7 +216,9 @@ export default function AudioFilter({
   ] = useState('');
 
   // Exit early if we haven't parsed the search string yet
-  if (!state.queryParsed) return <></>;
+  if (!state.queryParsed) {
+    return <></>;
+  }
 
   let tgValueParsed: {
     type: 'presets';
@@ -254,7 +258,9 @@ export default function AudioFilter({
   }
 
   const addTg = (tg: string) => {
-    if (tgValueParsed.type !== 'talkgroup') return;
+    if (tgValueParsed.type !== 'talkgroup') {
+      return;
+    }
 
     setFilterChanges({
       tg: `tg${[
@@ -264,7 +270,9 @@ export default function AudioFilter({
     });
   };
   const rmTg = (tg: string) => {
-    if (tgValueParsed.type !== 'talkgroup') return;
+    if (tgValueParsed.type !== 'talkgroup') {
+      return;
+    }
 
     setFilterChanges({
       tg: `tg${tgValueParsed.value.filter(v => v.toString() !== tg).join('|')}`,
@@ -333,17 +341,24 @@ export default function AudioFilter({
                   <tbody>
                     {Object.keys(state.talkgroups)
                       .filter(tg => {
-                        if (tgValueParsed.value.includes(Number(tg))) return false;
+                        if (tgValueParsed.value.includes(Number(tg))) {
+                          return false;
+                        }
 
                         if (
                           tgFilter !== '' &&
-                          !state.talkgroups[tg].selectName.toLowerCase().includes(tgFilter.toLowerCase())
-                        ) return false;
+                          !state.talkgroups[tg].selectName
+                            .toLowerCase()
+                            .includes(tgFilter.toLowerCase())
+                        ) {
+                          return false;
+                        }
 
                         return true;
                       })
                       .sort((a, b) =>
-                        state.talkgroups[a].selectName.localeCompare(state.talkgroups[b].selectName))
+                        state.talkgroups[a].selectName
+                          .localeCompare(state.talkgroups[b].selectName))
                       .map(tg => <tr
                         key={tg}
                         onClick={() => addTg(tg)}
@@ -369,7 +384,8 @@ export default function AudioFilter({
                     {Object.keys(state.talkgroups)
                       .filter(tg => tgValueParsed.value.includes(Number(tg)))
                       .sort((a, b) =>
-                        state.talkgroups[a].selectName.localeCompare(state.talkgroups[b].selectName))
+                        state.talkgroups[a].selectName
+                          .localeCompare(state.talkgroups[b].selectName))
                       .map(tg => <tr
                         key={tg}
                         onClick={() => rmTg(tg)}

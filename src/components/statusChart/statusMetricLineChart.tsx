@@ -23,7 +23,9 @@ const msToSFormat = (places: number = 1) => (v: string | number) => {
   return (Math.round(v) / 1000).toFixed(places);
 };
 const secondFormat = (places: number = 1) => (v: string | number) => {
-  if (typeof v === 'string') v = Number(v);
+  if (typeof v === 'string') {
+    v = Number(v);
+  }
 
   return (Math.round(v * 1000) / 1000).toFixed(places);
 };

@@ -149,16 +149,20 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin && !userPerms.isDistrictAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin && !userPerms.isDistrictAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Validate the query and path parameters
   const {
@@ -175,21 +179,25 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
     params === null ||
     query === null ||
     validationErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(validationErrors),
-    userHeaders,
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(validationErrors),
+      userHeaders,
+    ];
+  }
 
   // Make sure the user can access this department
   if (
     (params.id === 'all' && !userPerms.isDistrictAdmin) ||
     (params.id !== 'all' && !userPerms.adminDepartments.includes(params.id))
-  ) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  ) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Get the timeframe that we should use
   const month = query.month || 'last';
@@ -226,7 +234,9 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
   if (
     typeof accountSid === 'undefined' ||
     typeof authToken === 'undefined'
-  ) throw new Error(`Unable to find auth for account ${params.id} - ${twilioAccount}`);
+  ) {
+    throw new Error(`Unable to find auth for account ${params.id} - ${twilioAccount}`);
+  }
 
   // Get the twilio cost information
   const twilioData: BillingItem[] = await new Promise((res, rej) => {

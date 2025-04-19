@@ -41,7 +41,9 @@ export default function StatusTimingLineChart({
   );
 
   const datasets = data?.datasets.map((v, i, a) => {
-    if (i < a.length - 1) return v;
+    if (i < a.length - 1) {
+      return v;
+    }
 
     return {
       ...v,

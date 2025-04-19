@@ -7,7 +7,8 @@ import {
   api401Body, api403Body, api404Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  FullTalkgroupObject, GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator, talkgroupParamsValidator
+  FullTalkgroupObject, GetTalkgroupApi, PatchTalkgroupApi, talkgroupBodyValidator,
+  talkgroupParamsValidator
 } from '@/types/api/talkgroups';
 import {
   TABLE_TALKGROUP, typedGet, typedUpdate
@@ -31,10 +32,12 @@ const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(paramsErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+    ];
+  }
 
   const talkgroup = await typedGet<FullTalkgroupObject>({
     TableName: TABLE_TALKGROUP,
@@ -43,10 +46,12 @@ const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
     },
   });
 
-  if (!talkgroup.Item) return [
-    404,
-    api404Body,
-  ];
+  if (!talkgroup.Item) {
+    return [
+      404,
+      api404Body,
+    ];
+  }
 
   return [
     200,
@@ -71,10 +76,12 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
     params === null ||
     body == null ||
     validationErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(validationErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(validationErrors),
+    ];
+  }
 
   // Authorize the user
   const [
@@ -82,16 +89,20 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isDistrictAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isDistrictAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Verify that the talkgroup exists
   const tgObj = await typedGet<FullTalkgroupObject>({
@@ -100,11 +111,13 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
       ID: params.id,
     },
   });
-  if (!tgObj.Item) return [
-    404,
-    api404Body,
-    userHeaders,
-  ];
+  if (!tgObj.Item) {
+    return [
+      404,
+      api404Body,
+      userHeaders,
+    ];
+  }
 
   // Update the talkgroup
   const tgUpdate = await typedUpdate({

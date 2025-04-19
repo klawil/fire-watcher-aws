@@ -9,7 +9,8 @@ import {
 } from 'react-icons/bs';
 
 import {
-  CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi, UserDepartment
+  CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi,
+  UserDepartment
 } from '@/types/api/users';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
@@ -96,7 +97,9 @@ export default function UserDepartmentRow({
     setErrorFields,
   ] = useState<string[]>([]);
   async function saveChanges() {
-    if (!hasChanges) return;
+    if (!hasChanges) {
+      return;
+    }
 
     const apiParams: UpdateUserDepartmentApi['params'] = {
       id: user.phone,
@@ -135,9 +138,11 @@ export default function UserDepartmentRow({
       if (
         code !== 200 ||
         apiResult === null
-      ) throw {
-        code, apiResult,
-      };
+      ) {
+        throw {
+          code, apiResult,
+        };
+      }
       if ('errors' in apiResult) {
         setErrorFields(apiResult.errors);
         throw {
@@ -171,7 +176,9 @@ export default function UserDepartmentRow({
     setIsDeleting,
   ] = useState(false);
   async function deleteDepartment() {
-    if (!user[dep]) return;
+    if (!user[dep]) {
+      return;
+    }
 
     setIsDeleting(true);
     try {
@@ -191,9 +198,11 @@ export default function UserDepartmentRow({
         code !== 200 ||
         apiResult === null ||
         'message' in apiResult
-      ) throw {
-        code, apiResult,
-      };
+      ) {
+        throw {
+          code, apiResult,
+        };
+      }
 
       dispatch({
         action: 'UpdateUser',

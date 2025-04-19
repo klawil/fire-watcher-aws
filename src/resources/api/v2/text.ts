@@ -7,7 +7,8 @@ import {
   api200Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator, updateTextSeenApiParamsValidator
+  FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator,
+  updateTextSeenApiParamsValidator
 } from '@/types/api/texts';
 import {
   TABLE_TEXT, typedUpdate
@@ -35,10 +36,12 @@ const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
     params === null ||
     body === null ||
     validationErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(validationErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(validationErrors),
+    ];
+  }
 
   // Update the message
   try {

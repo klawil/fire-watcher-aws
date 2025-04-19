@@ -43,10 +43,12 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(paramsErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+    ];
+  }
 
   // Make sure the user is not already logged in
   const [ user, ] = await getCurrentUser(event);
@@ -110,10 +112,12 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(paramsErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+    ];
+  }
 
   // Validate the body
   const [
@@ -126,10 +130,12 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   if (
     body === null ||
     bodyErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(bodyErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(bodyErrors),
+    ];
+  }
 
   // Make sure the user is not already logged in
   const [ user, ] = await getCurrentUser(event);
@@ -169,17 +175,21 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
     !userObj.codeExpiry ||
     Date.now() > userObj.codeExpiry ||
     body.code !== userObj.code
-  ) return [
-    400,
-    generateApi400Body([ 'code', ]),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body([ 'code', ]),
+    ];
+  }
 
   // Generate the authentication token for the user
   const jwtSecret = await secretsManager.getSecretValue({
     SecretId: jwtSecretArn,
   }).promise()
     .then(data => data.SecretString);
-  if (typeof jwtSecret === 'undefined') throw new Error('Unable to get JWT secret');
+  if (typeof jwtSecret === 'undefined') {
+    throw new Error('Unable to get JWT secret');
+  }
   const token = sign({ phone: userObj.phone, }, jwtSecret, {
     expiresIn: `${loginDuration}s`,
   });

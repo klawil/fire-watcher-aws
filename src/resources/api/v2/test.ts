@@ -18,7 +18,9 @@ const lambdaNames: {
     if (
       typeof value === 'undefined' ||
       pieces === null
-    ) return agg;
+    ) {
+      return agg;
+    }
 
     agg[key] = {
       name: value === 'self'
@@ -41,10 +43,12 @@ export async function main(event: APIGatewayProxyEvent) {
   if (
     user === null ||
     !userPerms.isAdmin
-  ) return {
-    statusCode: 403,
-    body: JSON.stringify(api403Body),
-  };
+  ) {
+    return {
+      statusCode: 403,
+      body: JSON.stringify(api403Body),
+    };
+  }
 
   const keys = Object.keys(process.env)
     .filter(key => key.endsWith('_FN_NAME'));

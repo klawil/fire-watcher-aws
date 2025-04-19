@@ -11,7 +11,9 @@ export function getUserPermissions(user: FrontendUserObject | null): UserPermiss
     activeDepartments: [],
     adminDepartments: [],
   };
-  if (user === null) return userPerms;
+  if (user === null) {
+    return userPerms;
+  }
 
   // Determine the permissions
   userPerms.activeDepartments = validDepartments.filter(dep => user[dep]?.active);

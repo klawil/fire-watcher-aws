@@ -13,7 +13,8 @@ import {
 } from '@/types/backend/dynamo';
 import { SendPageQueueItem } from '@/types/backend/queue';
 import {
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem, typedQuery, typedUpdate
+  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem,
+  typedQuery, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
@@ -206,25 +207,31 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             if (
               typeof itemStartTime === 'undefined' ||
               typeof itemEndTime === 'undefined'
-            ) return false;
+            ) {
+              return false;
+            }
 
             // Return true if the file starts in, ends in, or covers the buffer period
-            const startsIn = itemStartTime >= startTime - actualDuplicateBuffer && itemStartTime <= endTime + actualDuplicateBuffer;
-            const endsIn = itemEndTime >= startTime - actualDuplicateBuffer && itemEndTime <= endTime + actualDuplicateBuffer;
-            const covers = itemStartTime <= startTime - actualDuplicateBuffer && itemEndTime >= endTime + actualDuplicateBuffer;
+            const startsIn = itemStartTime >= startTime - actualDuplicateBuffer &&
+              itemStartTime <= endTime + actualDuplicateBuffer;
+            const endsIn = itemEndTime >= startTime - actualDuplicateBuffer &&
+              itemEndTime <= endTime + actualDuplicateBuffer;
+            const covers = itemStartTime <= startTime - actualDuplicateBuffer &&
+              itemEndTime >= endTime + actualDuplicateBuffer;
             return startsIn || endsIn || covers;
           });
 
         if (matchingItems.length > 1) {
           doTranscriptOnly = true; // So we don't accidentally double page
-          const transcript: string | null = matchingItems.reduce((transcript: null | string, item) => {
-            if (item.Transcript) {
-              return transcript !== null && transcript.length > item.Transcript.length
-                ? transcript
-                : item.Transcript;
-            }
-            return null;
-          }, null);
+          const transcript: string | null = matchingItems
+            .reduce((transcript: null | string, item) => {
+              if (item.Transcript) {
+                return transcript !== null && transcript.length > item.Transcript.length
+                  ? transcript
+                  : item.Transcript;
+              }
+              return null;
+            }, null);
           const allItems = matchingItems
             .sort((a, b) => {
               const aAdded = a.Added;
@@ -232,7 +239,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
               const aLen = a.Len;
               const bLen = b.Len;
 
-              if (aLen === bLen) return aAdded > bAdded ? -1 : 1;
+              if (aLen === bLen) {
+                return aAdded > bAdded ? -1 : 1;
+              }
 
               return (aLen || 0) > (bLen || 0) ? 1 : -1;
             });
@@ -257,7 +266,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             },
           })));
           promises['delete-s3-dups'] = Promise.all(itemsToDelete.map(item => {
-            if (typeof item.Key === 'undefined') return;
+            if (typeof item.Key === 'undefined') {
+              return;
+            }
 
             return s3.deleteObject({
               Bucket,
@@ -327,7 +338,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
                 logger.error(`Error on ${key}`, e);
                 wasError = true;
               })));
-            if (wasError) throw new Error('Error in promises');
+            if (wasError) {
+              throw new Error('Error in promises');
+            }
             return;
           }
         } else if (isPage) {
@@ -408,7 +421,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             logger.error(`Error on ${key}`, e);
             wasError = true;
           })));
-        if (wasError) throw new Error('Error in promises');
+        if (wasError) {
+          throw new Error('Error in promises');
+        }
         return;
       }
     }
@@ -444,7 +459,9 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         logger.error(`Error on ${key}`, e);
         wasError = true;
       })));
-    if (wasError) throw new Error('Error in promises');
+    if (wasError) {
+      throw new Error('Error in promises');
+    }
   } else {
     await incrementMetric('Call', {
       source: metricSource,

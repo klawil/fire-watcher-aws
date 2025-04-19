@@ -21,10 +21,12 @@ import {
   TypedGetOutput, TypedUpdateInput
 } from '@/types/backend/dynamo';
 import {
-  ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendPageQueueItem, SendUserAuthCodeQueueItem, SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
+  ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendPageQueueItem, SendUserAuthCodeQueueItem,
+  SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
 } from '@/types/backend/queue';
 import {
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan, typedUpdate
+  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan,
+  typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import {
   getPageNumber, getUserRecipients, saveMessageData, sendMessage
@@ -66,7 +68,9 @@ function createPageMessage(
   logger.trace('createPageMessage', ...arguments);
   const pageConfig = pagingTalkgroupConfig[pageTg];
 
-  if (typeof pageConfig === 'undefined') return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
+  if (typeof pageConfig === 'undefined') {
+    return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
+  }
 
   let pageStr = `${pageConfig.pagedService} PAGE\n`;
   pageStr += `${pageConfig.partyBeingPaged} paged `;
@@ -114,7 +118,9 @@ interface TranscribeResult {
 
 async function getItemToUpdate(key: string | null): Promise<FullFileObject | null> {
   logger.trace('getItemToUpdate', ...arguments);
-  if (key === null) return key;
+  if (key === null) {
+    return key;
+  }
 
   let item: FullFileObject | null = null;
   let count = 0;
@@ -132,7 +138,7 @@ async function getItemToUpdate(key: string | null): Promise<FullFileObject | nul
     });
 
     if (!result.Items || result.Items.length === 0) {
-      const resultMap: TypedGetOutput<FileTranslationObject> = await typedGet<FileTranslationObject>({
+      const resultMap: TypedGetOutput<FileTranslationObject> = await typedGet({
         TableName: TABLE_FILE_TRANSLATION,
         Key: {
           Key: key,
@@ -159,12 +165,15 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   const transcriptionInfo = await transcribe.getTranscriptionJob({
     TranscriptionJobName: body.detail.TranscriptionJobName,
   }).promise();
-  const fileData: string = await new Promise((res, rej) => https.get(transcriptionInfo.TranscriptionJob?.Transcript?.TranscriptFileUri as string, response => {
-    let data = '';
+  const fileData: string = await new Promise((res, rej) => https.get(
+    transcriptionInfo.TranscriptionJob?.Transcript?.TranscriptFileUri as string,
+    response => {
+      let data = '';
 
-    response.on('data', chunk => data += chunk);
-    response.on('end', () => res(data));
-  }).on('error', e => rej(e)));
+      response.on('data', chunk => data += chunk);
+      response.on('end', () => res(data));
+    }
+  ).on('error', e => rej(e)));
   const result: TranscribeResult = JSON.parse(fileData);
 
   const transcript: string = result.results.transcripts[0].transcript === ''
@@ -175,10 +184,11 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   let messageBody: string;
   let updateFilePromise: Promise<unknown> = new Promise(res => res(null));
   let tg: PagingTalkgroup;
-  const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || []).reduce((agg: { [key: string]: string; }, value) => {
-    agg[value.Key] = value.Value;
-    return agg;
-  }, {});
+  const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || [])
+    .reduce((agg: { [key: string]: string; }, value) => {
+      agg[value.Key] = value.Value;
+      return agg;
+    }, {});
   if (jobInfo.Talkgroup) {
     tg = Number(jobInfo.Talkgroup) as PagingTalkgroup;
     messageBody = createPageMessage(
@@ -191,7 +201,9 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 
     updateFilePromise = getItemToUpdate(jobInfo.FileKey as string)
       .then(item => {
-        if (item === null) return;
+        if (item === null) {
+          return;
+        }
 
         return typedUpdate<FullFileObject>({
           TableName: TABLE_FILE,
@@ -315,9 +327,13 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
   // Get the recipients
   const recipients = (await getUserRecipients(phoneNumberConfig.department, null, isTest))
     .filter(number => {
-      if (doNotSend) return false;
+      if (doNotSend) {
+        return false;
+      }
 
-      if (isTest) return true;
+      if (isTest) {
+        return true;
+      }
 
       return includeSender ||
         number.phone !== body.user.phone;
@@ -376,11 +392,15 @@ async function handlePhoneIssue(body: PhoneNumberIssueQueueItem) {
 
   const recipients = (await getUserRecipients('all', null))
     .filter(u => {
-      if (u.phone === body.number) return false;
+      if (u.phone === body.number) {
+        return false;
+      }
 
       for (let i = 0; i < body.department.length; i++) {
         const dep = body.department[i];
-        if (u[dep]?.admin && u[dep].active) return true;
+        if (u[dep]?.admin && u[dep].active) {
+          return true;
+        }
       }
 
       return false;
@@ -420,7 +440,9 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
       phone: body.phone,
     },
   });
-  if (!userGet.Item) throw new Error(`Invalid user - ${body.phone}`);
+  if (!userGet.Item) {
+    throw new Error(`Invalid user - ${body.phone}`);
+  }
   const user = userGet.Item;
 
   const phoneCategories = await twilioPhoneCategories();
@@ -429,7 +451,9 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
   if (
     typeof config === 'undefined' ||
     typeof phoneCategories[pagePhoneName] === 'undefined'
-  ) throw new Error(`Invalid phone config - ${config}`);
+  ) {
+    throw new Error(`Invalid phone config - ${config}`);
+  }
 
   const pageTgs = (user.talkgroups || [])
     .map(key => pagingTalkgroupConfig[key].partyBeingPaged)
@@ -480,7 +504,9 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
   })
     .then(admins => {
       const adminsToSendTo = admins.Items || [];
-      if (adminsToSendTo.length === 0) return;
+      if (adminsToSendTo.length === 0) {
+        return;
+      }
 
       const adminMessageId = Date.now();
       const adminMessageBody = `New subscriber: ${user.fName} ${user.lName} (${formatPhone(body.phone)}) has been added to the ${body.department} group`;
@@ -525,7 +551,9 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
       ScanIndexForward: false,
     })
       .then(data => {
-        if (!data.Items || data.Items.length === 0) return;
+        if (!data.Items || data.Items.length === 0) {
+          return;
+        }
         const pageKey = data.Items[0].Key?.split('/').pop() || 'none';
         const pageTg = data.Items[0].Talkgroup as PagingTalkgroup;
 
@@ -565,7 +593,9 @@ async function handleSiteStatus(body: SiteStatusQueueItem) {
     };
     const updateStrings: string[] = [ '#IsActive = :IsActive', ];
     (Object.keys(site) as (keyof typeof site)[]).forEach(key => {
-      if (typeof site[key] === 'string') return;
+      if (typeof site[key] === 'string') {
+        return;
+      }
 
       updateConfig.ExpressionAttributeNames[`#${key}`] = key as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -609,7 +639,9 @@ async function handleAuthCode(body: SendUserAuthCodeQueueItem) {
     UpdateExpression: 'SET #code = :code, #codeExpiry = :codeExpiry',
     ReturnValues: 'ALL_NEW',
   });
-  if (!updateResult.Attributes) throw new Error('Failed to add login code to user');
+  if (!updateResult.Attributes) {
+    throw new Error('Failed to add login code to user');
+  }
 
   await sendMessage(
     'account',

@@ -30,7 +30,8 @@ export type GetAllTalkgroupsApi = {
   query: {
 
     /**
-     * Pass 'y' to access all talkgroups. The default behavior is to only return talkgroups that have recordings associated with them
+     * Pass 'y' to access all talkgroups. The default behavior is to only return talkgroups that
+     * have recordings associated with them
      */
     all?: 'y';
   };
@@ -119,7 +120,8 @@ export type PatchTalkgroupApi = {
   body: {
 
     /**
-     * New name for the talkgroup. Pass null to delete the name. Name may not contain newline or tab characters
+     * New name for the talkgroup. Pass null to delete the name. Name may not contain newline or
+     * tab characters
      */
     name: string | null;
   };

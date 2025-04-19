@@ -38,7 +38,9 @@ export function useRefIntersection(): [
   );
 
   useEffect(() => {
-    if (node === null) return;
+    if (node === null) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([ entry, ]) => setRefIntersecting(entry.isIntersecting)

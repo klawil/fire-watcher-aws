@@ -33,7 +33,9 @@ export default function CofrnLayout({
         !pageConfig.requireAuth &&
         !pageConfig.requireAdmin
       )
-    ) return;
+    ) {
+      return;
+    }
 
     if (!user.isUser) {
       window.location.replace(`/login?redirectTo=${
@@ -51,7 +53,9 @@ export default function CofrnLayout({
     pageConfig.requireAuth,
   ]);
 
-  if (colorModeName === null) return <></>;
+  if (colorModeName === null) {
+    return <></>;
+  }
 
   const containerClasses: string[] = [];
   if (pageConfig.centerAll) {

@@ -25,16 +25,20 @@ const GET: LambdaApiFunction<GetAllSitesApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Retrieve the sites
   const sites = await typedQuery<FullSiteObject>({

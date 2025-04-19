@@ -128,14 +128,20 @@ export async function mergeDynamoQueriesDocClient<
     ...config,
   })));
   const combinedQueryResults = queryResults.reduce((agg: DocClientListOutput<ItemType>, result) => {
-    if (typeof result.Count !== 'undefined') agg.Count += result.Count;
+    if (typeof result.Count !== 'undefined') {
+      agg.Count += result.Count;
+    }
 
-    if (typeof result.ScannedCount !== 'undefined') agg.ScannedCount += result.ScannedCount;
+    if (typeof result.ScannedCount !== 'undefined') {
+      agg.ScannedCount += result.ScannedCount;
+    }
 
-    if (typeof result.Items !== 'undefined') agg.Items = [
-      ...agg.Items,
-      ...(result.Items as ItemType[]),
-    ];
+    if (typeof result.Items !== 'undefined') {
+      agg.Items = [
+        ...agg.Items,
+        ...(result.Items as ItemType[]),
+      ];
+    }
 
     agg.LastEvaluatedKeys.push(result.LastEvaluatedKey || null);
 
@@ -154,11 +160,15 @@ export async function mergeDynamoQueriesDocClient<
   combinedQueryResults.Items = (combinedQueryResults.Items as ItemType[]).sort((a, b) => {
     if (
       typeof b[sortKey] === 'undefined'
-    ) return sortDirGreater;
+    ) {
+      return sortDirGreater;
+    }
 
     if (
       typeof a[sortKey] === 'undefined'
-    ) return sortDirLesser;
+    ) {
+      return sortDirLesser;
+    }
 
     return a[sortKey] > b[sortKey] ? sortDirGreater : sortDirLesser;
   });
@@ -183,7 +193,9 @@ export async function mergeDynamoQueriesDocClient<
         minSortKey === null ||
         sortKeyValue < minSortKey
       )
-    ) minSortKey = sortKeyValue;
+    ) {
+      minSortKey = sortKeyValue;
+    }
 
     if (
       !isNaN(sortKeyValue) &&
@@ -191,7 +203,9 @@ export async function mergeDynamoQueriesDocClient<
         maxSortKey === null ||
         sortKeyValue > maxSortKey
       )
-    ) maxSortKey = sortKeyValue;
+    ) {
+      maxSortKey = sortKeyValue;
+    }
 
     if (
       !isNaN(afterKeyValue) &&
@@ -199,13 +213,17 @@ export async function mergeDynamoQueriesDocClient<
         maxAfterKey === null ||
         afterKeyValue > maxAfterKey
       )
-    ) maxAfterKey = afterKeyValue;
+    ) {
+      maxAfterKey = afterKeyValue;
+    }
   });
   combinedQueryResults.MinSortKey = minSortKey;
   combinedQueryResults.MaxSortKey = maxSortKey;
   combinedQueryResults.MaxAfterKey = maxAfterKey;
 
-  if (scanForward) combinedQueryResults.Items.reverse();
+  if (scanForward) {
+    combinedQueryResults.Items.reverse();
+  }
 
   return combinedQueryResults;
 }
@@ -293,14 +311,18 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
     if (
       !(authUserCookie in cookies) ||
       !(authTokenCookie in cookies)
-    ) return response;
+    ) {
+      return response;
+    }
 
     // Use JWT to validate the user (first pass)
     const jwtSecret = await secretManager.getSecretValue({
       SecretId: jwtSecretArn,
     }).promise()
       .then(data => data.SecretString);
-    if (typeof jwtSecret === 'undefined') throw new Error('Unable to get JWT secret');
+    if (typeof jwtSecret === 'undefined') {
+      throw new Error('Unable to get JWT secret');
+    }
     const userPayload = verify(
       cookies[authTokenCookie],
       jwtSecret
@@ -351,7 +373,9 @@ export function parseJsonBody<T extends object>(
 
     const parsed = JSON.parse(body);
 
-    if (validator) return validateObject<T>(parsed, validator);
+    if (validator) {
+      return validateObject<T>(parsed, validator);
+    }
 
     return [
       parsed as T,

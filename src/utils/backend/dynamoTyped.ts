@@ -1,9 +1,8 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 
 import {
-  TypedDeleteItemInput, TypedDeleteItemOutput,
-  TypedGetInput,
-  TypedGetOutput, TypedPutItemInput, TypedPutItemOutput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput,
+  TypedDeleteItemInput, TypedDeleteItemOutput, TypedGetInput, TypedGetOutput, TypedPutItemInput,
+  TypedPutItemOutput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput,
   TypedUpdateInput, TypedUpdateOutput
 } from '@/types/backend/dynamo';
 

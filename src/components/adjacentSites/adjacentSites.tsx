@@ -37,11 +37,17 @@ const makeSiteStringFn = (keysAndNames: {
   const flags: string[] = [];
   (Object.keys(keysAndNames) as (keyof typeof keysAndNames)[]).forEach(key => {
     const siteData = site[key];
-    if (typeof siteData === 'undefined') return;
+    if (typeof siteData === 'undefined') {
+      return;
+    }
     let flagStr = keysAndNames[key] as string;
     const numTrue = Object.keys(siteData).filter(seen => siteData[seen]).length;
-    if (numTrue !== Object.keys(siteData).length) flagStr += '?';
-    if (numTrue > 0) flags.push(flagStr);
+    if (numTrue !== Object.keys(siteData).length) {
+      flagStr += '?';
+    }
+    if (numTrue > 0) {
+      flags.push(flagStr);
+    }
   });
   return flags.join(', ');
 };
@@ -67,15 +73,27 @@ function SiteMapMarker({
   site: FullSiteObject;
   minUpdateTime: number;
 }>) {
-  if (typeof site.SiteLat === 'undefined' || typeof site.SiteLon === 'undefined') return <></>;
+  if (typeof site.SiteLat === 'undefined' || typeof site.SiteLon === 'undefined') {
+    return <></>;
+  }
 
-  const siteUpdateTime = Math.max.apply(null, Object.keys(site.UpdateTime || {}).map(key => (site.UpdateTime?.[key] || 0) * 1000));
+  const siteUpdateTime = Math.max.apply(
+    null,
+    Object.keys(site.UpdateTime || {})
+      .map(key => (site.UpdateTime?.[key] || 0) * 1000)
+  );
   const markerOpacity = Date.now() - siteUpdateTime >= fadeSiteTime ? 0.5 : 1;
-  const siteFailed = Object.keys(site.SiteFailed || {}).filter(key => site.SiteFailed?.[key]).length > 0;
-  const seenBy = Object.keys(site.UpdateTime || {}).filter(key => (site.UpdateTime?.[key] || 0) >= minUpdateTime)
+  const siteFailed = Object.keys(site.SiteFailed || {})
+    .filter(key => site.SiteFailed?.[key]).length > 0;
+  const seenBy = Object.keys(site.UpdateTime || {})
+    .filter(key => (site.UpdateTime?.[key] || 0) >= minUpdateTime)
     .sort()
     .join(', ');
-  const updateTime = new Date(Math.max.apply(null, Object.keys(site.UpdateTime || {}).map(key => (site.UpdateTime?.[key] || 0) * 1000)))
+  const updateTime = new Date(Math.max.apply(
+    null,
+    Object.keys(site.UpdateTime || {})
+      .map(key => (site.UpdateTime?.[key] || 0) * 1000)
+  ))
     .toLocaleTimeString('en-US', localeTimeOptions);
 
   return <>
@@ -129,7 +147,9 @@ export default function AdjacentSites() {
     setIsLoading,
   ] = useState(false);
   const updateSites = useCallback(async () => {
-    if (isLoading) return;
+    if (isLoading) {
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -145,9 +165,11 @@ export default function AdjacentSites() {
         code !== 200 ||
         siteData === null ||
         'message' in siteData
-      ) throw {
-        code, siteData,
-      };
+      ) {
+        throw {
+          code, siteData,
+        };
+      }
 
       setSites(siteData.sites);
     } catch (e) {
@@ -235,7 +257,11 @@ export default function AdjacentSites() {
             .sort()
             .join(', ')}</td>
           <td className='text-center'>{
-            new Date(Math.max.apply(null, Object.keys(site.UpdateTime || {}).map(key => (site.UpdateTime?.[key] || 0) * 1000)))
+            new Date(Math.max.apply(
+              null,
+              Object.keys(site.UpdateTime || {})
+                .map(key => (site.UpdateTime?.[key] || 0) * 1000)
+            ))
               .toLocaleTimeString('en-US', localeTimeOptions)
           }</td>
         </tr>)

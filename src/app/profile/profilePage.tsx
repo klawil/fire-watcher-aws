@@ -96,7 +96,9 @@ export default function ProfilePage() {
       !hasChanges ||
       user === null ||
       !user.isUser
-    ) return;
+    ) {
+      return;
+    }
     setIsSaving(true);
 
     const apiParams: UpdateUserApi['params'] = {
@@ -120,9 +122,11 @@ export default function ProfilePage() {
         code !== 200 ||
         apiResponse === null ||
         'message' in apiResponse
-      ) throw {
-        code, apiResponse,
-      };
+      ) {
+        throw {
+          code, apiResponse,
+        };
+      }
 
       await reCheckUser();
       setUserEditInfo({});

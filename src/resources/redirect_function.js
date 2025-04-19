@@ -33,7 +33,9 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   if (
     request.uri.includes('/api/infra') ||
     request.uri.includes('/api/events')
-  ) return request;
+  ) {
+    return request;
+  }
 
   // Redirect fire.klawil.net and www.cofrn.org
   if (

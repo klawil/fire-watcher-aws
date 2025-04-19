@@ -13,7 +13,8 @@ import UserDepartmentRow from '../userDepartmentRow/userDepartmentRow';
 import styles from './userEdit.module.css';
 
 import {
-  CreateUserApi, FrontendUserObject, PagingTalkgroup, UpdateUserApi, pagingTalkgroups, validDepartments
+  CreateUserApi, FrontendUserObject, PagingTalkgroup, UpdateUserApi, pagingTalkgroups,
+  validDepartments
 } from '@/types/api/users';
 import {
   pagingTalkgroupConfig
@@ -201,7 +202,9 @@ export default function UserEdit({
     setErrorFields,
   ] = useState<string[]>([]);
   async function createUserApi(updates: CreateUserApi['body']): ReturnType<typeof typeFetch<CreateUserApi>> {
-    if (user !== null) throw new Error('Tried to create existing user');
+    if (user !== null) {
+      throw new Error('Tried to create existing user');
+    }
 
     const [
       code,
@@ -218,7 +221,9 @@ export default function UserEdit({
     ];
   }
   async function saveUserApi(updates: UpdateUserApi['body']): ReturnType<typeof typeFetch<UpdateUserApi>> {
-    if (user === null) throw new Error('Tried to update new user');
+    if (user === null) {
+      throw new Error('Tried to update new user');
+    }
 
     const [
       code,
@@ -239,7 +244,9 @@ export default function UserEdit({
   }
 
   async function saveUser() {
-    if (!hasChanges) return;
+    if (!hasChanges) {
+      return;
+    }
     const phone = user === null ? 'phone' in updateState && updateState.phone : user.phone;
     if (!phone) {
       setErrorFields([ 'phone', ]);
@@ -303,7 +310,9 @@ export default function UserEdit({
     'row',
     'px-4',
   ];
-  if (user === null) classList.push('offset-xl-3');
+  if (user === null) {
+    classList.push('offset-xl-3');
+  }
 
   let checkedTalkgroups: PagingTalkgroup[] = [];
   if (typeof updateState.talkgroups !== 'undefined') {

@@ -25,7 +25,9 @@ export default function WeatherPage() {
     setIsLoading,
   ] = useState(false);
   useEffect(() => {
-    if (typeof weatherData !== 'undefined' || isLoading) return;
+    if (typeof weatherData !== 'undefined' || isLoading) {
+      return;
+    }
 
     setIsLoading(true);
     (async () => {
@@ -60,10 +62,14 @@ export default function WeatherPage() {
     []
   );
   useEffect(() => {
-    if (imgNode === null) return;
+    if (imgNode === null) {
+      return;
+    }
 
     const setSize = () => {
-      if (imgNode === null) return;
+      if (imgNode === null) {
+        return;
+      }
 
       const newWidth = imgNode.clientWidth;
       const ratio = 555 / 815;

@@ -4,7 +4,8 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('dynamodb');
 
-type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue | DynamoDbValues[];
+type DynamoDbValues = boolean | number | string | undefined | aws.DynamoDB.AttributeValue
+  | DynamoDbValues[];
 
 /**
  * @deprecated The method should not be used

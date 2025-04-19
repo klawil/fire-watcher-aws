@@ -110,7 +110,9 @@ export function useChartData(
     setIsLoading,
   ] = useState(false);
   useEffect(() => {
-    if (typeof data !== 'undefined' || isLoading || !shouldLoad) return;
+    if (typeof data !== 'undefined' || isLoading || !shouldLoad) {
+      return;
+    }
 
     (async () => {
       setIsLoading(true);
@@ -145,7 +147,9 @@ export function useChartData(
           }));
 
         const formatter = periodFormatters.reduce((f, val) => {
-          if (newData.period <= val.period) return val.formatter;
+          if (newData.period <= val.period) {
+            return val.formatter;
+          }
 
           return f;
         }, periodFormatters[periodFormatters.length - 1].formatter);

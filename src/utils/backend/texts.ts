@@ -213,7 +213,9 @@ export async function sendMessage(
 
   // Get the twilio configuration
   const twilioConf = await getTwilioSecret();
-  if (twilioConf === null) throw new Error('Unable to get twilio secret');
+  if (twilioConf === null) {
+    throw new Error('Unable to get twilio secret');
+  }
 
   const fromNumber = numberConfig.number;
   const accountSid = twilioConf[`accountSid${numberConfig.account || ''}`];
@@ -249,7 +251,9 @@ export async function sendAlertMessage(
   const messageId = Date.now();
   const recipients = (await getUserRecipients('all', null))
     .filter(user => user[`get${alertType}Alerts`]);
-  if (recipients.length === 0) throw new Error(`No recipients found for ${alertType} alert`);
+  if (recipients.length === 0) {
+    throw new Error(`No recipients found for ${alertType} alert`);
+  }
 
   await Promise.all([
     saveMessageData('alert', messageId, recipients.length, body),

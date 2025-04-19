@@ -25,16 +25,20 @@ const GET: LambdaApiFunction<GetAllHeartbeatsApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Get the items to return
   const heartbeats = await typedScan<Heartbeat>({

@@ -31,7 +31,9 @@ interface TextObject extends FrontendTextObject {
 }
 
 function makePercentString(numerator: number, denominator: number) {
-  if (denominator === 0) return '';
+  if (denominator === 0) {
+    return '';
+  }
   const percentStr = `${Math.round(numerator * 100 / denominator)}%`;
 
   if (numerator !== denominator) {
@@ -42,7 +44,9 @@ function makePercentString(numerator: number, denominator: number) {
 }
 
 function getPercentile(values: number[], percentile: number) {
-  if (values.length === 0) return '';
+  if (values.length === 0) {
+    return '';
+  }
 
   values = values.sort((a, b) => a > b ? 1 : -1);
   const index = Math.ceil(values.length * percentile / 100) - 1;
@@ -73,13 +77,17 @@ async function getTexts(
       code !== 200 ||
       apiResult === null ||
       'message' in apiResult
-    ) throw {
-      code, apiResult,
-    };
+    ) {
+      throw {
+        code, apiResult,
+      };
+    }
 
     return (apiResult.texts as TextObject[])
       .map(text => {
-        if (text.isPage) text.pageTime = fNameToDate(text.body || '').getTime();
+        if (text.isPage) {
+          text.pageTime = fNameToDate(text.body || '').getTime();
+        }
 
         const baselineTime = text.isPage ? text.pageTime || text.datetime : text.datetime;
 
@@ -146,7 +154,9 @@ function TextsTable({
       (texts.length > 0 && loadMoreRefInView === false) ||
       isLoading ||
       Date.now() - lastLoad <= 2000
-    ) return;
+    ) {
+      return;
+    }
 
     setIsLoading(true);
     setScrollIdx(texts.length - 1);
@@ -216,7 +226,11 @@ function TextsTable({
                 : {})}
           >
             <td>{dateTimeToTimeStr(text.datetime)}</td>
-            <td>{text.body?.split(/\n/g).map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}</td>
+            <td>
+              {text.body
+                ?.split(/\n/g)
+                .map((part, i) => <React.Fragment key={i}>{part}<br /></React.Fragment>)}
+            </td>
             {!isPage && <td>{(typeof text.mediaUrls === 'string' ? text.mediaUrls.split(',') : text.mediaUrls || [])
               .filter(s => s !== '')
               .map((v, i) => <a key={i} href={v}>{i + 1}</a>)}</td>}
@@ -303,14 +317,16 @@ export default function TextsPage() {
   return <>
     {/* @TODO - Implement the form to send an announcement from the website */}
 
-    {tablesToLoad.filter(table => !table.requireDistrictAdmin || user.isDistrictAdmin).map((table, i) =>
-      <TextsTable
-        key={i}
-        title={table.title}
-        query={table.query}
-        isPage={!!table.isPage}
-        shouldLoad={i <= tablesLoadedCount + maxParallelTableLoads}
-        setTableLoaded={setTablesLoadedCount}
-      />)}
+    {tablesToLoad
+      .filter(table => !table.requireDistrictAdmin || user.isDistrictAdmin)
+      .map((table, i) =>
+        <TextsTable
+          key={i}
+          title={table.title}
+          query={table.query}
+          isPage={!!table.isPage}
+          shouldLoad={i <= tablesLoadedCount + maxParallelTableLoads}
+          setTableLoaded={setTablesLoadedCount}
+        />)}
   </>;
 }

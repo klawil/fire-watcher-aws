@@ -728,20 +728,34 @@ export class FireWatcherAwsStack extends Stack {
         logRetention: logs.RetentionDays.ONE_MONTH,
       });
 
-      if (config.read) config.read.forEach(table => table.grantReadData(apiHandler));
-      if (config.readWrite) config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
-      if (config.bucket) config.bucket.grantRead(apiHandler);
-      if (config.queue) config.queue.grantSendMessages(apiHandler);
-      if (config.firehose) apiHandler.addToRolePolicy(new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        resources: [ config.firehose.attrArn, ],
-        actions: [
-          'firehose:PutRecord',
-          'firehose:PutRecordBatch',
-        ],
-      }));
-      if (config.secret) config.secret.grantRead(apiHandler);
-      if (config.secret2) config.secret2.grantRead(apiHandler);
+      if (config.read) {
+        config.read.forEach(table => table.grantReadData(apiHandler));
+      }
+      if (config.readWrite) {
+        config.readWrite.forEach(table => table.grantReadWriteData(apiHandler));
+      }
+      if (config.bucket) {
+        config.bucket.grantRead(apiHandler);
+      }
+      if (config.queue) {
+        config.queue.grantSendMessages(apiHandler);
+      }
+      if (config.firehose) {
+        apiHandler.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          resources: [ config.firehose.attrArn, ],
+          actions: [
+            'firehose:PutRecord',
+            'firehose:PutRecordBatch',
+          ],
+        }));
+      }
+      if (config.secret) {
+        config.secret.grantRead(apiHandler);
+      }
+      if (config.secret2) {
+        config.secret2.grantRead(apiHandler);
+      }
 
       const apiIntegration = new apigateway.LambdaIntegration(apiHandler, {
         requestTemplates: {
@@ -1049,7 +1063,9 @@ export class FireWatcherAwsStack extends Stack {
 
         // Add the table permissions
         config.tables?.forEach(table => {
-          if (!resourceHandler) return;
+          if (!resourceHandler) {
+            return;
+          }
           if (table.readOnly) {
             tableMap[table.table].grantReadData(resourceHandler);
           } else {
@@ -1059,7 +1075,9 @@ export class FireWatcherAwsStack extends Stack {
 
         // Add the bucket permissions
         config.buckets?.forEach(bucket => {
-          if (!resourceHandler) return;
+          if (!resourceHandler) {
+            return;
+          }
           if (bucket.readOnly) {
             bucketMap[bucket.bucket].grantRead(resourceHandler);
           } else {
@@ -1069,7 +1087,8 @@ export class FireWatcherAwsStack extends Stack {
 
         // Grant access to the SQS queue if needed
         if (config.queues) {
-          config.queues.forEach(q => q.grantSendMessages(resourceHandler as lambdanodejs.NodejsFunction));
+          config.queues
+            .forEach(q => q.grantSendMessages(resourceHandler as lambdanodejs.NodejsFunction));
         }
 
         // Grant access to the Twilio secret if needed
@@ -1089,7 +1108,9 @@ export class FireWatcherAwsStack extends Stack {
 
       // Add the resource
       const apiResource = baseResource.addResource(config.pathPart);
-      if ('fileName' in config && resourceIntegration) config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
+      if ('fileName' in config && resourceIntegration) {
+        config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
+      }
       if ('fileName' in config && resourceHandler) {
         const envName = apiResource.path
           .replace(/[\{\}]/g, '')
@@ -1119,7 +1140,9 @@ export class FireWatcherAwsStack extends Stack {
     s3ReadPolicy.addActions('s3:List*');
     s3ReadPolicy.addResources(bucket.bucketArn);
     s3ReadPolicy.addResources(`${bucket.bucketArn}/*`);
-    s3ReadPolicy.addCanonicalUserPrincipal(s3AccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId);
+    s3ReadPolicy.addCanonicalUserPrincipal(
+      s3AccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId
+    );
 
     // Add the new policy to the bucket
     if (!bucket.policy) {
@@ -1362,7 +1385,9 @@ export class FireWatcherAwsStack extends Stack {
     alarms.forEach(alarmConfig => {
       const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm);
       alarm.addAlarmAction(alarmAction);
-      if (alarmConfig.okayAction !== false) alarm.addOkAction(alarmAction);
+      if (alarmConfig.okayAction !== false) {
+        alarm.addOkAction(alarmAction);
+      }
 
       Tags.of(alarm).add('cofrn-alarm-type', alarmConfig.tag);
     });

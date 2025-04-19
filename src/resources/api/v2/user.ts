@@ -7,8 +7,8 @@ import {
   api200Body, api401Body, api403Body, api404Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  DeleteUserApi, FullUserObject, GetUserApi, UpdateUserApi,
-  adminUserKeys, districtAdminUserKeys, updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
+  DeleteUserApi, FullUserObject, GetUserApi, UpdateUserApi, adminUserKeys, districtAdminUserKeys,
+  updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
 } from '@/types/api/users';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
 import {
@@ -28,11 +28,13 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
   const [
     params,
     paramsErrors,
@@ -43,11 +45,13 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
   if (
     params === null ||
     paramsErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(paramsErrors),
-    userHeaders,
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+      userHeaders,
+    ];
+  }
 
   if (typeof params.id === 'string') {
     return [
@@ -71,11 +75,13 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
       phone: params.id,
     },
   });
-  if (!userInfo.Item) return [
-    404,
-    api404Body,
-    userHeaders,
-  ];
+  if (!userInfo.Item) {
+    return [
+      404,
+      api404Body,
+      userHeaders,
+    ];
+  }
 
   return [
     200,
@@ -117,22 +123,26 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
   const updateType = typeof params.id === 'string'
     ? 'SELF'
     : 'OTHER';
   if (
     !userPerms.isAdmin &&
     updateType === 'OTHER'
-  ) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  ) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Validate the user exists and can be edited by the authenticated user
   const phoneToUpdate = updateType === 'SELF'
@@ -246,11 +256,13 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
   if (!userPerms.isAdmin) {
     return [
       403,

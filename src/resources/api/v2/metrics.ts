@@ -26,12 +26,18 @@ function buildMetricKey(metric: MetricToFetch): string {
       break;
     case 'count':
       key += `${metric.namespace}_${metric.metricName}`;
-      if (typeof metric.source !== 'undefined') key += `_${metric.source}`;
-      if (typeof metric.action !== 'undefined') key += `_${metric.action}`;
+      if (typeof metric.source !== 'undefined') {
+        key += `_${metric.source}`;
+      }
+      if (typeof metric.action !== 'undefined') {
+        key += `_${metric.action}`;
+      }
       break;
     case 'timing':
       key += `${metric.namespace}_${metric.metricName}`;
-      if (typeof metric.tower !== 'undefined') key += `_${metric.tower}`;
+      if (typeof metric.tower !== 'undefined') {
+        key += `_${metric.tower}`;
+      }
       key += `_${metric.stat}`;
       break;
   }
@@ -52,7 +58,9 @@ const lambdaNames: {
     if (
       typeof value === 'undefined' ||
       pieces === null
-    ) return agg;
+    ) {
+      return agg;
+    }
 
     agg[key] = {
       name: value === 'self'
@@ -110,10 +118,12 @@ function buildSpecialLambdaMetric(
   metric: LambdaMetric,
   body: Required<Pick<GetMetricsApi['body'], 'period'>>
 ): [ MetricDataQueries, string[] ] {
-  if (!(metric.fn in specialLambdaNames)) return [
-    [],
-    [],
-  ];
+  if (!(metric.fn in specialLambdaNames)) {
+    return [
+      [],
+      [],
+    ];
+  }
 
   const metricsToUse: MetricDataQueries = [];
   const keysToUse: string[] = [];
@@ -121,11 +131,17 @@ function buildSpecialLambdaMetric(
   const fnName = metric.fn as keyof typeof specialLambdaNames;
   Object.keys(lambdaNames)
     .filter(name => {
-      if (fnName === 'all') return true;
+      if (fnName === 'all') {
+        return true;
+      }
 
-      if (fnName === 'all_A' && name.startsWith('A_')) return true;
+      if (fnName === 'all_A' && name.startsWith('A_')) {
+        return true;
+      }
 
-      if (fnName === 'all_I' && name.startsWith('I_')) return true;
+      if (fnName === 'all_I' && name.startsWith('I_')) {
+        return true;
+      }
 
       return false;
     })
@@ -182,14 +198,18 @@ const periodToTime: {
 
 function getPeriodFromTimerange(timerange: number) {
   return periodToTime.reduce((period, item) => {
-    if (timerange <= item.timerange) return item.period;
+    if (timerange <= item.timerange) {
+      return item.period;
+    }
 
     return period;
   }, periodToTime[0].period);
 }
 function getTimerangeFromPeriod(period: number) {
   return periodToTime.reduce((timerange, item) => {
-    if (period <= item.period) return item.timerange;
+    if (period <= item.period) {
+      return item.timerange;
+    }
 
     return timerange;
   }, periodToTime[0].timerange);
@@ -212,10 +232,12 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
   if (
     body === null ||
     bodyErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(bodyErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(bodyErrors),
+    ];
+  }
 
   // Validate the individual metrics
   const allErrors: string[] = [];
@@ -269,14 +291,18 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
       body.metrics[i] = metricParsed;
     }
   });
-  if (allErrors.length > 0) return [
-    400,
-    generateApi400Body(allErrors),
-  ];
-  if (body.metrics.length === 0) return [
-    400,
-    generateApi400Body([ 'metrics', ]),
-  ];
+  if (allErrors.length > 0) {
+    return [
+      400,
+      generateApi400Body(allErrors),
+    ];
+  }
+  if (body.metrics.length === 0) {
+    return [
+      400,
+      generateApi400Body([ 'metrics', ]),
+    ];
+  }
 
   // Get the timezone information
   const nowDate = new Date();
@@ -308,7 +334,9 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     typeof body.endTime === 'undefined' &&
     typeof body.period === 'undefined'
   ) {
-    const nowHour = (Math[dir]((Date.now() + timeZoneOffset) / ONE_HOUR) * ONE_HOUR) - timeZoneOffset;
+    const nowHour = (Math[dir](
+      (Date.now() + timeZoneOffset) / ONE_HOUR
+    ) * ONE_HOUR) - timeZoneOffset;
     body.startTime = nowHour - ONE_DAY;
     body.endTime = nowHour;
     body.period = 3600;
@@ -359,10 +387,12 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     typeof body.period === 'undefined' ||
     typeof body.startTime === 'undefined' ||
     typeof body.endTime === 'undefined'
-  ) return [
-    400,
-    generateApi400Body([ 'times', ]),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body([ 'times', ]),
+    ];
+  }
   const fullBody: Required<Pick<GetMetricsApi['body'], 'startTime' | 'endTime' | 'period'>> = {
     period: body.period,
     startTime: body.startTime,
@@ -410,7 +440,9 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
           ] = buildLambdaMetric(metric, fullBody);
         }
         metrics.forEach((m, i) => {
-          if (includedMetrics.includes(keys[i])) return;
+          if (includedMetrics.includes(keys[i])) {
+            return;
+          }
 
           metricRequest.MetricDataQueries.push(m);
           includedMetrics.push(keys[i]);
@@ -419,7 +451,9 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
       }
       case 'timing': {
         const key = buildMetricKey(metric);
-        if (includedMetrics.includes(key)) return;
+        if (includedMetrics.includes(key)) {
+          return;
+        }
         metricRequest.MetricDataQueries.push({
           Label: metric.label,
           Id: key,
@@ -443,7 +477,9 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
       }
       case 'count': {
         const key = buildMetricKey(metric);
-        if (includedMetrics.includes(key)) return;
+        if (includedMetrics.includes(key)) {
+          return;
+        }
         metricRequest.MetricDataQueries.push({
           Label: metric.label,
           Id: key,
@@ -456,7 +492,9 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
                 'source',
                 'ApiName',
               ] as const).map(v => {
-                if (typeof metric[v] === 'undefined') return null;
+                if (typeof metric[v] === 'undefined') {
+                  return null;
+                }
 
                 return {
                   Name: v,
@@ -481,10 +519,12 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     labels: {},
     data: [],
   };
-  if (metricRequest.MetricDataQueries.length === 0) return [
-    200,
-    response,
-  ];
+  if (metricRequest.MetricDataQueries.length === 0) {
+    return [
+      200,
+      response,
+    ];
+  }
 
   const data = await cloudwatch.getMetricData(metricRequest).promise();
   if (typeof data.MetricDataResults === 'undefined') {

@@ -69,7 +69,9 @@ async function processGaccUrl(url: string): Promise<number[]> {
           ];
         }
         agg[1]++;
-        if (allowedCounties.includes(feature.properties.POOCounty)) agg[0]++;
+        if (allowedCounties.includes(feature.properties.POOCounty)) {
+          agg[0]++;
+        }
         return agg;
       }, []);
   } catch (e) {
@@ -135,7 +137,9 @@ async function getReadinessInfo(): Promise<WeatherResultJson['readiness']> {
     const readinessInfo: { [key: string]: number } = {};
     Array.from(dom.querySelectorAll('td center strong'))
       .reduce((agg: string | null, item) => {
-        if (agg === null) return item.innerHTML;
+        if (agg === null) {
+          return item.innerHTML;
+        }
 
         readinessInfo[agg] = Number(item.innerHTML.split(' ')[1]);
 
@@ -248,7 +252,9 @@ async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
       .filter(line => line.indexOf('var _pageData = ') !== -1)[0]
       .match(/_pageData = (".*?");<\/script>/);
 
-    if (!json) throw new Error('Cannot find page data');
+    if (!json) {
+      throw new Error('Cannot find page data');
+    }
 
     const _pageData = JSON.parse(eval(json[1]));
 

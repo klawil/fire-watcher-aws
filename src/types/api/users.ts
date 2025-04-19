@@ -81,7 +81,9 @@ interface MinimumUserState {
   isAdmin: boolean;
   isDistrictAdmin: boolean;
 }
-export interface FrontendUserState extends Partial<Omit<FrontendUserObject, keyof MinimumUserState>>, MinimumUserState {}
+export interface FrontendUserState extends Partial<
+  Omit<FrontendUserObject, keyof MinimumUserState>
+>, MinimumUserState {}
 
 declare global {
   interface ReadonlyArray<T> {

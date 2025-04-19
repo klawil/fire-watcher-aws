@@ -28,10 +28,12 @@ const GET: LambdaApiFunction<LogoutApi> = async function (event) {
   if (
     query === null ||
     queryErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(queryErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(queryErrors),
+    ];
+  }
 
   // Default to returning to the homepage
   if (typeof query.redirectTo === 'undefined') {

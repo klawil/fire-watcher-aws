@@ -29,10 +29,12 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   if (
     query === null ||
     queryErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(queryErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(queryErrors),
+    ];
+  }
 
   const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
     AWS.DynamoDB.DocumentClient.QueryInput,

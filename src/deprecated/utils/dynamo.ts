@@ -35,14 +35,20 @@ export async function mergeDynamoQueries(
 
   return await Promise.all(queryConfigs.map(queryConfig => dynamodb.query(queryConfig).promise()))
     .then(data => data.reduce((agg: DynamoListOutput, result) => {
-      if (typeof result.Count !== 'undefined') agg.Count += result.Count;
+      if (typeof result.Count !== 'undefined') {
+        agg.Count += result.Count;
+      }
 
-      if (typeof result.ScannedCount !== 'undefined') agg.ScannedCount += result.ScannedCount;
+      if (typeof result.ScannedCount !== 'undefined') {
+        agg.ScannedCount += result.ScannedCount;
+      }
 
-      if (typeof result.Items !== 'undefined') agg.Items = [
-        ...agg.Items,
-        ...result.Items,
-      ];
+      if (typeof result.Items !== 'undefined') {
+        agg.Items = [
+          ...agg.Items,
+          ...result.Items,
+        ];
+      }
 
       agg.LastEvaluatedKeys.push(result.LastEvaluatedKey || null);
 
@@ -61,12 +67,16 @@ export async function mergeDynamoQueries(
         if (
           typeof b[sortKey] === 'undefined' ||
           typeof b[sortKey].N === 'undefined'
-        ) return sortDirGreater;
+        ) {
+          return sortDirGreater;
+        }
 
         if (
           typeof a[sortKey] === 'undefined' ||
           typeof a[sortKey].N === 'undefined'
-        ) return sortDirLesser;
+        ) {
+          return sortDirLesser;
+        }
 
         return Number(a[sortKey].N) > Number(b[sortKey].N)
           ? sortDirGreater
@@ -91,7 +101,9 @@ export async function mergeDynamoQueries(
             minSortKey === null ||
             sortKeyValue < minSortKey
           )
-        ) minSortKey = sortKeyValue;
+        ) {
+          minSortKey = sortKeyValue;
+        }
 
         if (
           !isNaN(sortKeyValue) &&
@@ -99,7 +111,9 @@ export async function mergeDynamoQueries(
             maxSortKey === null ||
             sortKeyValue > maxSortKey
           )
-        ) maxSortKey = sortKeyValue;
+        ) {
+          maxSortKey = sortKeyValue;
+        }
 
         if (
           !isNaN(afterKeyValue) &&
@@ -107,14 +121,18 @@ export async function mergeDynamoQueries(
             maxAfterKey === null ||
             afterKeyValue > maxAfterKey
           )
-        ) maxAfterKey = afterKeyValue;
+        ) {
+          maxAfterKey = afterKeyValue;
+        }
       });
 
       data.MinSortKey = minSortKey;
       data.MaxSortKey = maxSortKey;
       data.MaxAfterKey = maxAfterKey;
 
-      if (scanForward) data.Items.reverse();
+      if (scanForward) {
+        data.Items.reverse();
+      }
 
       return data;
     });

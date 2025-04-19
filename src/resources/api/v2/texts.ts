@@ -37,21 +37,25 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   if (
     query === null ||
     queryErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(queryErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(queryErrors),
+    ];
+  }
 
   // Make sure either department or type is passed
   if (
     typeof query.type === typeof query.department
-  ) return [
-    400,
-    generateApi400Body([
-      'type',
-      'department',
-    ]),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body([
+        'type',
+        'department',
+      ]),
+    ];
+  }
 
   // Authorize the user
   const [
@@ -59,16 +63,20 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
     userPerms,
     userHeaders,
   ] = await getCurrentUser(event);
-  if (user === null) return [
-    401,
-    api401Body,
-    userHeaders,
-  ];
-  if (!userPerms.isAdmin) return [
-    403,
-    api403Body,
-    userHeaders,
-  ];
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+      userHeaders,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+      userHeaders,
+    ];
+  }
 
   // Build the query input
   let queryInput: (TypedQueryInput<FullTextObject> & Required<Pick<
@@ -104,7 +112,9 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
       Limit: 100,
     };
   }
-  if (queryInput === null) throw new Error('Not enough info to make query');
+  if (queryInput === null) {
+    throw new Error('Not enough info to make query');
+  }
 
   // Add the timing component
   if (typeof query.before !== 'undefined') {
@@ -120,22 +130,32 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   const data = (result.Items || [])
     .filter(text => {
       // Don't show texts that include auth codes
-      if (text.type === 'account') return false;
+      if (text.type === 'account') {
+        return false;
+      }
 
       // Don't show texts that aren't sent to anyone
       if (
         text.recipients === 0 &&
         query.all !== 'y'
-      ) return false;
+      ) {
+        return false;
+      }
 
       // Show all remaining texts to the district admin
-      if (user.isDistrictAdmin) return true;
+      if (user.isDistrictAdmin) {
+        return true;
+      }
 
       // Show certain types of texts to any admin
-      if (anyAdminTextTypes.includes(text.type)) return true;
+      if (anyAdminTextTypes.includes(text.type)) {
+        return true;
+      }
 
       // Don't show texts that aren't associated with a specific department
-      if (typeof text.department === 'undefined') return false;
+      if (typeof text.department === 'undefined') {
+        return false;
+      }
 
       // Don't show texts that are affiliated with a department the user is not a member of
       return userPerms.adminDepartments.includes(text.department);

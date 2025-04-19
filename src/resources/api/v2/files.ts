@@ -37,10 +37,12 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
   if (
     query === null ||
     queryErrors.length > 0
-  ) return [
-    400,
-    generateApi400Body(queryErrors),
-  ];
+  ) {
+    return [
+      400,
+      generateApi400Body(queryErrors),
+    ];
+  }
 
   const baseQueryConfig: TypedQueryInput<FullFileObject> = {
     ScanIndexForward: false,
@@ -109,8 +111,11 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
     baseQueryConfig.KeyConditionExpression += ' AND #added > :added';
 
     const newIndex = afterAddedIndexNames[baseQueryConfig.IndexName || ''];
-    if (typeof newIndex === 'undefined') delete baseQueryConfig.IndexName;
-    else baseQueryConfig.IndexName = newIndex;
+    if (typeof newIndex === 'undefined') {
+      delete baseQueryConfig.IndexName;
+    } else {
+      baseQueryConfig.IndexName = newIndex;
+    }
 
     queryConfigs.forEach(queryConfig => {
       queryConfig.ExpressionAttributeValues[':added'] = query.afterAdded;

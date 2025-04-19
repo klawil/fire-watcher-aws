@@ -27,6 +27,10 @@ const eslintConfig = [
         },
       ],
       'prefer-rest-params': 'off',
+      'curly': [
+        'error',
+        'all',
+      ],
     },
   }),
   {
@@ -125,19 +129,18 @@ const eslintConfig = [
       ],
       '@stylistic/key-spacing': 'error',
       '@stylistic/keyword-spacing': 'error',
-      // '@stylistic/line-comment-position': 'error',
       '@stylistic/linebreak-style': 'error',
       '@stylistic/lines-around-comment': 'error',
-
-      /*
-       * '@stylistic/max-len': [ 'error', {
-       *   code: 100,
-       *   tabWidth: 2,
-       *   ignoreUrls: true,
-       *   ignoreStrings: true,
-       *   ignoreTemplateLiterals: true,
-       * } ],
-       */
+      '@stylistic/max-len': [
+        'error',
+        {
+          code: 100,
+          tabWidth: 2,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+        },
+      ],
       '@stylistic/max-statements-per-line': 'error',
       '@stylistic/multiline-ternary': [
         'error',
@@ -162,7 +165,6 @@ const eslintConfig = [
       '@stylistic/no-tabs': 'error',
       '@stylistic/no-trailing-spaces': 'error',
       '@stylistic/no-whitespace-before-property': 'error',
-      '@stylistic/nonblock-statement-body-position': 'error',
       '@stylistic/object-curly-newline': [
         'error',
         {

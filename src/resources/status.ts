@@ -8,7 +8,8 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('status');
 
-const maxSpacing = 5 * 60 * 1000; // The amount of time to wait for a heartbeat before failing over (in ms)
+// The amount of time to wait for a heartbeat before failing over (in ms)
+const maxSpacing = 5 * 60 * 1000;
 
 export async function main() {
   logger.trace('main', ...arguments);
@@ -20,8 +21,14 @@ export async function main() {
   const heartbeats = heartbeatsScan.Items || [];
 
   const now = Date.now();
-  const changedHeartbeats = heartbeats.filter(hb => (hb.IsFailed && now - (hb.LastHeartbeat || 0) <= maxSpacing) ||
-    (!hb.IsFailed && now - (hb.LastHeartbeat || 0) >= maxSpacing));
+  const changedHeartbeats = heartbeats
+    .filter(hb => (
+      hb.IsFailed &&
+      now - (hb.LastHeartbeat || 0) <= maxSpacing
+    ) || (
+      !hb.IsFailed &&
+      now - (hb.LastHeartbeat || 0) >= maxSpacing
+    ));
 
   const updateDynamoPromises = Promise.all(changedHeartbeats.map(hb => {
     hb.IsFailed = !hb.IsFailed;

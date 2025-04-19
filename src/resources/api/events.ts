@@ -86,12 +86,14 @@ async function handleEvent(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 
   validateEventBody(body, 0, response);
 
-  if (body.radioId !== '-1' && response.success) await firehose.putRecord({
-    DeliveryStreamName: FIREHOSE_NAME,
-    Record: {
-      Data: JSON.stringify(body),
-    },
-  }).promise();
+  if (body.radioId !== '-1' && response.success) {
+    await firehose.putRecord({
+      DeliveryStreamName: FIREHOSE_NAME,
+      Record: {
+        Data: JSON.stringify(body),
+      },
+    }).promise();
+  }
 
   if (!response.success) {
     logger.error('handleEvent', '400', response);
