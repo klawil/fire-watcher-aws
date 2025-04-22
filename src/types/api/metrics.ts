@@ -158,16 +158,6 @@ export type AddMetricsApi = {
   }];
 };
 
-/**
- * Add one or more metrics
- * @summary Add Metrics
- * @tags Metrics
- * @body.contentType application/json
- */
-export type DeprecatedAddMetricsApi = Omit<AddMetricsApi, 'path'> & {
-  path: '/api/infra?action=metric';
-};
-
 export const getMetricsApiBodyValidator: Validator<GetMetricsApi['body']> = {
   metrics: {
     required: true,

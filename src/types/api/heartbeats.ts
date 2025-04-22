@@ -101,16 +101,6 @@ export type AddHeartbeatApi = {
   }];
 };
 
-/**
- * Add a heartbeat from a recorder
- * @summary Add Heartbeat
- * @tags Heartbeats
- * @body.contentType application/json
- */
-export type DeprecatedAddHeartbeatApi = Omit<AddHeartbeatApi, 'path'> & {
-  path: '/api/infra?action=heartbeat';
-};
-
 export const addHeartbeatBodyValidator: Validator<AddHeartbeatApi['body']> = {
   Server: {
     required: true,
