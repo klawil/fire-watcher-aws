@@ -986,11 +986,16 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'sites',
         fileName: 'sites',
-        methods: [ 'GET', ],
+        methods: [
+          'GET',
+          'POST',
+        ],
         authRequired: true,
         tables: [ {
           table: 'SITE',
+          readOnly: true,
         }, ],
+        queues: [ queue, ],
       },
       // heartbeats
       {

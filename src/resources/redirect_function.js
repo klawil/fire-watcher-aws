@@ -8,6 +8,7 @@ const targetDomain = 'cofrn.org';
 const infraActionRedirects = {
   heartbeat: '/api/v2/heartbeats',
   metric: '/api/v2/metrics/add',
+  site_status: '/api/v2/sites',
 };
 
 function getURLSearchParamsString(querystring) {
