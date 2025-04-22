@@ -95,7 +95,13 @@ export function useChartData(
   setChartLoaded: Dispatch<SetStateAction<number>>,
   returnNonData: boolean,
   convertValue: (a: number) => number = v => v
-) {
+): [
+  {
+    labels: string[];
+    datasets: ChartDataset<'line', number[]>[];
+  } | null | undefined,
+  () => void
+  ] {
   const [
     data,
     setData,
@@ -103,6 +109,7 @@ export function useChartData(
     labels: string[];
     datasets: ChartDataset<'line', number[]>[];
   } | null | undefined>(undefined);
+  const resetData = () => setData(undefined);
   const addAlert = useContext(AddAlertContext);
 
   const [
@@ -186,7 +193,10 @@ export function useChartData(
     returnNonData,
   ]);
 
-  return data;
+  return [
+    data,
+    resetData,
+  ];
 }
 
 export function usePageSize() {

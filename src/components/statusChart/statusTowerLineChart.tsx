@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { Line } from 'react-chartjs-2';
+import { BsArrowClockwise } from 'react-icons/bs';
 
 import { useChartData } from './common';
 
@@ -47,7 +48,10 @@ export default function StatusTowerLineChart({
     setShouldLoad(true);
   }
 
-  const data = useChartData(
+  const [
+    data,
+    resetData,
+  ] = useChartData(
     body,
     shouldLoad,
     setChartLoaded,
@@ -76,7 +80,10 @@ export default function StatusTowerLineChart({
   }
 
   return <>
-    <h3 className='text-center mt-5'>{title}</h3>
+    <h3 className='text-center mt-5'>{title} <BsArrowClockwise
+      style={{ cursor: 'pointer', }}
+      onClick={resetData}
+    /></h3>
     <Row><Col style={{ height: 'calc(80vh - 60px)', }}>
       {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%', }}><LoadingSpinner fullHeight={true} /></div>}
       {typeof data === 'undefined' && lazyLoad && shouldLoad && <LoadingSpinner fullHeight={true} />}
