@@ -6,20 +6,26 @@ type ExactValues<V, key> = key extends 'array'
 
 type PossibleTypes = 'string' | 'number' | 'boolean' | 'array' | 'null';
 
+type BaseTypeValidation<V, type> = {
+  regex?: RegExp;
+  exact?: ExactValues<V, type>;
+};
+export type ArrayTypeValidations<V> = BaseTypeValidation<V, 'array'> & {
+  items?: V extends Array<unknown> ? Validator<V[number]> : never;
+};
+
 type SpecificTypeValidations<V> = Pick<
-  {
-    [type in PossibleTypes]: {
-      regex?: RegExp;
-      exact?: ExactValues<V, type>;
-    };
-  },
+  ({
+    [type in Exclude<PossibleTypes, 'array' | 'object'>]: BaseTypeValidation<V, type>;
+  } & {
+    array: ArrayTypeValidations<V>;
+  }),
   {
     string: V extends string ? 'string' : never;
     number: V extends number ? 'number' : never;
     boolean: V extends boolean ? 'boolean' : never;
     array: V extends Array<unknown> ? 'array' : never;
     null: V extends null ? 'null' : never;
-    object: V extends object ? 'object' : never;
   }[PossibleTypes]
 > & {
   [key in PossibleTypes]?: {

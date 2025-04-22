@@ -5,6 +5,10 @@ const changeDomains = [
 
 const targetDomain = 'cofrn.org';
 
+const infraActionRedirects = {
+  heartbeat: '/api/v2/heartbeats',
+};
+
 function getURLSearchParamsString(querystring) {
   var str = [];
 
@@ -32,6 +36,18 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   // Redirect /api/events to the new API
   if (request.uri.includes('/api/events')) {
     request.uri = '/api/v2/events';
+    return request;
+  }
+
+  // Redirect the /api/infra to various places
+  if (
+    request.uri.includes('/api/infra') &&
+    typeof request.querystring !== 'undefined' &&
+    typeof request.querystring.action !== 'undefined' &&
+    typeof request.querystring.action.value !== 'undefined' &&
+    typeof infraActionRedirects[request.querystring.action.value] !== 'undefined'
+  ) {
+    request.uri = infraActionRedirects[request.querystring.action.value];
     return request;
   }
 

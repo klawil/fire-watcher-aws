@@ -7,13 +7,13 @@ export function validateObject<T extends object>(
   obj: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   validator: Validator<T>,
   useMultiValue: boolean = false
-): [T | null, (keyof T)[] ] {
+): [T | null, string[] ] {
   logger.trace('validateObject', ...arguments);
   const newObj: Partial<T> = {};
 
   // Validate the object
   const objKeys = Object.keys(validator) as (keyof typeof validator)[];
-  const badKeys: (keyof typeof validator)[] = [];
+  const badKeys: string[] = [];
   if (
     typeof obj !== 'object' ||
     Array.isArray(obj) ||
@@ -21,12 +21,15 @@ export function validateObject<T extends object>(
   ) {
     return [
       null,
-      objKeys,
+      objKeys as string[],
     ];
   }
 
   // Loop over the keys
   objKeys.forEach(key => {
+    if (typeof key !== 'string') {
+      return;
+    }
     const config = validator[key];
 
     // If the key is undefined, show an error if it is required
@@ -130,6 +133,26 @@ export function validateObject<T extends object>(
         );
         badKeys.push(key);
         return;
+      }
+
+      // Validate each array item
+      if ('items' in conf) {
+        const itemConf = conf.items as Validator<T[typeof key]>;
+        value.map((item, idx) => {
+          const [
+            itemReal,
+            itemErrors,
+          ] = validateObject(item, itemConf);
+
+          if (itemErrors.length > 0) {
+            badKeys.push(...itemErrors.map(err => `${key}-${idx}-${err}`));
+          } else if (itemReal === null) {
+            badKeys.push(`${key}-${idx}-null`);
+          }
+
+          return itemReal;
+        });
+        console.log(conf.items);
       }
       foundType = true;
     }

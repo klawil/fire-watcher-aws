@@ -56,10 +56,7 @@ export type AddEventsApi = {
  * @body.contentType application/json
  */
 export type OldEventsApi = Omit<AddEventsApi, 'path'> & {
-  path: '/api/events';
-  query: {
-    action: 'events';
-  };
+  path: '/api/events?action=events';
 };
 
 export const eventItemValidator: Validator<EventItem> = {

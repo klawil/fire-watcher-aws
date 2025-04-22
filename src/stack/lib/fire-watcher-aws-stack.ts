@@ -814,12 +814,14 @@ export class FireWatcherAwsStack extends Stack {
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
+      // metrics
       {
         pathPart: 'metrics',
         fileName: 'metrics',
         methods: [ 'POST', ],
         getMetrics: true,
       },
+      // files
       {
         pathPart: 'files',
         fileName: 'files',
@@ -838,6 +840,7 @@ export class FireWatcherAwsStack extends Stack {
           }, ],
         }, ],
       },
+      // talkgroups
       {
         pathPart: 'talkgroups',
         fileName: 'talkgroups',
@@ -859,6 +862,7 @@ export class FireWatcherAwsStack extends Stack {
           }, ],
         }, ],
       },
+      // users
       {
         pathPart: 'users',
         fileName: 'users',
@@ -900,6 +904,7 @@ export class FireWatcherAwsStack extends Stack {
           }, ],
         }, ],
       },
+      // texts
       {
         pathPart: 'texts',
         fileName: 'texts',
@@ -918,6 +923,7 @@ export class FireWatcherAwsStack extends Stack {
           }, ],
         }, ],
       },
+      // twilio
       {
         pathPart: 'twilio',
         fileName: 'twilioBase',
@@ -947,6 +953,7 @@ export class FireWatcherAwsStack extends Stack {
           ],
         }, ],
       },
+      // login
       {
         pathPart: 'login',
         next: [ {
@@ -963,11 +970,13 @@ export class FireWatcherAwsStack extends Stack {
           queues: [ queue, ],
         }, ],
       },
+      // logout
       {
         pathPart: 'logout',
         fileName: 'logout',
         methods: [ 'GET', ],
       },
+      // sites
       {
         pathPart: 'sites',
         fileName: 'sites',
@@ -977,16 +986,21 @@ export class FireWatcherAwsStack extends Stack {
           table: 'SITE',
         }, ],
       },
+      // heartbeats
       {
         pathPart: 'heartbeats',
         fileName: 'heartbeats',
-        methods: [ 'GET', ],
+        methods: [
+          'GET',
+          'POST',
+        ],
         authRequired: true,
         tables: [ {
           table: 'STATUS',
-          readOnly: true,
         }, ],
+        sendsMetrics: true,
       },
+      // departments
       {
         pathPart: 'departments',
         next: [ {
@@ -1001,6 +1015,7 @@ export class FireWatcherAwsStack extends Stack {
           twilioSecret: true,
         }, ],
       },
+      // events
       {
         pathPart: 'events',
         fileName: 'events',

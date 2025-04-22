@@ -364,7 +364,7 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
 export function parseJsonBody<T extends object>(
   body: string | null,
   validator?: Validator<T>
-): [T | null, (keyof T)[] ] {
+): [T | null, string[] ] {
   logger.trace('validateBodyIsJson', ...arguments);
   try {
     if (body === null) {

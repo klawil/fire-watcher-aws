@@ -1,4 +1,7 @@
+import { Validator } from '../backend/validation';
+
 import {
+  api400Body,
   api401Body, api403Body, api500Body
 } from './_shared';
 
@@ -43,4 +46,82 @@ export type GetAllHeartbeatsApi = {
   security: [{
     cookie: [],
   }];
+};
+
+/**
+ * Add a heartbeat from a recorder
+ * @summary Add Heartbeat
+ * @tags Heartbeats
+ * @body.contentType application/json
+ */
+export type AddHeartbeatApi = {
+  path: '/api/v2/heartbeats/';
+  method: 'POST';
+  body: {
+
+    /**
+     * The name of the server that is sending the heartbeat
+     */
+    Server: string;
+
+    /**
+     * Is this server self-identifying as the primary server?
+     */
+    IsPrimary: boolean;
+
+    /**
+     * Is this server actively uploading files?
+     */
+    IsActive: boolean;
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: Heartbeat[];
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    apiKey: [];
+  }];
+};
+
+/**
+ * Add a heartbeat from a recorder
+ * @summary Add Heartbeat
+ * @tags Heartbeats
+ * @body.contentType application/json
+ */
+export type DeprecatedAddHeartbeatApi = Omit<AddHeartbeatApi, 'path'> & {
+  path: '/api/infra?action=heartbeat';
+};
+
+export const addHeartbeatBodyValidator: Validator<AddHeartbeatApi['body']> = {
+  Server: {
+    required: true,
+    types: { string: {}, },
+  },
+  IsPrimary: {
+    required: true,
+    types: { boolean: {}, },
+  },
+  IsActive: {
+    required: true,
+    types: { boolean: {}, },
+  },
 };
