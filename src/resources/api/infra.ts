@@ -652,6 +652,7 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
       message: `Invalid action '${action}'`,
     }),
   };
+  logger.error(`Action: ${action}`);
 
   switch (action) {
     case 'page':
@@ -685,16 +686,4 @@ export async function main(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
   }
 
   return result;
-
-  /*
-   * logger.error('main', 'Invalid Action', action);
-   * return {
-   *   statusCode: 404,
-   *   headers: {},
-   *   body: JSON.stringify({
-   *     error: true,
-   *     message: `Invalid action '${action}'`
-   *   })
-   * };
-   */
 }
