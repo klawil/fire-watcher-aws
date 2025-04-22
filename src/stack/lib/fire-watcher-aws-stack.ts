@@ -820,6 +820,12 @@ export class FireWatcherAwsStack extends Stack {
         fileName: 'metrics',
         methods: [ 'POST', ],
         getMetrics: true,
+        next: [ {
+          pathPart: 'add',
+          fileName: 'metricsAdd',
+          methods: [ 'POST', ],
+          sendsMetrics: true,
+        }, ],
       },
       // files
       {

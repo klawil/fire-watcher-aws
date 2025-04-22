@@ -1,4 +1,5 @@
 import {
+  api200Body,
   api400Body, api401Body, api403Body, api500Body
 } from './_shared';
 
@@ -113,6 +114,58 @@ export type GetMetricsApi = {
   security: [{
     cookie: [],
   }];
+};
+
+/**
+ * Add one or more metrics
+ * @summary Add Metrics
+ * @tags Metrics
+ * @body.contentType application/json
+ */
+export type AddMetricsApi = {
+  path: '/api/v2/metrics/add/';
+  method: 'POST';
+  body: {
+    data: {
+      id: string;
+      val: number;
+    }[];
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: typeof api200Body;
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    apiKey: [];
+  }];
+};
+
+/**
+ * Add one or more metrics
+ * @summary Add Metrics
+ * @tags Metrics
+ * @body.contentType application/json
+ */
+export type DeprecatedAddMetricsApi = Omit<AddMetricsApi, 'path'> & {
+  path: '/api/infra?action=metric';
 };
 
 export const getMetricsApiBodyValidator: Validator<GetMetricsApi['body']> = {
@@ -333,5 +386,25 @@ export const lambdaMetricValidator: Validator<LambdaMetric> = {
         ],
       },
     },
+  },
+};
+
+export const addMetricsMetricValidator: Validator<AddMetricsApi['body']['data'][number]> = {
+  id: {
+    required: true,
+    types: { string: {}, },
+  },
+  val: {
+    required: true,
+    types: { number: {}, },
+  },
+};
+
+export const addMetricsApiBodyValidator: Validator<AddMetricsApi['body']> = {
+  data: {
+    required: true,
+    types: { array: {
+      items: addMetricsMetricValidator,
+    }, },
   },
 };
