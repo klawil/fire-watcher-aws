@@ -20,6 +20,12 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
         description: 'JWT passed as a cookie',
         name: 'cofrn-token',
       },
+      apiKey: {
+        type: 'apiKey',
+        in: 'query',
+        description: 'API key passed in as a query string parameter',
+        name: 'cofrn-api-key',
+      },
     },
   },
   tags: [
@@ -30,6 +36,10 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
     {
       name: 'Departments',
       description: 'APIs about departments',
+    },
+    {
+      name: 'Events',
+      description: 'APIs that work with DTR events',
     },
     {
       name: 'Files',
@@ -94,4 +104,15 @@ const specObject = tsoas.getOpenApiSpec(
   [ /.Api$/, ],
   baseOasSpec
 );
+
+// Mark certain APIs as deprecated
+Object.keys(specObject.paths).forEach(path => {
+  if (path.includes('/v2/')) {
+    return;
+  }
+
+  Object.keys(specObject.paths[path]).forEach(method => {
+    (specObject.paths[path] as any)[method].deprecated = true; // eslint-disable-line
+  });
+});
 writeFileSync(outputFileName, JSON.stringify(specObject, null, 2));
