@@ -29,6 +29,12 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
   let hasRedirect = false;
   let redirectUriBase = `https://${targetDomain}`;
 
+  // Redirect /api/events to the new API
+  if (request.uri.includes('/api/events')) {
+    request.uri = '/api/v2/events';
+    return request;
+  }
+
   // Ignore the 2 old APIs
   if (
     request.uri.includes('/api/infra') ||
