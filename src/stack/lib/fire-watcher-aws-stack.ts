@@ -809,6 +809,7 @@ export class FireWatcherAwsStack extends Stack {
         bucket: keyof typeof bucketMap;
         readOnly?: true;
       }[];
+      firehoses?: kinesisfirehose.CfnDeliveryStream[];
       queues?: sqs.Queue[];
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
@@ -1000,6 +1001,12 @@ export class FireWatcherAwsStack extends Stack {
           twilioSecret: true,
         }, ],
       },
+      {
+        pathPart: 'events',
+        fileName: 'events',
+        methods: [ 'POST', ],
+        firehoses: [ eventsFirehose, ],
+      },
     ];
     const createApi = (
       baseResource: apigateway.Resource,
@@ -1086,10 +1093,25 @@ export class FireWatcherAwsStack extends Stack {
         });
 
         // Grant access to the SQS queue if needed
-        if (config.queues) {
-          config.queues
-            .forEach(q => q.grantSendMessages(resourceHandler as lambdanodejs.NodejsFunction));
-        }
+        config.queues
+          ?.forEach(q => q.grantSendMessages(resourceHandler as lambdanodejs.NodejsFunction));
+
+        // Add the firehose permissions
+        config.firehoses
+          ?.forEach(hose => {
+            if (!resourceHandler) {
+              return;
+            }
+
+            resourceHandler.addToRolePolicy(new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              resources: [ hose.attrArn, ],
+              actions: [
+                'firehose:PutRecord',
+                'firehose:PutRecordBatch',
+              ],
+            }));
+          });
 
         // Grant access to the Twilio secret if needed
         if (config.twilioSecret) {
