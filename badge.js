@@ -26,5 +26,4 @@ if (coverage <= 0) {
 } else {
   badge.color = 'brightgreen';
 }
-console.log(badge);
-writeFileSync('./coverage/badge.json', JSON.stringify(badge));
+writeFileSync('./coverage/lcov-report/badge.json', JSON.stringify(badge));
