@@ -23,6 +23,7 @@ const config: Config = {
   coverageReporters: [
     'lcov',
     'cobertura',
+    'json-summary',
   ],
 
   // An object that configures minimum threshold enforcement for coverage results
@@ -40,7 +41,7 @@ const config: Config = {
   // },
 
   // Force coverage collection from ignored files using an array of glob patterns
-  // forceCoverageMatch: [],
+  collectCoverageFrom: [ '<rootDir>/src/**/*.{ts,tsx}', ],
 
   // A path to a module which exports an async function that is triggered once before all test
   // suites
