@@ -6,12 +6,12 @@
     "dev": "next dev",
     "diff": "cdk diff --all",
     "document": "tsx documentApi.ts",
-    "build": "npm run test && PROD_BUILD=y next build",
+    "build": "PROD_BUILD=y next build",
     "start": "next start",
     "lint": "next lint",
     "lint-fix": "next lint --fix",
     "synth": "cdk synth",
-    "deploy": "npm run document && npm run build && cdk deploy --all",
+    "deploy": "npm run document && npm run test && npm run build && cdk deploy --all",
     "test": "jest"
   },
   "dependencies": {
