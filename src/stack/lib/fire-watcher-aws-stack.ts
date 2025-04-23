@@ -32,13 +32,15 @@ import { HTTPMethod } from 'ts-oas';
 
 import { LambdaEnvironment } from '@/types/backend/environment';
 
-dotenv.config({ path: resolve(
-  __dirname,
-  '..', // stack
-  '..', // src
-  '..', // root
-  '.env'
-), });
+dotenv.config({
+  path: resolve(
+    __dirname,
+    '..', // stack
+    '..', // src
+    '..', // root
+    '.env'
+  ),
+});
 
 const resourceBase = resolve(
   __dirname,

@@ -1,4 +1,7 @@
-import * as AWS from 'aws-sdk';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
 
 import {
   LambdaApiFunction,
@@ -24,7 +27,7 @@ import {
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('users');
-const sqs = new AWS.SQS();
+const sqs = new SQSClient();
 const queueUrl = process.env.SQS_QUEUE;
 
 type EditKeyConfig = {
@@ -225,10 +228,10 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
     phone: body.phone,
     department: body.department,
   };
-  await sqs.sendMessage({
+  await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
     QueueUrl: queueUrl,
-  }).promise();
+  }));
 
   // Return the safed user object
   const returnBody = getFrontendUserObj(putConfig.Item);

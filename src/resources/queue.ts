@@ -1,7 +1,12 @@
 import * as https from 'https';
 
+import {
+  CloudWatchClient, PutMetricDataCommand
+} from '@aws-sdk/client-cloudwatch';
+import {
+  GetTranscriptionJobCommand, TranscribeClient
+} from '@aws-sdk/client-transcribe';
 import * as lambda from 'aws-lambda';
-import * as AWS from 'aws-sdk';
 
 import {
   getTwilioSecret, twilioPhoneCategories, twilioPhoneNumbers
@@ -38,8 +43,8 @@ import {
 import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('queue');
-const transcribe = new AWS.TranscribeService();
-const cloudWatch = new AWS.CloudWatch();
+const transcribe = new TranscribeClient();
+const cloudWatch = new CloudWatchClient();
 
 type WelcomeMessageConfigKeys = 'name' | 'type' | 'pageNumber';
 const welcomeMessageParts: {
@@ -162,9 +167,9 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   }
 
   // Get the transcription results
-  const transcriptionInfo = await transcribe.getTranscriptionJob({
+  const transcriptionInfo = await transcribe.send(new GetTranscriptionJobCommand({
     TranscriptionJobName: body.detail.TranscriptionJobName,
-  }).promise();
+  }));
   const fileData: string = await new Promise((res, rej) => https.get(
     transcriptionInfo.TranscriptionJob?.Transcript?.TranscriptFileUri as string,
     response => {
@@ -186,7 +191,13 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   let tg: PagingTalkgroup;
   const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || [])
     .reduce((agg: { [key: string]: string; }, value) => {
-      agg[value.Key] = value.Value;
+      if (
+        typeof value.Key !== 'undefined' &&
+        typeof value.Value !== 'undefined'
+      ) {
+        agg[value.Key] = value.Value;
+      }
+
       return agg;
     }, {});
   if (jobInfo.Talkgroup) {
@@ -669,7 +680,7 @@ async function handlePage(body: SendPageQueueItem) {
   const pageTime = fNameToDate(body.key);
   const lenMs = body.len * 1000;
   if (!body.isTest) {
-    metricPromise = cloudWatch.putMetricData({
+    metricPromise = cloudWatch.send(new PutMetricDataCommand({
       Namespace: 'Twilio Health',
       MetricData: [
         {
@@ -685,7 +696,7 @@ async function handlePage(body: SendPageQueueItem) {
           Value: pageInitTime.getTime() - pageTime.getTime() - lenMs,
         },
       ],
-    }).promise();
+    }));
   }
 
   // Save the message data

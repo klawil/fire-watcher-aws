@@ -1,3 +1,17 @@
+import {
+  DeleteCommandInput,
+  DeleteCommandOutput,
+  GetCommandInput,
+  GetCommandOutput,
+  PutCommandInput,
+  PutCommandOutput,
+  QueryCommandInput,
+  QueryCommandOutput,
+  ScanCommandInput,
+  ScanCommandOutput,
+  UpdateCommandInput, UpdateCommandOutput
+} from '@aws-sdk/lib-dynamodb';
+
 type RequiredKeys<T extends object> = {
   [key in keyof T]: undefined extends T[key] ? never : key;
 }[keyof T];
@@ -18,7 +32,7 @@ type ExpressionAttributeNames<T extends object> = {
 
 export interface TypedUpdateInput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.UpdateItemInput {
+> extends UpdateCommandInput {
   ExpressionAttributeNames: ExpressionAttributeNames<T>;
   ExpressionAttributeValues?: ExpressionAttributeValues<T>;
   Key: {
@@ -27,59 +41,59 @@ export interface TypedUpdateInput<
 }
 export interface TypedUpdateOutput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.UpdateItemOutput {
+> extends UpdateCommandOutput {
   Attributes?: Partial<T>;
 }
 
-export interface TypedGetInput<T extends object> extends AWS.DynamoDB.DocumentClient.GetItemInput {
+export interface TypedGetInput<T extends object> extends GetCommandInput {
   Key: {
     [key in RequiredKeys<T>]: T[key];
   };
 }
 export interface TypedGetOutput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.GetItemOutput {
+> extends GetCommandOutput {
   Item?: T;
 }
 
-export interface TypedQueryInput<T extends object> extends AWS.DynamoDB.DocumentClient.QueryInput {
+export interface TypedQueryInput<T extends object> extends QueryCommandInput {
   ExpressionAttributeNames?: ExpressionAttributeNames<T>;
   ExpressionAttributeValues?: ExpressionAttributeValues<T>;
 }
 export interface TypedQueryOutput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.QueryOutput {
+> extends QueryCommandOutput {
   Items?: T[];
 }
 
-export interface TypedScanInput<T extends object> extends AWS.DynamoDB.DocumentClient.ScanInput {
+export interface TypedScanInput<T extends object> extends ScanCommandInput {
   ExpressionAttributeNames?: ExpressionAttributeNames<T>;
   ExpressionAttributeValues?: ExpressionAttributeValues<T>;
 }
-export interface TypedScanOutput<T extends object> extends AWS.DynamoDB.DocumentClient.ScanOutput {
+export interface TypedScanOutput<T extends object> extends ScanCommandOutput {
   Items?: T[];
 }
 
 export interface TypedDeleteItemInput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.DeleteItemInput {
+> extends DeleteCommandInput {
   Key: {
     [key in RequiredKeys<T>]: T[key];
   };
 }
 export interface TypedDeleteItemOutput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.DeleteItemOutput {
+> extends DeleteCommandOutput {
   Attributes?: Partial<T>;
 }
 
 export interface TypedPutItemInput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.PutItemInput {
+> extends PutCommandInput {
   Item: T;
 }
 export interface TypedPutItemOutput<
   T extends object
-> extends AWS.DynamoDB.DocumentClient.PutItemOutput {
+> extends PutCommandOutput {
   Attributes?: Partial<T>;
 }

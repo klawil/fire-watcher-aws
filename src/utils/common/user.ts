@@ -20,7 +20,7 @@ export function getUserPermissions(user: FrontendUserObject | null): UserPermiss
   userPerms.adminDepartments = userPerms.activeDepartments.filter(dep => user[dep]?.admin);
   userPerms.isUser = userPerms.activeDepartments.length > 0;
   userPerms.isAdmin = userPerms.adminDepartments.length > 0;
-  userPerms.isDistrictAdmin = !!user.isDistrictAdmin;
+  userPerms.isDistrictAdmin = userPerms.isUser && !!user.isDistrictAdmin;
 
   return userPerms;
 }

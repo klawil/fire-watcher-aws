@@ -1,4 +1,6 @@
-import * as AWS from 'aws-sdk';
+import {
+  PutObjectCommand, S3Client
+} from '@aws-sdk/client-s3';
 import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 
@@ -271,7 +273,7 @@ async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
 
 async function uploadFile(text: string) {
   logger.trace('uploadFile', ...arguments);
-  const s3 = new AWS.S3();
+  const s3 = new S3Client();
 
   const uploadParams = {
     Bucket: s3Bucket,
@@ -279,7 +281,7 @@ async function uploadFile(text: string) {
     Body: text,
   };
 
-  return await s3.upload(uploadParams).promise();
+  return await s3.send(new PutObjectCommand(uploadParams));
 }
 
 export async function main() {

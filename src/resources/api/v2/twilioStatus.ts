@@ -1,4 +1,10 @@
-import * as AWS from 'aws-sdk';
+import {
+  CloudWatchClient, PutMetricDataCommand
+} from '@aws-sdk/client-cloudwatch';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
 
 import {
   LambdaApiFunction,
@@ -17,6 +23,7 @@ import {
 import {
   FullUserObject, validDepartments
 } from '@/types/api/users';
+import { TypedUpdateInput } from '@/types/backend/dynamo';
 import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
 import { TwilioQueueEvent } from '@/types/backend/twilioQueue';
 import {
@@ -25,8 +32,8 @@ import {
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('twilioStatus');
-const sqs = new AWS.SQS();
-const cloudWatch = new AWS.CloudWatch();
+const sqs = new SQSClient();
+const cloudWatch = new CloudWatchClient();
 const queueUrl = process.env.SQS_QUEUE;
 const twilioQueueUrl = process.env.TWILIO_QUEUE;
 
@@ -133,18 +140,18 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     phone: user.phone,
     eventTime,
   };
-  promises['text-update'] = sqs.sendMessage({
+  promises['text-update'] = sqs.send(new SendMessageCommand({
     QueueUrl: twilioQueueUrl,
     MessageBody: JSON.stringify(twilioQueueBody),
-  }).promise();
+  }));
 
   // Update the user for delivered and undelivered messages
   if ([
     'undelivered',
     'delivered',
   ].includes(body.MessageStatus)) {
-    const updateValues: AWS.DynamoDB.DocumentClient.ExpressionAttributeValueMap = {
-      ':lastStatus': body.MessageStatus,
+    const updateValues: TypedUpdateInput<FullUserObject>['ExpressionAttributeValues'] = {
+      ':lastStatus': body.MessageStatus as 'undelivered' | 'delivered',
       ':lastStatusBase': 0,
     };
     let updateExpr: string;
@@ -189,10 +196,10 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
             department: validDepartments
               .filter(dep => result.Attributes && result.Attributes[dep]?.active),
           };
-          return sqs.sendMessage({
+          return sqs.send(new SendMessageCommand({
             QueueUrl: queueUrl,
             MessageBody: JSON.stringify(queueMessage),
-          }).promise();
+          }));
         }
         return null;
       });
@@ -202,7 +209,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   const metricName = body.MessageStatus.slice(0, 1).toUpperCase() +
     body.MessageStatus.slice(1) + 'Time';
   const messageTime = new Date(params.id);
-  promises['metrics'] = cloudWatch.putMetricData({
+  promises['metrics'] = cloudWatch.send(new PutMetricDataCommand({
     Namespace: 'Twilio Health',
     MetricData: [ {
       MetricName: metricName,
@@ -210,7 +217,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
       Unit: 'Milliseconds',
       Value: eventTime - messageTime.getTime(),
     }, ],
-  }).promise();
+  }));
 
   let wasError = false;
   await Promise.all(Object.keys(promises)

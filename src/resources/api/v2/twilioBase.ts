@@ -1,4 +1,7 @@
-import * as AWS from 'aws-sdk';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
 
 import {
   LambdaApiFunction,
@@ -25,7 +28,7 @@ import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('twilioBase');
 
-const sqs = new AWS.SQS();
+const sqs = new SQSClient();
 const queueUrl = process.env.SQS_QUEUE;
 
 function buildTwilioResponse(
@@ -217,10 +220,10 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
       isTest: sendingUser.isTest || isTest,
     },
   };
-  await sqs.sendMessage({
+  await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
     QueueUrl: queueUrl,
-  }).promise();
+  }));
 
   return buildTwilioResponse(200);
 };

@@ -1,4 +1,6 @@
-import { CloudWatch } from 'aws-sdk';
+import {
+  CloudWatchClient, PutMetricDataCommand
+} from '@aws-sdk/client-cloudwatch';
 
 import {
   LambdaApiFunction,
@@ -22,7 +24,7 @@ import {
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/heartbeats');
-const cloudWatch = new CloudWatch();
+const cloudWatch = new CloudWatchClient();
 
 const GET: LambdaApiFunction<GetAllHeartbeatsApi> = async function (event) {
   logger.trace('GET', ...arguments);
@@ -80,7 +82,7 @@ const POST: LambdaApiFunction<AddHeartbeatApi> = async function (event) {
   }
 
   // Send the metric
-  const metricPromise = cloudWatch.putMetricData({
+  const metricPromise = cloudWatch.send(new PutMetricDataCommand({
     Namespace: 'VHF Metrics',
     MetricData: [ {
       MetricName: body.Server,
@@ -88,7 +90,7 @@ const POST: LambdaApiFunction<AddHeartbeatApi> = async function (event) {
       Unit: 'Count',
       Value: 1,
     }, ],
-  }).promise();
+  }));
 
   // Insert the update into the status table
   await typedUpdate<Heartbeat>({

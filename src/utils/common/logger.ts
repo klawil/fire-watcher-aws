@@ -32,6 +32,15 @@ if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
 }
 const stylePlaceholder = isNodeEnv ? '' : '%c';
 
+// Set to silent for testing
+if (
+  typeof process !== 'undefined' &&
+  typeof process.env !== 'undefined' &&
+  process.env.NODE_ENV === 'test'
+) {
+  globalLogLevel = LogLevel.Silent;
+}
+
 const levelStrings: string[] = [
   'Trace',
   'Debug',
@@ -70,7 +79,7 @@ class Logger {
   }
 
   setLevel(level: LogLevel) {
-    this.level = level;
+    globalLogLevel = level;
   }
 
   buildAlert(msg: string) {} // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -82,7 +91,7 @@ class Logger {
     }
 
     // Exit early if we shouldn't print this log
-    if (this.level > level && globalLogLevel > level) {
+    if (globalLogLevel > level) {
       return;
     }
 

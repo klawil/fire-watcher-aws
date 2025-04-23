@@ -1,4 +1,6 @@
-import { CloudWatch } from 'aws-sdk';
+import {
+  CloudWatchClient, PutMetricDataCommand
+} from '@aws-sdk/client-cloudwatch';
 
 import {
   LambdaApiFunction,
@@ -15,7 +17,7 @@ import {
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/metricsAdd');
-const cloudWatch = new CloudWatch();
+const cloudWatch = new CloudWatchClient();
 
 const POST: LambdaApiFunction<AddMetricsApi> = async function (event) {
   logger.trace('POST', ...arguments);
@@ -49,7 +51,7 @@ const POST: LambdaApiFunction<AddMetricsApi> = async function (event) {
   };
 
   // Send the metrics
-  await cloudWatch.putMetricData({
+  await cloudWatch.send(new PutMetricDataCommand({
     Namespace: 'DTR Metrics',
     MetricData: body.data.map(i => ({
       MetricName: 'Decode Rate',
@@ -61,7 +63,7 @@ const POST: LambdaApiFunction<AddMetricsApi> = async function (event) {
       Unit: 'Count',
       Value: i.val,
     })),
-  }).promise();
+  }));
 
   return [
     200,

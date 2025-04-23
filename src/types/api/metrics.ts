@@ -393,8 +393,10 @@ export const addMetricsMetricValidator: Validator<AddMetricsApi['body']['data'][
 export const addMetricsApiBodyValidator: Validator<AddMetricsApi['body']> = {
   data: {
     required: true,
-    types: { array: {
-      items: addMetricsMetricValidator,
-    }, },
+    types: {
+      array: {
+        items: addMetricsMetricValidator,
+      },
+    },
   },
 };

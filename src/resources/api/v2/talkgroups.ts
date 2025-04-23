@@ -1,5 +1,3 @@
-import * as AWS from 'aws-sdk';
-
 import {
   DocumentQueryConfig,
   LambdaApiFunction,
@@ -10,6 +8,7 @@ import { generateApi400Body } from '@/types/api/_shared';
 import {
   FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator
 } from '@/types/api/talkgroups';
+import { TypedQueryInput } from '@/types/backend/dynamo';
 import { TABLE_TALKGROUP } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
@@ -36,10 +35,7 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
     ];
   }
 
-  const baseQueryConfig: AWS.DynamoDB.DocumentClient.QueryInput & Required<Pick<
-    AWS.DynamoDB.DocumentClient.QueryInput,
-    'ExpressionAttributeNames'
-  >> = {
+  const baseQueryConfig: TypedQueryInput<FullTalkgroupObject> = {
     TableName: TABLE_TALKGROUP,
     IndexName: 'InUseIndex',
     ExpressionAttributeNames: {

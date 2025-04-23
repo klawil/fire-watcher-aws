@@ -1,4 +1,7 @@
-import * as AWS from 'aws-sdk';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
 
 import {
   LambdaApiFunction,
@@ -20,7 +23,7 @@ import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('userDepartment');
-const sqs = new AWS.SQS();
+const sqs = new SQSClient();
 const queueUrl = process.env.SQS_QUEUE;
 
 const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) {
@@ -142,10 +145,10 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
       phone: phoneToEdit,
       department: departmentToEdit,
     };
-    await sqs.sendMessage({
+    await sqs.send(new SendMessageCommand({
       MessageBody: JSON.stringify(queueMessage),
       QueueUrl: queueUrl,
-    }).promise();
+    }));
   }
 
   // Return the result

@@ -1,7 +1,10 @@
 import {
+  GetSecretValueCommand, SecretsManagerClient
+} from '@aws-sdk/client-secrets-manager';
+import { QueryCommandOutput } from '@aws-sdk/lib-dynamodb';
+import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
-import * as AWS from 'aws-sdk';
 import { verify } from 'jsonwebtoken';
 import { Api } from 'ts-oas';
 
@@ -23,7 +26,7 @@ import { getLogger } from '@/utils/common/logger';
 import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('api/v2/_base');
-const secretManager = new AWS.SecretsManager();
+const secretManager = new SecretsManagerClient();
 
 export type LambdaApiFunction<T extends Api> = (
   event: APIGatewayProxyEvent,
@@ -85,12 +88,12 @@ export async function handleResourceApi(
 }
 
 interface DocClientListOutput<
-  ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
-> extends TypedQueryOutput<ItemType> {
-  Items: ItemType[],
+  ItemType extends object
+> extends Omit<TypedQueryOutput<ItemType>, '$metadata'> {
+  Items: ItemType[];
   Count: number;
   ScannedCount: number;
-  LastEvaluatedKeys: (AWS.DynamoDB.DocumentClient.Key | null)[];
+  LastEvaluatedKeys: (QueryCommandOutput['LastEvaluatedKey'] | null)[];
   MinSortKey: number | null;
   MaxSortKey: number | null;
   MaxAfterKey: number | null;
@@ -106,7 +109,7 @@ export type DocumentQueryConfig<T extends object> = Omit<
 >>;
 
 export async function mergeDynamoQueriesDocClient<
-  ItemType extends AWS.DynamoDB.DocumentClient.AttributeMap
+  ItemType extends object
 >(
   baseConfig: TypedQueryInput<ItemType>,
   queryConfigs: DocumentQueryConfig<ItemType>[],
@@ -157,21 +160,27 @@ export async function mergeDynamoQueriesDocClient<
   });
 
   // Sort the items
-  combinedQueryResults.Items = (combinedQueryResults.Items as ItemType[]).sort((a, b) => {
-    if (
-      typeof b[sortKey] === 'undefined'
-    ) {
-      return sortDirGreater;
-    }
+  combinedQueryResults.Items = (combinedQueryResults.Items as ItemType[])
+    .filter(v => v[sortKey] !== null)
+    .sort((a, b) => {
+      if (
+        typeof b[sortKey] === 'undefined'
+      ) {
+        return sortDirGreater;
+      }
 
-    if (
-      typeof a[sortKey] === 'undefined'
-    ) {
-      return sortDirLesser;
-    }
+      if (
+        typeof a[sortKey] === 'undefined'
+      ) {
+        return sortDirLesser;
+      }
 
-    return a[sortKey] > b[sortKey] ? sortDirGreater : sortDirLesser;
-  });
+      if (a[sortKey] === null || b[sortKey] === null) {
+        return -1;
+      }
+
+      return a[sortKey] > b[sortKey] ? sortDirGreater : sortDirLesser;
+    });
 
   // Limit the returned results
   if (typeof baseConfig.Limit !== 'undefined') {
@@ -184,8 +193,8 @@ export async function mergeDynamoQueriesDocClient<
   let maxSortKey: null | number = null;
   let maxAfterKey: null | number = null;
   combinedQueryResults.Items.forEach(item => {
-    const sortKeyValue = item[sortKey];
-    const afterKeyValue = item[afterKey];
+    const sortKeyValue = item[sortKey] as number;
+    const afterKeyValue = item[afterKey] as number;
 
     if (
       !isNaN(sortKeyValue) &&
@@ -316,9 +325,9 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
     }
 
     // Use JWT to validate the user (first pass)
-    const jwtSecret = await secretManager.getSecretValue({
+    const jwtSecret = await secretManager.send(new GetSecretValueCommand({
       SecretId: jwtSecretArn,
-    }).promise()
+    }))
       .then(data => data.SecretString);
     if (typeof jwtSecret === 'undefined') {
       throw new Error('Unable to get JWT secret');

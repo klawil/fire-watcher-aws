@@ -152,7 +152,6 @@ export function validateObject<T extends object>(
 
           return itemReal;
         });
-        console.log(conf.items);
       }
       foundType = true;
     }

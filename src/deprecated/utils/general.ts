@@ -1,3 +1,10 @@
+import {
+  CloudWatchClient, PutMetricDataCommand,
+  PutMetricDataCommandInput
+} from '@aws-sdk/client-cloudwatch';
+import {
+  GetSecretValueCommand, SecretsManagerClient
+} from '@aws-sdk/client-secrets-manager';
 import * as aws from 'aws-sdk';
 
 import {
@@ -10,67 +17,8 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('u-gen');
 
-const phoneTable = process.env.TABLE_USER;
-
-const secretManager = new aws.SecretsManager();
-const cloudWatch = new aws.CloudWatch();
-const dynamodb = new aws.DynamoDB();
-
-/**
- * @deprecated The method should not be used
- */
-export async function getRecipients(
-  department: string,
-  pageTg: number | null,
-  isTest: boolean = false
-) {
-  logger.trace('getRecipients', ...arguments);
-  const scanInput: AWS.DynamoDB.QueryInput = {
-    TableName: phoneTable,
-  };
-  if (pageTg !== null) {
-    scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-    scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-    scanInput.FilterExpression = scanInput.FilterExpression || '';
-
-    scanInput.FilterExpression = 'contains(#tg, :tg)';
-    scanInput.ExpressionAttributeNames['#tg'] = 'talkgroups';
-    scanInput.ExpressionAttributeValues[':tg'] = { N: pageTg.toString(), };
-  }
-  if (department !== 'all') {
-    scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-    scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-    scanInput.FilterExpression = scanInput.FilterExpression || '';
-
-    scanInput.ExpressionAttributeNames['#dep'] = department;
-    scanInput.ExpressionAttributeNames['#ac'] = 'active';
-    scanInput.ExpressionAttributeValues[':ac'] = { BOOL: true, };
-    if ((scanInput.FilterExpression || '').length > 0) {
-      scanInput.FilterExpression += ' AND ';
-    }
-    scanInput.FilterExpression += '#dep.#ac = :ac';
-  }
-
-  if (isTest) {
-    scanInput.ExpressionAttributeNames = scanInput.ExpressionAttributeNames || {};
-    scanInput.ExpressionAttributeValues = scanInput.ExpressionAttributeValues || {};
-    scanInput.FilterExpression = scanInput.FilterExpression || '';
-
-    scanInput.ExpressionAttributeNames['#t'] = 'isTest';
-    scanInput.ExpressionAttributeValues[':t'] = {
-      BOOL: true,
-    };
-    if (scanInput.FilterExpression !== '') {
-      scanInput.FilterExpression += ' AND ';
-    }
-    scanInput.FilterExpression += '#t = :t';
-  }
-
-  const promise = dynamodb.scan(scanInput).promise();
-
-  return promise
-    .then(data => data.Items || []);
-}
+const secretManager = new SecretsManagerClient();
+const cloudWatch = new CloudWatchClient();
 
 type AccountSidKey = `accountSid${TwilioAccounts}`;
 type AuthTokenKey = `authToken${TwilioAccounts}`;
@@ -210,9 +158,9 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
     return twilioSecret;
   }
 
-  twilioSecret = secretManager.getSecretValue({
+  twilioSecret = secretManager.send(new GetSecretValueCommand({
     SecretId: twilioSecretId,
-  }).promise()
+  }))
     .then(data => JSON.parse(data.SecretString as string))
     .catch(e => {
       logger.error('getTwilioSecret', e);
@@ -304,7 +252,7 @@ export async function incrementMetric(
   sendMoreSpecific: boolean = true
 ): Promise<unknown> {
   logger.trace('incrementMetric', ...arguments);
-  const putConfig: aws.CloudWatch.PutMetricDataInput = {
+  const putConfig: PutMetricDataCommandInput & Required<Pick<PutMetricDataCommandInput, 'MetricData'>> = {
     Namespace: 'CVFD API',
     MetricData: [],
   };
@@ -339,7 +287,7 @@ export async function incrementMetric(
     });
   }
 
-  await cloudWatch.putMetricData(putConfig).promise();
+  await cloudWatch.send(new PutMetricDataCommand(putConfig));
   return;
 }
 

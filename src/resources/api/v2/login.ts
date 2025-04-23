@@ -1,4 +1,10 @@
-import * as AWS from 'aws-sdk';
+import {
+  GetSecretValueCommand, SecretsManagerClient
+} from '@aws-sdk/client-secrets-manager';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
 import { sign } from 'jsonwebtoken';
 
 import {
@@ -24,8 +30,8 @@ import { getUserPermissions } from '@/utils/common/user';
 const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 
 const logger = getLogger('login');
-const sqs = new AWS.SQS();
-const secretsManager = new AWS.SecretsManager();
+const sqs = new SQSClient();
+const secretsManager = new SecretsManagerClient();
 const queueUrl = process.env.SQS_QUEUE;
 const jwtSecretArn = process.env.JWT_SECRET;
 
@@ -87,10 +93,10 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
     action: 'auth-code',
     phone: params.id,
   };
-  await sqs.sendMessage({
+  await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
     QueueUrl: queueUrl,
-  }).promise();
+  }));
 
   return [
     200,
@@ -183,9 +189,9 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   }
 
   // Generate the authentication token for the user
-  const jwtSecret = await secretsManager.getSecretValue({
+  const jwtSecret = await secretsManager.send(new GetSecretValueCommand({
     SecretId: jwtSecretArn,
-  }).promise()
+  }))
     .then(data => data.SecretString);
   if (typeof jwtSecret === 'undefined') {
     throw new Error('Unable to get JWT secret');

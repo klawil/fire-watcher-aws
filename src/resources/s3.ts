@@ -1,5 +1,18 @@
+import {
+  CloudWatchClient, PutMetricDataCommand,
+  PutMetricDataCommandInput
+} from '@aws-sdk/client-cloudwatch';
+import {
+  DeleteObjectCommand, HeadObjectCommand, S3Client
+} from '@aws-sdk/client-s3';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
+import {
+  StartTranscriptionJobCommand, StartTranscriptionJobRequest, TranscribeClient
+} from '@aws-sdk/client-transcribe';
 import * as lambda from 'aws-lambda';
-import * as aws from 'aws-sdk';
 
 import { incrementMetric } from '@/deprecated/utils/general';
 import {
@@ -19,10 +32,10 @@ import {
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('s3');
-const s3 = new aws.S3();
-const sqs = new aws.SQS();
-const transcribe = new aws.TranscribeService();
-const cloudwatch = new aws.CloudWatch();
+const s3 = new S3Client();
+const sqs = new SQSClient();
+const transcribe = new TranscribeClient();
+const cloudwatch = new CloudWatchClient();
 
 const sqsQueue = process.env.SQS_QUEUE;
 
@@ -79,10 +92,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       }, false);
       promises['call-metric'] = metric;
     }
-    const headInfo = await s3.headObject({
+    const headInfo = await s3.send(new HeadObjectCommand({
       Bucket,
       Key,
-    }).promise();
+    }));
 
     const addedTime = Date.now();
     const body: TypedPutItemInput<FullFileObject> = {
@@ -136,7 +149,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         delete body.Item.Sources;
       }
 
-      const towerUploadMetrics: aws.CloudWatch.MetricData = [ {
+      const towerUploadMetrics: PutMetricDataCommandInput['MetricData'] = [ {
         MetricName: 'UploadTime',
         Dimensions: [ {
           Name: 'Tower',
@@ -146,10 +159,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         Value: Math.round(addedTime / 1000) - Number(headInfo.Metadata?.stop_time),
       }, ];
 
-      promises['put-metric-data'] = cloudwatch.putMetricData({
+      promises['put-metric-data'] = cloudwatch.send(new PutMetricDataCommand({
         Namespace: 'DTR Metrics',
         MetricData: towerUploadMetrics,
-      }).promise();
+      }));
     } else {
       for (const vhfKey in vhfConfig) {
         if (Key.indexOf(vhfKey) !== -1) {
@@ -270,10 +283,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
               return;
             }
 
-            return s3.deleteObject({
+            return s3.send(new DeleteObjectCommand({
               Bucket,
               Key: item.Key,
-            }).promise();
+            }));
           }));
           if (shouldDoTranscript && !keepingCurrentItem) {
             promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
@@ -365,7 +378,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     if (shouldDoTranscript) {
       const transcribeJobName = `${body.Item.Talkgroup}-${Date.now()}`;
       const toneFile = Key.split('/')[2] || Key.split('/')[1];
-      const Tags: aws.TranscribeService.TagList = [
+      const Tags: StartTranscriptionJobRequest['Tags'] = [
         {
           Key: 'Talkgroup', Value: body.Item.Talkgroup.toString(),
         },
@@ -385,7 +398,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           Value: fileTag,
         });
       }
-      promises['start-transcribe'] = transcribe.startTranscriptionJob({
+      promises['start-transcribe'] = transcribe.send(new StartTranscriptionJobCommand({
         TranscriptionJobName: transcribeJobName,
         LanguageCode: 'en-US',
         Media: {
@@ -397,7 +410,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           ShowSpeakerLabels: true,
         },
         Tags,
-      }).promise();
+      }));
 
       if (!doTranscriptOnly && body.Item.Tone) {
         logger.debug('Transcript and page');
@@ -408,10 +421,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           len: body.Item.Len,
           isTest: false,
         };
-        promises['page-sqs'] = sqs.sendMessage({
+        promises['page-sqs'] = sqs.send(new SendMessageCommand({
           MessageBody: JSON.stringify(queueMessage),
           QueueUrl: sqsQueue,
-        }).promise();
+        }));
       } else {
         // Exit early if we just wanted to kick off the transcript
         logger.debug('Transcript only');

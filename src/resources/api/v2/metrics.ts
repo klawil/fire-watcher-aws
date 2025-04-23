@@ -1,6 +1,7 @@
-import CloudWatch, {
-  GetMetricDataInput, MetricDataQueries
-} from 'aws-sdk/clients/cloudwatch';
+import {
+  CloudWatchClient, GetMetricDataCommand, GetMetricDataCommandInput,
+  MetricDataQuery
+} from '@aws-sdk/client-cloudwatch';
 
 import {
   LambdaApiFunction,
@@ -16,7 +17,7 @@ import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('metrics');
-const cloudwatch = new CloudWatch();
+const cloudwatch = new CloudWatchClient();
 
 function buildMetricKey(metric: MetricToFetch): string {
   let key: string = `${metric.type}_`;
@@ -82,7 +83,7 @@ const specialLambdaNames = {
 function buildLambdaMetric(
   metric: LambdaMetric,
   body: Required<Pick<GetMetricsApi['body'], 'period'>>
-): [ MetricDataQueries, string[] ] {
+): [ MetricDataQuery[], string[] ] {
   const key = buildMetricKey(metric);
   const conf = lambdaNames[metric.fn];
   if (typeof conf === 'undefined') {
@@ -90,7 +91,7 @@ function buildLambdaMetric(
     throw new Error(`Invalid fn - ${metric.fn}`);
   }
 
-  const metricToPush: MetricDataQueries[number] = {
+  const metricToPush: MetricDataQuery = {
     Id: key,
     ReturnData: true,
     Label: `${conf.label || metric.fn} ${metric.metric}`,
@@ -117,7 +118,7 @@ function buildLambdaMetric(
 function buildSpecialLambdaMetric(
   metric: LambdaMetric,
   body: Required<Pick<GetMetricsApi['body'], 'period'>>
-): [ MetricDataQueries, string[] ] {
+): [ MetricDataQuery[], string[] ] {
   if (!(metric.fn in specialLambdaNames)) {
     return [
       [],
@@ -125,7 +126,7 @@ function buildSpecialLambdaMetric(
     ];
   }
 
-  const metricsToUse: MetricDataQueries = [];
+  const metricsToUse: MetricDataQuery[] = [];
   const keysToUse: string[] = [];
 
   const fnName = metric.fn as keyof typeof specialLambdaNames;
@@ -400,7 +401,9 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
   };
 
   // Build the metrics request
-  const metricRequest: GetMetricDataInput = {
+  const metricRequest: GetMetricDataCommandInput & {
+    MetricDataQueries: MetricDataQuery[];
+  } = {
     EndTime: new Date(fullBody.endTime),
     StartTime: new Date(fullBody.startTime),
     ScanBy: 'TimestampDescending',
@@ -426,7 +429,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     // Handle each metric type
     switch (metric.type) {
       case 'lambda': {
-        let metrics: MetricDataQueries | null = null;
+        let metrics: MetricDataQuery[] | null = null;
         let keys: string[] | null = null;
         if (metric.fn in specialLambdaNames) {
           [
@@ -526,7 +529,7 @@ const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
     ];
   }
 
-  const data = await cloudwatch.getMetricData(metricRequest).promise();
+  const data = await cloudwatch.send(new GetMetricDataCommand(metricRequest));
   if (typeof data.MetricDataResults === 'undefined') {
     return [
       200,

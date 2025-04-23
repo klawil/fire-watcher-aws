@@ -1,5 +1,11 @@
+import {
+  CloudWatchClient,
+  ListTagsForResourceCommand
+} from '@aws-sdk/client-cloudwatch';
+import {
+  GetObjectCommand, PutObjectCommand, S3Client
+} from '@aws-sdk/client-s3';
 import * as lambda from 'aws-lambda';
-import * as aws from 'aws-sdk';
 
 import { AlertCategory } from '@/types/backend/alerts';
 import { sendAlertMessage } from '@/utils/backend/texts';
@@ -8,8 +14,8 @@ import { dateToTimeString } from '@/utils/common/strings';
 
 const logger = getLogger('alarms');
 
-const cloudWatch = new aws.CloudWatch();
-const s3 = new aws.S3();
+const cloudWatch = new CloudWatchClient();
+const s3 = new S3Client();
 
 const S3_BUCKET = process.env.COSTS_BUCKET;
 const S3_KEY = 'alarm-data.json';
@@ -26,10 +32,10 @@ interface DataCache {
 
 async function getCachedData(): Promise<DataCache> {
   try {
-    const rawData = await s3.getObject({
+    const rawData = await s3.send(new GetObjectCommand({
       Bucket: S3_BUCKET,
       Key: S3_KEY,
-    }).promise();
+    }));
 
     if (typeof rawData.Body === 'undefined') {
       return {};
@@ -59,15 +65,22 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
 
   if (event.source !== 'aws.events') {
     const tags: {
-      'cofrn-alarm-type': AlertCategory, [key: string]: string
+      'cofrn-alarm-type': AlertCategory;
+      [key: string]: string;
     } = {
       'cofrn-alarm-type': 'Api',
     };
     try {
-      const alarmInfo = await cloudWatch.listTagsForResource({
+      const alarmInfo = await cloudWatch.send(new ListTagsForResourceCommand({
         ResourceARN: event.alarmArn,
-      }).promise();
+      }));
       alarmInfo.Tags?.forEach(tag => {
+        if (
+          typeof tag.Key === 'undefined' ||
+          typeof tag.Value === 'undefined'
+        ) {
+          return;
+        }
         tags[tag.Key] = tag.Value;
       });
     } catch (e) {
@@ -144,10 +157,10 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
     }));
 
   if (cacheChanged) {
-    await s3.putObject({
+    await s3.send(new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: S3_KEY,
       Body: JSON.stringify(cachedData),
-    }).promise();
+    }));
   }
 }

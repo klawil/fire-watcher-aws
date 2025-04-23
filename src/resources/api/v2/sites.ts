@@ -1,4 +1,7 @@
-import { SQS } from 'aws-sdk';
+import {
+  SQSClient,
+  SendMessageCommand
+} from '@aws-sdk/client-sqs';
 
 import {
   LambdaApiFunction,
@@ -26,7 +29,7 @@ import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('stack/resources/api/v2/sites');
-const sqs = new SQS();
+const sqs = new SQSClient();
 
 const GET: LambdaApiFunction<GetAllSitesApi> = async function (event) {
   logger.trace('GET', ...arguments);
@@ -164,10 +167,10 @@ const POST: LambdaApiFunction<UpdateSitesApi> = async function (event) {
     });
 
     // Send the message
-    await sqs.sendMessage({
+    await sqs.send(new SendMessageCommand({
       QueueUrl: process.env.SQS_QUEUE,
       MessageBody: JSON.stringify(queueMessage),
-    }).promise();
+    }));
   }
 
   // Return the errors

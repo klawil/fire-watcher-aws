@@ -1,4 +1,13 @@
-import { DocumentClient } from 'aws-sdk/clients/dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import {
+  DeleteCommand,
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  ScanCommand,
+  UpdateCommand
+} from '@aws-sdk/lib-dynamodb';
 
 import {
   TypedDeleteItemInput, TypedDeleteItemOutput, TypedGetInput, TypedGetOutput, TypedPutItemInput,
@@ -6,7 +15,12 @@ import {
   TypedUpdateInput, TypedUpdateOutput
 } from '@/types/backend/dynamo';
 
-const docClient = new DocumentClient();
+const client = new DynamoDBClient();
+const dynamoDb = DynamoDBDocumentClient.from(client, {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 
 export const TABLE_FILE = process.env.TABLE_FILE;
 export const TABLE_USER = process.env.TABLE_USER;
@@ -19,35 +33,35 @@ export const TABLE_STATUS = process.env.TABLE_STATUS;
 export async function typedUpdate<T extends object>(
   config: TypedUpdateInput<T>
 ): Promise<TypedUpdateOutput<T>> {
-  return (await docClient.update(config).promise()) as TypedUpdateOutput<T>;
+  return (await dynamoDb.send(new UpdateCommand(config))) as TypedUpdateOutput<T>;
 }
 
 export async function typedGet<T extends object>(
   config: TypedGetInput<T>
 ): Promise<TypedGetOutput<T>> {
-  return (await docClient.get(config).promise()) as TypedGetOutput<T>;
+  return (await dynamoDb.send(new GetCommand(config))) as TypedGetOutput<T>;
 }
 
 export async function typedQuery<T extends object>(
   config: TypedQueryInput<T>
 ): Promise<TypedQueryOutput<T>> {
-  return (await docClient.query(config).promise()) as TypedQueryOutput<T>;
+  return (await dynamoDb.send(new QueryCommand(config))) as TypedQueryOutput<T>;
 }
 
 export async function typedScan<T extends object>(
   config: TypedScanInput<T>
 ): Promise<TypedScanOutput<T>> {
-  return (await docClient.scan(config).promise()) as TypedScanOutput<T>;
+  return (await dynamoDb.send(new ScanCommand(config))) as TypedScanOutput<T>;
 }
 
 export async function typedDeleteItem<T extends object>(
   config: TypedDeleteItemInput<T>
 ): Promise<TypedDeleteItemOutput<T>> {
-  return (await docClient.delete(config).promise()) as TypedDeleteItemOutput<T>;
+  return (await dynamoDb.send(new DeleteCommand(config))) as TypedDeleteItemOutput<T>;
 }
 
 export async function typedPutItem<T extends object>(
   config: TypedPutItemInput<T>
 ): Promise<TypedPutItemOutput<T>> {
-  return (await docClient.put(config).promise()) as TypedPutItemOutput<T>;
+  return (await dynamoDb.send(new PutCommand(config))) as TypedPutItemOutput<T>;
 }

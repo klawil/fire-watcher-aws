@@ -140,9 +140,11 @@ export type UpdateSitesApi = {
 export const adjacentSiteItemValidator: Validator<AdjacentSiteBodyItem> = {
   time: {
     required: true,
-    types: { string: {
-      regex: /^[0-9]+$/,
-    }, },
+    types: {
+      string: {
+        regex: /^[0-9]+$/,
+      },
+    },
   },
   rfss: {
     required: true,

@@ -1,4 +1,6 @@
-import CloudWatch from 'aws-sdk/clients/cloudwatch';
+import {
+  CloudWatchClient, PutMetricDataCommand
+} from '@aws-sdk/client-cloudwatch';
 import twilio from 'twilio';
 
 import {
@@ -23,7 +25,7 @@ import { getUserPermissions } from '@/utils/common/user';
 
 const logger = getLogger('stack/resources/utils/texts');
 
-const cloudWatch = new CloudWatch();
+const cloudWatch = new CloudWatchClient();
 const testUser = Number(process.env.TESTING_USER);
 
 export async function getUserRecipients(
@@ -31,7 +33,7 @@ export async function getUserRecipients(
   pageTg: PagingTalkgroup | null,
   isTest: boolean = false
 ): Promise<FullUserObject[]> {
-  logger.trace('getRecipients', ...arguments);
+  logger.trace('getUserRecipients', ...arguments);
 
   // Build out the scanning information
   const scanInput: TypedScanInput<FullUserObject> = {
@@ -163,7 +165,7 @@ export async function saveMessageData(
 
   // Add the metric data
   const dataDate = new Date(messageId);
-  promises.push(cloudWatch.putMetricData({
+  promises.push(cloudWatch.send(new PutMetricDataCommand({
     Namespace: 'Twilio Health',
     MetricData: [ {
       MetricName: 'Initiated',
@@ -171,7 +173,7 @@ export async function saveMessageData(
       Unit: 'Count',
       Value: recipients,
     }, ],
-  }).promise()
+  }))
     .catch(e => logger.error('Error pushing metrics in saveMessageData', e)));
 
   await Promise.all(promises);

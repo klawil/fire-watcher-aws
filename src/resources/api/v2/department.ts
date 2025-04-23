@@ -1,6 +1,9 @@
 import {
-  CostExplorer, S3
-} from 'aws-sdk';
+  CostExplorerClient, GetCostAndUsageCommand
+} from '@aws-sdk/client-cost-explorer';
+import {
+  GetObjectCommand, PutObjectCommand, S3Client
+} from '@aws-sdk/client-s3';
 import twilio from 'twilio';
 
 import {
@@ -22,8 +25,8 @@ import { TwilioAccounts } from '@/types/backend/department';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/department');
-const s3 = new S3();
-const costExporer = new CostExplorer();
+const s3 = new S3Client();
+const costExporer = new CostExplorerClient();
 
 const twilioCategoryLabels: { [key: string]: string } = {
   phonenumbers: 'Phone Numbers',
@@ -56,10 +59,10 @@ async function getAwsBillingData(
 
   // Check for cached data
   try {
-    const data = await s3.getObject({
+    const data = await s3.send(new GetObjectCommand({
       Bucket: process.env.COSTS_BUCKET,
       Key: fileName,
-    }).promise();
+    }));
     if (typeof data.Body !== 'undefined') {
       const body = JSON.parse(data.Body.toString());
       return body.data;
@@ -77,7 +80,7 @@ async function getAwsBillingData(
   }
 
   // Fetch the actual data
-  const awsData = await costExporer.getCostAndUsage({
+  const awsData = await costExporer.send(new GetCostAndUsageCommand({
     Granularity: 'MONTHLY',
     Metrics: [
       'UnblendedCost',
@@ -101,7 +104,7 @@ async function getAwsBillingData(
         },
       }
       : {},
-  }).promise();
+  }));
 
   const cache: {
     dateTimePulled: string;
@@ -131,11 +134,11 @@ async function getAwsBillingData(
       });
   }
 
-  await s3.putObject({
+  await s3.send(new PutObjectCommand({
     Bucket: process.env.COSTS_BUCKET,
     Key: fileName,
     Body: JSON.stringify(cache),
-  }).promise();
+  }));
 
   return cache.data;
 }

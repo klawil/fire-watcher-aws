@@ -1,4 +1,6 @@
-import { Firehose } from 'aws-sdk';
+import {
+  FirehoseClient, PutRecordBatchCommand
+} from '@aws-sdk/client-firehose';
 
 import {
   LambdaApiFunction,
@@ -15,7 +17,7 @@ import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/events');
-const firehose = new Firehose();
+const firehose = new FirehoseClient();
 
 const FIREHOSE_NAME = process.env.FIREHOSE_NAME;
 
@@ -54,15 +56,16 @@ const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
 
   // Send the valid items to the firehose
   if (validItems.length > 0) {
-    await firehose.putRecordBatch({
+    const encoder = new TextEncoder();
+    await firehose.send(new PutRecordBatchCommand({
       DeliveryStreamName: FIREHOSE_NAME,
       Records: validItems.map(item => ({
-        Data: JSON.stringify({
+        Data: encoder.encode(JSON.stringify({
           ...item,
           timestamp: eventTime,
-        }),
+        })),
       })),
-    }).promise();
+    }));
   }
 
   // Return either the errors or a 200
