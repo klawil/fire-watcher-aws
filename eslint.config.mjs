@@ -32,6 +32,12 @@ const eslintConfig = [
         'all',
       ],
     },
+    overrides: [ {
+      files: [ 'tests/**/*', ],
+      env: {
+        jest: true,
+      },
+    }, ],
   }),
   {
     plugins: {
