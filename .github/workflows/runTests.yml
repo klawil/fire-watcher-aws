@@ -53,6 +53,9 @@ jobs:
           recreate: true
           path: code-coverage-results.md
 
+      - name: Update Coverage Badge
+        uses: we-cli/coverage-badge-action@main
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
