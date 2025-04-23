@@ -26,6 +26,5 @@ if (coverage <= 0) {
 } else {
   badge.color = 'brightgreen';
 }
-writeFileSync(`${__dirname}/coverage/badge.json`, JSON.stringify(badge));
 console.log(badge);
-console.log(`${__dirname}/coverage/badge.json`);
+writeFileSync('./coverage/badge.json', JSON.stringify(badge));
