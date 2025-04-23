@@ -51,3 +51,4 @@ cdk.out
 # JS files
 *.js
 !redirect_function.js
+!badge.js
