@@ -168,6 +168,7 @@ const eslintConfig = [
       '@stylistic/object-curly-newline': [
         'error',
         {
+          multiline: true,
           minProperties: 2,
           consistent: true,
         },
@@ -176,6 +177,7 @@ const eslintConfig = [
         'error',
         'always',
       ],
+      '@stylistic/object-property-newline': 'error',
       '@stylistic/one-var-declaration-per-line': 'error',
       '@stylistic/operator-linebreak': 'error',
       '@stylistic/quotes': [

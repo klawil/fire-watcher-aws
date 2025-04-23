@@ -107,7 +107,8 @@ export default function LoginPage() {
         )
       ) {
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       }
 
@@ -168,7 +169,8 @@ export default function LoginPage() {
         'message' in apiResult
       ) {
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       }
 

@@ -393,7 +393,8 @@ export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
   getTranscriptOnly: {
     required: false,
     types: {
-      boolean: {}, null: {},
+      boolean: {},
+      null: {},
     },
   },
 };

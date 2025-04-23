@@ -94,7 +94,8 @@ export default function UserEditPage() {
         )
       ) {
         throw {
-          code, apiResponse,
+          code,
+          apiResponse,
         };
       }
 

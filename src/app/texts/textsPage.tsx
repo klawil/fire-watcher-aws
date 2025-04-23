@@ -79,7 +79,8 @@ async function getTexts(
       'message' in apiResult
     ) {
       throw {
-        code, apiResult,
+        code,
+        apiResult,
       };
     }
 

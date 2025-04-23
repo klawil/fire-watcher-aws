@@ -90,7 +90,8 @@ export default function StatusTowerLineChart({
       {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
         className='d-grid'
         xs={{
-          span: 6, offset: 3,
+          span: 6,
+          offset: 3,
         }}
         style={{ height: '100%', }}
       >

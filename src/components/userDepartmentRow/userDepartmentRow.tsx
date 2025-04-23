@@ -140,17 +140,20 @@ export default function UserDepartmentRow({
         apiResult === null
       ) {
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       }
       if ('errors' in apiResult) {
         setErrorFields(apiResult.errors);
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       } else if ('message' in apiResult) {
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       } else {
         dispatch({
@@ -200,7 +203,8 @@ export default function UserDepartmentRow({
         'message' in apiResult
       ) {
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       }
 

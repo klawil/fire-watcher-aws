@@ -257,19 +257,24 @@ export class FireWatcherAwsStack extends Stack {
         tableType: 'EXTERNAL_TABLE',
         partitionKeys: [
           {
-            name: 'year', type: 'int',
+            name: 'year',
+            type: 'int',
           },
           {
-            name: 'month', type: 'int',
+            name: 'month',
+            type: 'int',
           },
           {
-            name: 'day', type: 'int',
+            name: 'day',
+            type: 'int',
           },
           {
-            name: 'hour', type: 'int',
+            name: 'hour',
+            type: 'int',
           },
           {
-            name: 'event', type: 'string',
+            name: 'event',
+            type: 'string',
           },
         ],
         storageDescriptor: {
@@ -281,19 +286,24 @@ export class FireWatcherAwsStack extends Stack {
           },
           columns: [
             {
-              name: 'radioId', type: 'string',
+              name: 'radioId',
+              type: 'string',
             },
             {
-              name: 'talkgroup', type: 'string',
+              name: 'talkgroup',
+              type: 'string',
             },
             {
-              name: 'talkgroupList', type: 'string',
+              name: 'talkgroupList',
+              type: 'string',
             },
             {
-              name: 'tower', type: 'string',
+              name: 'tower',
+              type: 'string',
             },
             {
-              name: 'timestamp', type: 'bigint',
+              name: 'timestamp',
+              type: 'bigint',
             },
           ],
           location: eventsS3Bucket.s3UrlForObject() + '/data/',
@@ -400,10 +410,12 @@ export class FireWatcherAwsStack extends Stack {
             type: 'MetadataExtraction',
             parameters: [
               {
-                parameterName: 'JsonParsingEngine', parameterValue: 'JQ-1.6',
+                parameterName: 'JsonParsingEngine',
+                parameterValue: 'JQ-1.6',
               },
               {
-                parameterName: 'MetadataExtractionQuery', parameterValue: '{event:.event}',
+                parameterName: 'MetadataExtractionQuery',
+                parameterValue: '{event:.event}',
               },
             ],
           }, ],

@@ -89,7 +89,8 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
         'message' in apiResult
       ) {
         throw {
-          code, apiResult,
+          code,
+          apiResult,
         };
       }
 

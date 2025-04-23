@@ -71,7 +71,8 @@ export default function StatusTimingLineChart({
       {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
         className='d-grid'
         xs={{
-          span: 6, offset: 3,
+          span: 6,
+          offset: 3,
         }}
         style={{ height: '100%', }}
       >
@@ -85,7 +86,8 @@ export default function StatusTimingLineChart({
       {data && data.datasets.length === 0 && <Col
         className='d-grid'
         xs={{
-          span: 6, offset: 3,
+          span: 6,
+          offset: 3,
         }}
         style={{ height: '75%', }}
       ><h2 className='text-center align-self-center'>No Data Found</h2></Col>}

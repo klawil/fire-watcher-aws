@@ -167,7 +167,8 @@ export default function AdjacentSites() {
         'message' in siteData
       ) {
         throw {
-          code, siteData,
+          code,
+          siteData,
         };
       }
 

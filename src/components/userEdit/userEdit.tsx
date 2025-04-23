@@ -329,11 +329,14 @@ export default function UserEdit({
       }
       : 6} className='row px-4'>
       <Col lg={{
-        span: 6, offset: 3,
+        span: 6,
+        offset: 3,
       }} md={{
-        span: 8, offset: 2,
+        span: 8,
+        offset: 2,
       }} xl={{
-        span: 8, offset: 2,
+        span: 8,
+        offset: 2,
       }}>
         {user === null && <TextInput
           invalidFields={errorFields}
@@ -419,13 +422,17 @@ export default function UserEdit({
         />)}
       </Col>
       <Col lg={{
-        span: 3, offset: 3,
+        span: 3,
+        offset: 3,
       }} md={{
-        span: 4, offset: 2,
+        span: 4,
+        offset: 2,
       }} sm={{
-        span: 5, offset: 1,
+        span: 5,
+        offset: 1,
       }} xl={{
-        span: 6, offset: 0,
+        span: 6,
+        offset: 0,
       }}>
         <h6>Roles</h6>
         {userRoleCheckboxes
@@ -449,10 +456,12 @@ export default function UserEdit({
       </Col>
       <Col
         lg={{
-          span: 6, offset: 3,
+          span: 6,
+          offset: 3,
         }}
         md={{
-          span: 8, offset: 2,
+          span: 8,
+          offset: 2,
         }}
         className='p-2'
       >
@@ -472,10 +481,12 @@ export default function UserEdit({
     </Col>
     {user !== null && <Col
       xl={{
-        span: 6, offset: 0,
+        span: 6,
+        offset: 0,
       }}
       lg={{
-        span: 10, offset: 1,
+        span: 10,
+        offset: 1,
       }}
       className='table-responsive'
     >

@@ -124,7 +124,8 @@ export default function ProfilePage() {
         'message' in apiResponse
       ) {
         throw {
-          code, apiResponse,
+          code,
+          apiResponse,
         };
       }
 

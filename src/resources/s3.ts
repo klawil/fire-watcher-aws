@@ -380,16 +380,20 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       const toneFile = Key.split('/')[2] || Key.split('/')[1];
       const Tags: StartTranscriptionJobRequest['Tags'] = [
         {
-          Key: 'Talkgroup', Value: body.Item.Talkgroup.toString(),
+          Key: 'Talkgroup',
+          Value: body.Item.Talkgroup.toString(),
         },
         {
-          Key: 'File', Value: toneFile,
+          Key: 'File',
+          Value: toneFile,
         },
         {
-          Key: 'FileKey', Value: Key,
+          Key: 'FileKey',
+          Value: Key,
         },
         {
-          Key: 'IsPage', Value: body.Item.Tone ? 'y' : 'n',
+          Key: 'IsPage',
+          Value: body.Item.Tone ? 'y' : 'n',
         },
       ];
       if (fileTag !== null) {
