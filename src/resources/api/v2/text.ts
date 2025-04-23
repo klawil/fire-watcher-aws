@@ -65,8 +65,8 @@ const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
     });
   } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (
-      !('code' in e) ||
-      e.code !== 'ConditionalCheckFailedException'
+      !('name' in e) ||
+      e.name !== 'ConditionalCheckFailedException'
     ) {
       throw e;
     }
