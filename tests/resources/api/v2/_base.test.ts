@@ -28,7 +28,7 @@ import {
   getLogger
 } from '@/utils/common/logger';
 
-describe('resources/api/v2/department', () => {
+describe('resources/api/v2/_base', () => {
   describe('handleResourceApi', () => {
     let handlers: Parameters<typeof handleResourceApi>[0];
     beforeEach(() => {

@@ -38,7 +38,7 @@ const queueUrl = process.env.SQS_QUEUE;
 const twilioQueueUrl = process.env.TWILIO_QUEUE;
 
 const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
-  logger.trace('GET', ...arguments);
+  logger.trace('POST', ...arguments);
   const eventTime = Date.now();
 
   // Parse the body

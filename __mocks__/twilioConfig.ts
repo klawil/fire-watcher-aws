@@ -1,20 +1,24 @@
-export const twilioConf: Record<string, string> = {};
+import { TwilioConfig } from '@/deprecated/utils/general';
 
-[
+export const twilioConf: TwilioConfig = {
+  apiCode: 'apiCodeValue',
+} as TwilioConfig;
+
+([
   '',
   'Baca',
   'Crestone',
   'NSCAD',
   'Saguache',
-].forEach(account => {
+] as const).forEach(account => {
   twilioConf[`accountSid${account}`] = `accountSid${account}`;
   twilioConf[`authToken${account}`] = `authToken${account}`;
 
-  [
+  ([
     'page',
     'alert',
     'chat',
-  ].forEach(phone => {
+  ] as const).forEach(phone => {
     twilioConf[`phoneNumber${account}${phone}`] = `phoneNumber${account}${phone}`;
   });
 });

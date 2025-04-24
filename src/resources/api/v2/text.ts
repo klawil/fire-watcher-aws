@@ -18,7 +18,7 @@ import { getLogger } from '@/utils/common/logger';
 const logger = getLogger('text');
 
 const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
-  logger.trace('POST', ...arguments);
+  logger.trace('PATCH', ...arguments);
 
   // Validate the request
   const {
