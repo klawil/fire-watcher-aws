@@ -6,24 +6,40 @@ import {
 const coverageInfo = JSON.parse(readFileSync('./coverage/coverage-summary.json', {
   encoding: 'utf8',
 }));
-
 const coverage = Math.floor(coverageInfo.total.lines.pct);
-const badge = {
+const coverageBadge = {
   schemaVersion: 1,
   label: 'Coverage',
   message: `${coverageInfo.total.lines.covered} / ${coverageInfo.total.lines.total} (${coverage}%)`,
 };
 if (coverage <= 0) {
-  badge.color = 'red';
+  coverageBadge.color = 'red';
 } else if (coverage < 50) {
-  badge.color = 'orange';
+  coverageBadge.color = 'orange';
 } else if (coverage < 80) {
-  badge.color = 'yellow';
+  coverageBadge.color = 'yellow';
 } else if (coverage < 90) {
-  badge.color = 'yellowgreen';
+  coverageBadge.color = 'yellowgreen';
 } else if (coverage < 95) {
-  badge.color = 'green';
+  coverageBadge.color = 'green';
 } else {
-  badge.color = 'brightgreen';
+  coverageBadge.color = 'brightgreen';
 }
-writeFileSync('./coverage/lcov-report/badge.json', JSON.stringify(badge));
+writeFileSync('./coverage/lcov-report/coverage.json', JSON.stringify(coverageBadge));
+
+// Get the test result information
+const testResults = JSON.parse(readFileSync('./coverage/test-results.json', {
+  encoding: 'utf8',
+}));
+const failed = testResults.results.summary.failed;
+const testsResultsBadge = {
+  schemaVersion: 1,
+  label: 'Test Results',
+  message: failed === 0
+    ? 'PASSING'
+    : `FAILED ${failed}`,
+  color: failed === 0
+    ? 'brightgreen'
+    : 'red',
+};
+writeFileSync('./coverage/lcov-report/testResults.json', JSON.stringify(testsResultsBadge));
