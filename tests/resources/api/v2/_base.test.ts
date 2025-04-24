@@ -5,7 +5,7 @@ import {
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
 import {
-  GetSecretValueCommand, SecretsManagerClientMock
+  GetSecretValueCommand
 } from '../../../../__mocks__/@aws-sdk/client-secrets-manager';
 import {
   DynamoDBDocumentClientMock, GetCommand
@@ -331,11 +331,6 @@ describe('resources/api/v2/_base', () => {
         phone: 5555555555,
       });
 
-      // JWT secret mock
-      SecretsManagerClientMock.setResult('getSecretValue', {
-        SecretString: 'JWT-secret',
-      });
-
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {
         Item: {
@@ -363,7 +358,7 @@ describe('resources/api/v2/_base', () => {
       expect(verify).toHaveBeenCalledTimes(1);
       expect(verify).toHaveBeenCalledWith(
         '1234567890',
-        'JWT-secret'
+        'JWT-Secret-Value'
       );
 
       // Validate the user was fetched from the DB
@@ -399,11 +394,6 @@ describe('resources/api/v2/_base', () => {
     it('Deletes cookies if the cofrn-user cookie is not present', async () => {
       // JWT library mock
       verify.mockReturnValue('none');
-
-      // JWT secret mock
-      SecretsManagerClientMock.setResult('getSecretValue', {
-        SecretString: 'JWT-secret',
-      });
 
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {
@@ -460,11 +450,6 @@ describe('resources/api/v2/_base', () => {
     it('Deletes cookies if the cofrn-token cookie is not present', async () => {
       // JWT library mock
       verify.mockReturnValue('none');
-
-      // JWT secret mock
-      SecretsManagerClientMock.setResult('getSecretValue', {
-        SecretString: 'JWT-secret',
-      });
 
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {
@@ -524,11 +509,6 @@ describe('resources/api/v2/_base', () => {
         throw new Error('Invalid');
       });
 
-      // JWT secret mock
-      SecretsManagerClientMock.setResult('getSecretValue', {
-        SecretString: 'JWT-secret',
-      });
-
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {
         Item: {
@@ -556,7 +536,7 @@ describe('resources/api/v2/_base', () => {
       expect(verify).toHaveBeenCalledTimes(1);
       expect(verify).toHaveBeenCalledWith(
         '1234567890',
-        'JWT-secret'
+        'JWT-Secret-Value'
       );
 
       // Validate that nothing was fetched from the database
@@ -587,11 +567,6 @@ describe('resources/api/v2/_base', () => {
       // JWT library mock
       verify.mockReturnValue({});
 
-      // JWT secret mock
-      SecretsManagerClientMock.setResult('getSecretValue', {
-        SecretString: 'JWT-secret',
-      });
-
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {
         Item: {
@@ -619,7 +594,7 @@ describe('resources/api/v2/_base', () => {
       expect(verify).toHaveBeenCalledTimes(1);
       expect(verify).toHaveBeenCalledWith(
         '1234567890',
-        'JWT-secret'
+        'JWT-Secret-Value'
       );
 
       // Validate that nothing was fetched from the database
@@ -652,11 +627,6 @@ describe('resources/api/v2/_base', () => {
         phone: 5555555555,
       });
 
-      // JWT secret mock
-      SecretsManagerClientMock.setResult('getSecretValue', {
-        SecretString: 'JWT-secret',
-      });
-
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {});
 
@@ -676,7 +646,7 @@ describe('resources/api/v2/_base', () => {
       expect(verify).toHaveBeenCalledTimes(1);
       expect(verify).toHaveBeenCalledWith(
         '1234567890',
-        'JWT-secret'
+        'JWT-Secret-Value'
       );
 
       // Validate the user was fetched from the DB
