@@ -1,6 +1,6 @@
 import {
   beforeEach,
-  describe, expect, it
+  describe, expect, it, jest
 } from '@jest/globals';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
@@ -14,23 +14,183 @@ import { verify } from '../../../../__mocks__/jsonwebtoken';
 
 import { generateApiEvent } from './_utils';
 
-import { getCurrentUser } from '@/resources/api/v2/_base';
+import {
+  getCookies, getCurrentUser,
+  getDeleteCookieHeader,
+  getFrontendUserObj,
+  getSetCookieHeader,
+  handleResourceApi,
+  parseJsonBody
+} from '@/resources/api/v2/_base';
+import { api403Response } from '@/types/api/_shared';
+import {
+  LogLevel,
+  getLogger
+} from '@/utils/common/logger';
 
 describe('resources/api/v2/department', () => {
   describe('handleResourceApi', () => {
-    it.todo('Passes the event to the appropriate function when provided');
+    let handlers: Parameters<typeof handleResourceApi>[0];
+    beforeEach(() => {
+      handlers = {
+        POST: jest.fn().mockReturnValue(Promise.resolve([
+          200,
+          {},
+        ])) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        PATCH: jest.fn().mockReturnValue(Promise.resolve([
+          201,
+          {},
+        ])) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      };
+    });
 
-    it.todo('Returns a 403 if the appropriate method is not available');
+    it('Passes the event to the appropriate function when provided', async () => {
+      const event = generateApiEvent({
+        method: 'POST',
+        path: '',
+      });
 
-    it.todo('Attaches a Content-Type header unless the status code is 204');
+      await handleResourceApi(
+        handlers,
+        event
+      );
 
-    it.todo('Does not attach a Content-Type header if the status code is 204');
+      expect(handlers.POST).toHaveBeenCalledTimes(1);
+      expect(handlers.POST).toHaveBeenCalledWith(event);
 
-    it.todo('Uses the Content-Type header from the function if provided');
+      expect(handlers.PATCH).toHaveBeenCalledTimes(0);
+    });
 
-    it.todo('Stringifies a JSON response');
+    it('Returns a 403 if the appropriate method is not available', async () => {
+      const event = generateApiEvent({
+        method: 'GET',
+        path: '',
+      });
 
-    it.todo('Does not modify a string response');
+      const result = await handleResourceApi(
+        handlers,
+        event
+      );
+
+      expect(handlers.POST).toHaveBeenCalledTimes(0);
+      expect(handlers.PATCH).toHaveBeenCalledTimes(0);
+      expect(result).toEqual(api403Response);
+    });
+
+    it('Attaches a Content-Type header if the status code is not 204', async () => {
+      const event = generateApiEvent({
+        method: 'POST',
+        path: '',
+      });
+
+      const result = await handleResourceApi(
+        handlers,
+        event
+      );
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: '{}',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
+    it('Does not attach a Content-Type header if the status code is 204', async () => {
+      const event = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+      });
+
+      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .mockReturnValue([
+          204,
+          '',
+        ]);
+
+      const result = await handleResourceApi(
+        handlers,
+        event
+      );
+
+      expect(result).toEqual({
+        statusCode: 204,
+        body: '',
+      });
+    });
+
+    it('Uses the Content-Type header from the function if provided', async () => {
+      const event = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+      });
+
+      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .mockReturnValue([
+          200,
+          '<Response>Test</Response>',
+          null,
+          'application/xml',
+        ]);
+
+      const result = await handleResourceApi(
+        handlers,
+        event
+      );
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: '<Response>Test</Response>',
+        headers: {
+          'Content-Type': 'application/xml',
+        },
+      });
+    });
+
+    it('Logs an error if the status code is not 200 or 204', async () => {
+      const logger = getLogger('');
+      logger.setLevel(LogLevel.Error);
+
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const event = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+      });
+
+      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .mockReturnValue([
+          400,
+          [
+            'key',
+            'key2',
+          ],
+        ]);
+
+      const result = await handleResourceApi(
+        handlers,
+        event
+      );
+
+      expect(result).toEqual({
+        statusCode: 400,
+        body: '["key","key2"]',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      expect(console.error).toHaveBeenCalledTimes(1);
+      expect(console.error).toHaveBeenCalledWith(
+        '[ api/v2/_base ]',
+        'PATCH Error - 400',
+        [
+          'key',
+          'key2',
+        ],
+        event
+      );
+    });
   });
 
   describe('mergeDynamoQueriesDocClient', () => {
@@ -48,27 +208,111 @@ describe('resources/api/v2/department', () => {
   });
 
   describe('getCookies', () => {
-    it.todo('Reads the cookies out of the cookie header');
+    it('Reads the cookies out of the cookie header', () => {
+      expect(getCookies(generateApiEvent({
+        method: 'GET',
+        path: '',
+        headers: {
+          Cookie: 'cookieA=valueA; cookieB=valueB; cookieC=valueC',
+        },
+      }))).toEqual({
+        cookieA: 'valueA',
+        cookieB: 'valueB',
+        cookieC: 'valueC',
+      });
+    });
 
-    it.todo('Does not modify the cookie name or value in any way');
+    it('Does not modify the cookie name or value in any way', () => {
+      expect(getCookies(generateApiEvent({
+        method: 'GET',
+        path: '',
+        headers: {
+          Cookie: 'cookie%20A=value%20A; cookie B=value B; cookieC=value!C',
+        },
+      }))).toEqual({
+        'cookie%20A': 'value%20A',
+        'cookie B': 'value B',
+        cookieC: 'value!C',
+      });
+    });
 
-    it.todo('Handles cookies with a blank value');
+    it('Handles cookies with a blank value', () => {
+      expect(getCookies(generateApiEvent({
+        method: 'GET',
+        path: '',
+        headers: {
+          Cookie: 'cookieA; cookieB=; cookieC=value!C',
+        },
+      }))).toEqual({
+        cookieA: '',
+        cookieB: '',
+        cookieC: 'value!C',
+      });
+    });
+
+    it('Ignores cookies without a key', () => {
+      expect(getCookies(generateApiEvent({
+        method: 'GET',
+        path: '',
+        headers: {
+          Cookie: 'cookieA; =; =valueC',
+        },
+      }))).toEqual({
+        cookieA: '',
+      });
+    });
   });
 
   describe('getFrontendUserObj', () => {
-    it.todo('Returns only the allowed keys from the user object');
+    it('Returns only the allowed keys from the user object', () => {
+      expect(getFrontendUserObj({
+        phone: 5555555555,
+        Baca: {
+          active: true,
+          admin: true,
+          callSign: 'BG-ID',
+        },
+        isDistrictAdmin: true,
+        isTest: true,
+        getApiAlerts: true,
+        code: '123456',
+        codeExpiry: 1234567,
+      })).toEqual({
+        phone: 5555555555,
+        Baca: {
+          active: true,
+          admin: true,
+          callSign: 'BG-ID',
+        },
+        isDistrictAdmin: true,
+        isTest: true,
+        getApiAlerts: true,
+      });
+    });
   });
 
   describe('getDeleteCookieHeader', () => {
-    it.todo('Returns a cookie string that will result in the cookie being deleted');
+    it('Returns a cookie string that will result in the cookie being deleted', () => {
+      expect(getDeleteCookieHeader('test-cookie'))
+        .toEqual('test-cookie=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+    });
 
-    it.todo('Encodes the cookie name in a URL safe manner');
+    it('Encodes the cookie name in a URL safe manner', () => {
+      expect(getDeleteCookieHeader('test cookie'))
+        .toEqual('test%20cookie=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+    });
   });
 
   describe('getSetCookieHeader', () => {
-    it.todo('Returns a cookie string that will result in the cookie being set');
+    it('Returns a cookie string that will result in the cookie being set', () => {
+      expect(getSetCookieHeader('test-cookie', 'test-value', 20))
+        .toEqual('test-cookie=test-value; Secure; SameSite=None; Path=/; Max-Age=20');
+    });
 
-    it.todo('Encodes the cookie name and value in a URL safe manner');
+    it('Encodes the cookie name and value in a URL safe manner', () => {
+      expect(getSetCookieHeader('test cookie', 'test;value', 20))
+        .toEqual('test%20cookie=test%3Bvalue; Secure; SameSite=None; Path=/; Max-Age=20');
+    });
   });
 
   describe('getCurrentUser', () => {
@@ -467,13 +711,72 @@ describe('resources/api/v2/department', () => {
   });
 
   describe('parseJsonBody', () => {
-    it.todo('Returns an error if the body is null');
+    it('Returns an error if the body is null', () => {
+      expect(parseJsonBody(null)).toEqual([
+        null,
+        [],
+      ]);
+    });
 
-    it.todo('Returns an error if the object is not valid JSON');
+    it('Returns an error if the object is not valid JSON', () => {
+      expect(parseJsonBody('test')).toEqual([
+        null,
+        [],
+      ]);
+    });
 
-    it.todo('Returns an error if the validation fails');
+    it('Returns an error if the validation fails', () => {
+      expect(parseJsonBody<{
+        key: number;
+      }>(
+        JSON.stringify({
+          key: 'value',
+        }),
+        {
+          key: {
+            required: true,
+            types: {
+              number: {},
+            },
+          },
+        }
+      )).toEqual([
+        null,
+        [ 'key', ],
+      ]);
+    });
 
-    it.todo('Validates the object if a validator is provided');
+    it('Validates the object if a validator is provided', () => {
+      expect(parseJsonBody<{
+        key: number;
+      }>(
+        JSON.stringify({
+          key: 1234,
+        }),
+        {
+          key: {
+            required: true,
+            types: {
+              number: {},
+            },
+          },
+        }
+      )).toEqual([
+        { key: 1234, },
+        [],
+      ]);
+    });
+
+    it('Does not validate the object if no validator is provided', () => {
+      expect(parseJsonBody(
+        JSON.stringify({
+          key: 'test',
+        })
+      )).toEqual([
+        { key: 'test', },
+        [],
+      ]);
+    });
   });
 
   describe('validateRequest', () => {
