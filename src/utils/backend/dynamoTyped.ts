@@ -30,38 +30,88 @@ export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP;
 export const TABLE_FILE_TRANSLATION = process.env.TABLE_DTR_TRANSLATION;
 export const TABLE_STATUS = process.env.TABLE_STATUS;
 
+function removeSets<T extends object>(input: T): T {
+  const output = { ...input, };
+  (Object.keys(output) as (keyof T)[]).forEach(key => {
+    if (!(output[key] instanceof Set)) {
+      return;
+    }
+
+    output[key] =
+      [ ...output[key], ] as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  });
+
+  return output;
+}
+
 export async function typedUpdate<T extends object>(
   config: TypedUpdateInput<T>
 ): Promise<TypedUpdateOutput<T>> {
-  return (await dynamoDb.send(new UpdateCommand(config))) as TypedUpdateOutput<T>;
+  const output = (await dynamoDb.send(new UpdateCommand(config))) as TypedUpdateOutput<T>;
+
+  if (output.Attributes) {
+    output.Attributes = removeSets(output.Attributes);
+  }
+
+  return output;
 }
 
 export async function typedGet<T extends object>(
   config: TypedGetInput<T>
 ): Promise<TypedGetOutput<T>> {
-  return (await dynamoDb.send(new GetCommand(config))) as TypedGetOutput<T>;
+  const output = (await dynamoDb.send(new GetCommand(config))) as TypedGetOutput<T>;
+
+  if (output.Item) {
+    output.Item = removeSets(output.Item);
+  }
+
+  return output;
 }
 
 export async function typedQuery<T extends object>(
   config: TypedQueryInput<T>
 ): Promise<TypedQueryOutput<T>> {
-  return (await dynamoDb.send(new QueryCommand(config))) as TypedQueryOutput<T>;
+  const output = (await dynamoDb.send(new QueryCommand(config))) as TypedQueryOutput<T>;
+
+  if (output.Items) {
+    output.Items = output.Items.map(v => removeSets(v));
+  }
+
+  return output;
 }
 
 export async function typedScan<T extends object>(
   config: TypedScanInput<T>
 ): Promise<TypedScanOutput<T>> {
-  return (await dynamoDb.send(new ScanCommand(config))) as TypedScanOutput<T>;
+  const output = (await dynamoDb.send(new ScanCommand(config))) as TypedScanOutput<T>;
+
+  if (output.Items) {
+    output.Items = output.Items.map(v => removeSets(v));
+  }
+
+  return output;
 }
 
 export async function typedDeleteItem<T extends object>(
   config: TypedDeleteItemInput<T>
 ): Promise<TypedDeleteItemOutput<T>> {
-  return (await dynamoDb.send(new DeleteCommand(config))) as TypedDeleteItemOutput<T>;
+  const output = (await dynamoDb.send(new DeleteCommand(config))) as TypedDeleteItemOutput<T>;
+
+  if (output.Attributes) {
+    output.Attributes = removeSets(output.Attributes);
+  }
+
+  return output;
 }
 
 export async function typedPutItem<T extends object>(
   config: TypedPutItemInput<T>
 ): Promise<TypedPutItemOutput<T>> {
-  return (await dynamoDb.send(new PutCommand(config))) as TypedPutItemOutput<T>;
+  const output = (await dynamoDb.send(new PutCommand(config))) as TypedPutItemOutput<T>;
+
+  if (output.Attributes) {
+    output.Attributes = removeSets(output.Attributes);
+  }
+
+  return output;
 }
