@@ -199,7 +199,7 @@ function TextsTable({
   const loadNextBatchRefIdx = texts.length - 1;
 
   return <>
-    <h2 className='text-center'>{title}</h2>
+    <h2 className='text-center mt-3'>{title}</h2>
 
     <Container fluid style={{ height: '400px', }}>
       {texts.length > 0 && <Table striped className={`align-middle ${styles.tableScrollY}`}>
