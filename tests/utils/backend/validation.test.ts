@@ -16,6 +16,8 @@ interface TestObject {
     stringOpt?: string;
   }[];
   stringArr?: string[];
+  nullOpt?: null;
+  stringOrNum?: string | number;
 }
 
 const testObjectValidator: Validator<TestObject> = {
@@ -93,6 +95,17 @@ const testObjectValidator: Validator<TestObject> = {
       },
     },
   },
+  nullOpt: {
+    required: false,
+    types: { null: {}, },
+  },
+  stringOrNum: {
+    required: false,
+    types: {
+      string: {},
+      number: {},
+    },
+  },
 };
 
 const baseValidObject = {
@@ -100,6 +113,7 @@ const baseValidObject = {
   stringReq: 'test',
   specificString: 'other',
   boolReq: false,
+  nullOpt: null,
 };
 
 describe('utils/backend/validation', () => {
@@ -178,6 +192,8 @@ describe('utils/backend/validation', () => {
         stringOpt: 1234,
         arrOpt: 'test',
         stringArr: false,
+        stringOrNum: null,
+        nullOpt: {},
       }, testObjectValidator);
 
       expect(parsed).toEqual(null);
@@ -185,6 +201,8 @@ describe('utils/backend/validation', () => {
         'stringOpt',
         'arrOpt',
         'stringArr',
+        'nullOpt',
+        'stringOrNum',
       ]);
     });
 
@@ -201,10 +219,19 @@ describe('utils/backend/validation', () => {
           'value',
           'other',
         ],
-      }, testObjectValidator);
+      }, {
+        ...testObjectValidator,
+        numberReq: {
+          required: true,
+          types: {
+            number: { exact: [ 1234, ], },
+          },
+        },
+      });
 
       expect(parsed).toEqual(null);
       expect(errs).toEqual([
+        'numberReq',
         'stringReq',
         'specificString',
         'stringArr',
@@ -275,6 +302,56 @@ describe('utils/backend/validation', () => {
         'arrOpt-4-stringReq',
         'arrOpt-5-stringOpt',
       ]);
+    });
+
+    it('Uses the first value in a multi value array', () => {
+      const [
+        parsed,
+        errs,
+      ] = validateObject({
+        numberReq: [ 125, ],
+        stringReq: [ 'test', ],
+        specificString: [ 'other', ],
+        boolReq: [ false, ],
+        nullOpt: [ null, ],
+      }, testObjectValidator, true);
+
+      expect(parsed).toEqual({
+        ...baseValidObject,
+      });
+      expect(errs).toEqual([]);
+    });
+
+    it('Handles keys that can be multiple types', () => {
+      [
+        1234,
+        'string',
+      ].forEach(val => {
+        const [
+          parsed,
+          errors,
+        ] = validateObject<{
+          key: string | number;
+        }>(
+          {
+            key: val,
+          },
+          {
+            key: {
+              required: true,
+              types: {
+                string: {},
+                number: {},
+              },
+            },
+          }
+        );
+
+        expect(parsed).toEqual({
+          key: val,
+        });
+        expect(errors).toEqual([]);
+      });
     });
   });
 });
