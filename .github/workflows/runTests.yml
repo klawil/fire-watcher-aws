@@ -56,7 +56,7 @@ jobs:
 
       - name: Make Code Coverage Badge
         run: |
-          node badge.js
+          node badge.mjs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
