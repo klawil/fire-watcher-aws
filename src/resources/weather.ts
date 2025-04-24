@@ -59,7 +59,7 @@ async function processGaccUrl(url: string): Promise<number[]> {
   logger.trace('processGaccUrl', ...arguments);
   try {
     const data: GaccJson = await fetch(url)
-      .then(r => r.json());
+      .then(r => r.json()) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     return data.features
       .filter(f => f.properties.POOState === 'US-CO')
@@ -204,7 +204,7 @@ async function getAreaAlerts(): Promise<WeatherResultJson['weather']> {
         'User-Agent': 'klawil willyk95@gmail.com',
         Accept: 'application/geo+json',
       },
-    }).then(r => r.json());
+    }).then(r => r.json()) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     const featuresToReturn: NwsAlert[] = [];
     weatherAlerts.features
