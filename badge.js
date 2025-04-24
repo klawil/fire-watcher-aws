@@ -11,7 +11,7 @@ const coverage = Math.floor(coverageInfo.total.lines.pct);
 const badge = {
   schemaVersion: 1,
   label: 'Coverage',
-  message: `${coverage}%`,
+  message: `${coverageInfo.total.lines.covered} / ${coverageInfo.total.lines.total} (${coverage}%)`,
 };
 if (coverage <= 0) {
   badge.color = 'red';
