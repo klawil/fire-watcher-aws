@@ -1319,8 +1319,8 @@ export class FireWatcherAwsStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.BREACHING,
     };
     const baseUploadAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 18,
-      datapointsToAlarm: 18,
+      evaluationPeriods: 6,
+      datapointsToAlarm: 6,
       metric: new cloudwatch.Metric({
         metricName: 'UploadTime',
         namespace: 'DTR Metrics',
@@ -1358,12 +1358,10 @@ export class FireWatcherAwsStack extends Stack {
         codeName: 'pool-table-upload',
         alarm: {
           ...baseUploadAlarmConfig,
-          evaluationPeriods: 4,
-          datapointsToAlarm: 4,
           metric: new cloudwatch.Metric({
             metricName: 'UploadTime',
             namespace: 'DTR Metrics',
-            period: Duration.hours(3),
+            period: Duration.hours(1),
             statistic: cloudwatch.Stats.SAMPLE_COUNT,
             dimensionsMap: {
               Tower: 'PoolTable',
