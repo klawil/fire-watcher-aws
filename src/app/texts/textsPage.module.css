@@ -1,6 +1,7 @@
 .tableScrollY {
   display: block;
   height: 400px;
+  max-height: 75vh;
   overflow: auto;
   margin-top: 10px;
 }

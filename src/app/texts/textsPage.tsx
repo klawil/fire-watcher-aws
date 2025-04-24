@@ -201,10 +201,13 @@ function TextsTable({
   return <>
     <h2 className='text-center mt-3'>{title}</h2>
 
-    <Container fluid style={{ height: '400px', }}>
+    <Container fluid style={{
+      height: '400px',
+      maxHeight: '75vh',
+    }}>
       {texts.length > 0 && <Table striped className={`align-middle ${styles.tableScrollY}`}>
         <thead className='floatHead'><tr className='text-center'>
-          <th>{isPage && 'Page '}Time</th>
+          <th>Text Time</th>
           <th>Message</th>
           {!isPage && <th>Media</th>}
           <th>Recipients</th>
