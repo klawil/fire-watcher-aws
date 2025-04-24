@@ -473,4 +473,10 @@ describe('resources/s3', () => {
 
     it.todo('Handles deleting a deleted item from the database');
   });
+
+  describe('fail', () => {
+    it('Intentionally fails', () => {
+      expect(false).toEqual(true);
+    });
+  });
 });
