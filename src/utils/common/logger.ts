@@ -96,7 +96,10 @@ class Logger {
     }
 
     // Build the logger name portion
-    const loggerName = `[ ${stylePlaceholder}${this.name.padEnd(maxLoggerNameLen, ' ')}${stylePlaceholder} ]`;
+    const loggerNameStr = isNodeEnv
+      ? this.name
+      : this.name.padEnd(maxLoggerNameLen, ' ');
+    const loggerName = `[ ${stylePlaceholder}${loggerNameStr}${stylePlaceholder} ]`;
     let styles: string[] = [
       levelStyles[level],
       resetStyleString,
