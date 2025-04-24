@@ -13,12 +13,19 @@ export const twilioConf: TwilioConfig = {
 ] as const).forEach(account => {
   twilioConf[`accountSid${account}`] = `accountSid${account}`;
   twilioConf[`authToken${account}`] = `authToken${account}`;
+});
 
-  ([
-    'page',
-    'alert',
-    'chat',
-  ] as const).forEach(phone => {
-    twilioConf[`phoneNumber${account}${phone}`] = `phoneNumber${account}${phone}`;
-  });
+([
+  'Bacapage',
+  'Crestonepage',
+  'alert',
+  'Crestonechat',
+  'NSCADchat',
+  'NSCADpage',
+  'Saguachepage',
+] as const).forEach((phone, idx) => {
+  twilioConf[`phoneNumber${phone}`] = `+1${idx
+    .toString()
+    .repeat(10)
+    .slice(0, 10)}`;
 });

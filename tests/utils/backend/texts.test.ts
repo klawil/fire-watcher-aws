@@ -286,7 +286,7 @@ describe('utils/backend/texts', () => {
       expect(createFn).toBeCalledWith({
         body: 'test-body',
         mediaUrl: [],
-        from: 'phoneNumberalert',
+        from: '+12222222222',
         to: '+15555555555',
         statusCallback: 'https://cofrn.org/api/v2/twilio/12345/',
       });
@@ -306,7 +306,7 @@ describe('utils/backend/texts', () => {
       expect(createFn).toBeCalledWith({
         body: 'test-body',
         mediaUrl: [],
-        from: 'phoneNumberalert',
+        from: '+12222222222',
         to: '+15555555555',
         statusCallback: 'https://cofrn.org/api/v2/twilio/123456/',
       });
@@ -370,14 +370,14 @@ describe('utils/backend/texts', () => {
       expect(createFn).toBeCalledWith({
         body: 'test-body',
         mediaUrl: [],
-        from: 'phoneNumberalert',
+        from: '+12222222222',
         to: '+15555555555',
         statusCallback: 'https://cofrn.org/api/v2/twilio/123456/',
       });
       expect(createFn).toBeCalledWith({
         body: 'test-body',
         mediaUrl: [],
-        from: 'phoneNumberalert',
+        from: '+12222222222',
         to: '+14444444444',
         statusCallback: 'https://cofrn.org/api/v2/twilio/123456/',
       });
