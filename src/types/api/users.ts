@@ -97,6 +97,8 @@ export const adminUserKeys = [
   'phone',
   'talkgroups',
   'lastLogin',
+  'lastStatus',
+  'lastStatusCount',
   'getTranscript',
   ...validDepartments,
 ] as const;
@@ -108,6 +110,7 @@ export const districtAdminUserKeys = [
   'isDistrictAdmin',
   'pagingPhone',
   'getTranscriptOnly',
+  'isTest',
 ] as const;
 
 /**
