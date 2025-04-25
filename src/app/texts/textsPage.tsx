@@ -324,13 +324,15 @@ export default function TextsPage() {
     {tablesToLoad
       .filter(table => !table.requireDistrictAdmin || user.isDistrictAdmin)
       .map((table, i) =>
-        <TextsTable
-          key={i}
-          title={table.title}
-          query={table.query}
-          isPage={!!table.isPage}
-          shouldLoad={i <= tablesLoadedCount + maxParallelTableLoads}
-          setTableLoaded={setTablesLoadedCount}
-        />)}
+        <React.Fragment key={i}>
+          {i > 0 && <hr />}
+          <TextsTable
+            title={table.title}
+            query={table.query}
+            isPage={!!table.isPage}
+            shouldLoad={i <= tablesLoadedCount + maxParallelTableLoads}
+            setTableLoaded={setTablesLoadedCount}
+          />
+        </React.Fragment>)}
   </>;
 }
