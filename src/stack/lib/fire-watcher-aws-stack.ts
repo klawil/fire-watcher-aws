@@ -552,6 +552,7 @@ export class FireWatcherAwsStack extends Stack {
     twilioSecret.grantRead(queueHandler);
     dtrTranslationTable.grantReadWriteData(queueHandler);
     siteTable.grantReadWriteData(queueHandler);
+    costDataS3Bucket.grantReadWrite(queueHandler);
 
     // Create a queue for cloudwatch alarms
     const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
@@ -932,6 +933,10 @@ export class FireWatcherAwsStack extends Stack {
         authRequired: true,
         tables: [ {
           table: 'TEXT',
+          readOnly: true,
+        }, ],
+        buckets: [ {
+          bucket: 'COSTS',
           readOnly: true,
         }, ],
         next: [ {

@@ -184,7 +184,7 @@ export type UpdateTextStatusApi = {
     code?: string;
   };
   body: {
-    MessageStatus: 'delivered' | 'undelivered' | 'sent';
+    MessageStatus: 'delivered' | 'undelivered' | 'sent' | 'failed';
 
     /**
      * The phone number the message was sent to in the format +1XXXXXXXXXX
@@ -234,6 +234,7 @@ export const updateTextStatusBodyValidator: Validator<UpdateTextStatusApi['body'
           'delivered',
           'undelivered',
           'sent',
+          'failed',
         ],
       },
     },

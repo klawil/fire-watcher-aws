@@ -4,8 +4,12 @@ import {
   CloudWatchClient, PutMetricDataCommand
 } from '@aws-sdk/client-cloudwatch';
 import {
+  GetObjectCommand, PutObjectCommand, S3Client
+} from '@aws-sdk/client-s3';
+import {
   GetTranscriptionJobCommand, TranscribeClient
 } from '@aws-sdk/client-transcribe';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as lambda from 'aws-lambda';
 
 import {
@@ -45,6 +49,9 @@ import { getUserPermissions } from '@/utils/common/user';
 const logger = getLogger('queue');
 const transcribe = new TranscribeClient();
 const cloudWatch = new CloudWatchClient();
+const s3 = new S3Client();
+
+const cacheBucket = process.env.COSTS_BUCKET;
 
 type WelcomeMessageConfigKeys = 'name' | 'type' | 'pageNumber';
 const welcomeMessageParts: {
@@ -358,15 +365,40 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
     .filter(key => key.indexOf('MediaUrl') === 0)
     .map(key => body.body[key as keyof TwilioTextQueueItem['body']] as string);
   let storedMediaUrls: string[] = [];
+  let outboundMediaUrls: string[] = [];
   const messageId = Date.now();
 
   // Add auth information to the media URLs
   if (mediaUrls.length > 0) {
     const twilioConf = await getTwilioSecret();
-    storedMediaUrls = mediaUrls.map(url => url.replace(
-      /https:\/\//,
-      `https://${twilioConf.accountSid}:${twilioConf.authToken}`
-    ));
+    storedMediaUrls = await Promise.all(mediaUrls
+      // .map(url => url.replace(
+      //   /https:\/\//,
+      //   `https://${twilioConf.accountSid}:${twilioConf.authToken}@`
+      // ))
+      .map(async (url, idx) => {
+        const key = `textMedia/${messageId}-${idx}`;
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Basic ${Buffer
+              .from(`${twilioConf.accountSid}:${twilioConf.authToken}`)
+              .toString('base64')}`,
+          },
+        });
+        await s3.send(new PutObjectCommand({
+          Body: await response.bytes(),
+          Bucket: cacheBucket,
+          Key: key,
+          ContentType: response.headers.get('content-type') || undefined,
+        }));
+        return key;
+      }));
+    outboundMediaUrls = await Promise.all(storedMediaUrls.map(async Key => {
+      return await getSignedUrl(s3, new GetObjectCommand({
+        Bucket: cacheBucket,
+        Key,
+      }), { expiresIn: 3600, });
+    }));
   }
 
   // Save the message data
@@ -393,7 +425,7 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
         ? await getPageNumber(number)
         : depConfig.textPhone || depConfig.pagePhone,
       messageBody,
-      mediaUrls
+      outboundMediaUrls
     )));
   await insertMessage;
 }

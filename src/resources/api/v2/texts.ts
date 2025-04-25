@@ -1,4 +1,9 @@
 import {
+  GetObjectCommand, S3Client
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+import {
   LambdaApiFunction,
   getCurrentUser, handleResourceApi
 } from './_base';
@@ -17,6 +22,9 @@ import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('texts');
+
+const s3 = new S3Client();
+const cacheBucket = process.env.COSTS_BUCKET;
 
 const anyAdminTextTypes: FullTextObject['type'][] = [
   'page',
@@ -165,6 +173,44 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
         .filter(key => !allowedFrontendTextFields.includes(key))
         .forEach(key => delete text[key]);
       return text;
+    });
+
+  // Fill in the signed S3 urls for media as needed
+  const signedUrlPromises: Promise<{
+    textIdx: number;
+    idx: number;
+    url: string;
+  }>[] = [];
+  data.forEach((text, textIdx) => {
+    if (
+      !text.mediaUrls ||
+      !Array.isArray(text.mediaUrls) ||
+      !text.mediaUrls.some(u => u.startsWith('textMedia'))
+    ) {
+      return;
+    }
+
+    text.mediaUrls.forEach((url, idx) => {
+      if (!url.startsWith('textMedia')) {
+        return;
+      }
+
+      signedUrlPromises.push((async () => ({
+        textIdx,
+        idx,
+        url: await getSignedUrl(s3, new GetObjectCommand({
+          Bucket: cacheBucket,
+          Key: url,
+        })),
+      }))());
+    });
+  });
+  (await Promise.all(signedUrlPromises))
+    .forEach(result => {
+      data[result.textIdx].mediaUrls = Array.isArray(data[result.textIdx].mediaUrls)
+        ? data[result.textIdx].mediaUrls
+        : [];
+      (data[result.textIdx].mediaUrls as string[])[result.idx] = result.url;
     });
 
   // Build the response
