@@ -256,6 +256,13 @@ const lineChartsToShow: ChartConfig[] = [
           metricName: 'DeliveredTime',
           stat: 'SampleCount',
         },
+        {
+          type: 'timing',
+          label: 'Failed',
+          namespace: 'Twilio Health',
+          metricName: 'FailedTime',
+          stat: 'SampleCount',
+        },
       ],
       period: ONE_DAY,
       timerange: ONE_MONTH,

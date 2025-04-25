@@ -1445,6 +1445,26 @@ export class FireWatcherAwsStack extends Stack {
           }),
         },
       },
+      { // Failed Twilio texts
+        tag: 'Api',
+        codeName: 'twilio-failed',
+        okayAction: false,
+        alarm: {
+          evaluationPeriods: 1,
+          datapointsToAlarm: 1,
+          threshold: 0,
+          alarmDescription: 'Twilio texts were marked as failed',
+          alarmName: 'Twilio Errors',
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+          metric: new cloudwatch.Metric({
+            metricName: 'FailedTime',
+            namespace: 'Twilio Health',
+            period: Duration.minutes(15),
+            statistic: cloudwatch.Stats.SAMPLE_COUNT,
+          }),
+        },
+      },
     ];
 
     alarms.forEach(alarmConfig => {
