@@ -58,7 +58,7 @@ type AlarmTag = 'Dtr' | 'Api';
 interface CvfdAlarm {
   tag: AlarmTag;
   codeName: string;
-  okayAction?: boolean;
+  okayAction: boolean;
   alarm: cloudwatch.AlarmProps;
 }
 
@@ -1345,6 +1345,7 @@ export class FireWatcherAwsStack extends Stack {
       { // Saguache tower not decoding
         tag: 'Dtr',
         codeName: 'saguache-tower',
+        okayAction: true,
         alarm: {
           ...baseTowerAlarmConfig,
         },
@@ -1352,6 +1353,7 @@ export class FireWatcherAwsStack extends Stack {
       { // Saguache tower down
         tag: 'Dtr',
         codeName: 'saguache-tower-upload',
+        okayAction: true,
         alarm: {
           ...baseUploadAlarmConfig,
           evaluationPeriods: 18,
@@ -1361,6 +1363,7 @@ export class FireWatcherAwsStack extends Stack {
       { // Pool table tower down
         tag: 'Dtr',
         codeName: 'pool-table-upload',
+        okayAction: true,
         alarm: {
           ...baseUploadAlarmConfig,
           metric: new cloudwatch.Metric({
