@@ -5,9 +5,8 @@ import './globals.css';
 import {
   useCallback, useEffect, useState
 } from 'react';
-import {
-  Alert, Container
-} from 'react-bootstrap';
+import Alert from 'react-bootstrap/Alert';
+import Container from 'react-bootstrap/Container';
 import { Variant } from 'react-bootstrap/esm/types';
 
 import {

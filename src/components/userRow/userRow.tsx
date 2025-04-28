@@ -2,11 +2,14 @@ import Link from 'next/link';
 import {
   useContext, useEffect, useState
 } from 'react';
+import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
-import { BsTrash } from 'react-icons/bs';
+import {
+  BsEnvelopeExclamation, BsTrash
+} from 'react-icons/bs';
 
 import styles from './userRow.module.css';
 
@@ -73,10 +76,23 @@ export default function UserRow({
   }, []);
   const hideMedium = winWidth && winWidth < 576;
 
+  const userAlerts: string[] = [];
+  let showDangerIcon: boolean = false;
+  if (user !== null && user.lastStatus === 'undelivered') {
+    rowClasses.push(user.lastStatusCount && user.lastStatusCount >= 10
+      ? 'table-danger'
+      : 'table-warning');
+    userAlerts.push(`Last ${user.lastStatusCount || 1} text(s) have failed to deliver`);
+    showDangerIcon = true;
+  }
+
   return <>
     {user !== null && <tr className={rowClasses.join(' ')}>
       <td><Link href={`tel:+1${user.phone}`}>{formatPhone(user.phone)}</Link></td>
-      <td className='text-start'>{user.lName}, {user.fName}</td>
+      <td className='text-start'>
+        {showDangerIcon && <BsEnvelopeExclamation className='me-2 mb-1' />}
+        {user.lName}, {user.fName}
+      </td>
       <td className='d-none d-sm-table-cell'>{validDepartments
         .filter(dep => user[dep]?.active)
         .map(dep => `${dep} (${user[dep]?.callSign || '??'})`)
@@ -106,6 +122,9 @@ export default function UserRow({
     </tr>}
     {editOpen && <tr className={idx % 2 === 0 ? styles.highlightRow : ''}><td colSpan={hideMedium ? 3 : 4}>
       <Container fluid>
+        {userAlerts.length > 0 && <>
+          {userAlerts.map((text, idx) => <Alert variant='danger' key={idx}>{text}</Alert>)}
+        </>}
         {(user !== null && loggedInUser?.isDistrictAdmin) && <Row className='text-center'>
           <Col xs={12}><b>Last Login:</b> {
             typeof user.lastLogin === 'undefined'
