@@ -4,9 +4,9 @@ import Link from 'next/link';
 import {
   useCallback, useContext, useEffect, useState
 } from 'react';
-import {
-  Col, Image, Row
-} from 'react-bootstrap';
+import Col from 'react-bootstrap/Col';
+import Image from 'react-bootstrap/Image';
+import Row from 'react-bootstrap/Row';
 
 import styles from './weather.module.css';
 

@@ -2,13 +2,14 @@ import { useSearchParams } from 'next/navigation';
 import {
   useCallback, useEffect, useState
 } from 'react';
-import {
-  Col, Container, Row, Table
-} from 'react-bootstrap';
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import Row from 'react-bootstrap/Row';
 import Tab from 'react-bootstrap/Tab';
+import Table from 'react-bootstrap/Table';
 import Tabs from 'react-bootstrap/Tabs';
 
 import { UpdateTextSeenApi } from '@/types/api/texts';
