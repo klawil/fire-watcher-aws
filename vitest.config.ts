@@ -18,33 +18,28 @@ export default defineConfig({
     mockReset: true,
 
     outputFile: {
-      json: 'coverage/test-results.json',
-      html: 'reports/tests/index.html',
+      json: 'output/internal/test-results.json',
+      html: 'output/reports/index.html',
     },
     coverage: {
       enabled: true,
-      reportsDirectory: 'reports',
+      reportsDirectory: 'output/reports/coverage',
       include: [ 'src/**/*.{ts,tsx}', ],
       clean: true,
       reporter: [
         [
           'cobertura',
           {
-            file: '../coverage/cobertura-coverage.xml',
+            file: '../../internal/cobertura-coverage.xml',
           },
         ],
         [
           'json-summary',
           {
-            file: '../coverage/coverage-summary.json',
+            file: '../../internal/coverage-summary.json',
           },
         ],
-        [
-          'html',
-          {
-            subdir: 'coverage',
-          },
-        ],
+        'html',
       ],
     },
     reporters: [

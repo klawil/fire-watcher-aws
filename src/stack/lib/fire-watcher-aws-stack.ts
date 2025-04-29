@@ -1297,6 +1297,7 @@ export class FireWatcherAwsStack extends Stack {
           '..', // stack
           '..', // src
           '..', // root
+          'output',
           'build'
         )
       ), ],

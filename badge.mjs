@@ -3,7 +3,7 @@ import {
 } from 'fs';
 
 // Get the coverage information
-const coverageInfo = JSON.parse(readFileSync('./coverage/coverage-summary.json', {
+const coverageInfo = JSON.parse(readFileSync('./output/internal/coverage-summary.json', {
   encoding: 'utf8',
 }));
 const coverage = Math.floor(coverageInfo.total.lines.pct);
@@ -25,10 +25,10 @@ if (coverage <= 0) {
 } else {
   coverageBadge.color = 'brightgreen';
 }
-writeFileSync('./reports/coverage.json', JSON.stringify(coverageBadge));
+writeFileSync('./output/reports/coverage.json', JSON.stringify(coverageBadge));
 
 // Get the test result information
-const testResults = JSON.parse(readFileSync('./coverage/test-results.json', {
+const testResults = JSON.parse(readFileSync('./output/internal/test-results.json', {
   encoding: 'utf8',
 }));
 const failed = testResults.numFailedTests;
@@ -42,4 +42,4 @@ const testsResultsBadge = {
     ? 'brightgreen'
     : 'red',
 };
-writeFileSync('./reports/testResults.json', JSON.stringify(testsResultsBadge));
+writeFileSync('./output/reports/testResults.json', JSON.stringify(testsResultsBadge));

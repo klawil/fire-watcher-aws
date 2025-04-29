@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
 };
 
 if (process.env.PROD_BUILD) {
-  nextConfig.distDir = 'build';
+  nextConfig.distDir = 'output/build';
 } else {
   nextConfig.rewrites = async () => {
     return {
