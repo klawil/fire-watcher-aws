@@ -3,15 +3,12 @@ import {
 } from 'aws-lambda';
 import { Api } from 'ts-oas';
 import {
-  expect, it
+  expect, it, vi
 } from 'vitest';
 
-import {
-  DynamoDBDocumentClientMock, GetCommand
-} from '../../../../__mocks__/@aws-sdk/lib-dynamodb';
-import { verify } from '../../../../__mocks__/jsonwebtoken';
-
+import { getCurrentUser } from '@/resources/api/v2/_base';
 import { FullUserObject } from '@/types/api/users';
+import { UserPermissions } from '@/types/backend/user';
 
 interface ApiEventConfig {
   method: Api['method'];
@@ -94,21 +91,14 @@ export function mockUserRequest(
   isAdmin: boolean = false,
   isDistrictAdmin: boolean = false
 ) {
-  // Build the request
-  req.headers = req.headers || {};
-  if (typeof req.headers.Cookie !== 'undefined') {
-    req.headers.Cookie += '; ';
-  } else {
-    req.headers.Cookie = '';
-  }
-  req.headers.Cookie += 'cofrn-user=5555555555; cofrn-token=test-token';
-
-  // Mock the request from the verification
-  verify.mockReturnValue({
-    phone: 5555555555,
-  });
-
   // Mock the returned user
+  const userPerms: UserPermissions = {
+    isUser: isActive,
+    isAdmin,
+    isDistrictAdmin,
+    activeDepartments: [ 'Baca', ],
+    adminDepartments: [],
+  };
   const userObj: FullUserObject = {
     phone: 5555555555,
     fName: 'TestF',
@@ -127,9 +117,11 @@ export function mockUserRequest(
   if (isDistrictAdmin) {
     userObj.isDistrictAdmin = true;
   }
-  DynamoDBDocumentClientMock.setResult('get', {
-    Item: { ...userObj, },
-  });
+  vi.mocked(getCurrentUser).mockResolvedValue([
+    { ...userObj, },
+    { ...userPerms, },
+    {},
+  ]);
 }
 
 export function testUserAuth(
@@ -151,6 +143,9 @@ export function testUserAuth(
       },
       multiValueHeaders: {},
     });
+
+    // Make sure the current user was fetched
+    expect(getCurrentUser).toHaveBeenCalledTimes(1);
   });
 
   it('Returns a 403 error if the logged in user is not active', async () => {
@@ -170,21 +165,8 @@ export function testUserAuth(
       multiValueHeaders: {},
     });
 
-    // Make sure the token was validated
-    expect(verify).toHaveBeenCalled();
-    expect(verify).toHaveBeenCalledWith(
-      'test-token',
-      'JWT-Secret-Value'
-    );
-
-    // Make sure the user was pulled from the database
-    expect(GetCommand).toHaveBeenCalled();
-    expect(GetCommand).toHaveBeenCalledWith({
-      TableName: 'TABLE_USER_VAL',
-      Key: {
-        phone: 5555555555,
-      },
-    });
+    // Make sure the current user was fetched
+    expect(getCurrentUser).toHaveBeenCalledTimes(1);
   });
 
   if (requireAdmin) {
@@ -204,21 +186,8 @@ export function testUserAuth(
         multiValueHeaders: {},
       });
 
-      // Make sure the token was validated
-      expect(verify).toHaveBeenCalled();
-      expect(verify).toHaveBeenCalledWith(
-        'test-token',
-        'JWT-Secret-Value'
-      );
-
-      // Make sure the user was pulled from the database
-      expect(GetCommand).toHaveBeenCalled();
-      expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER_VAL',
-        Key: {
-          phone: 5555555555,
-        },
-      });
+      // Make sure the current user was fetched
+      expect(getCurrentUser).toHaveBeenCalledTimes(1);
     });
   }
 }

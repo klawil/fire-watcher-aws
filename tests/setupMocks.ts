@@ -20,6 +20,25 @@ vi.mock('@aws-sdk/lib-dynamodb');
 vi.mock('jsonwebtoken');
 vi.mock('twilio');
 
+vi.mock('@/resources/api/v2/_base', async () => {
+  const originalModule = await vi.importActual('@/resources/api/v2/_base');
+
+  return {
+    ...originalModule,
+    getCurrentUser: vi.fn(() => Promise.resolve([
+      null,
+      {
+        isUser: false,
+        isAdmin: false,
+        isDistrictAdmin: false,
+        activeDepartments: [],
+        adminDepartments: [],
+      },
+      {},
+    ])),
+  };
+});
+
 beforeEach(() => {
   const logger = getLogger('');
 

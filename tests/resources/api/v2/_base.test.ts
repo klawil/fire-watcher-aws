@@ -23,10 +23,16 @@ import {
   parseJsonBody
 } from '@/resources/api/v2/_base';
 import { api403Response } from '@/types/api/_shared';
+import { validateObject } from '@/utils/backend/validation';
 import {
   LogLevel,
   getLogger
 } from '@/utils/common/logger';
+import { getUserPermissions } from '@/utils/common/user';
+
+vi.mock('@/utils/backend/validation');
+vi.mock('@/utils/common/user');
+vi.unmock('@/resources/api/v2/_base');
 
 describe('resources/api/v2/_base', () => {
   describe('handleResourceApi', () => {
@@ -323,6 +329,15 @@ describe('resources/api/v2/_base', () => {
         path: '/api/v2/test/',
         withUser: true,
       });
+
+      // Mock the permissions
+      vi.mocked(getUserPermissions).mockReturnValue({
+        isUser: false,
+        isAdmin: false,
+        isDistrictAdmin: false,
+        activeDepartments: [],
+        adminDepartments: [],
+      });
     });
 
     it('Uses cookies to retrieve the current user and their permissions', async () => {
@@ -340,6 +355,15 @@ describe('resources/api/v2/_base', () => {
             active: true,
           },
         },
+      });
+
+      // User perms
+      vi.mocked(getUserPermissions).mockReturnValue({
+        isUser: true,
+        isAdmin: false,
+        isDistrictAdmin: false,
+        activeDepartments: [ 'Baca', ],
+        adminDepartments: [],
       });
 
       const [
@@ -367,6 +391,16 @@ describe('resources/api/v2/_base', () => {
         TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
+        },
+      });
+
+      // Validate the perms were acquired correctly
+      expect(getUserPermissions).toHaveBeenCalledTimes(2);
+      expect(getUserPermissions).toHaveBeenCalledWith(null);
+      expect(getUserPermissions).toHaveBeenCalledWith({
+        phone: 5555555555,
+        Baca: {
+          active: true,
         },
       });
 
@@ -426,6 +460,10 @@ describe('resources/api/v2/_base', () => {
       expect(verify).toHaveBeenCalledTimes(0);
       expect(GetCommand).toHaveBeenCalledTimes(0);
 
+      // Validate the perms were acquired correctly
+      expect(getUserPermissions).toHaveBeenCalledTimes(1);
+      expect(getUserPermissions).toHaveBeenCalledWith(null);
+
       // Validate the response - front end user object
       expect(user).toEqual(null);
 
@@ -481,6 +519,10 @@ describe('resources/api/v2/_base', () => {
       expect(GetSecretValueCommand).toHaveBeenCalledTimes(0);
       expect(verify).toHaveBeenCalledTimes(0);
       expect(GetCommand).toHaveBeenCalledTimes(0);
+
+      // Validate the perms were acquired correctly
+      expect(getUserPermissions).toHaveBeenCalledTimes(1);
+      expect(getUserPermissions).toHaveBeenCalledWith(null);
 
       // Validate the response - front end user object
       expect(user).toEqual(null);
@@ -538,6 +580,10 @@ describe('resources/api/v2/_base', () => {
         '1234567890',
         'JWT-Secret-Value'
       );
+
+      // Validate the perms were acquired correctly
+      expect(getUserPermissions).toHaveBeenCalledTimes(1);
+      expect(getUserPermissions).toHaveBeenCalledWith(null);
 
       // Validate that nothing was fetched from the database
       expect(GetCommand).toHaveBeenCalledTimes(0);
@@ -600,6 +646,10 @@ describe('resources/api/v2/_base', () => {
       // Validate that nothing was fetched from the database
       expect(GetCommand).toHaveBeenCalledTimes(0);
 
+      // Validate the perms were acquired correctly
+      expect(getUserPermissions).toHaveBeenCalledTimes(1);
+      expect(getUserPermissions).toHaveBeenCalledWith(null);
+
       // Validate the response - front end user object
       expect(user).toEqual(null);
 
@@ -649,6 +699,10 @@ describe('resources/api/v2/_base', () => {
         'JWT-Secret-Value'
       );
 
+      // Validate the perms were acquired correctly
+      expect(getUserPermissions).toHaveBeenCalledTimes(1);
+      expect(getUserPermissions).toHaveBeenCalledWith(null);
+
       // Validate the user was fetched from the DB
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
@@ -696,6 +750,11 @@ describe('resources/api/v2/_base', () => {
     });
 
     it('Returns an error if the validation fails', () => {
+      vi.mocked(validateObject).mockReturnValue([
+        null,
+        [ 'key', ],
+      ]);
+
       expect(parseJsonBody<{
         key: number;
       }>(
@@ -714,9 +773,28 @@ describe('resources/api/v2/_base', () => {
         null,
         [ 'key', ],
       ]);
+
+      expect(validateObject).toHaveBeenCalledTimes(1);
+      expect(validateObject).toHaveBeenCalledWith({
+        key: 'value',
+      }, {
+        key: {
+          required: true,
+          types: {
+            number: {},
+          },
+        },
+      });
     });
 
     it('Validates the object if a validator is provided', () => {
+      vi.mocked(validateObject).mockReturnValue([
+        {
+          key: 1234,
+        },
+        [],
+      ]);
+
       expect(parseJsonBody<{
         key: number;
       }>(
@@ -746,6 +824,8 @@ describe('resources/api/v2/_base', () => {
         { key: 'test', },
         [],
       ]);
+
+      expect(validateObject).toHaveBeenCalledTimes(0);
     });
   });
 
