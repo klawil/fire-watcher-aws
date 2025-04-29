@@ -685,6 +685,9 @@ export class FireWatcherAwsStack extends Stack {
     const api = new apigateway.RestApi(this, 'cvfd-api-gateway', {
       restApiName: 'CVFD API Gateway',
       description: 'Allow interaction from the CVFD radio website',
+      deployOptions: {
+        loggingLevel: apigateway.MethodLoggingLevel.ERROR,
+      },
     });
     const apiResource = api.root.addResource('api');
 
@@ -720,9 +723,6 @@ export class FireWatcherAwsStack extends Stack {
       {
         name: 'events',
         firehose: eventsFirehose,
-      },
-      {
-        name: 'frontend',
       },
     ];
 
