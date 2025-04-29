@@ -1,14 +1,14 @@
 # Fire Watcher AWS
 
-![Test Results Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fklawil.github.io%2Ffire-watcher-aws%2FtestResults.json)
-![Code Coverage Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fklawil.github.io%2Ffire-watcher-aws%2Fcoverage.json)
+[![Test Results Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fklawil.github.io%2Ffire-watcher-aws%2FtestResults.json)](https://klawil.github.io/fire-watcher-aws/tests/)
+[![Code Coverage Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fklawil.github.io%2Ffire-watcher-aws%2Fcoverage.json)](https://klawil.github.io/fire-watcher-aws/coverage/)
 
 This is a re-write of a previous project that sends text notifications to first responders when a
 page is detected for their organization over the appropriate radio channel.
 
 Live site - [COFRN.org](https://cofrn.org)
 
-Testing Code Coverage Report - [GitHub Pages](https://klawil.github.io/fire-watcher-aws/)
+Testing Code Coverage Report - [GitHub Pages](https://klawil.github.io/fire-watcher-aws/coverage/)
 
 ## Repo Layout
 

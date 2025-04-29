@@ -15,27 +15,42 @@ export default defineConfig({
       'tests/setupEnv.ts',
       'tests/setupMocks.ts',
     ],
-    restoreMocks: true,
+    mockReset: true,
 
+    outputFile: {
+      json: 'coverage/test-results.json',
+      html: 'reports/tests/index.html',
+    },
     coverage: {
       enabled: true,
-      reportsDirectory: 'coverage',
+      reportsDirectory: 'reports',
       include: [ 'src/**/*.{ts,tsx}', ],
       clean: true,
       reporter: [
-        'lcov',
-        'cobertura',
-        'json-summary',
+        [
+          'cobertura',
+          {
+            file: '../coverage/cobertura-coverage.xml',
+          },
+        ],
+        [
+          'json-summary',
+          {
+            file: '../coverage/coverage-summary.json',
+          },
+        ],
+        [
+          'html',
+          {
+            subdir: 'coverage',
+          },
+        ],
       ],
     },
     reporters: [
       'default',
-      [
-        'json',
-        {
-          outputFile: 'coverage/test-results.json',
-        },
-      ],
+      'json',
+      'html',
     ],
   },
 });

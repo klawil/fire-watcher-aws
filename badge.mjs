@@ -25,7 +25,7 @@ if (coverage <= 0) {
 } else {
   coverageBadge.color = 'brightgreen';
 }
-writeFileSync('./coverage/lcov-report/coverage.json', JSON.stringify(coverageBadge));
+writeFileSync('./reports/coverage.json', JSON.stringify(coverageBadge));
 
 // Get the test result information
 const testResults = JSON.parse(readFileSync('./coverage/test-results.json', {
@@ -42,4 +42,4 @@ const testsResultsBadge = {
     ? 'brightgreen'
     : 'red',
 };
-writeFileSync('./coverage/lcov-report/testResults.json', JSON.stringify(testsResultsBadge));
+writeFileSync('./reports/testResults.json', JSON.stringify(testsResultsBadge));
