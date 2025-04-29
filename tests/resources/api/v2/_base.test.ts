@@ -24,15 +24,12 @@ import {
 } from '@/resources/api/v2/_base';
 import { api403Response } from '@/types/api/_shared';
 import { validateObject } from '@/utils/backend/validation';
+import { debugLoggers } from '@/utils/common/__mocks__/logger';
 import {
   LogLevel,
   getLogger
 } from '@/utils/common/logger';
 import { getUserPermissions } from '@/utils/common/user';
-
-vi.mock('@/utils/backend/validation');
-vi.mock('@/utils/common/user');
-vi.unmock('@/resources/api/v2/_base');
 
 describe('resources/api/v2/_base', () => {
   describe('handleResourceApi', () => {
@@ -186,9 +183,8 @@ describe('resources/api/v2/_base', () => {
           'Content-Type': 'application/json',
         },
       });
-      expect(console.error).toHaveBeenCalledTimes(1);
-      expect(console.error).toHaveBeenCalledWith(
-        '[ api/v2/_base ]',
+      expect(debugLoggers['api/v2/_base'].error).toHaveBeenCalledTimes(1);
+      expect(debugLoggers['api/v2/_base'].error).toHaveBeenCalledWith(
         'PATCH Error - 400',
         [
           'key',
@@ -750,11 +746,6 @@ describe('resources/api/v2/_base', () => {
     });
 
     it('Returns an error if the validation fails', () => {
-      vi.mocked(validateObject).mockReturnValue([
-        null,
-        [ 'key', ],
-      ]);
-
       expect(parseJsonBody<{
         key: number;
       }>(
@@ -788,13 +779,6 @@ describe('resources/api/v2/_base', () => {
     });
 
     it('Validates the object if a validator is provided', () => {
-      vi.mocked(validateObject).mockReturnValue([
-        {
-          key: 1234,
-        },
-        [],
-      ]);
-
       expect(parseJsonBody<{
         key: number;
       }>(
@@ -813,6 +797,18 @@ describe('resources/api/v2/_base', () => {
         { key: 1234, },
         [],
       ]);
+
+      expect(validateObject).toHaveBeenCalledTimes(1);
+      expect(validateObject).toHaveBeenCalledWith({
+        key: 1234,
+      }, {
+        key: {
+          required: true,
+          types: {
+            number: {},
+          },
+        },
+      });
     });
 
     it('Does not validate the object if no validator is provided', () => {

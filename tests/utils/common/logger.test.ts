@@ -9,6 +9,8 @@ import {
   getLogger
 } from '@/utils/common/logger';
 
+vi.unmock('@/utils/common/logger');
+
 describe('utils/common/logger', () => {
   let logger: ReturnType<typeof getLogger>;
 
