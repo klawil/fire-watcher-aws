@@ -1,6 +1,6 @@
 import {
-  describe, expect, it, jest
-} from '@jest/globals';
+  describe, expect, it, vi
+} from 'vitest';
 
 import { PutMetricDataCommand } from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
 import {
@@ -27,7 +27,7 @@ describe('resources/api/v2/heartbeats', () => {
         }),
       });
 
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       expect(await main(req)).toEqual({
         statusCode: 200,
@@ -87,7 +87,7 @@ describe('resources/api/v2/heartbeats', () => {
         }),
       });
 
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       DynamoDBDocumentClientMock.setResult('scan', {
         Items: [

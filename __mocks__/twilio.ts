@@ -1,11 +1,11 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
-export const createFn = jest.fn().mockReturnValue(Promise.resolve(false));
+export const createFn = vi.fn(() => Promise.resolve(false));
 
-export const validateRequest = jest.fn().mockReturnValue(true);
+export const validateRequest = vi.fn(() => true);
 
-export default jest.fn().mockReturnValue({
+export default vi.fn(() => ({
   messages: {
     create: createFn,
   },
-});
+}));

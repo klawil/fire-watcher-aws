@@ -1,8 +1,8 @@
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   beforeEach,
-  describe, expect, it, jest
-} from '@jest/globals';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+  describe, expect, it, vi
+} from 'vitest';
 
 import { PutMetricDataCommand } from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
 import { SendMessageCommand } from '../../../../__mocks__/@aws-sdk/client-sqs';
@@ -148,7 +148,7 @@ describe('resources/api/v2/twilioStatus', () => {
     });
 
     it('Returns a 204 if the status is successfully parsed', async () => {
-      jest.useFakeTimers().setSystemTime(12345);
+      vi.useFakeTimers().setSystemTime(12345);
 
       req.body = 'MessageStatus=delivered&To=%2B15555555555&From=%2B14444444444';
 
@@ -221,7 +221,7 @@ describe('resources/api/v2/twilioStatus', () => {
     });
 
     it('Sends a message to the queue if the user has enough undelivered messages', async () => {
-      jest.useFakeTimers().setSystemTime(12345);
+      vi.useFakeTimers().setSystemTime(12345);
 
       req.body = 'MessageStatus=undelivered&To=%2B15555555555&From=%2B14444444444';
 
@@ -293,7 +293,7 @@ describe('resources/api/v2/twilioStatus', () => {
     });
 
     it('Does not update the user if the status is not delivered or undelivered', async () => {
-      jest.useFakeTimers().setSystemTime(12345);
+      vi.useFakeTimers().setSystemTime(12345);
 
       req.body = 'MessageStatus=sent&To=%2B15555555555&From=%2B14444444444';
 

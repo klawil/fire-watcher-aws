@@ -1,6 +1,6 @@
 import {
   describe, expect, it
-} from '@jest/globals';
+} from 'vitest';
 
 import { validateRequest } from '../../../../__mocks__/twilio';
 import { twilioConf } from '../../../../__mocks__/twilioConfig';

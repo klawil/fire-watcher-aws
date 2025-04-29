@@ -1,7 +1,6 @@
 import {
-  describe, expect, it,
-  jest
-} from '@jest/globals';
+  describe, expect, it, vi
+} from 'vitest';
 
 import { PutMetricDataCommand } from '../../../__mocks__/@aws-sdk/client-cloudwatch';
 import {
@@ -293,7 +292,7 @@ describe('utils/backend/texts', () => {
     });
 
     it('Saves message data if no ID is provided', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       await mod.sendMessage(
         'account',
@@ -336,7 +335,7 @@ describe('utils/backend/texts', () => {
     });
 
     it('Throws an error if an invalid phone number type is provided', async () => {
-      expect(async () => mod.sendMessage(
+      await expect(async () => mod.sendMessage(
         'account',
         null,
         5555555555,

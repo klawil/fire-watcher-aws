@@ -1,10 +1,10 @@
 import {
-  expect, it
-} from '@jest/globals';
-import {
   APIGatewayProxyEvent, APIGatewayProxyResult
 } from 'aws-lambda';
 import { Api } from 'ts-oas';
+import {
+  expect, it
+} from 'vitest';
 
 import {
   DynamoDBDocumentClientMock, GetCommand

@@ -31,7 +31,7 @@ writeFileSync('./coverage/lcov-report/coverage.json', JSON.stringify(coverageBad
 const testResults = JSON.parse(readFileSync('./coverage/test-results.json', {
   encoding: 'utf8',
 }));
-const failed = testResults.results.summary.failed;
+const failed = testResults.numFailedTests;
 const testsResultsBadge = {
   schemaVersion: 1,
   label: 'Test Results',

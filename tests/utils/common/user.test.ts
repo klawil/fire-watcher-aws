@@ -1,4 +1,6 @@
-import { describe, it, expect } from '@jest/globals';
+import {
+  describe, expect, it
+} from 'vitest';
 
 import * as mod from '@/utils/common/user';
 
@@ -52,7 +54,10 @@ describe('utils/common/user', () => {
         isUser: true,
         isAdmin: false,
         isDistrictAdmin: false,
-        activeDepartments: [ 'Baca', 'NSCAD', ],
+        activeDepartments: [
+          'Baca',
+          'NSCAD',
+        ],
         adminDepartments: [],
       });
     });
@@ -85,7 +90,10 @@ describe('utils/common/user', () => {
         isUser: true,
         isAdmin: true,
         isDistrictAdmin: false,
-        activeDepartments: [ 'Baca', 'NSCAD', ],
+        activeDepartments: [
+          'Baca',
+          'NSCAD',
+        ],
         adminDepartments: [ 'NSCAD', ],
       });
     });

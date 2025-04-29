@@ -1,6 +1,6 @@
 import {
   describe, expect, it
-} from '@jest/globals';
+} from 'vitest';
 
 import { Validator } from '@/types/backend/validation';
 import { validateObject } from '@/utils/backend/validation';

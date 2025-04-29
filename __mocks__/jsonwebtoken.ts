@@ -1,3 +1,3 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
-export const verify = jest.fn();
+export const verify = vi.fn();

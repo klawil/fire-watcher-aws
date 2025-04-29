@@ -1,8 +1,8 @@
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   beforeEach,
   describe, expect, it
-} from '@jest/globals';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+} from 'vitest';
 
 import { SendMessageCommand } from '../../../../__mocks__/@aws-sdk/client-sqs';
 import {

@@ -1,8 +1,8 @@
+import { S3EventRecord } from 'aws-lambda';
 import {
   describe, expect, it,
-  jest
-} from '@jest/globals';
-import { S3EventRecord } from 'aws-lambda';
+  vi
+} from 'vitest';
 
 import { PutMetricDataCommand } from '../../__mocks__/@aws-sdk/client-cloudwatch';
 import {
@@ -113,7 +113,7 @@ const createVhfHeadInfo = {
 describe('resources/s3', () => {
   describe('main', () => {
     it('Handles a DTR file being created', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       S3Mock.setResult('head', createDtrHeadInfo);
 
@@ -206,7 +206,7 @@ describe('resources/s3', () => {
     });
 
     it('Picks the right file if multiple start near the same time', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       S3Mock.setResult('head', createDtrHeadInfo);
 
@@ -271,7 +271,7 @@ describe('resources/s3', () => {
     });
 
     it('Handles a VHF file being created', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       S3Mock.setResult('head', createVhfHeadInfo);
 
@@ -357,7 +357,7 @@ describe('resources/s3', () => {
     });
 
     it('Starts a transcription job if the file is a page', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
@@ -404,7 +404,7 @@ describe('resources/s3', () => {
     });
 
     it('Starts a transcription job if the file is emegency traffic', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       S3Mock.setResult('head', createDtrEmergencyHeadInfo);
 
@@ -447,7 +447,7 @@ describe('resources/s3', () => {
     });
 
     it('Sends a command to the SQS queue if the file is a page', async () => {
-      jest.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(123456);
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 

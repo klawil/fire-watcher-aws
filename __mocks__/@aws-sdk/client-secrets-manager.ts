@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import { twilioConf } from '../twilioConfig';
 
 import { BaseClientMock } from './_base';
@@ -12,7 +14,7 @@ const results = {
 } as const;
 
 export const SecretsManagerClientMock = new BaseClientMock();
-SecretsManagerClientMock.send.mockImplementation(input => {
+SecretsManagerClientMock.send = vi.fn(input => {
   let result = {};
   if (
     typeof input === 'object' &&

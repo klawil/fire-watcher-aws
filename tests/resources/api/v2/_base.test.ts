@@ -1,8 +1,8 @@
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   beforeEach,
-  describe, expect, it, jest
-} from '@jest/globals';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+  describe, expect, it, vi
+} from 'vitest';
 
 import {
   GetSecretValueCommand
@@ -33,11 +33,11 @@ describe('resources/api/v2/_base', () => {
     let handlers: Parameters<typeof handleResourceApi>[0];
     beforeEach(() => {
       handlers = {
-        POST: jest.fn().mockReturnValue(Promise.resolve([
+        POST: vi.fn().mockReturnValue(Promise.resolve([
           200,
           {},
         ])) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-        PATCH: jest.fn().mockReturnValue(Promise.resolve([
+        PATCH: vi.fn().mockReturnValue(Promise.resolve([
           201,
           {},
         ])) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -152,7 +152,7 @@ describe('resources/api/v2/_base', () => {
       const logger = getLogger('');
       logger.setLevel(LogLevel.Error);
 
-      jest.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const event = generateApiEvent({
         method: 'PATCH',

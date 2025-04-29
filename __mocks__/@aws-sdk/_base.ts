@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 const instances: BaseClientMock[] = [];
 
@@ -18,12 +18,12 @@ export class BaseClientMock {
     instances.push(this);
   }
 
-  client = jest.fn().mockImplementation(() => ({
+  client = vi.fn(() => ({
     send: this.send,
-    from: jest.fn().mockReturnValue(this),
+    from: vi.fn(() => this),
   }));
 
-  send = jest.fn().mockImplementation(commandRaw => {
+  send = vi.fn(commandRaw => {
     const command = commandRaw as {
       type: string;
     };
@@ -34,7 +34,7 @@ export class BaseClientMock {
   });
 
   getCommand(type: string) {
-    const command = jest.fn().mockImplementation(data => {
+    const command = vi.fn(data => {
       return {
         ...data as object,
         type,

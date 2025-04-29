@@ -1,8 +1,8 @@
 import {
   beforeEach,
   describe, expect, it,
-  jest
-} from '@jest/globals';
+  vi
+} from 'vitest';
 
 import {
   LogLevel,
@@ -57,7 +57,7 @@ describe('utils/common/logger', () => {
         it(`${level < idx ? 'Does not log' : 'Logs'} ${method} if the log level is ${methods[idx] || 'silent'}`, () => {
           logger.setLevel(level);
 
-          jest.spyOn(console, method).mockImplementation(() => {});
+          vi.spyOn(console, method).mockImplementation(() => {});
 
           logger[method]('test-value');
 
