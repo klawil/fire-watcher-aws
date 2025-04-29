@@ -1,8 +1,9 @@
 process.env.TESTING_USER = '5555555555';
-process.env.SQS_QUEUE = 'SQS_QUEUE';
-process.env.TWILIO_QUEUE = 'TWILIO_QUEUE';
-process.env.JWT_SECRET = 'JWT_SECRET';
-process.env.TWILIO_SECRET = 'TWILIO_SECRET';
+process.env.SQS_QUEUE = 'SQS_QUEUE_VAL';
+process.env.TWILIO_QUEUE = 'TWILIO_QUEUE_VAL';
+process.env.JWT_SECRET = 'JWT_SECRET_VAL';
+process.env.TWILIO_SECRET = 'TWILIO_SECRET_VAL';
+process.env.COSTS_BUCKET = 'COSTS_BUCKET_VAL';
 
 [
   'TEXT',
@@ -12,4 +13,4 @@ process.env.TWILIO_SECRET = 'TWILIO_SECRET';
   'TALKGROUP',
   'SITE',
   'DTR_TRANSLATION',
-].forEach(table => process.env[`TABLE_${table}`] = `TABLE_${table}`);
+].forEach(table => process.env[`TABLE_${table}`] = `TABLE_${table}_VAL`);

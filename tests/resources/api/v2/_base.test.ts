@@ -351,7 +351,7 @@ describe('resources/api/v2/_base', () => {
       // Validate the JWT secret was retrieved
       expect(GetSecretValueCommand).toHaveBeenCalledTimes(1);
       expect(GetSecretValueCommand).toHaveBeenCalledWith({
-        SecretId: 'JWT_SECRET',
+        SecretId: 'JWT_SECRET_VAL',
       });
 
       // Validate the token was verified
@@ -364,7 +364,7 @@ describe('resources/api/v2/_base', () => {
       // Validate the user was fetched from the DB
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -529,7 +529,7 @@ describe('resources/api/v2/_base', () => {
       // Validate the JWT secret was retrieved
       expect(GetSecretValueCommand).toHaveBeenCalledTimes(1);
       expect(GetSecretValueCommand).toHaveBeenCalledWith({
-        SecretId: 'JWT_SECRET',
+        SecretId: 'JWT_SECRET_VAL',
       });
 
       // Validate the token was verified
@@ -587,7 +587,7 @@ describe('resources/api/v2/_base', () => {
       // Validate the JWT secret was retrieved
       expect(GetSecretValueCommand).toHaveBeenCalledTimes(1);
       expect(GetSecretValueCommand).toHaveBeenCalledWith({
-        SecretId: 'JWT_SECRET',
+        SecretId: 'JWT_SECRET_VAL',
       });
 
       // Validate the token was verified
@@ -639,7 +639,7 @@ describe('resources/api/v2/_base', () => {
       // Validate the JWT secret was retrieved
       expect(GetSecretValueCommand).toHaveBeenCalledTimes(1);
       expect(GetSecretValueCommand).toHaveBeenCalledWith({
-        SecretId: 'JWT_SECRET',
+        SecretId: 'JWT_SECRET_VAL',
       });
 
       // Validate the token was verified
@@ -652,7 +652,7 @@ describe('resources/api/v2/_base', () => {
       // Validate the user was fetched from the DB
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },

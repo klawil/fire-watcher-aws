@@ -3,10 +3,10 @@ import { twilioConf } from '../twilioConfig';
 import { BaseClientMock } from './_base';
 
 const results = {
-  TWILIO_SECRET: {
+  TWILIO_SECRET_VAL: {
     SecretString: JSON.stringify(twilioConf),
   },
-  JWT_SECRET: {
+  JWT_SECRET_VAL: {
     SecretString: 'JWT-Secret-Value',
   },
 } as const;

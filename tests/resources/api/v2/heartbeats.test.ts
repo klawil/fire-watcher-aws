@@ -52,7 +52,7 @@ describe('resources/api/v2/heartbeats', () => {
       // Heartbeat table update
       expect(UpdateCommand).toHaveBeenCalledTimes(1);
       expect(UpdateCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_STATUS',
+        TableName: 'TABLE_STATUS_VAL',
         Key: {
           Server: 'test',
         },
@@ -72,7 +72,7 @@ describe('resources/api/v2/heartbeats', () => {
       // Scan for other heartbeats
       expect(ScanCommand).toHaveBeenCalledTimes(1);
       expect(ScanCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_STATUS',
+        TableName: 'TABLE_STATUS_VAL',
       });
     });
 
@@ -142,7 +142,7 @@ describe('resources/api/v2/heartbeats', () => {
       // Heartbeat table update
       expect(UpdateCommand).toHaveBeenCalledTimes(1);
       expect(UpdateCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_STATUS',
+        TableName: 'TABLE_STATUS_VAL',
         Key: {
           Server: 'test',
         },
@@ -162,7 +162,7 @@ describe('resources/api/v2/heartbeats', () => {
       // Scan for other heartbeats
       expect(ScanCommand).toHaveBeenCalledTimes(1);
       expect(ScanCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_STATUS',
+        TableName: 'TABLE_STATUS_VAL',
       });
     });
 

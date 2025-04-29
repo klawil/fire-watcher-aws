@@ -84,7 +84,7 @@ describe('resources/api/v2/twilioBase', () => {
       // Sender validated
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -93,7 +93,7 @@ describe('resources/api/v2/twilioBase', () => {
       // Message sent to the queue
       expect(SendMessageCommand).toHaveBeenCalledTimes(1);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'SQS_QUEUE',
+        QueueUrl: 'SQS_QUEUE_VAL',
         MessageBody: JSON.stringify({
           action: 'twilio-text',
           body: bodyObj,
@@ -262,7 +262,7 @@ describe('resources/api/v2/twilioBase', () => {
       // Sender validated
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -271,7 +271,7 @@ describe('resources/api/v2/twilioBase', () => {
       // User updated
       expect(UpdateCommand).toHaveBeenCalledTimes(1);
       expect(UpdateCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -316,7 +316,7 @@ describe('resources/api/v2/twilioBase', () => {
       // Sender validated
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },

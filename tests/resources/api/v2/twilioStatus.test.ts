@@ -170,7 +170,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Get the user to verify they are a user
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -179,7 +179,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Send the status into the queue for processing
       expect(SendMessageCommand).toHaveBeenCalledTimes(1);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'TWILIO_QUEUE',
+        QueueUrl: 'TWILIO_QUEUE_VAL',
         MessageBody: JSON.stringify({
           datetime: 1234567890123,
           status: 'delivered',
@@ -191,7 +191,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Update the user with the most recent status
       expect(UpdateCommand).toHaveBeenCalledTimes(1);
       expect(UpdateCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -252,7 +252,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Update the user with the most recent status
       expect(UpdateCommand).toHaveBeenCalledTimes(1);
       expect(UpdateCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -272,7 +272,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Send the message into the queue
       expect(SendMessageCommand).toHaveBeenCalledTimes(2);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'TWILIO_QUEUE',
+        QueueUrl: 'TWILIO_QUEUE_VAL',
         MessageBody: JSON.stringify({
           datetime: 1234567890123,
           status: 'undelivered',
@@ -281,7 +281,7 @@ describe('resources/api/v2/twilioStatus', () => {
         }),
       });
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'SQS_QUEUE',
+        QueueUrl: 'SQS_QUEUE_VAL',
         MessageBody: JSON.stringify({
           action: 'phone-issue',
           count: 10,
@@ -315,7 +315,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Get the user to verify they are a user
       expect(GetCommand).toHaveBeenCalledTimes(1);
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },
@@ -324,7 +324,7 @@ describe('resources/api/v2/twilioStatus', () => {
       // Send the status into the queue for processing
       expect(SendMessageCommand).toHaveBeenCalledTimes(1);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'TWILIO_QUEUE',
+        QueueUrl: 'TWILIO_QUEUE_VAL',
         MessageBody: JSON.stringify({
           datetime: 1234567890123,
           status: 'sent',

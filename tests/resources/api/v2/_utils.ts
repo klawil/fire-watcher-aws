@@ -180,7 +180,7 @@ export function testUserAuth(
     // Make sure the user was pulled from the database
     expect(GetCommand).toHaveBeenCalled();
     expect(GetCommand).toHaveBeenCalledWith({
-      TableName: 'TABLE_USER',
+      TableName: 'TABLE_USER_VAL',
       Key: {
         phone: 5555555555,
       },
@@ -214,7 +214,7 @@ export function testUserAuth(
       // Make sure the user was pulled from the database
       expect(GetCommand).toHaveBeenCalled();
       expect(GetCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         Key: {
           phone: 5555555555,
         },

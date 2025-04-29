@@ -26,7 +26,7 @@ describe('utils/backend/texts', () => {
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         ExpressionAttributeNames: {
           '#isTest': 'isTest',
         },
@@ -51,7 +51,7 @@ describe('utils/backend/texts', () => {
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         ExpressionAttributeNames: {
           '#talkgroups': 'talkgroups',
         },
@@ -76,7 +76,7 @@ describe('utils/backend/texts', () => {
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         ExpressionAttributeNames: {
           '#Baca': 'Baca',
           '#active': 'active',
@@ -102,7 +102,7 @@ describe('utils/backend/texts', () => {
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         ExpressionAttributeNames: {
           '#Baca': 'Baca',
           '#active': 'active',
@@ -130,7 +130,7 @@ describe('utils/backend/texts', () => {
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
         ExpressionAttributeNames: {
           '#Baca': 'Baca',
           '#active': 'active',
@@ -160,7 +160,7 @@ describe('utils/backend/texts', () => {
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
-        TableName: 'TABLE_USER',
+        TableName: 'TABLE_USER_VAL',
       });
     });
   });
@@ -176,7 +176,7 @@ describe('utils/backend/texts', () => {
 
       expect(UpdateCommand).toBeCalledTimes(1);
       expect(UpdateCommand).toBeCalledWith({
-        TableName: 'TABLE_TEXT',
+        TableName: 'TABLE_TEXT_VAL',
         ExpressionAttributeNames: {
           '#body': 'body',
           '#isPage': 'isPage',
@@ -218,7 +218,7 @@ describe('utils/backend/texts', () => {
 
       expect(UpdateCommand).toBeCalledTimes(1);
       expect(UpdateCommand).toBeCalledWith({
-        TableName: 'TABLE_TEXT',
+        TableName: 'TABLE_TEXT_VAL',
         ExpressionAttributeNames: {
           '#body': 'body',
           '#isPage': 'isPage',
@@ -311,7 +311,7 @@ describe('utils/backend/texts', () => {
         statusCallback: 'https://cofrn.org/api/v2/twilio/123456/',
       });
       expect(UpdateCommand).toBeCalledWith({
-        TableName: 'TABLE_TEXT',
+        TableName: 'TABLE_TEXT_VAL',
         ExpressionAttributeNames: {
           '#body': 'body',
           '#isPage': 'isPage',
@@ -403,7 +403,7 @@ describe('utils/backend/texts', () => {
       await mod.sendAlertMessage('Api', 'test-body');
 
       expect(UpdateCommand).toBeCalledWith({
-        TableName: 'TABLE_TEXT',
+        TableName: 'TABLE_TEXT_VAL',
         ExpressionAttributeNames: {
           '#body': 'body',
           '#isPage': 'isPage',

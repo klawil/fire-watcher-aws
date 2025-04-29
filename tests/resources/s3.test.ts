@@ -131,7 +131,7 @@ describe('resources/s3', () => {
       // Add the S3 information
       expect(PutCommand).toBeCalledTimes(1);
       expect(PutCommand).toBeCalledWith({
-        TableName: 'TABLE_FILE',
+        TableName: 'TABLE_FILE_VAL',
         Item: {
           Added: 123456,
           Emergency: 0,
@@ -165,7 +165,7 @@ describe('resources/s3', () => {
       // Query to find possible adjacent files
       expect(QueryCommand).toBeCalledTimes(1);
       expect(QueryCommand).toBeCalledWith({
-        TableName: 'TABLE_FILE',
+        TableName: 'TABLE_FILE_VAL',
         ExpressionAttributeNames: {
           '#StartTime': 'StartTime',
           '#Talkgroup': 'Talkgroup',
@@ -182,7 +182,7 @@ describe('resources/s3', () => {
       // Get the talkgroup to make sure it is in use
       expect(GetCommand).toBeCalledTimes(1);
       expect(GetCommand).toBeCalledWith({
-        TableName: 'TABLE_TALKGROUP',
+        TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
           ID: 1234,
         },
@@ -191,7 +191,7 @@ describe('resources/s3', () => {
       // Set the talkgroup to in use
       expect(UpdateCommand).toBeCalledTimes(1);
       expect(UpdateCommand).toBeCalledWith({
-        TableName: 'TABLE_TALKGROUP',
+        TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
           ID: 1234,
         },
@@ -245,14 +245,14 @@ describe('resources/s3', () => {
 
       expect(DeleteCommand).toBeCalledTimes(2);
       expect(DeleteCommand).toBeCalledWith({
-        TableName: 'TABLE_FILE',
+        TableName: 'TABLE_FILE_VAL',
         Key: {
           Added: 1234,
           Talkgroup: 8332,
         },
       });
       expect(DeleteCommand).toBeCalledWith({
-        TableName: 'TABLE_FILE',
+        TableName: 'TABLE_FILE_VAL',
         Key: {
           Added: 9012,
           Talkgroup: 8332,
@@ -289,7 +289,7 @@ describe('resources/s3', () => {
       // Add the S3 information
       expect(PutCommand).toBeCalledTimes(1);
       expect(PutCommand).toBeCalledWith({
-        TableName: 'TABLE_FILE',
+        TableName: 'TABLE_FILE_VAL',
         Item: {
           Added: 123456,
           Emergency: 0,
@@ -333,7 +333,7 @@ describe('resources/s3', () => {
       // Get the talkgroup to make sure it is in use
       expect(GetCommand).toBeCalledTimes(1);
       expect(GetCommand).toBeCalledWith({
-        TableName: 'TABLE_TALKGROUP',
+        TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
           ID: 18331,
         },
@@ -342,7 +342,7 @@ describe('resources/s3', () => {
       // Set the talkgroup to in use
       expect(UpdateCommand).toBeCalledTimes(1);
       expect(UpdateCommand).toBeCalledWith({
-        TableName: 'TABLE_TALKGROUP',
+        TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
           ID: 18331,
         },
@@ -458,7 +458,7 @@ describe('resources/s3', () => {
       // Check for the SQS queue message
       expect(SendMessageCommand).toHaveBeenCalledTimes(1);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'SQS_QUEUE',
+        QueueUrl: 'SQS_QUEUE_VAL',
         MessageBody: JSON.stringify({
           action: 'page',
           tg: 8198,
