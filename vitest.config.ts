@@ -25,6 +25,7 @@ export default defineConfig({
       enabled: true,
       reportsDirectory: 'output/reports/coverage',
       include: [ 'src/**/*.{ts,tsx}', ],
+      exclude: [ 'src/**/__mocks__/*.{ts,tsx}', ],
       clean: true,
       reporter: [
         [
