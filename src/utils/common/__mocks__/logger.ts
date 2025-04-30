@@ -2,8 +2,6 @@ import { vi } from 'vitest';
 
 import { LogLevel } from '../logger';
 
-console.log(LogLevel);
-
 interface Logger {
   name: string;
   level: LogLevel;
