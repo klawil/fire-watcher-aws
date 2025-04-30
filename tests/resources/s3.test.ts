@@ -21,6 +21,11 @@ import {
 } from '../../__mocks__/@aws-sdk/lib-dynamodb';
 
 import * as mod from '@/resources/s3';
+import {
+  typedPutItem,
+  typedQuery,
+  typedUpdate
+} from '@/utils/backend/dynamoTyped';
 
 const newS3Event = (
   bucket: string,
@@ -96,6 +101,19 @@ const createDtrEmergencyHeadInfo = {
     talkgroup_num: '1234',
   },
 };
+const createDtrItem = {
+  Key: 'audio/dtr/8332-1745367697_851475000.0-call_227155.m4a',
+  Added: 123456,
+  Talkgroup: 8198,
+  StartTime: 10,
+  EndTime: 15,
+  Len: 7,
+  Freq: 1234,
+  Emergency: 0,
+  Tone: true,
+  ToneIndex: 'y',
+  Tower: 'tower',
+};
 
 const createVhfEvent = newS3Event(
   'bucket-name',
@@ -110,12 +128,55 @@ const createVhfHeadInfo = {
   },
 };
 
+const currentTime = 123456;
+
+function getFileItem(
+  Key: string,
+  Added: number,
+  StartTime: number,
+  EndTime: number,
+  Tone: boolean,
+  Emergency: boolean,
+  Transcript?: string,
+  PageSent?: boolean
+) {
+  return {
+    Key,
+    Added,
+    StartTime,
+    EndTime,
+    Len: EndTime - StartTime,
+    Freq: 1234,
+    Emergency: Emergency ? 1 : 0,
+    Tone,
+    ToneIndex: Tone ? 'y' : 'n',
+    Tower: 'tower',
+    Transcript,
+    PageSent,
+  };
+}
+
 describe('resources/s3', () => {
   describe('main', () => {
     it('Handles a DTR file being created', async () => {
-      vi.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(currentTime);
 
-      S3Mock.setResult('head', createDtrHeadInfo);
+      S3Mock.setResult('head', {
+        ...createDtrHeadInfo,
+        Metadata: {
+          ...createDtrHeadInfo.Metadata,
+          source_list: JSON.stringify([
+            {
+              pos: 0,
+              src: 1,
+            },
+            {
+              pos: 1,
+              src: 2,
+            },
+          ]),
+        },
+      });
 
       await mod.main({
         Records: [ createDtrEvent, ],
@@ -133,7 +194,7 @@ describe('resources/s3', () => {
       expect(PutCommand).toBeCalledWith({
         TableName: 'TABLE_FILE_VAL',
         Item: {
-          Added: 123456,
+          Added: currentTime,
           Emergency: 0,
           EndTime: 15,
           Freq: 1234,
@@ -144,6 +205,10 @@ describe('resources/s3', () => {
           Tone: false,
           ToneIndex: 'n',
           Tower: 'tower',
+          Sources: [
+            1,
+            2,
+          ],
         },
       });
 
@@ -206,7 +271,7 @@ describe('resources/s3', () => {
     });
 
     it('Picks the right file if multiple start near the same time', async () => {
-      vi.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(currentTime);
 
       S3Mock.setResult('head', createDtrHeadInfo);
 
@@ -271,7 +336,7 @@ describe('resources/s3', () => {
     });
 
     it('Handles a VHF file being created', async () => {
-      vi.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(currentTime);
 
       S3Mock.setResult('head', createVhfHeadInfo);
 
@@ -291,7 +356,7 @@ describe('resources/s3', () => {
       expect(PutCommand).toBeCalledWith({
         TableName: 'TABLE_FILE_VAL',
         Item: {
-          Added: 123456,
+          Added: currentTime,
           Emergency: 0,
           EndTime: 17,
           Freq: 154445000,
@@ -357,7 +422,7 @@ describe('resources/s3', () => {
     });
 
     it('Starts a transcription job if the file is a page', async () => {
-      vi.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(currentTime);
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
@@ -404,7 +469,7 @@ describe('resources/s3', () => {
     });
 
     it('Starts a transcription job if the file is emegency traffic', async () => {
-      vi.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(currentTime);
 
       S3Mock.setResult('head', createDtrEmergencyHeadInfo);
 
@@ -447,7 +512,7 @@ describe('resources/s3', () => {
     });
 
     it('Sends a command to the SQS queue if the file is a page', async () => {
-      vi.useFakeTimers().setSystemTime(123456);
+      vi.useFakeTimers().setSystemTime(currentTime);
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
@@ -469,7 +534,265 @@ describe('resources/s3', () => {
       });
     });
 
-    it.todo('Does not send a command to the SQS queue if the file is a page but is a duplicate');
+    it('Does not send a command to the SQS queue if the file is a page but is a duplicate', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+
+      vi.mocked(typedQuery).mockImplementation(() => {
+        return Promise.resolve({
+          '$metadata': {},
+          Items: [
+            {
+              Key: 'key-1',
+              StartTime: 10,
+              EndTime: 15,
+              Len: 5,
+              Added: 1234,
+              Talkgroup: 8332,
+              IsPage: true,
+            },
+            {
+              Key: 'key-2',
+              StartTime: -5,
+              EndTime: 15,
+              Len: 20,
+              Added: 5678,
+              Talkgroup: 8332,
+              IsPage: true,
+              Transcript: 'test',
+            },
+            {
+              Key: 'key-3',
+              StartTime: 0,
+              EndTime: 20,
+              Len: 20,
+              Added: 9012,
+              Talkgroup: 8332,
+              IsPage: true,
+            },
+          ],
+        });
+      });
+
+      await mod.main({
+        Records: [ createDtrEvent, ],
+      });
+
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(0);
+    });
+
+    it('Copies the transcript from another page recording if available', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+
+      vi.mocked(typedQuery).mockResolvedValue({
+        Items: [
+          createDtrItem,
+          getFileItem(
+            'lower-length',
+            currentTime - 1000,
+            createDtrItem.StartTime + 5,
+            createDtrItem.EndTime,
+            true,
+            false,
+            'Transcript 11'
+          ),
+          getFileItem(
+            'added-before',
+            currentTime - 1000,
+            createDtrItem.StartTime,
+            createDtrItem.EndTime,
+            true,
+            false,
+            'Transcript 2',
+            true
+          ),
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createDtrEvent, ],
+      });
+
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(1);
+      expect(SendMessageCommand).toHaveBeenCalledTimes(0);
+
+      expect(typedUpdate).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 8198,
+          Added: currentTime,
+        },
+        ExpressionAttributeNames: {
+          '#Transcript': 'Transcript',
+        },
+        ExpressionAttributeValues: {
+          ':Transcript': 'Transcript 11',
+        },
+        UpdateExpression: 'SET #Transcript = :Transcript',
+      });
+    });
+
+    it('Adds files to the translation table if not keeping the current item', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+
+      vi.mocked(typedQuery).mockResolvedValue({
+        Items: [
+          createDtrItem,
+          getFileItem(
+            'lower-length',
+            currentTime - 1000,
+            createDtrItem.StartTime + 5,
+            createDtrItem.EndTime,
+            true,
+            false,
+            'Transcript 1'
+          ),
+          getFileItem(
+            'longer',
+            currentTime - 1000,
+            createDtrItem.StartTime,
+            createDtrItem.EndTime + 2,
+            true,
+            false,
+            'Transcript 2',
+            true
+          ),
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createDtrEvent, ],
+      });
+
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(0);
+      expect(SendMessageCommand).toHaveBeenCalledTimes(0);
+
+      expect(typedPutItem).toHaveBeenCalledWith({
+        TableName: 'TABLE_DTR_TRANSLATION_VAL',
+        Item: {
+          Key: createDtrItem.Key,
+          NewKey: 'longer',
+          TTL: 3723,
+        },
+      });
+      expect(typedPutItem).toHaveBeenCalledWith({
+        TableName: 'TABLE_DTR_TRANSLATION_VAL',
+        Item: {
+          Key: 'lower-length',
+          NewKey: 'longer',
+          TTL: 3723,
+        },
+      });
+    });
+
+    it('Marks the page as sent if it is kept from duplicates', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+
+      vi.mocked(typedQuery).mockResolvedValue({
+        Items: [
+          createDtrItem,
+          getFileItem(
+            'lower-length',
+            currentTime - 1000,
+            createDtrItem.StartTime + 5,
+            createDtrItem.EndTime,
+            true,
+            false,
+            'Transcript 1'
+          ),
+          getFileItem(
+            'added-before',
+            currentTime - 2000,
+            createDtrItem.StartTime,
+            createDtrItem.EndTime,
+            true,
+            false,
+            'Transcript 2'
+          ),
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createDtrEvent, ],
+      });
+
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(1);
+      expect(SendMessageCommand).toHaveBeenCalledTimes(1);
+
+      expect(typedUpdate).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 8198,
+          Added: currentTime,
+        },
+        ExpressionAttributeNames: {
+          '#PageSent': 'PageSent',
+        },
+        ExpressionAttributeValues: {
+          ':PageSent': true,
+        },
+        UpdateExpression: 'SET #PageSent = :PageSent',
+      });
+    });
+
+    it('Marks the page as sent if it is not a duplicate', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+
+      vi.mocked(typedQuery).mockResolvedValue({
+        Items: [
+          createDtrItem,
+          getFileItem(
+            'too-early-key',
+            currentTime - 1000,
+            createDtrItem.StartTime - 10,
+            createDtrItem.StartTime - 5,
+            true,
+            false
+          ),
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createDtrEvent, ],
+      });
+
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(1);
+      expect(SendMessageCommand).toHaveBeenCalledTimes(1);
+
+      expect(typedUpdate).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 8198,
+          Added: currentTime,
+        },
+        ExpressionAttributeNames: {
+          '#PageSent': 'PageSent',
+        },
+        ExpressionAttributeValues: {
+          ':PageSent': true,
+        },
+        UpdateExpression: 'SET #PageSent = :PageSent',
+      });
+    });
+
+    it.todo('Adds a line to the mapping table for deleted emergency traffic');
+
+    it.todo('Adds a line to the mapping table for deleted page traffic');
+
+    it.todo('Keeps the longer transcript if there are multiple');
 
     it.todo('Handles deleting a deleted item from the database');
   });
