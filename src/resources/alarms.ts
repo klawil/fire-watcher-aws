@@ -50,7 +50,9 @@ async function getCachedData(): Promise<DataCache> {
 
 const minOkayTime = 15 * 60 * 1000; // 15 minutes
 
-export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
+export async function main(
+  event: lambda.CloudWatchAlarmEvent | lambda.EventBridgeEvent<'event', null>
+): Promise<void> {
   logger.trace('main', ...arguments);
 
   const cachedDataPromise = getCachedData();
@@ -63,7 +65,7 @@ export async function main(event: lambda.CloudWatchAlarmEvent): Promise<void> {
   } = null;
   const nowTime = Date.now();
 
-  if (event.source !== 'aws.events') {
+  if ('alarmArn' in event) {
     const tags: {
       'cofrn-alarm-type': AlertCategory;
       [key: string]: string;
