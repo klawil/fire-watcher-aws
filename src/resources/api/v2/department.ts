@@ -192,7 +192,7 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
 
   // Make sure the user can access this department
   if (
-    (params.id === 'all' && !userPerms.isDistrictAdmin) ||
+    !userPerms.isDistrictAdmin &&
     (params.id !== 'all' && !userPerms.adminDepartments.includes(params.id))
   ) {
     return [
