@@ -20,7 +20,7 @@ export interface BillingItem {
  * @body.contentType application/json
  */
 export type GetDepartmentApi = {
-  path: '/api/v2/department/{id}/';
+  path: '/api/v2/departments/{id}/';
   method: 'GET';
   params: { id: Exclude<TwilioAccounts, ''> | 'all'; }
   query: { month?: 'this' | 'last'; };
