@@ -232,12 +232,16 @@ export default function RootLayout({
     typeof location === 'undefined' ||
     user === null
   ) {
-    return <html><body></body></html>;
+    return <html>
+      <head><link rel='icon' type='image/png' href='/favicon.png' /></head>
+      <body data-bs-theme={'dark'}></body>
+    </html>;
   }
 
   const modeName = isDarkMode ? 'dark' : 'light';
   return (
     <html lang='en'>
+      <head><link rel='icon' type='image/png' href='/favicon.png' /></head>
       <body data-bs-theme={modeName}>
         {alerts.length > 0 && <Container
           style={{
