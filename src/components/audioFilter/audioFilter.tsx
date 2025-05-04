@@ -141,6 +141,7 @@ export default function AudioFilter({
   const setFilterChanges = useCallback((changes: typeof filterChanges) =>
     setFilterChangesRaw(current => {
       const newValues = {
+        ...state.filter,
         ...current,
         ...changes,
       };
@@ -150,10 +151,6 @@ export default function AudioFilter({
           if (typeof newValues[key] === 'undefined') {
             delete newValues[key];
             return;
-          }
-
-          if (newValues[key] === state.filter[key]) {
-            delete newValues[key];
           }
         });
       if (
@@ -184,6 +181,7 @@ export default function AudioFilter({
 
   const hasChanges = (Object.keys(filterChanges) as (keyof typeof filterChanges)[])
     .filter(key => typeof filterChanges[key] !== 'undefined')
+    .filter(key => filterChanges[key] !== state.filter[key])
     .length > 0;
 
   const closeFilter = useCallback((apply: boolean, jumpToPresent: boolean) => {
@@ -299,9 +297,11 @@ export default function AudioFilter({
 
           <Form.Check
             type='switch'
-            checked={state.filter.emerg === 'y'}
+            checked={typeof filterChanges.emerg !== 'undefined'
+              ? filterChanges.emerg === 'y'
+              : state.filter.emerg === 'y'}
             onChange={e => setFilterChanges({
-              emerg: e.target.checked ? 'y' : undefined,
+              emerg: e.target.checked ? 'y' : 'n',
             })}
             label='Only show emergency traffic'
           />
