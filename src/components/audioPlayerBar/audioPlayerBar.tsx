@@ -7,13 +7,14 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import {
-  BsArrowBarUp, BsCalendar, BsDownload, BsFilter, BsPauseFill, BsPlayFill
+  BsArrowBarUp, BsCalendar, BsDownload, BsFilter, BsLink, BsPauseFill, BsPlayFill
 } from 'react-icons/bs';
 
 import styles from './audioPlayerBar.module.css';
 
 import {
-  AudioAction, AudioState
+  AudioAction, AudioState,
+  allowedNostartParams
 } from '@/types/frontend/audio';
 import { findClosestFileIdx } from '@/utils/common/dateAndFile';
 
@@ -216,6 +217,21 @@ export default function AudioPlayerBar({
     state.player.fileUrl,
   ]);
 
+  // This is a link that can be used to save to the website home screen
+  const [
+    permaLink,
+    setPermaLink,
+  ] = useState('');
+  useEffect(() => {
+    const permaLinkSearchParams = new URLSearchParams();
+    searchParams.keys()
+      .filter(key => allowedNostartParams.includes(key))
+      .forEach(key => permaLinkSearchParams.set(key, searchParams.get(key) || ''));
+    permaLinkSearchParams.set('nostart', '');
+
+    setPermaLink(permaLinkSearchParams.toString());
+  }, [ searchParams, ]);
+
   // Auto play the next file
   useEffect(() => {
     if (
@@ -320,6 +336,9 @@ export default function AudioPlayerBar({
               })}
             ><BsCalendar /> Jump to Time</Nav.Link>
           </Nav>
+          <Nav.Link
+            onClick={() => window.location.search = permaLink}
+          ><BsLink /></Nav.Link>
         </Navbar.Collapse>
       </Container>
     </Navbar>

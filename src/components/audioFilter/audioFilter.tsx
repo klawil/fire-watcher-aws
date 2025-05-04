@@ -14,7 +14,8 @@ import Tabs from 'react-bootstrap/Tabs';
 
 import { UpdateTextSeenApi } from '@/types/api/texts';
 import {
-  AudioAction, AudioState, FilterPresetUrlParams, filterPresetValues, filterPresets
+  AudioAction, AudioState, FilterPresetUrlParams, allowedNostartParams, filterPresetValues,
+  filterPresets
 } from '@/types/frontend/audio';
 import { defaultFilterPreset } from '@/utils/frontend/audioState';
 import { typeFetch } from '@/utils/frontend/typeFetch';
@@ -48,7 +49,7 @@ export default function AudioFilter({
       const newParams = new URLSearchParams(searchParams.toString());
       if (newParams.get('nostart') !== null) {
         newParams.keys()
-          .filter(key => key !== 'tg')
+          .filter(key => !allowedNostartParams.includes(key))
           .forEach(key => newParams.delete(key));
         window.history.replaceState(null, '', `?${newParams.toString()}`);
       }

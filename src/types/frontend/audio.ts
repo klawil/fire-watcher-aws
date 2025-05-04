@@ -2,6 +2,11 @@ import {
   FullFileObject, GetAllFilesApi
 } from '@/types/api/files';
 
+export const allowedNostartParams = [
+  'tg',
+  'emerg',
+] as const;
+
 type PlayerState = 'playing' | 'paused' | 'ended';
 type FileAddDirection = 'before' | 'after';
 
