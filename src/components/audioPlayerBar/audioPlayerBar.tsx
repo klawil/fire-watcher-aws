@@ -120,6 +120,7 @@ export default function AudioPlayerBar({
     currentAudio.addEventListener('ended', ended);
     currentAudio.addEventListener('play', playing);
     currentAudio.addEventListener('paused', paused);
+    currentAudio.addEventListener('error', ended);
 
     return () => {
       currentAudio.removeEventListener('timeupdate', setPlayerTimes);
