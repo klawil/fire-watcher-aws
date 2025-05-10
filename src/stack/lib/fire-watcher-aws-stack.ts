@@ -387,7 +387,7 @@ export class FireWatcherAwsStack extends Stack {
         bufferingHints: {
           intervalInSeconds: 300,
         },
-        prefix: 'data/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/event=!{partitionKeyFromQuery:event}/',
+        prefix: 'data/datetime=!{timestamp:yyyy}-!{timestamp:MM}-!{timestamp:dd}-!{timestamp:HH}/event=!{partitionKeyFromQuery:event}/',
         errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
         dataFormatConversionConfiguration: {
           enabled: true,
