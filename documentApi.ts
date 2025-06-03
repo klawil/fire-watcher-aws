@@ -38,6 +38,10 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
       description: 'APIs about departments',
     },
     {
+      name: 'Errors',
+      description: 'APIs that submit front end errors',
+    },
+    {
       name: 'Events',
       description: 'APIs that work with DTR events',
     },

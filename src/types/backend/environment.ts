@@ -4,6 +4,7 @@ export interface LambdaEnvironment {
   TWILIO_SECRET: string;
   TESTING_USER: string;
   TABLE_USER: string;
+  TABLE_ERROR: string;
   TABLE_FILE: string;
   TABLE_TEXT: string;
   TABLE_STATUS: string;

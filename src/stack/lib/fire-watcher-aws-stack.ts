@@ -125,6 +125,13 @@ export class FireWatcherAwsStack extends Stack {
       },
       timeToLiveAttribute: 'TTL',
     });
+    const errorsTable = new dynamodb.Table(this, 'cofrn-frontend-errors', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'Datetime',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
 
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'AddedIndex',
@@ -463,6 +470,7 @@ export class FireWatcherAwsStack extends Stack {
       TWILIO_QUEUE: twilioStatusQueue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
 
+      TABLE_ERROR: errorsTable.tableName,
       TABLE_USER: phoneNumberTable.tableName,
       TABLE_FILE: dtrTable.tableName,
       TABLE_TEXT: textsTable.tableName,
@@ -796,6 +804,7 @@ export class FireWatcherAwsStack extends Stack {
       SITE: siteTable,
       TALKGROUP: talkgroupTable,
       STATUS: statusTable,
+      ERROR: errorsTable,
     } as const;
     const bucketMap = {
       FILE: bucket,
@@ -1051,6 +1060,15 @@ export class FireWatcherAwsStack extends Stack {
         fileName: 'events',
         methods: [ 'POST', ],
         firehoses: [ eventsFirehose, ],
+      },
+      // errors
+      {
+        pathPart: 'errors',
+        fileName: 'errors',
+        methods: [ 'POST', ],
+        tables: [ {
+          table: 'ERROR',
+        }, ],
       },
     ];
     const createApi = (
