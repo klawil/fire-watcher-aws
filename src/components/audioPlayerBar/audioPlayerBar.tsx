@@ -225,7 +225,7 @@ export default function AudioPlayerBar({
   ] = useState('');
   useEffect(() => {
     const permaLinkSearchParams = new URLSearchParams();
-    searchParams.keys()
+    [ ...searchParams.keys(), ]
       .filter(key => allowedNostartParams.includes(key))
       .forEach(key => permaLinkSearchParams.set(key, searchParams.get(key) || ''));
     permaLinkSearchParams.set('nostart', '');

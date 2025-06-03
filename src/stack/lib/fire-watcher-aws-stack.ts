@@ -1065,7 +1065,11 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'errors',
         fileName: 'errors',
-        methods: [ 'POST', ],
+        methods: [
+          'POST',
+          'GET',
+        ],
+        authRequired: true,
         tables: [ {
           table: 'ERROR',
         }, ],

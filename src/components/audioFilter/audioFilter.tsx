@@ -48,7 +48,7 @@ export default function AudioFilter({
     if (noStart) {
       const newParams = new URLSearchParams(searchParams.toString());
       if (newParams.get('nostart') !== null) {
-        newParams.keys()
+        [ ...newParams.keys(), ]
           .filter(key => !allowedNostartParams.includes(key))
           .forEach(key => newParams.delete(key));
         window.history.replaceState(null, '', `?${newParams.toString()}`);

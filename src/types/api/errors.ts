@@ -1,5 +1,8 @@
 import {
-  api200Body, api400Body
+  api200Body, api400Body,
+  api401Body,
+  api403Body,
+  api500Body
 } from '@/types/api/_shared';
 import { Validator } from '@/types/backend/validation';
 
@@ -8,7 +11,45 @@ export interface ErrorTableItem {
   Url: string;
   Message: string;
   Trace: string;
+  UserAgent: string;
 }
+
+/**
+ * Retrieve a list of the last 100 errors that have been reported
+ * @summary Retrieve Errors List
+ * @tags Errors
+ */
+export type GetErrorsApi = {
+  path: '/api/v2/errors/';
+  method: 'GET';
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: {
+      errors: ErrorTableItem[];
+    };
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    cookie: [];
+  }];
+};
 
 /**
  * Sends an error message to the backend signaling a front-end error.
