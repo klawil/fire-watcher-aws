@@ -3,6 +3,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
+  productionBrowserSourceMaps: true,
 };
 
 if (process.env.PROD_BUILD) {
