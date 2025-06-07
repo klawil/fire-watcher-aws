@@ -5,7 +5,7 @@ import {
 } from './_base';
 
 import {
-  api200Body, api401Body, api403Body, generateApi400Body
+  api401Body, api403Body, api500Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
   AddErrorApi,
@@ -96,8 +96,8 @@ const POST: LambdaApiFunction<AddErrorApi> = async function (event) {
   });
 
   return [
-    200,
-    api200Body,
+    500,
+    api500Body,
   ];
 };
 

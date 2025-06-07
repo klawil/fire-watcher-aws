@@ -1,5 +1,5 @@
 import {
-  api200Body, api400Body,
+  api400Body,
   api401Body,
   api403Body,
   api500Body
@@ -70,12 +70,12 @@ export type AddErrorApi = {
     /**
      * @contentType application/json
      */
-    200: typeof api200Body;
+    400: typeof api400Body;
 
     /**
      * @contentType application/json
      */
-    400: typeof api400Body;
+    500: typeof api500Body;
   };
 };
 
