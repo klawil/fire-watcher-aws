@@ -239,7 +239,10 @@ function useLoadFiles(
         urlParams.before = state.api.before;
       } else if (
         loadFilesDirection === 'after' &&
-        !state.api.loadAfterAdded &&
+        (
+          !state.api.loadAfterAdded ||
+          state.filter.tone === 'y'
+        ) &&
         typeof state.api.after !== 'undefined'
       ) {
         urlParams.after = state.api.after;
@@ -259,7 +262,10 @@ function useLoadFiles(
       }
 
       // Build out the filter values
-      if (typeof state.filter.emerg !== 'undefined') {
+      if (state.filter.tone === 'y') {
+        urlParams.tone = state.filter.tone;
+      }
+      if (state.filter.emerg === 'y') {
         urlParams.emerg = state.filter.emerg;
       }
       if (typeof state.filter.tg !== 'undefined') {

@@ -5,6 +5,7 @@ import {
 export const allowedNostartParams = [
   'tg',
   'emerg',
+  'tone',
 ] as const;
 
 type PlayerState = 'playing' | 'paused' | 'ended';
@@ -131,6 +132,7 @@ export interface AudioState {
     f?: string;
     tg?: string;
     emerg?: 'y' | 'n';
+    tone?: 'y' | 'n';
   };
   api: {
     [key in FileAddDirection]?: number;

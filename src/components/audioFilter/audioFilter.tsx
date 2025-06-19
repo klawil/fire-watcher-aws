@@ -91,7 +91,8 @@ export default function AudioFilter({
 
     const searchParamValues = {
       tg: searchParams.get('tg') || `p${defaultFilterPreset}`,
-      emerg: (searchParams.get('emerg') || undefined) as 'y' | 'n' | undefined,
+      emerg: (searchParams.get('emerg') || undefined) as 'n' | 'y' | undefined,
+      tone: (searchParams.get('tone') || undefined) as 'n' | 'y' | undefined,
       f: searchParams.get('f') || undefined,
     };
 
@@ -113,9 +114,19 @@ export default function AudioFilter({
           return;
         }
 
-        if (typeof state.filter[key] === 'undefined') {
+        if (
+          typeof state.filter[key] === 'undefined' ||
+          state.filter[key] === 'n'
+        ) {
           newSearchParams.delete(key);
-        } else if (newSearchParams.get(key) !== state.filter[key]) {
+          wasChange = true;
+        } else if (
+          newSearchParams.get(key) !== state.filter[key] &&
+          (
+            newSearchParams.get(key) !== null ||
+            state.filter[key] !== 'n'
+          )
+        ) {
           newSearchParams.set(key, state.filter[key]);
           wasChange = true;
         }
@@ -136,6 +147,7 @@ export default function AudioFilter({
     setFilterChangesRaw,
   ] = useState<Partial<
     Pick<AudioState['filter'], 'tg'> &
+    Pick<AudioState['filter'], 'tone'> &
     Pick<AudioState['filter'], 'emerg'>
   >>({});
   const setFilterChanges = useCallback((changes: typeof filterChanges) =>
@@ -146,6 +158,11 @@ export default function AudioFilter({
         ...changes,
       };
 
+      // Mutually exclude `emerg` and `tone`
+      if (newValues.emerg === 'y' && newValues.tone === 'y') {
+        newValues[typeof changes.emerg !== 'undefined' ? 'tone' : 'emerg'] = 'n';
+      }
+
       (Object.keys(newValues) as (keyof typeof newValues)[])
         .forEach(key => {
           if (typeof newValues[key] === 'undefined') {
@@ -154,8 +171,14 @@ export default function AudioFilter({
           }
         });
       if (
+        typeof newValues.tone !== 'undefined' &&
+        newValues.tg !== 'all'
+      ) {
+        delete newValues.tone;
+      }
+      if (
         typeof newValues.emerg !== 'undefined' &&
-          newValues.tg !== 'all'
+        newValues.tg !== 'all'
       ) {
         delete newValues.emerg;
       }
@@ -304,6 +327,17 @@ export default function AudioFilter({
               emerg: e.target.checked ? 'y' : 'n',
             })}
             label='Only show emergency traffic'
+          />
+
+          <Form.Check
+            type='switch'
+            checked={typeof filterChanges.tone !== 'undefined'
+              ? filterChanges.tone === 'y'
+              : state.filter.tone === 'y'}
+            onChange={e => setFilterChanges({
+              tone: e.target.checked ? 'y' : 'n',
+            })}
+            label='Only show pages'
           />
         </Tab>
         <Tab title='Presets' eventKey='presets'>
