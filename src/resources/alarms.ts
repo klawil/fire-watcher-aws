@@ -41,10 +41,10 @@ async function getCachedData(): Promise<DataCache> {
       return {};
     }
 
-    return JSON.parse(rawData?.Body.toString()) as DataCache;
+    return JSON.parse(await rawData?.Body.transformToString('utf-8')) as DataCache;
   } catch (e) {
     logger.error('Failed to get cached alarm data', e);
-    return {};
+    throw e;
   }
 }
 
@@ -120,14 +120,17 @@ export async function main(
         alarmCacheData.lastOk = nowTime;
         break;
       case 'ALARM':
-        alarmCacheData.lastAlarm = nowTime;
         if (
-          !alarmCacheData.lastOk ||
-          !alarmCacheData.lastOkSent ||
-          alarmCacheData.lastOkSent > alarmCacheData.lastOk
+          typeof alarmCacheData.lastAlarm === 'undefined' ||
+          (
+            alarmCacheData.lastOk &&
+            alarmCacheData.lastOkSent &&
+            alarmCacheData.lastOkSent > alarmCacheData.lastOk
+          )
         ) {
           await sendAlertMessage(alarmChange.type, alarmChange.reason);
         }
+        alarmCacheData.lastAlarm = nowTime;
         break;
     }
     cacheChanged = true;

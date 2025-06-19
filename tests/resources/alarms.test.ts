@@ -18,6 +18,12 @@ const defaultTransitionTime = 1735693261000;
 const currentTime = defaultTransitionTime + 1000;
 // const currentTimeString = new Date(currentTime).toISOString();
 
+const makeS3MockResponse = (body: string) => ({
+  Body: {
+    transformToString: () => Promise.resolve(body),
+  },
+});
+
 function generateAlarmEvent(
   isAlarm: boolean,
   alarmState: 'OK' | 'ALARM' = 'OK',
@@ -183,14 +189,12 @@ describe('@/resources/alarms', () => {
     });
 
     it('Does not send an ALARM message if the alarm OK message has not been sent', async () => {
-      S3Mock.setResult('get', {
-        Body: JSON.stringify(generateAlarmCache(
-          'testReasonLastCache',
-          null,
-          defaultTransitionTime - 10000,
-          defaultTransitionTime - 15000
-        )),
-      });
+      S3Mock.setResult('get', makeS3MockResponse(JSON.stringify(generateAlarmCache(
+        'testReasonLastCache',
+        defaultTransitionTime,
+        defaultTransitionTime - 10000,
+        defaultTransitionTime - 15000
+      ))));
 
       await main(generateAlarmEvent(
         true,
@@ -210,23 +214,21 @@ describe('@/resources/alarms', () => {
             lastReason: 'Alarm for testAlarmName transitioned from OK to ALARM on Tue, Dec 31 at 18:01:01.' +
             '\n\nImpact: AlarmDescription' +
             '\n\nReason For Change: stateReasonNew',
+            lastAlarm: currentTime,
             lastOk: defaultTransitionTime - 10000,
             lastOkSent: defaultTransitionTime - 15000,
-            lastAlarm: currentTime,
           },
         }),
       });
     });
 
     it('Sends an ALARM message if the alarm OK message has been sent', async () => {
-      S3Mock.setResult('get', {
-        Body: JSON.stringify(generateAlarmCache(
-          'testReasonLastCache',
-          null,
-          defaultTransitionTime - 10000,
-          defaultTransitionTime - 5000
-        )),
-      });
+      S3Mock.setResult('get', makeS3MockResponse(JSON.stringify(generateAlarmCache(
+        'testReasonLastCache',
+        null,
+        defaultTransitionTime - 10000,
+        defaultTransitionTime - 5000
+      ))));
 
       await main(generateAlarmEvent(
         true,
@@ -261,14 +263,12 @@ describe('@/resources/alarms', () => {
     });
 
     it('Sends an OK message after the alarm has been okay for 15 minutes', async () => {
-      S3Mock.setResult('get', {
-        Body: JSON.stringify(generateAlarmCache(
-          'testReasonLastCache',
-          null,
-          defaultTransitionTime - (15 * 60 * 1000),
-          null
-        )),
-      });
+      S3Mock.setResult('get', makeS3MockResponse(JSON.stringify(generateAlarmCache(
+        'testReasonLastCache',
+        null,
+        defaultTransitionTime - (15 * 60 * 1000),
+        null
+      ))));
 
       await main(generateAlarmEvent(false));
 
@@ -294,14 +294,12 @@ describe('@/resources/alarms', () => {
     });
 
     it('Sends no message if the alarm has been okay for less than 15 minutes', async () => {
-      S3Mock.setResult('get', {
-        Body: JSON.stringify(generateAlarmCache(
-          'testReasonLastCache',
-          null,
-          defaultTransitionTime - (13 * 60 * 1000),
-          null
-        )),
-      });
+      S3Mock.setResult('get', makeS3MockResponse(JSON.stringify(generateAlarmCache(
+        'testReasonLastCache',
+        null,
+        defaultTransitionTime - (13 * 60 * 1000),
+        null
+      ))));
 
       await main(generateAlarmEvent(false));
 
@@ -310,14 +308,12 @@ describe('@/resources/alarms', () => {
     });
 
     it('Sends no message if the OKAY message has already been sent', async () => {
-      S3Mock.setResult('get', {
-        Body: JSON.stringify(generateAlarmCache(
-          'testReasonLastCache',
-          null,
-          defaultTransitionTime - (16 * 60 * 1000),
-          defaultTransitionTime - (60 * 1000)
-        )),
-      });
+      S3Mock.setResult('get', makeS3MockResponse(JSON.stringify(generateAlarmCache(
+        'testReasonLastCache',
+        null,
+        defaultTransitionTime - (16 * 60 * 1000),
+        defaultTransitionTime - (60 * 1000)
+      ))));
 
       await main(generateAlarmEvent(false));
 
