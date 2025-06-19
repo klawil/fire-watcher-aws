@@ -70,7 +70,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
       '#ToneIndex': 'ToneIndex',
     };
     baseQueryConfig.IndexName = 'ToneIndex';
-    baseQueryConfig.KeyConditionExpression = '#ToneIndex` = :ToneIndex';
+    baseQueryConfig.KeyConditionExpression = '#ToneIndex = :ToneIndex';
     queryConfigs.push({
       ExpressionAttributeValues: {
         ':ToneIndex': query.tone,
