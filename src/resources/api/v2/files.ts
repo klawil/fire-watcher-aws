@@ -21,6 +21,7 @@ const afterAddedIndexNames: {
 } = {
   StartTimeEmergIndex: 'AddedIndex',
   StartTimeTgIndex: undefined,
+  ToneIndex: undefined,
 };
 
 const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
@@ -64,6 +65,17 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
           ':talkgroup': Number(tg),
         },
       }));
+  } else if (typeof query.tone !== 'undefined') {
+    baseQueryConfig.ExpressionAttributeNames = {
+      '#ToneIndex': 'ToneIndex',
+    };
+    baseQueryConfig.IndexName = 'ToneIndex';
+    baseQueryConfig.KeyConditionExpression = '#ToneIndex` = :ToneIndex';
+    queryConfigs.push({
+      ExpressionAttributeValues: {
+        ':ToneIndex': query.tone,
+      },
+    });
   } else {
     let emergencyValues = [
       0,

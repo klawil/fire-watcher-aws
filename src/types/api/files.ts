@@ -64,6 +64,11 @@ export type GetAllFilesApi = {
     emerg?: 'y' | 'n';
 
     /**
+     * Whether to exclusively return traffic that includes a paging tone
+     */
+    tone?: 'y' | 'n';
+
+    /**
      * Return files with a start time less than this time
      */
     before?: number;
@@ -110,6 +115,17 @@ export const getAllFilesApiQueryValidator: Validator<GetAllFilesApi['query']> = 
     },
   },
   emerg: {
+    required: false,
+    types: {
+      string: {
+        exact: [
+          'y',
+          'n',
+        ],
+      },
+    },
+  },
+  tone: {
     required: false,
     types: {
       string: {
