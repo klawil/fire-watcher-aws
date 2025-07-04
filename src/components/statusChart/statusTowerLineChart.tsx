@@ -1,7 +1,8 @@
 'use client';
 
 import {
-  useContext, useState
+  useCallback,
+  useContext, useEffect, useState
 } from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
@@ -37,6 +38,7 @@ export default function StatusTowerLineChart({
   lazyLoad,
   shouldFetchData,
   setChartLoaded,
+  mode,
 }: Readonly<ChartComponentParams<TowerChart>>) {
   const darkMode = useContext(DarkModeContext);
   const [
@@ -50,13 +52,22 @@ export default function StatusTowerLineChart({
 
   const [
     data,
-    resetData,
+    resetDataRaw,
   ] = useChartData(
     body,
     shouldLoad,
     setChartLoaded,
     true
   );
+
+  const resetData = useCallback(() => {
+    resetDataRaw();
+    setShouldLoad(true);
+  }, [ resetDataRaw, ]);
+
+  useEffect(() => {
+    resetDataRaw();
+  }, [ mode, ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (data && data.datasets.length === 3) {
     data.datasets.push({

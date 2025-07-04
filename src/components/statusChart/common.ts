@@ -13,13 +13,41 @@ type ApiLabels = GetMetricsApi['responses'][200]['labels'];
 type ApiData = GetMetricsApi['responses'][200]['data'];
 
 type TimeFormatFn = (a: Date) => string;
+
+const timezone = 'America/Denver';
+
+const formatHour: TimeFormatFn = date => date.toLocaleTimeString('en-US', {
+  timeZone: timezone,
+  hour12: false,
+  hour: '2-digit',
+  minute: '2-digit',
+});
 const formatDayHour: TimeFormatFn = date => {
   const dateString = date.toLocaleDateString('en-us', {
-    timeZone: 'America/Denver',
+    timeZone: timezone,
     weekday: 'short',
   });
   let timeString = date.toLocaleTimeString('en-US', {
-    timeZone: 'America/Denver',
+    timeZone: timezone,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  if (timeString === '24:00') {
+    timeString = '00:00';
+  }
+
+  return `${dateString} ${timeString}`;
+};
+const formatDateHour: TimeFormatFn = date => {
+  const dateString = date.toLocaleDateString('en-us', {
+    timeZone: timezone,
+    month: 'short',
+    day: '2-digit',
+  });
+  let timeString = date.toLocaleTimeString('en-US', {
+    timeZone: timezone,
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',
@@ -32,23 +60,62 @@ const formatDayHour: TimeFormatFn = date => {
   return `${dateString} ${timeString}`;
 };
 const formatDay: TimeFormatFn = date => date.toLocaleDateString('en-us', {
-  timeZone: 'America/Denver',
+  timeZone: timezone,
   weekday: 'short',
   month: 'short',
   day: '2-digit',
 });
+const formatDate: TimeFormatFn = date => date.toLocaleDateString('en-us', {
+  timeZone: timezone,
+  month: 'short',
+  day: '2-digit',
+});
 
-const periodFormatters: {
+// All values in milliseconds
+const ONE_HOUR = 60 * 60 * 1000;
+const ONE_DAY = ONE_HOUR * 24;
+const ONE_WEEK = ONE_DAY * 7;
+const ONE_MONTH = ONE_WEEK * 4;
+const ONE_YEAR = ONE_DAY * 365;
+
+function generatePeriodFormatter(hour: TimeFormatFn, day: TimeFormatFn): {
   period: number;
-  formatter: TimeFormatFn
+  formatter: TimeFormatFn;
+}[] {
+  return [
+    {
+      period: ONE_DAY,
+      formatter: day,
+    },
+    {
+      period: ONE_HOUR * 12,
+      formatter: hour,
+    },
+  ];
+}
+
+const rangeSizeFormatters: {
+  range: number;
+  periods: {
+    period: number;
+    formatter: TimeFormatFn;
+  }[];
 }[] = [
   {
-    period: 24 * 60 * 60,
-    formatter: formatDay,
+    range: ONE_YEAR,
+    periods: generatePeriodFormatter(formatDateHour, formatDate),
   },
   {
-    period: 6 * 60 * 60,
-    formatter: formatDayHour,
+    range: ONE_MONTH,
+    periods: generatePeriodFormatter(formatDateHour, formatDate),
+  },
+  {
+    range: ONE_WEEK,
+    periods: generatePeriodFormatter(formatDayHour, formatDay),
+  },
+  {
+    range: ONE_DAY,
+    periods: generatePeriodFormatter(formatHour, formatDay),
   },
 ];
 
@@ -153,13 +220,20 @@ export function useChartData(
             chartData[label][key] = convertValue(chartData[label][key] || 0);
           }));
 
-        const formatter = periodFormatters.reduce((f, val) => {
-          if (newData.period <= val.period) {
-            return val.formatter;
+        const dataRange = newData.endTime - newData.startTime;
+        const formatter = rangeSizeFormatters.reduce((f, val) => {
+          if (dataRange <= val.range) {
+            return val.periods.reduce((f, val) => {
+              if (newData.period * 1000 <= val.period) {
+                return val.formatter;
+              }
+
+              return f;
+            }, f);
           }
 
           return f;
-        }, periodFormatters[periodFormatters.length - 1].formatter);
+        }, formatDay);
 
         const datasets: ChartDataset<'line', number[]>[] = Object.keys(names)
           .map(key => ({

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import {
+  useCallback, useEffect, useState
+} from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -23,6 +25,7 @@ export default function StatusTimingLineChart({
   lazyLoad,
   setChartLoaded,
   convertValue = v => v,
+  mode,
 }: Readonly<ChartComponentParams<TimingChart>>) {
   const [
     shouldLoad,
@@ -35,7 +38,7 @@ export default function StatusTimingLineChart({
 
   const [
     data,
-    resetData,
+    resetDataRaw,
   ] = useChartData(
     body,
     shouldFetchData,
@@ -43,6 +46,15 @@ export default function StatusTimingLineChart({
     false,
     convertValue
   );
+
+  const resetData = useCallback(() => {
+    resetDataRaw();
+    setShouldLoad(true);
+  }, [ resetDataRaw, ]);
+
+  useEffect(() => {
+    resetDataRaw();
+  }, [ mode, ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const datasets = data?.datasets.map((v, i, a) => {
     if (i < a.length - 1) {

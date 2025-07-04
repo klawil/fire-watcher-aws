@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import {
+  useCallback, useEffect, useState
+} from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -38,6 +40,7 @@ export default function StatusMetricLineChart({
   lazyLoad,
   setChartLoaded,
   unit,
+  mode,
 }: Readonly<ChartComponentParams<MetricChart>>) {
   const [
     shouldLoad,
@@ -50,13 +53,22 @@ export default function StatusMetricLineChart({
 
   const [
     data,
-    resetData,
+    resetDataRaw,
   ] = useChartData(
     body,
     shouldLoad,
     setChartLoaded,
     false
   );
+
+  const resetData = useCallback(() => {
+    resetDataRaw();
+    setShouldLoad(true);
+  }, [ resetDataRaw, ]);
+
+  useEffect(() => {
+    resetDataRaw();
+  }, [ mode, ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [
     pageWidth,

@@ -31,4 +31,5 @@ export type ChartConfig = TowerChart | MetricChart | TimingChart;
 export type ChartComponentParams<T extends ChartConfig> = T & {
   shouldFetchData: boolean;
   setChartLoaded: Dispatch<SetStateAction<number>>;
+  mode: string;
 };
