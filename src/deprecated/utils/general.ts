@@ -8,7 +8,7 @@ import {
 import * as aws from 'aws-sdk';
 
 import {
-  UserDepartment, validDepartments
+  UserDepartment
 } from '@/types/api/users';
 import {
   PhoneNumberAccount, PhoneNumberTypes, TwilioAccounts, TwilioNumberTypes
@@ -170,47 +170,6 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
   return twilioSecret;
 }
 
-const DEFAULT_PAGE_NUMBER = 'page';
-
-/**
- * @deprecated The method should not be used
- */
-export async function getPageNumber(user: AWS.DynamoDB.AttributeMap): Promise<PhoneNumberTypes> {
-  // Loop over the departments the person is a member of and look for paging groups
-  const possibleDepartments: UserDepartment[] = [];
-  for (let i = 0; i < validDepartments.length; i++) {
-    const dep = validDepartments[i];
-    if (!user[dep]?.M?.active?.BOOL) {
-      continue;
-    }
-    possibleDepartments.push(dep);
-  }
-
-  // Use the only department if there is one
-  const resolvedTwilioPhoneCategories = await twilioPhoneCategories();
-  if (possibleDepartments.length === 1) {
-    return typeof resolvedTwilioPhoneCategories[`page${possibleDepartments[0]}` as PhoneNumberTypes] !== 'undefined'
-      ? `page${possibleDepartments[0]}` as PhoneNumberTypes
-      : DEFAULT_PAGE_NUMBER;
-  }
-
-  // Check for explicitly set paging number usage
-  if (
-    typeof user.pagingPhone?.S !== 'undefined' &&
-    validDepartments.includes(user.pagingPhone.S as UserDepartment) &&
-    typeof resolvedTwilioPhoneCategories[`page${user.pagingPhone.S as UserDepartment}` as PhoneNumberTypes] !== 'undefined'
-  ) {
-    return `page${user.pagingPhone.S as UserDepartment}` as PhoneNumberTypes;
-  }
-
-  /*
-   * Use the global paging number if the user is:
-   * - a member of multiple departments without a paging number set
-   * - a member no departments
-   */
-  return DEFAULT_PAGE_NUMBER;
-}
-
 interface CallMetric {
   source: string;
   action: string;
@@ -289,18 +248,4 @@ export async function incrementMetric(
 
   await cloudWatch.send(new PutMetricDataCommand(putConfig));
   return;
-}
-
-/**
- * @deprecated The method should not be used
- */
-export function validateBodyIsJson(body: string | null): true {
-  logger.trace('validateBodyIsJson', ...arguments);
-  if (body === null) {
-    throw new Error('Invalid JSON body - null');
-  }
-
-  JSON.parse(body);
-
-  return true;
 }

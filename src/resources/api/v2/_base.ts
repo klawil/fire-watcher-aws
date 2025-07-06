@@ -374,7 +374,7 @@ export function parseJsonBody<T extends object>(
   body: string | null,
   validator?: Validator<T>
 ): [T | null, string[] ] {
-  logger.trace('validateBodyIsJson', ...arguments);
+  logger.trace('parseJsonBody', ...arguments);
   try {
     if (body === null) {
       throw new Error('Invalid JSON body - null');
