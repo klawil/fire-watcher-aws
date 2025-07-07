@@ -15,6 +15,10 @@ export interface LambdaEnvironment {
   FIREHOSE_NAME: string;
   SQS_QUEUE: string;
   TWILIO_QUEUE: string;
+
+  GLUE_TABLE: string;
+  GLUE_DATABASE: string;
+  ATHENA_WORKGROUP: string;
 }
 
 declare global {

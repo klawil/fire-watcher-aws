@@ -1,5 +1,5 @@
 import {
-  api200Body, api400Body, api401Body, api500Body
+  api200Body, api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
 
 import { Validator } from '@/types/backend/validation';
@@ -12,6 +12,8 @@ interface EventItem {
   talkgroupList: string;
   timestamp?: number;
 }
+
+export type FullEventItem = Required<EventItem>;
 
 /**
  * Push DTR events and details into the firehose
@@ -51,13 +53,62 @@ export type AddEventsApi = {
 };
 
 /**
- * Push DTR events and details into the firehose
- * @summary Push DTR events
+ * Get DTR events associated with a radio ID
+ * @summary Get Radio Events
  * @tags Events
  * @body.contentType application/json
  */
-export type OldEventsApi = Omit<AddEventsApi, 'path'> & {
-  path: '/api/events?action=events';
+export type GetRadioEventsApi = {
+  path: '/api/v2/events/radioid/{id}/';
+  method: 'GET';
+  params: {
+    id: number;
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: {
+      events: FullEventItem[];
+      nextKey: string | null;
+    };
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+};
+
+/**
+ * Get DTR events associated with a Talkgroup
+ * @summary Get Talkgroup Events
+ * @tags Events
+ * @body.contentType application/json
+ */
+export type GetTalkgroupEventsApi = Omit<GetRadioEventsApi, 'path'> & {
+  path: '/api/v2/events/talkgroup/{id}/';
 };
 
 export const eventItemValidator: Validator<EventItem> = {
@@ -99,6 +150,16 @@ export const eventItemValidator: Validator<EventItem> = {
   },
   timestamp: {
     required: false,
+    types: {
+      number: {},
+    },
+  },
+};
+
+export const getEventsParamsValidator: Validator<GetRadioEventsApi['params']> = {
+  id: {
+    required: true,
+    parse: v => Number(v),
     types: {
       number: {},
     },

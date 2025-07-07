@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-athena": "^3.840.0",
     "@aws-sdk/client-cloudwatch": "^3.787.0",
     "@aws-sdk/client-cost-explorer": "^3.787.0",
     "@aws-sdk/client-dynamodb": "^3.788.0",

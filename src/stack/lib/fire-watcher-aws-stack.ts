@@ -6,6 +6,7 @@ import {
   Stack, StackProps, Tags
 } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as athena from 'aws-cdk-lib/aws-athena';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as cloudfrontOrigins from 'aws-cdk-lib/aws-cloudfront-origins';
@@ -374,7 +375,7 @@ export class FireWatcherAwsStack extends Stack {
         updateBehavior: 'LOG',
       },
       schedule: {
-        scheduleExpression: 'cron(0 * * * ? *)',
+        scheduleExpression: 'cron(15 0 * * ? *)',
       },
     });
     eventsS3Bucket.grantReadWrite(glueCrawlerRole);
@@ -453,6 +454,16 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
 
+    // Create the athena workgroup
+    const athenaWorkgroup = new athena.CfnWorkGroup(this, 'cofrn-athena-workgroup', {
+      name: 'COFRN-Athena-Workgroup',
+      workGroupConfiguration: {
+        resultConfiguration: {
+          outputLocation: `s3://${eventsS3Bucket.bucketName}/results/`,
+        },
+      },
+    });
+
     // Build the lambda environment variables
     const lambdaEnv: LambdaEnvironment = {
       S3_BUCKET: bucket.bucketName,
@@ -473,6 +484,10 @@ export class FireWatcherAwsStack extends Stack {
       TABLE_TALKGROUP: talkgroupTable.tableName,
       TABLE_SITE: siteTable.tableName,
       TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
+
+      GLUE_TABLE: glueTableName,
+      GLUE_DATABASE: glueDatabaseName,
+      ATHENA_WORKGROUP: athenaWorkgroup.name,
     };
 
     // Create a handler that pushes file information into Dynamo DB
@@ -707,6 +722,7 @@ export class FireWatcherAwsStack extends Stack {
     const bucketMap = {
       FILE: bucket,
       COSTS: costDataS3Bucket,
+      EVENTS: eventsS3Bucket,
     } as const;
 
     // Add the v2 APIs
@@ -723,6 +739,7 @@ export class FireWatcherAwsStack extends Stack {
       sendsMetrics?: true;
       getMetrics?: true;
       getCosts?: true;
+      getAthena?: true;
       tables?: {
         table: keyof typeof tableMap;
         readOnly?: true;
@@ -958,6 +975,17 @@ export class FireWatcherAwsStack extends Stack {
         fileName: 'events',
         methods: [ 'POST', ],
         firehoses: [ eventsFirehose, ],
+        next: [ {
+          pathPart: '{type}',
+          next: [ {
+            pathPart: '{id}',
+            fileName: 'eventsList',
+            methods: [ 'GET', ],
+            authRequired: true,
+            getAthena: true,
+            buckets: [ { bucket: 'EVENTS', }, ],
+          }, ],
+        }, ],
       },
       // errors
       {
@@ -973,6 +1001,12 @@ export class FireWatcherAwsStack extends Stack {
         }, ],
       },
     ];
+
+    const athenaAccessPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'lambda-athena-policy',
+      'arn:aws:iam::aws:policy/AmazonAthenaFullAccess'
+    );
     const createApi = (
       baseResource: apigateway.Resource,
       config: V2ApiConfig
@@ -1007,6 +1041,12 @@ export class FireWatcherAwsStack extends Stack {
             ...lambdaEnv,
           },
         });
+
+        // Give athena access
+        if (config.getAthena) {
+          resourceHandler.role?.addManagedPolicy(athenaAccessPolicy);
+        }
+
         resourceIntegration = new apigateway.LambdaIntegration(resourceHandler, {
           requestTemplates: {
             'application/json': '{"statusCode":"200"}',
