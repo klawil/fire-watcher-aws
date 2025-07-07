@@ -11,6 +11,7 @@ export interface LambdaEnvironment {
   TABLE_TALKGROUP: string;
   TABLE_SITE: string;
   TABLE_DTR_TRANSLATION: string;
+  TABLE_DEVICES: string;
   COSTS_BUCKET: string;
   FIREHOSE_NAME: string;
   SQS_QUEUE: string;

@@ -133,6 +133,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    const devicesTable = new dynamodb.Table(this, 'cofrn-devices', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'RadioID',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'StartTime',
+        type: dynamodb.AttributeType.NUMBER,
+      },
+    });
 
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'AddedIndex',
@@ -484,6 +495,7 @@ export class FireWatcherAwsStack extends Stack {
       TABLE_TALKGROUP: talkgroupTable.tableName,
       TABLE_SITE: siteTable.tableName,
       TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
+      TABLE_DEVICES: devicesTable.tableName,
 
       GLUE_TABLE: glueTableName,
       GLUE_DATABASE: glueDatabaseName,
@@ -520,6 +532,7 @@ export class FireWatcherAwsStack extends Stack {
     talkgroupTable.grantReadWriteData(s3Handler);
     queue.grantSendMessages(s3Handler);
     dtrTranslationTable.grantReadWriteData(s3Handler);
+    devicesTable.grantReadWriteData(s3Handler);
 
     // Create a handler for the SQS queue
     const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
