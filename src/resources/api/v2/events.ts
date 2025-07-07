@@ -61,8 +61,8 @@ const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
       DeliveryStreamName: FIREHOSE_NAME,
       Records: validItems.map(item => ({
         Data: encoder.encode(JSON.stringify({
-          ...item,
           timestamp: eventTime,
+          ...item,
         })),
       })),
     }));

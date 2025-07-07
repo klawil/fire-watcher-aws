@@ -242,21 +242,27 @@ export class FireWatcherAwsStack extends Stack {
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
     const eventsS3BucketQueue = new sqs.Queue(this, 'cvfd-events-queue');
-    new s3Notifications.SqsDestination(eventsS3BucketQueue);
+    eventsS3Bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3Notifications.SqsDestination(eventsS3BucketQueue),
+      {
+        prefix: 'data/',
+      }
+    );
 
     // Make the S3 bucket for caching cost data from AWS
     const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
 
     // Make the Glue table
     const glueDatabaseName = 'cvfd-data-db';
-    const glueTableName = 'cvfd-radio-events';
+    const glueTableName = 'cvfd-dtr-events';
     const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
       catalogId: glueCatalogId,
       databaseInput: {
         name: glueDatabaseName,
       },
     });
-    const eventsGlueTable = new glue.CfnTable(this, 'cvfd-events-table', {
+    const eventsGlueTable = new glue.CfnTable(this, 'cvfd-dtr-events-table', {
       databaseName: glueDatabaseName,
       catalogId: glueCatalogId,
       tableInput: {
@@ -264,20 +270,8 @@ export class FireWatcherAwsStack extends Stack {
         tableType: 'EXTERNAL_TABLE',
         partitionKeys: [
           {
-            name: 'year',
-            type: 'int',
-          },
-          {
-            name: 'month',
-            type: 'int',
-          },
-          {
-            name: 'day',
-            type: 'int',
-          },
-          {
-            name: 'hour',
-            type: 'int',
+            name: 'datetime',
+            type: 'string',
           },
           {
             name: 'event',
@@ -379,11 +373,12 @@ export class FireWatcherAwsStack extends Stack {
         deleteBehavior: 'LOG',
         updateBehavior: 'LOG',
       },
-      // schedule: {
-      //   scheduleExpression: 'cron(15 */2 * * ? *)'
-      // }
+      schedule: {
+        scheduleExpression: 'cron(0 * * * ? *)',
+      },
     });
     eventsS3Bucket.grantReadWrite(glueCrawlerRole);
+    eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
 
     // Make the kinesis firehose
     const eventsFirehose = new kinesisfirehose.CfnDeliveryStream(this, 'cvfd-events-firehose', {

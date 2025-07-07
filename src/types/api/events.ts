@@ -10,6 +10,7 @@ interface EventItem {
   event: string;
   talkgroup: string;
   talkgroupList: string;
+  timestamp?: number;
 }
 
 /**
@@ -94,6 +95,12 @@ export const eventItemValidator: Validator<EventItem> = {
       string: {
         regex: /^[0-9]*(,[0-9]*)*$/,
       },
+    },
+  },
+  timestamp: {
+    required: false,
+    types: {
+      number: {},
     },
   },
 };
