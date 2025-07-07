@@ -1,6 +1,7 @@
 import {
   api200Body, api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
+import { FullFileObject } from './files';
 
 import { Validator } from '@/types/backend/validation';
 
@@ -12,6 +13,11 @@ interface EventItem {
   talkgroupList: string;
   timestamp?: number;
 }
+
+export type FileEventItem = Partial<Omit<FullFileObject, 'StartTime'>> & {
+  RadioID: string;
+  StartTime: number;
+};
 
 export type FullEventItem = Required<EventItem>;
 

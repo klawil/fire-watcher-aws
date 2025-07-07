@@ -190,11 +190,12 @@ describe('resources/s3', () => {
       });
 
       // Add the S3 information
-      expect(PutCommand).toBeCalledTimes(1);
+      expect(PutCommand).toBeCalledTimes(3);
       expect(PutCommand).toBeCalledWith({
         TableName: 'TABLE_FILE_VAL',
         Item: {
           Added: currentTime,
+          DeviceProcessed: true,
           Emergency: 0,
           EndTime: 15,
           Freq: 1234,
@@ -357,6 +358,7 @@ describe('resources/s3', () => {
         TableName: 'TABLE_FILE_VAL',
         Item: {
           Added: currentTime,
+          DeviceProcessed: true,
           Emergency: 0,
           EndTime: 17,
           Freq: 154445000,

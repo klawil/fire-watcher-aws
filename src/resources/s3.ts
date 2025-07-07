@@ -15,6 +15,7 @@ import {
 import * as lambda from 'aws-lambda';
 
 import { incrementMetric } from '@/deprecated/utils/general';
+import { FileEventItem } from '@/types/api/events';
 import {
   FileTranslationObject, FullFileObject
 } from '@/types/api/files';
@@ -104,6 +105,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         Key: Key,
         Added: addedTime,
         Talkgroup: -1,
+        DeviceProcessed: true,
       },
     };
 
@@ -186,7 +188,17 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         fileTag = talkgroupsToTag[config.tg];
       }
     }
+    const sourcePutItems: Promise<unknown>[] = sourceList
+      .map(sourceId => typedPutItem<FileEventItem>({
+        TableName: process.env.TABLE_DEVICES,
+        Item: {
+          RadioID: sourceId.toString(),
+          StartTime: 0,
+          ...body.Item,
+        },
+      }));
     await typedPutItem<FullFileObject>(body);
+    await Promise.all(sourcePutItems);
 
     let doTranscriptOnly: boolean = false;
     const isPage: boolean = !!body.Item.Tone;
@@ -278,6 +290,19 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
               Added: item.Added,
             },
           })));
+          promises['delete-devices'] = Promise.all(itemsToDelete.map(async item => {
+            if (!item.Sources) {
+              return;
+            }
+
+            return Promise.all(item.Sources.map(sourceId => typedDeleteItem<FileEventItem>({
+              TableName: process.env.TABLE_DEVICES,
+              Key: {
+                RadioID: sourceId.toString(),
+                StartTime: item.StartTime || 0,
+              },
+            })));
+          }));
           promises['delete-s3-dups'] = Promise.all(itemsToDelete.map(item => {
             if (typeof item.Key === 'undefined') {
               return;

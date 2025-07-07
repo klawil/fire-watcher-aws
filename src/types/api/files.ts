@@ -7,6 +7,8 @@ import { Validator } from '@/types/backend/validation';
 export interface FullFileObject {
   Talkgroup: number;
 
+  DeviceProcessed?: boolean; // Temp field, delete
+
   /**
    * Timestamp of when the file was added to S3
    */
