@@ -76,6 +76,17 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
         ':ToneIndex': query.tone,
       },
     });
+  } else if (typeof query.radioId !== 'undefined') {
+    baseQueryConfig.TableName = process.env.TABLE_DEVICES;
+    baseQueryConfig.ExpressionAttributeNames = {
+      '#RadioID': 'RadioID',
+    };
+    baseQueryConfig.KeyConditionExpression = '#RadioID = :RadioID';
+    queryConfigs.push({
+      ExpressionAttributeValues: {
+        ':RadioID': query.radioId,
+      },
+    });
   } else {
     let emergencyValues = [
       0,

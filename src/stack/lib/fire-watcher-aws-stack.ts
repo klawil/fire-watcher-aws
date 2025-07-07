@@ -752,6 +752,7 @@ export class FireWatcherAwsStack extends Stack {
       TALKGROUP: talkgroupTable,
       STATUS: statusTable,
       ERROR: errorsTable,
+      DEVICE: devicesTable,
     } as const;
     const bucketMap = {
       FILE: bucket,
@@ -805,10 +806,16 @@ export class FireWatcherAwsStack extends Stack {
         pathPart: 'files',
         fileName: 'files',
         methods: [ 'GET', ],
-        tables: [ {
-          table: 'FILE',
-          readOnly: true,
-        }, ],
+        tables: [
+          {
+            table: 'FILE',
+            readOnly: true,
+          },
+          {
+            table: 'DEVICE',
+            readOnly: true,
+          },
+        ],
         next: [ {
           pathPart: '{id}',
           fileName: 'file',

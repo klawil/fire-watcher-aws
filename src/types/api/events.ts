@@ -14,12 +14,12 @@ interface EventItem {
   timestamp?: number;
 }
 
+export type FullEventItem = Required<EventItem>;
+
 export type FileEventItem = Partial<Omit<FullFileObject, 'StartTime'>> & {
   RadioID: string;
   StartTime: number;
 };
-
-export type FullEventItem = Required<EventItem>;
 
 /**
  * Push DTR events and details into the firehose

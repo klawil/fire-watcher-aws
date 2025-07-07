@@ -8,6 +8,7 @@ export interface FullFileObject {
   Talkgroup: number;
 
   DeviceProcessed?: boolean; // Temp field, delete
+  RadioID?: string; // Only actually on device files but added to make typing easier
 
   /**
    * Timestamp of when the file was added to S3
@@ -59,6 +60,11 @@ export type GetAllFilesApi = {
      * The talkgroups to retrieve file from. This should be a pipe-separated list of integers
      */
     tg?: number[];
+
+    /**
+     * The radio ID to retrieve files from. This should be a single integer
+     */
+    radioId?: string;
 
     /**
      * Whether to exclusively return traffic that is marked as "emergency"
@@ -114,6 +120,14 @@ export const getAllFilesApiQueryValidator: Validator<GetAllFilesApi['query']> = 
     required: false,
     types: {
       array: {},
+    },
+  },
+  radioId: {
+    required: false,
+    types: {
+      string: {
+        regex: /^[0-9]+$/,
+      },
     },
   },
   emerg: {
