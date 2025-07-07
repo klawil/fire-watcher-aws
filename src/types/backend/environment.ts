@@ -1,5 +1,6 @@
 export interface LambdaEnvironment {
   S3_BUCKET: string;
+  EVENTS_S3_BUCKET: string;
   JWT_SECRET: string;
   TWILIO_SECRET: string;
   TESTING_USER: string;
@@ -16,6 +17,7 @@ export interface LambdaEnvironment {
   FIREHOSE_NAME: string;
   SQS_QUEUE: string;
   TWILIO_QUEUE: string;
+  EVENTS_S3_QUEUE: string;
 
   GLUE_TABLE: string;
   GLUE_DATABASE: string;

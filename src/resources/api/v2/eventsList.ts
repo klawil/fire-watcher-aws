@@ -90,7 +90,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     ResultReuseConfiguration: {
       ResultReuseByAgeConfiguration: {
         Enabled: true,
-        MaxAgeInMinutes: 120,
+        MaxAgeInMinutes: 15,
       },
     },
   }));
@@ -166,6 +166,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     {
       events: items,
       nextKey: null,
+      queryId: queryId.QueryExecutionId || null,
     },
   ];
 };

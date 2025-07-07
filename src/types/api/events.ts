@@ -78,6 +78,7 @@ export type GetRadioEventsApi = {
     200: {
       events: FullEventItem[];
       nextKey: string | null;
+      queryId: string | null;
     };
 
     /**

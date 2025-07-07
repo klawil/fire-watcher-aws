@@ -378,19 +378,12 @@ export class FireWatcherAwsStack extends Stack {
           eventQueueArn: eventsS3BucketQueue.queueArn,
         }, ],
       },
-      recrawlPolicy: {
-        recrawlBehavior: 'CRAWL_EVENT_MODE',
-      },
       schemaChangePolicy: {
         deleteBehavior: 'LOG',
         updateBehavior: 'LOG',
       },
-      schedule: {
-        scheduleExpression: 'cron(15 0 * * ? *)',
-      },
     });
     eventsS3Bucket.grantReadWrite(glueCrawlerRole);
-    eventsS3BucketQueue.grantConsumeMessages(glueCrawlerRole);
 
     // Make the kinesis firehose
     const eventsFirehose = new kinesisfirehose.CfnDeliveryStream(this, 'cvfd-events-firehose', {
@@ -479,6 +472,7 @@ export class FireWatcherAwsStack extends Stack {
     const lambdaEnv: LambdaEnvironment = {
       S3_BUCKET: bucket.bucketName,
       COSTS_BUCKET: costDataS3Bucket.bucketName,
+      EVENTS_S3_BUCKET: eventsS3Bucket.bucketName,
 
       TWILIO_SECRET: twilioSecret.secretArn,
       JWT_SECRET: jwtSecret.secretArn,
@@ -486,6 +480,7 @@ export class FireWatcherAwsStack extends Stack {
       SQS_QUEUE: queue.queueUrl,
       TWILIO_QUEUE: twilioStatusQueue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
+      EVENTS_S3_QUEUE: eventsS3BucketQueue.queueUrl,
 
       TABLE_ERROR: errorsTable.tableName,
       TABLE_USER: phoneNumberTable.tableName,
@@ -558,6 +553,32 @@ export class FireWatcherAwsStack extends Stack {
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
     queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
+
+    // Create a handler for the S3 file creation SQS queue
+    const eventsS3QueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-events-s3-queue-lambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: resolve(resourceBase, 'eventFileQueueHandler.ts'),
+      handler: 'main',
+      environment: {
+        ...lambdaEnv,
+      },
+      timeout: Duration.minutes(5),
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    eventsS3BucketQueue.grantConsumeMessages(eventsS3QueueHandler);
+    eventsS3QueueHandler.role?.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'cofrn-full-glue-access',
+      'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+    ));
+
+    // Schedule the function for every 5 minutes
+    const eventsS3EventRule = new events.Rule(this, 'events-s3-rule', {
+      schedule: events.Schedule.cron({
+        minute: '*/5',
+      }),
+    });
+    eventsS3EventRule.addTarget(new targets.LambdaFunction(eventsS3QueueHandler));
 
     // Create a queue and handler that handles Twilio status updates
     const twilioQueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-twilio-queue-lambda', {
