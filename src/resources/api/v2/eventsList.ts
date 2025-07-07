@@ -80,8 +80,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
       FROM "${process.env.GLUE_TABLE}"
       WHERE "${queryType}" = '${params.id}'
       AND datetime >= '${startDatetimeString}'
-      ORDER BY "timestamp" DESC
-      LIMIT 200`;
+      ORDER BY "timestamp" DESC`;
   const queryId = await athena.send(new StartQueryExecutionCommand({
     QueryString,
     WorkGroup: process.env.ATHENA_WORKGROUP,
@@ -140,6 +139,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   // Get the results
   const results = await athena.send(new GetQueryResultsCommand({
     QueryExecutionId: queryId.QueryExecutionId,
+    MaxResults: 500,
   }));
   if (!results.ResultSet?.Rows) {
     logger.error(`No results returned from query ID ${queryId.QueryExecutionId}`);
