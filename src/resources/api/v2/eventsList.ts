@@ -79,7 +79,8 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   const QueryString = `SELECT *
       FROM "${process.env.GLUE_TABLE}"
       WHERE "${queryType}" = '${params.id}'
-      AND datetime >= '${startDatetimeString}'
+      AND "event" != 'call'
+      AND "datetime" >= '${startDatetimeString}'
       ORDER BY "timestamp" DESC`;
   const queryId = await athena.send(new StartQueryExecutionCommand({
     QueryString,

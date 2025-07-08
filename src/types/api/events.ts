@@ -14,7 +14,9 @@ interface EventItem {
   timestamp?: number;
 }
 
-export type FullEventItem = Required<EventItem>;
+export type FullEventItem = Required<Omit<EventItem, 'radioId'> & {
+  radioid: string;
+}>;
 
 export type FileEventItem = Partial<Omit<FullFileObject, 'StartTime'>> & {
   RadioID: string;
