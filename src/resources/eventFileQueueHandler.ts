@@ -4,60 +4,20 @@ import {
   GlueClient
 } from '@aws-sdk/client-glue';
 import {
-  DeleteMessageBatchCommand,
-  Message,
-  ReceiveMessageCommand, SQSClient
-} from '@aws-sdk/client-sqs';
-import {
   S3Event, S3EventRecord
 } from 'aws-lambda';
 
-const QueueUrl = process.env.EVENTS_S3_QUEUE;
 const glueDatabase = process.env.GLUE_DATABASE;
 const glueTable = process.env.GLUE_TABLE;
 
-const maxMessages = 150;
-
-export async function main() {
-  // Get all of the queue events
-  const sqs = new SQSClient();
-  const receiveMessageCommand = new ReceiveMessageCommand({
-    QueueUrl,
-    MaxNumberOfMessages: 10,
-    WaitTimeSeconds: 5,
-  });
-  let messages: Message[] = [];
-  while (true) {
-    const result = await sqs.send(receiveMessageCommand);
-    if (result.Messages && result.Messages.length > 0) {
-      messages = [
-        ...messages,
-        ...result.Messages,
-      ];
-      await sqs.send(new DeleteMessageBatchCommand({
-        QueueUrl,
-        Entries: result.Messages.map(msg => ({
-          Id: msg.MessageId || '',
-          ReceiptHandle: msg.ReceiptHandle || '',
-        })),
-      }));
-    }
-    if (!result.Messages || result.Messages.length === 0 || messages.length > maxMessages) {
-      break;
-    }
-  }
+export async function main(event: S3Event) {
+  // Get the S3 events
+  const s3EventRecords: S3EventRecord[] = event.Records || [];
 
   // Exit early if no messages
-  if (messages.length === 0) {
+  if (s3EventRecords.length === 0) {
     return;
   }
-
-  // Convert the messages into S3 events
-  const s3EventRecords: S3EventRecord[] = [];
-  messages.forEach(msg => {
-    const event: S3Event = JSON.parse(msg.Body || '{}');
-    event.Records.forEach(record => s3EventRecords.push(record));
-  });
 
   // Get all of the prefixes that were created
   const paths = s3EventRecords
@@ -153,6 +113,6 @@ export async function main() {
   }
 
   // Log the messages received
-  console.log(`Messages: ${messages.length}, Records: ${s3EventRecords.length}, ` +
+  console.log(`Records: ${s3EventRecords.length}, ` +
     `Partitions: ${eventPartitions.length}, New Partitions: ${newPartitions.length}`);
 }

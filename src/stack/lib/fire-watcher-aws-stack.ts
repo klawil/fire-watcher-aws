@@ -253,14 +253,6 @@ export class FireWatcherAwsStack extends Stack {
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
-    const eventsS3BucketQueue = new sqs.Queue(this, 'cvfd-events-queue');
-    eventsS3Bucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      new s3Notifications.SqsDestination(eventsS3BucketQueue),
-      {
-        prefix: 'data/',
-      }
-    );
 
     // Make the S3 bucket for caching cost data from AWS
     const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
@@ -364,27 +356,6 @@ export class FireWatcherAwsStack extends Stack {
       ],
     }));
 
-    // Make the glue crawler
-    const glueCrawlerRole = new iam.Role(this, 'cvfd-events-glue-role', {
-      assumedBy: new iam.ServicePrincipal('glue.amazonaws.com'),
-      managedPolicies: [ iam.ManagedPolicy.fromManagedPolicyArn(this, 'glue-managed-policy', 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'), ],
-    });
-    new glue.CfnCrawler(this, 'cvfd-events-glue-crawler', {
-      role: glueCrawlerRole.roleArn,
-      targets: {
-        catalogTargets: [ {
-          databaseName: glueDatabaseName,
-          tables: [ glueTableName, ],
-          eventQueueArn: eventsS3BucketQueue.queueArn,
-        }, ],
-      },
-      schemaChangePolicy: {
-        deleteBehavior: 'LOG',
-        updateBehavior: 'LOG',
-      },
-    });
-    eventsS3Bucket.grantReadWrite(glueCrawlerRole);
-
     // Make the kinesis firehose
     const eventsFirehose = new kinesisfirehose.CfnDeliveryStream(this, 'cvfd-events-firehose', {
       deliveryStreamName: 'cvfd-events-delivery-stream',
@@ -480,7 +451,6 @@ export class FireWatcherAwsStack extends Stack {
       SQS_QUEUE: queue.queueUrl,
       TWILIO_QUEUE: twilioStatusQueue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
-      EVENTS_S3_QUEUE: eventsS3BucketQueue.queueUrl,
 
       TABLE_ERROR: errorsTable.tableName,
       TABLE_USER: phoneNumberTable.tableName,
@@ -565,26 +535,20 @@ export class FireWatcherAwsStack extends Stack {
       timeout: Duration.minutes(5),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-    eventsS3BucketQueue.grantConsumeMessages(eventsS3QueueHandler);
     eventsS3QueueHandler.role?.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(
       this,
       'cofrn-full-glue-access',
       'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
     ));
 
-    // Schedule the function for 5 and 35 minutes after the hour
-    const eventsS3EventRule5 = new events.Rule(this, 'events-s3-rule-5', {
-      schedule: events.Schedule.cron({
-        minute: '5',
-      }),
-    });
-    eventsS3EventRule5.addTarget(new targets.LambdaFunction(eventsS3QueueHandler));
-    const eventsS3EventRule35 = new events.Rule(this, 'events-s3-rule-35', {
-      schedule: events.Schedule.cron({
-        minute: '35',
-      }),
-    });
-    eventsS3EventRule35.addTarget(new targets.LambdaFunction(eventsS3QueueHandler));
+    // Pipe the S3 events to the handler
+    eventsS3Bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3Notifications.LambdaDestination(eventsS3QueueHandler),
+      {
+        prefix: 'data/',
+      }
+    );
 
     // Create a queue and handler that handles Twilio status updates
     const twilioQueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-twilio-queue-lambda', {
@@ -737,6 +701,7 @@ export class FireWatcherAwsStack extends Stack {
       'I_STATUS': statusHandler.functionName,
       'I_WEATHER': weatherUpdater.functionName,
       'I_TWILIO_QUEUE': twilioQueueHandler.functionName,
+      'I_EVENTS_S3_QUEUE': eventsS3QueueHandler.functionName,
     };
 
     // Create a rest API
