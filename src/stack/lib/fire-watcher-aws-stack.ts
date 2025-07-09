@@ -572,13 +572,19 @@ export class FireWatcherAwsStack extends Stack {
       'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
     ));
 
-    // Schedule the function for every 5 minutes
-    const eventsS3EventRule = new events.Rule(this, 'events-s3-rule', {
+    // Schedule the function for 5 and 35 minutes after the hour
+    const eventsS3EventRule5 = new events.Rule(this, 'events-s3-rule-5', {
       schedule: events.Schedule.cron({
-        minute: '*/5',
+        minute: '5',
       }),
     });
-    eventsS3EventRule.addTarget(new targets.LambdaFunction(eventsS3QueueHandler));
+    eventsS3EventRule5.addTarget(new targets.LambdaFunction(eventsS3QueueHandler));
+    const eventsS3EventRule35 = new events.Rule(this, 'events-s3-rule-35', {
+      schedule: events.Schedule.cron({
+        minute: '35',
+      }),
+    });
+    eventsS3EventRule35.addTarget(new targets.LambdaFunction(eventsS3QueueHandler));
 
     // Create a queue and handler that handles Twilio status updates
     const twilioQueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-twilio-queue-lambda', {
