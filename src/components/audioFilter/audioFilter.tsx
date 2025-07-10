@@ -383,9 +383,15 @@ export default function AudioFilter({
 
                         if (
                           tgFilter !== '' &&
-                          !state.talkgroups[tg].selectName
-                            .toLowerCase()
-                            .includes(tgFilter.toLowerCase())
+                          (
+                            !state.talkgroups[tg].selectName
+                              .toLowerCase()
+                              .includes(tgFilter.toLowerCase()) &&
+                            (
+                              tgFilter.match(/^[0-9]+$/) &&
+                              !tg.toString().includes(tgFilter)
+                            )
+                          )
                         ) {
                           return false;
                         }
