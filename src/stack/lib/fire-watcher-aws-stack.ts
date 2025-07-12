@@ -1223,7 +1223,7 @@ export class FireWatcherAwsStack extends Stack {
       },
       additionalBehaviors: {
         '/weather.json': {
-          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
           functionAssociations: [ {
