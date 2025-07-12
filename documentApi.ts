@@ -58,6 +58,10 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
       description: 'Metrics about the system',
     },
     {
+      name: 'Radios',
+      description: 'Information about radios the DTR system has events for',
+    },
+    {
       name: 'Sites',
       description: 'Information about sites the DTR system monitors',
     },
