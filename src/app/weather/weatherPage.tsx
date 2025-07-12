@@ -87,7 +87,7 @@ export default function WeatherPage() {
     {weatherData === null && <h2 className='text-center'>Failed to Load Weather Data</h2>}
     {weatherData && <>
       <Row>
-        <Col xs={12} className='font-monospace mt-5 text-center'>{weatherData.updated}</Col>
+        <Col xs={12} className='font-monospace text-center'>{weatherData.updated}</Col>
 
         <Col md={6}>
           <h2 className='text-center'>Readiness Level</h2>
