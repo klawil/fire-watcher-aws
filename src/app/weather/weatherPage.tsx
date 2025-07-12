@@ -87,6 +87,8 @@ export default function WeatherPage() {
     {weatherData === null && <h2 className='text-center'>Failed to Load Weather Data</h2>}
     {weatherData && <>
       <Row>
+        <Col xs={12} className='font-monospace mt-5 text-center'>{weatherData.updated}</Col>
+
         <Col md={6}>
           <h2 className='text-center'>Readiness Level</h2>
           <Col xs={12} className='font-monospace text-center'>
@@ -205,8 +207,6 @@ export default function WeatherPage() {
             href='https://www.spc.noaa.gov/products/fire_wx/fwdy2.html'
           >Day 2 Fire Weather Outlook</Col>
         </Col>
-
-        <Col xs={12} className='font-monospace mt-5 text-center'>{weatherData.updated}</Col>
       </Row>
     </>}
   </>;
