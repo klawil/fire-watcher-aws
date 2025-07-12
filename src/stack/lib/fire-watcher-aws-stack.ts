@@ -144,6 +144,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    const radiosTable = new dynamodb.Table(this, 'cofrn-radios', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'RadioID',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'AddedIndex',
@@ -461,6 +468,7 @@ export class FireWatcherAwsStack extends Stack {
       TABLE_SITE: siteTable.tableName,
       TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
       TABLE_DEVICES: devicesTable.tableName,
+      TABLE_RADIOS: radiosTable.tableName,
 
       GLUE_TABLE: glueTableName,
       GLUE_DATABASE: glueDatabaseName,
@@ -724,6 +732,7 @@ export class FireWatcherAwsStack extends Stack {
       STATUS: statusTable,
       ERROR: errorsTable,
       DEVICE: devicesTable,
+      RADIO: radiosTable,
     } as const;
     const bucketMap = {
       FILE: bucket,
@@ -1011,6 +1020,16 @@ export class FireWatcherAwsStack extends Stack {
         tables: [ {
           table: 'ERROR',
         }, ],
+      },
+      // radios
+      {
+        pathPart: 'radios',
+        fileName: 'radios',
+        tables: [ {
+          table: 'RADIO',
+          readOnly: true,
+        }, ],
+        methods: [ 'GET', ],
       },
     ];
 
