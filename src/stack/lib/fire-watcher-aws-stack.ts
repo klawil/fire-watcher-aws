@@ -1025,6 +1025,7 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'radios',
         fileName: 'radios',
+        authRequired: true,
         tables: [ {
           table: 'RADIO',
           readOnly: true,

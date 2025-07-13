@@ -1,5 +1,5 @@
 import {
-  api400Body, api500Body
+  api401Body, api500Body
 } from './_shared';
 
 export interface RadioObject {
@@ -28,11 +28,14 @@ export type GetAllRadiosApi = {
     /**
      * @contentType application/json
      */
-    400: typeof api400Body;
+    401: typeof api401Body;
 
     /**
      * @contentType application/json
      */
     500: typeof api500Body;
   };
+  security: [{
+    cookie: [],
+  }];
 };
