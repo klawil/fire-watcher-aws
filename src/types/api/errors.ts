@@ -12,6 +12,7 @@ export interface ErrorTableItem {
   Message: string;
   Trace: string;
   UserAgent: string;
+  User?: string;
 }
 
 /**
