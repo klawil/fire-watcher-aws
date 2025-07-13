@@ -1,6 +1,5 @@
 import {
   LambdaApiFunction,
-  getCurrentUser,
   handleResourceApi
 } from './_base';
 
@@ -13,20 +12,14 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('radios');
 
-const GET: LambdaApiFunction<GetAllRadiosApi> = async function (event) {
+const GET: LambdaApiFunction<GetAllRadiosApi> = async function (event, user) {
   logger.trace('GET', ...arguments);
 
   // Authenticate the user
-  const [
-    user,
-    _,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
 
@@ -40,7 +33,6 @@ const GET: LambdaApiFunction<GetAllRadiosApi> = async function (event) {
       count: radios.Items?.length || 0,
       radios: radios.Items || [],
     },
-    userHeaders,
   ];
 };
 

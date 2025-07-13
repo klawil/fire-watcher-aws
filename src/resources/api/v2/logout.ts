@@ -1,7 +1,10 @@
 import {
   LambdaApiFunction,
-  getCookies, getDeleteCookieHeader, handleResourceApi
+  handleResourceApi
 } from './_base';
+import {
+  getCookies, getDeleteCookieHeader
+} from './_utils';
 
 import {
   api302Body, generateApi400Body

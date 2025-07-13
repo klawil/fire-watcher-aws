@@ -1,8 +1,10 @@
 import {
   LambdaApiFunction,
-  getCurrentUser,
-  handleResourceApi, parseJsonBody
+  handleResourceApi
 } from './_base';
+import {
+  parseJsonBody
+} from './_utils';
 
 import {
   api401Body, api403Body, api500Body, generateApi400Body
@@ -19,27 +21,20 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/errors');
 
-const GET: LambdaApiFunction<GetErrorsApi> = async function (event) {
+const GET: LambdaApiFunction<GetErrorsApi> = async function (event, user, userPerms) {
   logger.trace('GET', ...arguments);
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isDistrictAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -54,11 +49,10 @@ const GET: LambdaApiFunction<GetErrorsApi> = async function (event) {
     {
       errors: errors.Items || [],
     },
-    userHeaders,
   ];
 };
 
-const POST: LambdaApiFunction<AddErrorApi> = async function (event) {
+const POST: LambdaApiFunction<AddErrorApi> = async function (event, user) {
   logger.trace('POST', ...arguments);
   const eventTime = Date.now();
 
@@ -92,6 +86,7 @@ const POST: LambdaApiFunction<AddErrorApi> = async function (event) {
       Message: body.message,
       Trace: body.trace,
       UserAgent: event.headers['user-agent'] || 'N/A',
+      User: user === null ? 'N/A' : user.phone.toString(),
     },
   });
 

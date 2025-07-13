@@ -5,8 +5,11 @@ import {
 
 import {
   LambdaApiFunction,
-  getCurrentUser, getFrontendUserObj, handleResourceApi, validateRequest
+  handleResourceApi
 } from './_base';
+import {
+  getFrontendUserObj, validateRequest
+} from './_utils';
 
 import {
   api401Body, api403Body, api404Body, api500Body, generateApi400Body
@@ -26,7 +29,7 @@ const logger = getLogger('userDepartment');
 const sqs = new SQSClient();
 const queueUrl = process.env.SQS_QUEUE;
 
-const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) {
+const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, user, userPerms) {
   logger.trace('POST', ...arguments);
 
   // Validate the request
@@ -56,23 +59,16 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
   // Authorize the user
   const phoneToEdit = params.id;
   const departmentToEdit = params.department;
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
   if (
@@ -82,7 +78,6 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -97,7 +92,6 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     return [
       404,
       api404Body,
-      userHeaders,
     ];
   }
 
@@ -131,7 +125,6 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
     return [
       500,
       api500Body,
-      userHeaders,
     ];
   }
 
@@ -155,11 +148,10 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event) 
   return [
     200,
     getFrontendUserObj(updateResult.Attributes as FullUserObject),
-    userHeaders,
   ];
 };
 
-const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event) {
+const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event, user, userPerms) {
   logger.trace('POST', ...arguments);
 
   // Validate the parameters
@@ -184,23 +176,16 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
   // Authorize the user
   const phoneToEdit = params.id;
   const departmentToEdit = params.department;
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
   if (
@@ -210,7 +195,6 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -230,14 +214,12 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     return [
       500,
       api500Body,
-      userHeaders,
     ];
   }
 
   return [
     200,
     getFrontendUserObj(result.Attributes as FullUserObject),
-    userHeaders,
   ];
 };
 

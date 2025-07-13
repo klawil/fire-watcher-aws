@@ -44,6 +44,7 @@ describe('resources/api/v2/twilioStatus', () => {
           errors: [ 'id', ],
         }),
         statusCode: 400,
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -61,6 +62,7 @@ describe('resources/api/v2/twilioStatus', () => {
           errors: [ 'id', ],
         }),
         statusCode: 400,
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -76,6 +78,7 @@ describe('resources/api/v2/twilioStatus', () => {
           errors: [ 'MessageStatus', ],
         }),
         statusCode: 400,
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -95,6 +98,7 @@ describe('resources/api/v2/twilioStatus', () => {
           ],
         }),
         statusCode: 400,
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -110,6 +114,7 @@ describe('resources/api/v2/twilioStatus', () => {
           errors: [ 'From', ],
         }),
         statusCode: 400,
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -127,6 +132,7 @@ describe('resources/api/v2/twilioStatus', () => {
           errors: [],
         }),
         statusCode: 400,
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -141,6 +147,7 @@ describe('resources/api/v2/twilioStatus', () => {
       expect(await main(req)).toEqual({
         body: '',
         statusCode: 204,
+        multiValueHeaders: {},
       });
 
       expect(validateRequest).toHaveBeenCalledTimes(1);
@@ -162,6 +169,7 @@ describe('resources/api/v2/twilioStatus', () => {
       expect(await main(req)).toEqual({
         body: '',
         statusCode: 204,
+        multiValueHeaders: {},
       });
 
       // Validate the Twilio request
@@ -247,6 +255,7 @@ describe('resources/api/v2/twilioStatus', () => {
       expect(await main(req)).toEqual({
         body: '',
         statusCode: 204,
+        multiValueHeaders: {},
       });
 
       // Update the user with the most recent status
@@ -307,6 +316,7 @@ describe('resources/api/v2/twilioStatus', () => {
       expect(await main(req)).toEqual({
         body: '',
         statusCode: 204,
+        multiValueHeaders: {},
       });
 
       // Validate the Twilio request

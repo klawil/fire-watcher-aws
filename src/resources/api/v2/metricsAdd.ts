@@ -4,9 +4,11 @@ import {
 
 import {
   LambdaApiFunction,
-  handleResourceApi,
-  parseJsonBody
+  handleResourceApi
 } from './_base';
+import {
+  parseJsonBody
+} from './_utils';
 
 import {
   api200Body, generateApi400Body

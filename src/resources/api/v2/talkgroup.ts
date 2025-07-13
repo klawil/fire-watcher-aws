@@ -1,7 +1,10 @@
 import {
   LambdaApiFunction,
-  getCurrentUser, handleResourceApi, validateRequest
+  handleResourceApi
 } from './_base';
+import {
+  validateRequest
+} from './_utils';
 
 import {
   api401Body, api403Body, api404Body, generateApi400Body
@@ -59,7 +62,7 @@ const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
   ];
 };
 
-const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
+const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event, user, userPerms) {
   // Validate the request
   const {
     params,
@@ -84,23 +87,16 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
   }
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isDistrictAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -115,7 +111,6 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
     return [
       404,
       api404Body,
-      userHeaders,
     ];
   }
 
@@ -145,7 +140,6 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event) {
   return [
     200,
     tgUpdate.Attributes as PatchTalkgroupApi['responses'][200],
-    userHeaders,
   ];
 };
 

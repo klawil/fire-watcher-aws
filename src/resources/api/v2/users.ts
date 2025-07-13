@@ -5,8 +5,11 @@ import {
 
 import {
   LambdaApiFunction,
-  getCurrentUser, getFrontendUserObj, handleResourceApi, parseJsonBody
+  handleResourceApi
 } from './_base';
+import {
+  getFrontendUserObj, parseJsonBody
+} from './_utils';
 
 import {
   api401Body, api403Body, generateApi400Body
@@ -86,27 +89,20 @@ const districtAdminUserKeys: EditKeyConfig[] = [
   },
 ];
 
-const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
+const GET: LambdaApiFunction<GetAllUsersApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -137,11 +133,10 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event) {
   return [
     200,
     scanResult.Items || [],
-    userHeaders,
   ];
 };
 
-const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
+const POST: LambdaApiFunction<CreateUserApi> = async function (event, user, userPerms) {
   logger.trace('POST', ...arguments);
 
   // Parse the body
@@ -163,23 +158,16 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   }
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -215,7 +203,6 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
     return [
       400,
       generateApi400Body(errorKeys),
-      userHeaders,
     ];
   }
 
@@ -238,7 +225,6 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event) {
   return [
     200,
     returnBody,
-    userHeaders,
   ];
 };
 

@@ -26,6 +26,7 @@ vi.mock('@/deprecated/utils/dynamo', { spy: true, });
 vi.mock('@/deprecated/utils/dynamodb', { spy: true, });
 vi.mock('@/deprecated/utils/general', { spy: true, });
 vi.mock('@/resources/api/v2/_base', { spy: true, });
+vi.mock('@/resources/api/v2/_utils', { spy: true, });
 vi.mock('@/resources/api/v2/_twilio', { spy: true, });
 vi.mock('@/utils/backend/dynamoTyped', { spy: true, });
 vi.mock('@/utils/backend/texts', { spy: true, });

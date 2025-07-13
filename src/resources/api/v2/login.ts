@@ -9,8 +9,11 @@ import { sign } from 'jsonwebtoken';
 
 import {
   LambdaApiFunction,
-  getCurrentUser, getFrontendUserObj, getSetCookieHeader, handleResourceApi, parseJsonBody
+  handleResourceApi
 } from './_base';
+import {
+  getFrontendUserObj, getSetCookieHeader, parseJsonBody
+} from './_utils';
 
 import {
   api200Body, generateApi400Body
@@ -35,7 +38,7 @@ const secretsManager = new SecretsManagerClient();
 const queueUrl = process.env.SQS_QUEUE;
 const jwtSecretArn = process.env.JWT_SECRET;
 
-const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
+const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event, user) {
   logger.trace('GET', ...arguments);
 
   // Validate the path parameters
@@ -57,7 +60,6 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   }
 
   // Make sure the user is not already logged in
-  const [ user, ] = await getCurrentUser(event);
   if (user !== null) {
     return [
       400,
@@ -104,7 +106,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event) {
   ];
 };
 
-const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
+const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event, user) {
   logger.trace('POST', ...arguments);
 
   // Validate the path parameters
@@ -144,7 +146,6 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event) {
   }
 
   // Make sure the user is not already logged in
-  const [ user, ] = await getCurrentUser(event);
   if (user !== null) {
     return [
       400,

@@ -1,7 +1,10 @@
 import {
   LambdaApiFunction,
-  handleResourceApi, validateRequest
+  handleResourceApi
 } from './_base';
+import {
+  validateRequest
+} from './_utils';
 
 import {
   api200Body, generateApi400Body

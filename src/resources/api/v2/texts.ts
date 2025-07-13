@@ -5,7 +5,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import {
   LambdaApiFunction,
-  getCurrentUser, handleResourceApi
+  handleResourceApi
 } from './_base';
 
 import {
@@ -31,7 +31,7 @@ const anyAdminTextTypes: FullTextObject['type'][] = [
   'transcript',
   'pageAnnounce',
 ];
-const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
+const GET: LambdaApiFunction<GetAllTextsApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
   // Validate the query
@@ -66,23 +66,16 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
   }
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -221,7 +214,6 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event) {
       scanned: result.ScannedCount || 0,
       texts: data,
     },
-    userHeaders,
   ];
 };
 

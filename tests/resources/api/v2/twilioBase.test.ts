@@ -62,6 +62,7 @@ describe('resources/api/v2/twilioBase', () => {
     it('Sends the message into the queue if all checks pass', async () => {
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -116,6 +117,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 400,
+        multiValueHeaders: {},
         body: '<Response><Message>There was an issue processing your request</Message></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -132,6 +134,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -148,6 +151,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -164,6 +168,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -189,6 +194,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response><Message>This department is not using the group text feature of this system</Message></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -206,6 +212,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response><Message>This number is not able to receive messages</Message></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -223,6 +230,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response><Message>You are not an active member of the NSCAD department</Message></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -239,6 +247,7 @@ describe('resources/api/v2/twilioBase', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response><Message>Testing mode enabled</Message></Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -294,6 +303,7 @@ describe('resources/api/v2/twilioBase', () => {
       expect(await main(req)).toEqual({
         statusCode: 200,
         body: '<Response><Message>Messages that begin with an exclamation mark are reserved for testing purposes</Message></Response>',
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/xml',
         },

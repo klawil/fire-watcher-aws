@@ -749,7 +749,6 @@ export class FireWatcherAwsStack extends Stack {
     interface V2ApiConfigHandler extends V2ApiConfigBase {
       fileName: string;
       methods: (keyof typeof HTTPMethod)[];
-      authRequired?: true;
       twilioSecret?: true;
       sendsMetrics?: true;
       getMetrics?: true;
@@ -822,7 +821,6 @@ export class FireWatcherAwsStack extends Stack {
             'GET',
             'PATCH',
           ],
-          authRequired: true,
           tables: [ {
             table: 'TALKGROUP',
           }, ],
@@ -836,7 +834,6 @@ export class FireWatcherAwsStack extends Stack {
           'GET',
           'POST',
         ],
-        authRequired: true,
         tables: [ {
           table: 'USER',
         }, ],
@@ -849,7 +846,6 @@ export class FireWatcherAwsStack extends Stack {
             'PATCH',
             'DELETE',
           ],
-          authRequired: true,
           tables: [ {
             table: 'USER',
           }, ],
@@ -862,7 +858,6 @@ export class FireWatcherAwsStack extends Stack {
               'PATCH',
               'DELETE',
             ],
-            authRequired: true,
             tables: [ {
               table: 'USER',
             }, ],
@@ -875,7 +870,6 @@ export class FireWatcherAwsStack extends Stack {
         pathPart: 'texts',
         fileName: 'texts',
         methods: [ 'GET', ],
-        authRequired: true,
         tables: [ {
           table: 'TEXT',
           readOnly: true,
@@ -933,7 +927,6 @@ export class FireWatcherAwsStack extends Stack {
             'GET',
             'POST',
           ],
-          authRequired: true,
           tables: [ {
             table: 'USER',
           }, ],
@@ -954,7 +947,6 @@ export class FireWatcherAwsStack extends Stack {
           'GET',
           'POST',
         ],
-        authRequired: true,
         tables: [ {
           table: 'SITE',
           readOnly: true,
@@ -969,7 +961,6 @@ export class FireWatcherAwsStack extends Stack {
           'GET',
           'POST',
         ],
-        authRequired: true,
         tables: [ {
           table: 'STATUS',
         }, ],
@@ -986,7 +977,6 @@ export class FireWatcherAwsStack extends Stack {
             bucket: 'COSTS',
           }, ],
           getCosts: true,
-          authRequired: true,
           twilioSecret: true,
         }, ],
       },
@@ -1002,7 +992,6 @@ export class FireWatcherAwsStack extends Stack {
             pathPart: '{id}',
             fileName: 'eventsList',
             methods: [ 'GET', ],
-            authRequired: true,
             getAthena: true,
             buckets: [ { bucket: 'EVENTS', }, ],
           }, ],
@@ -1016,7 +1005,6 @@ export class FireWatcherAwsStack extends Stack {
           'POST',
           'GET',
         ],
-        authRequired: true,
         tables: [ {
           table: 'ERROR',
         }, ],
@@ -1025,7 +1013,6 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'radios',
         fileName: 'radios',
-        authRequired: true,
         tables: [ {
           table: 'RADIO',
           readOnly: true,
@@ -1088,11 +1075,8 @@ export class FireWatcherAwsStack extends Stack {
           lambdaNameRecips.push(resourceHandler);
         }
 
-        // Add read ability to the users table if the API will need authentication
-        if (
-          config.authRequired &&
-          !config.tables?.some(v => v.table === 'USER')
-        ) {
+        // Add read ability to the users table so the user can be authenticated
+        if (!config.tables?.some(v => v.table === 'USER')) {
           config.tables = config.tables || [];
           config.tables.push({
             table: 'USER',
@@ -1101,9 +1085,7 @@ export class FireWatcherAwsStack extends Stack {
         }
 
         // Add access to the JWT secret
-        if (config.authRequired) {
-          jwtSecret.grantRead(resourceHandler);
-        }
+        jwtSecret.grantRead(resourceHandler);
 
         // Add the table permissions
         config.tables?.forEach(table => {

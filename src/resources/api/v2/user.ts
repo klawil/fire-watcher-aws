@@ -1,7 +1,10 @@
 import {
   LambdaApiFunction,
-  getCurrentUser, getFrontendUserObj, handleResourceApi, validateRequest
+  handleResourceApi
 } from './_base';
+import {
+  getFrontendUserObj, validateRequest
+} from './_utils';
 
 import {
   api200Body, api401Body, api403Body, api404Body, generateApi400Body
@@ -19,20 +22,14 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('users');
 
-const GET: LambdaApiFunction<GetUserApi> = async function (event) {
+const GET: LambdaApiFunction<GetUserApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   const [
@@ -49,7 +46,6 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
     return [
       400,
       generateApi400Body(paramsErrors),
-      userHeaders,
     ];
   }
 
@@ -57,14 +53,12 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
     return [
       200,
       getFrontendUserObj(user),
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -79,18 +73,16 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event) {
     return [
       404,
       api404Body,
-      userHeaders,
     ];
   }
 
   return [
     200,
     getFrontendUserObj(userInfo.Item),
-    userHeaders,
   ];
 };
 
-const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
+const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
   // Validate the path params and body
@@ -118,16 +110,10 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   }
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   const updateType = typeof params.id === 'string'
@@ -140,7 +126,6 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -160,7 +145,6 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
       return [
         404,
         api404Body,
-        userHeaders,
       ];
     }
 
@@ -171,7 +155,6 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
       return [
         403,
         api403Body,
-        userHeaders,
       ];
     }
   }
@@ -225,11 +208,10 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event) {
   return [
     200,
     getFrontendUserObj(updateResult.Attributes as FullUserObject),
-    userHeaders,
   ];
 };
 
-const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
+const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event, user, userPerms) {
   logger.trace('DELETE', ...arguments);
 
   // Make sure the path parameter is valid
@@ -251,23 +233,16 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   }
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -283,7 +258,6 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
   const changeUser = changeUserGet.Item;
@@ -300,7 +274,6 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -315,7 +288,6 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event) {
   return [
     200,
     api200Body,
-    userHeaders,
   ];
 };
 

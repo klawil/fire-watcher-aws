@@ -6,7 +6,7 @@ import {
   expect, it, vi
 } from 'vitest';
 
-import { getCurrentUser } from '@/resources/api/v2/_base';
+import { getCurrentUser } from '@/resources/api/v2/_utils';
 import { FullUserObject } from '@/types/api/users';
 import { UserPermissions } from '@/types/backend/user';
 

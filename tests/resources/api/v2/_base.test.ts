@@ -15,13 +15,15 @@ import { verify } from '../../../../__mocks__/jsonwebtoken';
 import { generateApiEvent } from './_utils';
 
 import {
+  handleResourceApi
+} from '@/resources/api/v2/_base';
+import {
   getCookies, getCurrentUser,
   getDeleteCookieHeader,
   getFrontendUserObj,
   getSetCookieHeader,
-  handleResourceApi,
   parseJsonBody
-} from '@/resources/api/v2/_base';
+} from '@/resources/api/v2/_utils';
 import { api403Response } from '@/types/api/_shared';
 import { validateObject } from '@/utils/backend/validation';
 import { debugLoggers } from '@/utils/common/__mocks__/logger';
@@ -59,7 +61,17 @@ describe('resources/api/v2/_base', () => {
       );
 
       expect(handlers.POST).toHaveBeenCalledTimes(1);
-      expect(handlers.POST).toHaveBeenCalledWith(event);
+      expect(handlers.POST).toHaveBeenCalledWith(
+        event,
+        null,
+        {
+          activeDepartments: [],
+          adminDepartments: [],
+          isAdmin: false,
+          isDistrictAdmin: false,
+          isUser: false,
+        }
+      );
 
       expect(handlers.PATCH).toHaveBeenCalledTimes(0);
     });
@@ -94,6 +106,7 @@ describe('resources/api/v2/_base', () => {
       expect(result).toEqual({
         statusCode: 200,
         body: '{}',
+        multiValueHeaders: {},
         headers: {
           'Content-Type': 'application/json',
         },
@@ -119,6 +132,7 @@ describe('resources/api/v2/_base', () => {
 
       expect(result).toEqual({
         statusCode: 204,
+        multiValueHeaders: {},
         body: '',
       });
     });
@@ -144,6 +158,7 @@ describe('resources/api/v2/_base', () => {
 
       expect(result).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '<Response>Test</Response>',
         headers: {
           'Content-Type': 'application/xml',
@@ -178,6 +193,7 @@ describe('resources/api/v2/_base', () => {
 
       expect(result).toEqual({
         statusCode: 400,
+        multiValueHeaders: {},
         body: '["key","key2"]',
         headers: {
           'Content-Type': 'application/json',

@@ -5,10 +5,15 @@ import {
 
 import {
   LambdaApiFunction,
-  handleResourceApi, parseJsonBody
+  handleResourceApi
 } from './_base';
+import {
+  parseJsonBody
+} from './_utils';
 
-import { generateApi400Body } from '@/types/api/_shared';
+import {
+  api401Body, api403Body, generateApi400Body
+} from '@/types/api/_shared';
 import {
   GetMetricsApi, LambdaMetric, MetricToFetch,
   countMetricValidator, getMetricsApiBodyValidator, lambdaMetricValidator, timingMetricValidator
@@ -219,8 +224,22 @@ function getTimerangeFromPeriod(period: number) {
 const ONE_HOUR = 60 * 60 * 1000;
 const ONE_DAY = 24 * ONE_HOUR;
 
-const POST: LambdaApiFunction<GetMetricsApi> = async function (event) {
+const POST: LambdaApiFunction<GetMetricsApi> = async function (event, user, userPerms) {
   logger.trace('POST', ...arguments);
+
+  // Authorize the user
+  if (user === null) {
+    return [
+      401,
+      api401Body,
+    ];
+  }
+  if (!userPerms.isAdmin) {
+    return [
+      403,
+      api403Body,
+    ];
+  }
 
   // Validate the body (part 1)
   const [

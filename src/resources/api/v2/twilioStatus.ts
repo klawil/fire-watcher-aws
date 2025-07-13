@@ -8,9 +8,12 @@ import {
 
 import {
   LambdaApiFunction,
-  handleResourceApi, validateRequest
+  handleResourceApi
 } from './_base';
 import { validateTwilioRequest } from './_twilio';
+import {
+  validateRequest
+} from './_utils';
 
 import {
   getTwilioSecret, twilioPhoneNumbers

@@ -31,6 +31,7 @@ describe('resources/api/v2/heartbeats', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: '[]',
         headers: {
           'Content-Type': 'application/json',
@@ -108,6 +109,7 @@ describe('resources/api/v2/heartbeats', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 200,
+        multiValueHeaders: {},
         body: JSON.stringify([
           {
             Server: 'test',
@@ -180,6 +182,7 @@ describe('resources/api/v2/heartbeats', () => {
 
       expect(await main(req)).toEqual({
         statusCode: 400,
+        multiValueHeaders: {},
         body: JSON.stringify({
           message: 'Invalid request body',
           errors: [

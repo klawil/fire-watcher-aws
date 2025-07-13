@@ -8,10 +8,11 @@ import twilio from 'twilio';
 
 import {
   LambdaApiFunction,
-  getCurrentUser,
-  handleResourceApi,
-  validateRequest
+  handleResourceApi
 } from './_base';
+import {
+  validateRequest
+} from './_utils';
 
 import { getTwilioSecret } from '@/deprecated/utils/general';
 import {
@@ -143,27 +144,24 @@ async function getAwsBillingData(
   return cache.data;
 }
 
-const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
+const GET: LambdaApiFunction<GetDepartmentApi> = async function (
+  event,
+  user,
+  userPerms
+) {
   logger.trace('GET', ...arguments);
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin && !userPerms.isDistrictAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -186,7 +184,6 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
     return [
       400,
       generateApi400Body(validationErrors),
-      userHeaders,
     ];
   }
 
@@ -198,7 +195,6 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -275,7 +271,6 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event) {
         ...awsData,
       ],
     },
-    userHeaders,
   ];
 };
 

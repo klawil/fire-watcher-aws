@@ -5,9 +5,11 @@ import {
 
 import {
   LambdaApiFunction,
-  getCurrentUser, handleResourceApi,
-  parseJsonBody
+  handleResourceApi
 } from './_base';
+import {
+  parseJsonBody
+} from './_utils';
 
 import {
   api200Body,
@@ -31,27 +33,24 @@ import { getLogger } from '@/utils/common/logger';
 const logger = getLogger('stack/resources/api/v2/sites');
 const sqs = new SQSClient();
 
-const GET: LambdaApiFunction<GetAllSitesApi> = async function (event) {
+const GET: LambdaApiFunction<GetAllSitesApi> = async function (
+  event,
+  user,
+  userPerms
+) {
   logger.trace('GET', ...arguments);
 
   // Authorize the user
-  const [
-    user,
-    userPerms,
-    userHeaders,
-  ] = await getCurrentUser(event);
   if (user === null) {
     return [
       401,
       api401Body,
-      userHeaders,
     ];
   }
   if (!userPerms.isAdmin) {
     return [
       403,
       api403Body,
-      userHeaders,
     ];
   }
 
@@ -70,7 +69,6 @@ const GET: LambdaApiFunction<GetAllSitesApi> = async function (event) {
       count: (sites.Items || []).length,
       sites: sites.Items || [],
     },
-    userHeaders,
   ];
 };
 

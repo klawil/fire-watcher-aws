@@ -1,8 +1,11 @@
 import {
-  DocumentQueryConfig,
   LambdaApiFunction,
-  handleResourceApi, mergeDynamoQueriesDocClient
+  handleResourceApi
 } from './_base';
+import {
+  DocumentQueryConfig,
+  mergeDynamoQueriesDocClient
+} from './_utils';
 
 import { generateApi400Body } from '@/types/api/_shared';
 import {

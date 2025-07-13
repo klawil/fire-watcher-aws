@@ -4,10 +4,11 @@ import {
 
 import {
   LambdaApiFunction,
-  // getCurrentUser,
-  handleResourceApi,
-  validateRequest
+  handleResourceApi
 } from './_base';
+import {
+  validateRequest
+} from './_utils';
 
 import {
   // api401Body,
@@ -38,20 +39,6 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     ];
   }
   const queryType = event.pathParameters?.type as 'talkgroup' | 'radioid';
-
-  // // Authorize the user
-  // const [
-  //   user,
-  //   userPerms,
-  //   userHeaders,
-  // ] = await getCurrentUser(event);
-  // if (user === null) {
-  //   return [
-  //     401,
-  //     api401Body,
-  //     userHeaders,
-  //   ];
-  // }
 
   // Validate the ID
   const {
