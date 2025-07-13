@@ -18,9 +18,12 @@ import {
 import {
   FullFileObject, GetAllFilesApi
 } from '@/types/api/files';
+import { GetAllRadiosApi } from '@/types/api/radios';
 import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
 import { dateToStr } from '@/utils/common/dateAndFile';
-import { AddAlertContext } from '@/utils/frontend/clientContexts';
+import {
+  AddAlertContext, LoggedInUserContext
+} from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 
 type IdTypes = 'radio' | 'talkgroup';
@@ -52,7 +55,6 @@ export default function EventsPage() {
     }
   }>({});
   useEffect(() => {
-    console.log('addAlert', addAlert);
     (async () => {
       const [
         code,
@@ -86,6 +88,38 @@ export default function EventsPage() {
     })();
   }, [ addAlert, ]);
 
+  // Fetch the radio ID information
+  const [
+    radioNames,
+    setRadioNames,
+  ] = useState<{ [key: string]: string }>({});
+  const user = useContext(LoggedInUserContext);
+  useEffect(() => {
+    if (user === null || !user.isFinal || !user.isUser) {
+      return;
+    }
+
+    (async () => {
+      const [
+        code,
+        radioData,
+      ] = await typeFetch<GetAllRadiosApi>({
+        path: '/api/v2/radios/',
+        method: 'GET',
+      });
+
+      if (code !== 200 || !radioData || !('radios' in radioData)) {
+        console.log('Radio API Error', code, radioData);
+        return;
+      }
+
+      setRadioNames(radioData.radios.reduce((agg: { [key: string]: string }, line) => {
+        agg[line.RadioID] = line.Name;
+        return agg;
+      }, {}));
+    })();
+  }, [ user, ]);
+
   const [
     type,
     setType,
@@ -111,7 +145,6 @@ export default function EventsPage() {
     }
     window.history.pushState(null, '', `?${newParams.toString()}`);
 
-    console.log('Event changed');
     setId(newId);
     setType(newType);
     setAllEvents([]);
@@ -151,18 +184,24 @@ export default function EventsPage() {
       return '';
     }
 
+    const radioIdStr = radioId.toString();
+    const radioName = typeof radioNames[radioIdStr] !== 'undefined'
+      ? `${radioNames[radioIdStr]} [ID ${radioIdStr}]`
+      : radioIdStr;
+
     if (type === 'radio' && id === radioId.toString()) {
-      return <>Radio {radioId}</>;
+      return <>Radio {radioName}</>;
     }
 
     return <>Radio <a href={`/events/?radioId=${radioId}`} onClick={e => {
       e.preventDefault();
       changePage('radio', radioId.toString());
-    }}>{radioId}</a></>;
+    }}>{radioName}</a></>;
   }, [
     id,
     type,
     changePage,
+    radioNames,
   ]);
 
   const [
@@ -343,10 +382,6 @@ export default function EventsPage() {
     excludeItems,
     setExcludeItems,
   ] = useState<(keyof typeof eventFilters)[]>([]);
-
-  useEffect(() => {
-    console.log('Events:', allEvents);
-  }, [ allEvents, ]);
 
   const isLoading = allEvents.length === 0 ||
     loadingEvents !== LoadingStates.DONE ||
