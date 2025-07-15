@@ -7,7 +7,7 @@ import {
 
 export interface RadioObject {
   RadioID: string;
-  Name: string;
+  Name?: string;
 }
 
 /**

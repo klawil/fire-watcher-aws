@@ -994,10 +994,16 @@ export class FireWatcherAwsStack extends Stack {
             methods: [ 'GET', ],
             getAthena: true,
             buckets: [ { bucket: 'EVENTS', }, ],
-            tables: [ {
-              table: 'FILE',
-              readOnly: true,
-            }, ],
+            tables: [
+              {
+                table: 'FILE',
+                readOnly: true,
+              },
+              {
+                table: 'DEVICES',
+                readOnly: true,
+              },
+            ],
           }, ],
         }, ],
       },

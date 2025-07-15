@@ -6,9 +6,11 @@ import React, {
   useContext, useEffect,
   useState
 } from 'react';
-import {
-  Col, Form, Row
-} from 'react-bootstrap';
+import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
+import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
+import Row from 'react-bootstrap/Row';
 import Table from 'react-bootstrap/Table';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
@@ -16,8 +18,12 @@ import {
   FileEventItem,
   FullEventItem, GetRadioEventsApi, GetTalkgroupEventsApi
 } from '@/types/api/events';
-import { GetAllRadiosApi } from '@/types/api/radios';
-import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
+import {
+  GetAllRadiosApi, PatchRadioApi
+} from '@/types/api/radios';
+import {
+  GetAllTalkgroupsApi, PatchTalkgroupApi
+} from '@/types/api/talkgroups';
 import { dateToStr } from '@/utils/common/dateAndFile';
 import {
   AddAlertContext, LoggedInUserContext
@@ -112,7 +118,9 @@ export default function EventsPage() {
       }
 
       setRadioNames(radioData.radios.reduce((agg: { [key: string]: string }, line) => {
-        agg[line.RadioID] = line.Name;
+        if (line.Name) {
+          agg[line.RadioID] = line.Name;
+        }
         return agg;
       }, {}));
     })();
@@ -127,6 +135,72 @@ export default function EventsPage() {
     setId,
   ] = useState<string>('');
   const searchParams = useSearchParams();
+
+  const [
+    newName,
+    setNewName,
+  ] = useState('');
+  const saveNewName = useCallback(async () => {
+    let code, result;
+    if (type === 'radio') {
+      [
+        code,
+        result,
+      ] = await typeFetch<PatchRadioApi>({
+        path: '/api/v2/radios/{id}/',
+        method: 'PATCH',
+        params: {
+          id,
+        },
+        body: {
+          name: newName === '' ? null : newName,
+        },
+      });
+    } else {
+      [
+        code,
+        result,
+      ] = await typeFetch<PatchTalkgroupApi>({
+        path: '/api/v2/talkgroups/{id}/',
+        method: 'PATCH',
+        params: {
+          id: Number(id),
+        },
+        body: {
+          name: newName === '' ? null : newName,
+        },
+      });
+    }
+
+    if (
+      code !== 200 ||
+      result === null ||
+      'message' in result
+    ) {
+      addAlert('error', 'Failed to save new name');
+      return;
+    }
+
+    if (type === 'radio') {
+      setRadioNames(current => ({
+        ...current,
+        [id]: newName,
+      }));
+    } else {
+      setTalkgroups(current => ({
+        ...current,
+        [id]: {
+          ...current[id],
+          name: newName,
+        },
+      }));
+    }
+  }, [
+    newName,
+    id,
+    type,
+    addAlert,
+  ]);
 
   const changePage = useCallback((newType: IdTypes, newId: string) => {
     if (type === newType && id === newId) {
@@ -210,15 +284,11 @@ export default function EventsPage() {
   }) | (FileEventItem & {
     type: 'file';
   }))[]>([]);
-  // const [
-  //   loadingFiles,
-  //   setLoadingFiles,
-  // ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
   const [
     loadingEvents,
     setLoadingEvents,
   ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
-  useEffect(() => { // Events
+  useEffect(() => {
     if (
       allEvents.length > 0 ||
       id === '' ||
@@ -288,81 +358,6 @@ export default function EventsPage() {
     id,
     type,
   ]);
-  // useEffect(() => { // Files
-  //   if (
-  //     loadingFiles !== LoadingStates.NOT_STARTED ||
-  //     id === '' ||
-  //     allEvents.some(v => v.type === 'file')
-  //   ) {
-  //     return;
-  //   }
-
-  //   (async () => {
-  //     let code;
-  //     let results;
-  //     setLoadingFiles(LoadingStates.IN_PROGRESS);
-  //     if (type === 'talkgroup') {
-  //       [
-  //         code,
-  //         results,
-  //       ] = await typeFetch<GetAllFilesApi>({
-  //         path: '/api/v2/files/',
-  //         method: 'GET',
-  //         query: {
-  //           tg: [ Number(id), ],
-  //         },
-  //       });
-  //     } else {
-  //       [
-  //         code,
-  //         results,
-  //       ] = await typeFetch<GetAllFilesApi>({
-  //         path: '/api/v2/files/',
-  //         method: 'GET',
-  //         query: {
-  //           radioId: id,
-  //         },
-  //       });
-  //     }
-
-  //     if (code !== 200 || !results || !('files' in results)) {
-  //       console.log(code, results);
-  //       addAlert('danger', 'Failed to get events');
-  //       setLoadingFiles(LoadingStates.DONE);
-  //       return;
-  //     }
-  //     setAllEvents(current => {
-  //       if (current.some(v => v.type === 'file')) {
-  //         return current;
-  //       }
-
-  //       return [
-  //         ...current,
-  //         ...(results.files.map(f => ({
-  //           ...f,
-  //           type: 'file',
-  //         })) as typeof allEvents),
-  //       ].sort((a, b) => {
-  //         const aVal = a.type === 'file'
-  //           ? (a.StartTime || 0) * 1000
-  //           : a.timestamp;
-  //         const bVal = b.type === 'file'
-  //           ? (b.StartTime || 0) * 1000
-  //           : b.timestamp;
-
-  //         return aVal >= bVal ? -1 : 1;
-  //       });
-  //     });
-  //     setLoadingFiles(LoadingStates.DONE);
-  //   })();
-  // }, [
-  //   searchParams,
-  //   addAlert,
-  //   allEvents,
-  //   loadingFiles,
-  //   id,
-  //   type,
-  // ]);
 
   useEffect(() => {
     if (searchParams.get('tg') !== null) {
@@ -380,8 +375,22 @@ export default function EventsPage() {
   ] = useState<(keyof typeof eventFilters)[]>([]);
 
   const isLoading = allEvents.length === 0 &&
-    loadingEvents !== LoadingStates.DONE; // ||
-    // loadingFiles !== LoadingStates.DONE;
+    loadingEvents !== LoadingStates.DONE;
+
+  useEffect(() => {
+    setNewName(type === 'radio'
+      ? radioNames[id] || ''
+      : talkgroups[id]?.name || '');
+  }, [
+    radioNames,
+    talkgroups,
+    id,
+    type,
+  ]);
+
+  const currentName = type === 'radio'
+    ? radioNames[id]
+    : talkgroups[id]?.name;
 
   return <>
     {Object.keys(talkgroups).length > 0 && <Row className='justify-content-center mb-5'>
@@ -403,6 +412,31 @@ export default function EventsPage() {
     </Row>}
 
     {id !== '' && <h2 className='text-center'>{type === 'radio' ? parseRadioId(id) : parseTalkgroup(id)}</h2>}
+
+    {id !== '' && user?.canEditNames && <Col
+      lg={{
+        span: 4,
+        offset: 4,
+      }}
+      md={{
+        span: 6,
+        offset: 3,
+      }}
+      className='mb-4'
+    >
+      <InputGroup>
+        <Form.Control
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          placeholder='Change Name'
+        />
+        <Button
+          variant='success'
+          disabled={newName === currentName}
+          onClick={saveNewName}
+        >Change Name</Button>
+      </InputGroup>
+    </Col>}
 
     {isLoading && id !== '' && <LoadingSpinner />}
 

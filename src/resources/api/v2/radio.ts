@@ -8,8 +8,12 @@ import {
   api401Body, api403Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  PatchRadioApi, patchRadioApiBodyValidator, patchRadioApiParamsValidator
+  PatchRadioApi,
+  RadioObject, patchRadioApiBodyValidator, patchRadioApiParamsValidator
 } from '@/types/api/radios';
+import {
+  TABLE_RADIOS, typedDeleteItem, typedUpdate
+} from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/radio');
@@ -54,11 +58,35 @@ const PATCH: LambdaApiFunction<PatchRadioApi> = async function (event, user, use
     ];
   }
 
+  // Update the radio ID
+  if (body.name === null) {
+    await typedDeleteItem<RadioObject>({
+      TableName: TABLE_RADIOS,
+      Key: {
+        RadioID: params.id,
+      },
+    });
+  } else {
+    await typedUpdate<RadioObject>({
+      TableName: TABLE_RADIOS,
+      Key: {
+        RadioID: params.id,
+      },
+      ExpressionAttributeNames: {
+        '#Name': 'Name',
+      },
+      ExpressionAttributeValues: {
+        ':Name': body.name,
+      },
+      UpdateExpression: 'SET #Name = :Name',
+    });
+  }
+
   return [
     200,
     {
-      RadioID: '',
-      Name: '',
+      RadioID: params.id,
+      Name: body.name || '',
     },
   ];
 };
