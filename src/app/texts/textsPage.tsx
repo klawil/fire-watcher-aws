@@ -125,10 +125,6 @@ function TextsTable({
     setTexts,
   ] = useState<TextObject[]>([]);
   const [
-    isLoading,
-    setIsLoading,
-  ] = useState(false);
-  const [
     allLoaded,
     setAllLoaded,
   ] = useState(false);
@@ -153,13 +149,12 @@ function TextsTable({
       allLoaded ||
       !shouldLoad ||
       (texts.length > 0 && loadMoreRefInView === false) ||
-      isLoading ||
       Date.now() - lastLoad <= 2000
     ) {
       return;
     }
 
-    setIsLoading(true);
+    let useResult = true;
     setScrollIdx(texts.length - 1);
     (async () => {
       const newTexts = await getTexts(
@@ -167,6 +162,10 @@ function TextsTable({
         texts[texts.length - 1]?.datetime || null,
         addAlert
       );
+      if (!useResult) {
+        return;
+      }
+
       if (newTexts.length === 0) {
         setAllLoaded(true);
       } else {
@@ -182,14 +181,16 @@ function TextsTable({
         setTableLoaded(v => v + 1);
       }
       setLastLoad(Date.now());
-      setIsLoading(false);
     })();
+
+    return () => {
+      useResult = false;
+    };
   }, [
     allLoaded,
     shouldLoad,
     setTableLoaded,
     texts,
-    isLoading,
     loadMoreRefInView,
     query,
     lastLoad,

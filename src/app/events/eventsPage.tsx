@@ -47,8 +47,11 @@ const eventFilters = {
 } as const;
 
 export default function EventsPage() {
+  // Contexts
   const addAlert = useContext(AddAlertContext);
-  // Fetch the talkgroup information
+  const user = useContext(LoggedInUserContext);
+
+  // Names for IDs
   const [
     talkgroups,
     setTalkgroups,
@@ -58,74 +61,22 @@ export default function EventsPage() {
       selectName: string;
     }
   }>({});
-  useEffect(() => {
-    (async () => {
-      const [
-        code,
-        tgData,
-      ] = await typeFetch<GetAllTalkgroupsApi>({
-        path: '/api/v2/talkgroups/',
-        method: 'GET',
-      });
-
-      if (
-        code !== 200 ||
-        tgData === null ||
-        'message' in tgData
-      ) {
-        console.error('Failed to load talkgroup information', code, tgData);
-        addAlert('danger', 'Failed to load talkgroup information');
-        return;
-      }
-
-      setTalkgroups(tgData.talkgroups.reduce((
-        agg: typeof talkgroups,
-        item
-      ) => {
-        agg[item.ID.toString()] = {
-          name: item.Name || item.ID.toString(),
-          selectName: `${item.Name || `Talkgroup ID ${item.ID}`}`,
-        };
-
-        return agg;
-      }, {}));
-    })();
-  }, [ addAlert, ]);
-
-  // Fetch the radio ID information
   const [
     radioNames,
     setRadioNames,
   ] = useState<{ [key: string]: string }>({});
-  const user = useContext(LoggedInUserContext);
-  useEffect(() => {
-    if (user === null || !user.isFinal || !user.isUser) {
-      return;
-    }
 
-    (async () => {
-      const [
-        code,
-        radioData,
-      ] = await typeFetch<GetAllRadiosApi>({
-        path: '/api/v2/radios/',
-        method: 'GET',
-      });
+  // Filters for the talkgroup and radio select
+  const [
+    tgFilter,
+    setTgFilter,
+  ] = useState('');
+  const [
+    radioFilter,
+    setRadioFilter,
+  ] = useState('');
 
-      if (code !== 200 || !radioData || !('radios' in radioData)) {
-        console.log('Radio API Error', code, radioData);
-        return;
-      }
-
-      setRadioNames(radioData.radios.reduce((agg: { [key: string]: string }, line) => {
-        if (line.Name) {
-          agg[line.RadioID] = line.Name;
-        }
-        return agg;
-      }, {}));
-    })();
-  }, [ user, ]);
-
+  // Current ID and type
   const [
     type,
     setType,
@@ -136,10 +87,41 @@ export default function EventsPage() {
   ] = useState<string>('');
   const searchParams = useSearchParams();
 
+  // State for the renaming input
   const [
     newName,
     setNewName,
   ] = useState('');
+
+  // State for the events/recordings associated with the entity
+  const [
+    allEvents,
+    setAllEvents,
+  ] = useState<((FullEventItem & {
+    type: 'event';
+  }) | (FileEventItem & {
+    type: 'file';
+  }))[]>([]);
+
+  // Used to control spinner state
+  const [
+    loadingEvents,
+    setLoadingEvents,
+  ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
+
+  // Used to allow the types of events to be selected
+  const [
+    excludeItems,
+    setExcludeItems,
+  ] = useState<(keyof typeof eventFilters)[]>([]);
+
+  const isLoading = allEvents.length === 0 &&
+    loadingEvents !== LoadingStates.DONE;
+  const currentName = type === 'radio'
+    ? radioNames[id]
+    : talkgroups[id]?.name;
+
+  // Change an entity's name
   const saveNewName = useCallback(async () => {
     let code, result;
     if (type === 'radio') {
@@ -202,6 +184,7 @@ export default function EventsPage() {
     addAlert,
   ]);
 
+  // Change the entity being displayed
   const changePage = useCallback((newType: IdTypes, newId: string) => {
     if (type === newType && id === newId) {
       return;
@@ -228,6 +211,7 @@ export default function EventsPage() {
     id,
   ]);
 
+  // Parse an ID into a name and link
   const parseTalkgroup = useCallback((tgId: number | string) => {
     if (tgId === '') {
       return '';
@@ -276,26 +260,97 @@ export default function EventsPage() {
     radioNames,
   ]);
 
-  const [
-    allEvents,
-    setAllEvents,
-  ] = useState<((FullEventItem & {
-    type: 'event';
-  }) | (FileEventItem & {
-    type: 'file';
-  }))[]>([]);
-  const [
-    loadingEvents,
-    setLoadingEvents,
-  ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
+  // Fetch the talkgroup names
+  useEffect(() => {
+    let useResult = true;
+    (async () => {
+      const [
+        code,
+        tgData,
+      ] = await typeFetch<GetAllTalkgroupsApi>({
+        path: '/api/v2/talkgroups/',
+        method: 'GET',
+      });
+
+      if (!useResult) {
+        return;
+      }
+
+      if (
+        code !== 200 ||
+        tgData === null ||
+        'message' in tgData
+      ) {
+        console.error('Failed to load talkgroup information', code, tgData);
+        addAlert('danger', 'Failed to load talkgroup information');
+        return;
+      }
+
+      setTalkgroups(tgData.talkgroups.reduce((
+        agg: typeof talkgroups,
+        item
+      ) => {
+        agg[item.ID.toString()] = {
+          name: item.Name || item.ID.toString(),
+          selectName: `${item.Name || `Talkgroup ID ${item.ID}`}`,
+        };
+
+        return agg;
+      }, {}));
+    })();
+
+    return () => {
+      useResult = false;
+    };
+  }, [ addAlert, ]);
+
+  // Fetch the radio ID information
+  useEffect(() => {
+    if (user === null || !user.isFinal || !user.isUser) {
+      return;
+    }
+
+    let useResult = true;
+    (async () => {
+      const [
+        code,
+        radioData,
+      ] = await typeFetch<GetAllRadiosApi>({
+        path: '/api/v2/radios/',
+        method: 'GET',
+      });
+      if (!useResult) {
+        return;
+      }
+
+      if (code !== 200 || !radioData || !('radios' in radioData)) {
+        console.log('Radio API Error', code, radioData);
+        return;
+      }
+
+      setRadioNames(radioData.radios.reduce((agg: { [key: string]: string }, line) => {
+        if (line.Name) {
+          agg[line.RadioID] = `${line.Name} [${line.RadioID}]`;
+        }
+        return agg;
+      }, {}));
+    })();
+
+    return () => {
+      useResult = false;
+    };
+  }, [ user, ]);
+
+  // Load the events
   useEffect(() => {
     if (
       allEvents.length > 0 ||
-      id === '' ||
-      loadingEvents !== LoadingStates.NOT_STARTED
+      id === ''
     ) {
       return;
     }
+
+    let useResult = true;
     (async () => {
       let code, results;
       setLoadingEvents(LoadingStates.IN_PROGRESS);
@@ -325,7 +380,13 @@ export default function EventsPage() {
       const queryId = results && 'queryId' in results
         ? results.queryId
         : null;
-      while (code === 200 && queryId !== null && results && !('events' in results)) {
+      while (
+        useResult &&
+        code === 200 &&
+        queryId !== null &&
+        results &&
+        !('events' in results)
+      ) {
         await new Promise(res => setTimeout(res, 5000));
         if (type === 'radio') {
           [
@@ -356,7 +417,9 @@ export default function EventsPage() {
             },
           });
         }
-        console.log(code, results);
+      }
+      if (!useResult) {
+        return;
       }
       if (code !== 200 || !results || !('events' in results)) {
         console.log(code, results);
@@ -386,6 +449,10 @@ export default function EventsPage() {
       });
       setLoadingEvents(LoadingStates.DONE);
     })();
+
+    return () => {
+      useResult = false;
+    };
   }, [
     searchParams,
     addAlert,
@@ -395,6 +462,7 @@ export default function EventsPage() {
     type,
   ]);
 
+  // Parse the query string parameters on the first run
   useEffect(() => {
     if (searchParams.get('tg') !== null) {
       setType('talkgroup');
@@ -405,14 +473,7 @@ export default function EventsPage() {
     }
   }, [ searchParams, ]);
 
-  const [
-    excludeItems,
-    setExcludeItems,
-  ] = useState<(keyof typeof eventFilters)[]>([]);
-
-  const isLoading = allEvents.length === 0 &&
-    loadingEvents !== LoadingStates.DONE;
-
+  // Set the value of the renaming input when state changes
   useEffect(() => {
     setNewName(type === 'radio'
       ? radioNames[id] || ''
@@ -424,21 +485,8 @@ export default function EventsPage() {
     type,
   ]);
 
-  const currentName = type === 'radio'
-    ? radioNames[id]
-    : talkgroups[id]?.name;
-
-  const [
-    tgFilter,
-    setTgFilter,
-  ] = useState('');
-  const [
-    radioFilter,
-    setRadioFilter,
-  ] = useState('');
-
   return <>
-    {Object.keys(talkgroups).length > 0 && <Row className='justify-content-center mb-5'>
+    {(Object.keys(talkgroups).length > 0 || Object.keys(radioNames).length > 0) && <Row className='justify-content-center mb-5'>
       <Col md={4}>
         <h3>Talkgroups</h3>
         <Form.Control
