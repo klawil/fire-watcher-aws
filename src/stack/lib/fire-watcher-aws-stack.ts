@@ -372,7 +372,7 @@ export class FireWatcherAwsStack extends Stack {
         bufferingHints: {
           intervalInSeconds: 300,
         },
-        prefix: 'data/datetime=!{timestamp:yyyy}-!{timestamp:MM}-!{timestamp:dd}-!{timestamp:HH}/event=!{partitionKeyFromQuery:event}/',
+        prefix: 'data/datetime=!{partitionKeyFromQuery:datePartition}/event=!{partitionKeyFromQuery:event}/',
         errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
         dataFormatConversionConfiguration: {
           enabled: true,
@@ -400,7 +400,7 @@ export class FireWatcherAwsStack extends Stack {
               },
               {
                 parameterName: 'MetadataExtractionQuery',
-                parameterValue: '{event:.event}',
+                parameterValue: '{event:.event, datePartition:.datePartition}',
               },
             ],
           }, ],

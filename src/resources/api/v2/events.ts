@@ -59,12 +59,27 @@ const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
     const encoder = new TextEncoder();
     await firehose.send(new PutRecordBatchCommand({
       DeliveryStreamName: FIREHOSE_NAME,
-      Records: validItems.map(item => ({
-        Data: encoder.encode(JSON.stringify({
-          timestamp: eventTime,
-          ...item,
-        })),
-      })),
+      Records: validItems.map(item => {
+        const timestamp = typeof item.timestamp !== 'undefined'
+          ? item.timestamp
+          : eventTime;
+
+        const dateTime = new Date(timestamp);
+        const datePartition = `${dateTime.getUTCFullYear()}-` +
+          `${(dateTime.getUTCMonth() + 1).toString().padStart(2, '0')}-` +
+          `${dateTime.getUTCDate().toString()
+            .padStart(2, '0')}-` +
+          `${dateTime.getUTCHours().toString()
+            .padStart(2, '0')}`;
+
+        return {
+          Data: encoder.encode(JSON.stringify({
+            ...item,
+            timestamp,
+            datePartition,
+          })),
+        };
+      }),
     }));
   }
 
