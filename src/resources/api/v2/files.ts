@@ -12,7 +12,9 @@ import {
   FullFileObject, GetAllFilesApi, getAllFilesApiQueryValidator
 } from '@/types/api/files';
 import { TypedQueryInput } from '@/types/backend/dynamo';
-import { TABLE_FILE } from '@/utils/backend/dynamoTyped';
+import {
+  TABLE_DEVICES, TABLE_FILE
+} from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
@@ -80,7 +82,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
       },
     });
   } else if (typeof query.radioId !== 'undefined') {
-    baseQueryConfig.TableName = process.env.TABLE_DEVICES;
+    baseQueryConfig.TableName = TABLE_DEVICES;
     baseQueryConfig.ExpressionAttributeNames = {
       '#RadioID': 'RadioID',
     };

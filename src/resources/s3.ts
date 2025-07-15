@@ -27,6 +27,7 @@ import {
 } from '@/types/backend/dynamo';
 import { SendPageQueueItem } from '@/types/backend/queue';
 import {
+  TABLE_DEVICES,
   TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem,
   typedQuery, typedUpdate
 } from '@/utils/backend/dynamoTyped';
@@ -190,7 +191,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     }
     const sourcePutItems: Promise<unknown>[] = sourceList
       .map(sourceId => typedPutItem<FileEventItem>({
-        TableName: process.env.TABLE_DEVICES,
+        TableName: TABLE_DEVICES,
         Item: {
           RadioID: sourceId.toString(),
           StartTime: 0,
@@ -296,7 +297,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             }
 
             return Promise.all(item.Sources.map(sourceId => typedDeleteItem<FileEventItem>({
-              TableName: process.env.TABLE_DEVICES,
+              TableName: TABLE_DEVICES,
               Key: {
                 RadioID: sourceId.toString(),
                 StartTime: item.StartTime || 0,

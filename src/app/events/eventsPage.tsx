@@ -13,11 +13,9 @@ import Table from 'react-bootstrap/Table';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
+  FileEventItem,
   FullEventItem, GetRadioEventsApi, GetTalkgroupEventsApi
 } from '@/types/api/events';
-import {
-  FullFileObject, GetAllFilesApi
-} from '@/types/api/files';
 import { GetAllRadiosApi } from '@/types/api/radios';
 import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
 import { dateToStr } from '@/utils/common/dateAndFile';
@@ -149,7 +147,7 @@ export default function EventsPage() {
     setType(newType);
     setAllEvents([]);
     setLoadingEvents(LoadingStates.NOT_STARTED);
-    setLoadingFiles(LoadingStates.NOT_STARTED);
+    // setLoadingFiles(LoadingStates.NOT_STARTED);
   }, [
     searchParams,
     type,
@@ -209,20 +207,20 @@ export default function EventsPage() {
     setAllEvents,
   ] = useState<((FullEventItem & {
     type: 'event';
-  }) | (FullFileObject & {
+  }) | (FileEventItem & {
     type: 'file';
   }))[]>([]);
-  const [
-    loadingFiles,
-    setLoadingFiles,
-  ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
+  // const [
+  //   loadingFiles,
+  //   setLoadingFiles,
+  // ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
   const [
     loadingEvents,
     setLoadingEvents,
   ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
   useEffect(() => { // Events
     if (
-      allEvents.some(v => v.type === 'event') ||
+      allEvents.length > 0 ||
       id === '' ||
       loadingEvents !== LoadingStates.NOT_STARTED
     ) {
@@ -261,17 +259,15 @@ export default function EventsPage() {
         return;
       }
       setAllEvents(current => {
-        if (current.some(v => v.type === 'event')) {
+        if (current.length > 0) {
           return current;
         }
 
-        return [
-          ...current,
-          ...(results.events.filter(e => e.event !== 'call').map(e => ({
-            ...e,
-            type: 'event',
-          })) as typeof allEvents),
-        ].sort((a, b) => {
+        const newEvents = results.events.map(e => ({
+          ...e,
+          type: 'radioid' in e ? 'event' : 'file',
+        })) as typeof allEvents;
+        return newEvents.sort((a, b) => {
           const aVal = a.type === 'file'
             ? (a.StartTime || 0) * 1000
             : a.timestamp;
@@ -292,81 +288,81 @@ export default function EventsPage() {
     id,
     type,
   ]);
-  useEffect(() => { // Files
-    if (
-      loadingFiles !== LoadingStates.NOT_STARTED ||
-      id === '' ||
-      allEvents.some(v => v.type === 'file')
-    ) {
-      return;
-    }
+  // useEffect(() => { // Files
+  //   if (
+  //     loadingFiles !== LoadingStates.NOT_STARTED ||
+  //     id === '' ||
+  //     allEvents.some(v => v.type === 'file')
+  //   ) {
+  //     return;
+  //   }
 
-    (async () => {
-      let code;
-      let results;
-      setLoadingFiles(LoadingStates.IN_PROGRESS);
-      if (type === 'talkgroup') {
-        [
-          code,
-          results,
-        ] = await typeFetch<GetAllFilesApi>({
-          path: '/api/v2/files/',
-          method: 'GET',
-          query: {
-            tg: [ Number(id), ],
-          },
-        });
-      } else {
-        [
-          code,
-          results,
-        ] = await typeFetch<GetAllFilesApi>({
-          path: '/api/v2/files/',
-          method: 'GET',
-          query: {
-            radioId: id,
-          },
-        });
-      }
+  //   (async () => {
+  //     let code;
+  //     let results;
+  //     setLoadingFiles(LoadingStates.IN_PROGRESS);
+  //     if (type === 'talkgroup') {
+  //       [
+  //         code,
+  //         results,
+  //       ] = await typeFetch<GetAllFilesApi>({
+  //         path: '/api/v2/files/',
+  //         method: 'GET',
+  //         query: {
+  //           tg: [ Number(id), ],
+  //         },
+  //       });
+  //     } else {
+  //       [
+  //         code,
+  //         results,
+  //       ] = await typeFetch<GetAllFilesApi>({
+  //         path: '/api/v2/files/',
+  //         method: 'GET',
+  //         query: {
+  //           radioId: id,
+  //         },
+  //       });
+  //     }
 
-      if (code !== 200 || !results || !('files' in results)) {
-        console.log(code, results);
-        addAlert('danger', 'Failed to get events');
-        setLoadingFiles(LoadingStates.DONE);
-        return;
-      }
-      setAllEvents(current => {
-        if (current.some(v => v.type === 'file')) {
-          return current;
-        }
+  //     if (code !== 200 || !results || !('files' in results)) {
+  //       console.log(code, results);
+  //       addAlert('danger', 'Failed to get events');
+  //       setLoadingFiles(LoadingStates.DONE);
+  //       return;
+  //     }
+  //     setAllEvents(current => {
+  //       if (current.some(v => v.type === 'file')) {
+  //         return current;
+  //       }
 
-        return [
-          ...current,
-          ...(results.files.map(f => ({
-            ...f,
-            type: 'file',
-          })) as typeof allEvents),
-        ].sort((a, b) => {
-          const aVal = a.type === 'file'
-            ? (a.StartTime || 0) * 1000
-            : a.timestamp;
-          const bVal = b.type === 'file'
-            ? (b.StartTime || 0) * 1000
-            : b.timestamp;
+  //       return [
+  //         ...current,
+  //         ...(results.files.map(f => ({
+  //           ...f,
+  //           type: 'file',
+  //         })) as typeof allEvents),
+  //       ].sort((a, b) => {
+  //         const aVal = a.type === 'file'
+  //           ? (a.StartTime || 0) * 1000
+  //           : a.timestamp;
+  //         const bVal = b.type === 'file'
+  //           ? (b.StartTime || 0) * 1000
+  //           : b.timestamp;
 
-          return aVal >= bVal ? -1 : 1;
-        });
-      });
-      setLoadingFiles(LoadingStates.DONE);
-    })();
-  }, [
-    searchParams,
-    addAlert,
-    allEvents,
-    loadingFiles,
-    id,
-    type,
-  ]);
+  //         return aVal >= bVal ? -1 : 1;
+  //       });
+  //     });
+  //     setLoadingFiles(LoadingStates.DONE);
+  //   })();
+  // }, [
+  //   searchParams,
+  //   addAlert,
+  //   allEvents,
+  //   loadingFiles,
+  //   id,
+  //   type,
+  // ]);
 
   useEffect(() => {
     if (searchParams.get('tg') !== null) {
@@ -383,9 +379,9 @@ export default function EventsPage() {
     setExcludeItems,
   ] = useState<(keyof typeof eventFilters)[]>([]);
 
-  const isLoading = allEvents.length === 0 ||
-    loadingEvents !== LoadingStates.DONE ||
-    loadingFiles !== LoadingStates.DONE;
+  const isLoading = allEvents.length === 0 &&
+    loadingEvents !== LoadingStates.DONE; // ||
+    // loadingFiles !== LoadingStates.DONE;
 
   return <>
     {Object.keys(talkgroups).length > 0 && <Row className='justify-content-center mb-5'>
@@ -482,7 +478,7 @@ export default function EventsPage() {
               <td>{v.Tower}</td>
               <td>
                 {[
-                  ...type === 'radio' ? [ parseTalkgroup(v.Talkgroup), ] : [],
+                  ...type === 'radio' ? [ parseTalkgroup(v.Talkgroup || ''), ] : [],
                   ...v.Sources?.map(s => parseRadioId(s || '')) || [],
                 ].map((v, idx) => <React.Fragment
                   key={idx}

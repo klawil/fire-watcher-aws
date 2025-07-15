@@ -22,14 +22,16 @@ const dynamoDb = DynamoDBDocumentClient.from(client, {
   },
 });
 
-export const TABLE_FILE = process.env.TABLE_FILE;
-export const TABLE_USER = process.env.TABLE_USER;
-export const TABLE_TEXT = process.env.TABLE_TEXT;
-export const TABLE_SITE = process.env.TABLE_SITE;
-export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP;
-export const TABLE_FILE_TRANSLATION = process.env.TABLE_DTR_TRANSLATION;
-export const TABLE_STATUS = process.env.TABLE_STATUS;
+export const TABLE_DEVICES = process.env.TABLE_DEVICES;
 export const TABLE_ERROR = process.env.TABLE_ERROR;
+export const TABLE_FILE = process.env.TABLE_FILE;
+export const TABLE_FILE_TRANSLATION = process.env.TABLE_DTR_TRANSLATION;
+export const TABLE_RADIOS = process.env.TABLE_RADIOS;
+export const TABLE_SITE = process.env.TABLE_SITE;
+export const TABLE_STATUS = process.env.TABLE_STATUS;
+export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP;
+export const TABLE_TEXT = process.env.TABLE_TEXT;
+export const TABLE_USER = process.env.TABLE_USER;
 
 function removeSets<T extends object>(input: T): T {
   const output = { ...input, };

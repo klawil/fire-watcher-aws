@@ -28,7 +28,7 @@ import { typeFetch } from '@/utils/frontend/typeFetch';
 import { UsersDispatchContext } from '@/utils/frontend/usersState';
 
 interface CheckboxConfig {
-  name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin';
+  name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames';
   label: string;
   districtAdmin?: boolean;
 }
@@ -61,6 +61,11 @@ const userRoleCheckboxes: CheckboxConfig[] = [
   {
     name: 'getDtrAlerts',
     label: 'DTR Alerts',
+    districtAdmin: true,
+  },
+  {
+    name: 'canEditNames',
+    label: 'Can Edit Names',
     districtAdmin: true,
   },
 ];

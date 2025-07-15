@@ -7,7 +7,9 @@ import { api401Body } from '@/types/api/_shared';
 import {
   GetAllRadiosApi, RadioObject
 } from '@/types/api/radios';
-import { typedScan } from '@/utils/backend/dynamoTyped';
+import {
+  TABLE_RADIOS, typedScan
+} from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('radios');
@@ -24,7 +26,7 @@ const GET: LambdaApiFunction<GetAllRadiosApi> = async function (event, user) {
   }
 
   const radios = await typedScan<RadioObject>({
-    TableName: process.env.TABLE_RADIOS,
+    TableName: TABLE_RADIOS,
   });
 
   return [

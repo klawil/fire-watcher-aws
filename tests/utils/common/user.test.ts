@@ -13,6 +13,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
     });
 
@@ -25,6 +26,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
     });
 
@@ -40,6 +42,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: false,
         activeDepartments: [ 'Baca', ],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       expect(mod.getUserPermissions({
@@ -59,6 +62,7 @@ describe('utils/common/user', () => {
           'NSCAD',
         ],
         adminDepartments: [],
+        canEditNames: false,
       });
     });
 
@@ -75,6 +79,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: false,
         activeDepartments: [ 'Baca', ],
         adminDepartments: [ 'Baca', ],
+        canEditNames: false,
       });
 
       expect(mod.getUserPermissions({
@@ -95,6 +100,7 @@ describe('utils/common/user', () => {
           'NSCAD',
         ],
         adminDepartments: [ 'NSCAD', ],
+        canEditNames: false,
       });
     });
 
@@ -108,6 +114,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       expect(mod.getUserPermissions({
@@ -119,6 +126,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       expect(mod.getUserPermissions({
@@ -133,6 +141,7 @@ describe('utils/common/user', () => {
         isDistrictAdmin: true,
         activeDepartments: [ 'Baca', ],
         adminDepartments: [],
+        canEditNames: true,
       });
     });
   });

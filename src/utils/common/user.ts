@@ -8,6 +8,7 @@ export function getUserPermissions(user: FrontendUserObject | null): UserPermiss
     isUser: false,
     isAdmin: false,
     isDistrictAdmin: false,
+    canEditNames: false,
     activeDepartments: [],
     adminDepartments: [],
   };
@@ -21,6 +22,7 @@ export function getUserPermissions(user: FrontendUserObject | null): UserPermiss
   userPerms.isUser = userPerms.activeDepartments.length > 0;
   userPerms.isAdmin = userPerms.adminDepartments.length > 0;
   userPerms.isDistrictAdmin = userPerms.isUser && !!user.isDistrictAdmin;
+  userPerms.canEditNames = userPerms.isDistrictAdmin || user.canEditNames || false;
 
   return userPerms;
 }

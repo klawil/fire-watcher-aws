@@ -89,13 +89,15 @@ export function mockUserRequest(
   req: APIGatewayProxyEvent,
   isActive: boolean = true,
   isAdmin: boolean = false,
-  isDistrictAdmin: boolean = false
+  isDistrictAdmin: boolean = false,
+  canEditNames: boolean = false
 ) {
   // Mock the returned user
   const userPerms: UserPermissions = {
     isUser: isActive,
     isAdmin,
     isDistrictAdmin,
+    canEditNames,
     activeDepartments: [ 'Baca', ],
     adminDepartments: [],
   };

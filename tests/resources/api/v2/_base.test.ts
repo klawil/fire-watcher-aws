@@ -70,6 +70,7 @@ describe('resources/api/v2/_base', () => {
           isAdmin: false,
           isDistrictAdmin: false,
           isUser: false,
+          canEditNames: false,
         }
       );
 
@@ -349,6 +350,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
     });
 
@@ -376,6 +378,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [ 'Baca', ],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       const [
@@ -431,6 +434,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [ 'Baca', ],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       // Validate the response - headers
@@ -486,6 +490,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       // Validate the response - headers
@@ -546,6 +551,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       // Validate the response - headers
@@ -610,6 +616,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       // Validate the response - headers
@@ -672,6 +679,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       // Validate the response - headers
@@ -734,6 +742,7 @@ describe('resources/api/v2/_base', () => {
         isDistrictAdmin: false,
         activeDepartments: [],
         adminDepartments: [],
+        canEditNames: false,
       });
 
       // Validate the response - headers

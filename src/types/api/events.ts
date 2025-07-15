@@ -78,7 +78,7 @@ export type GetRadioEventsApi = {
      * @contentType application/json
      */
     200: {
-      events: FullEventItem[];
+      events: (FullEventItem | FileEventItem)[];
       nextKey: string | null;
       queryId: string | null;
     };

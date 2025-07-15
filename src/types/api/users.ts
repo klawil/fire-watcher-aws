@@ -46,6 +46,7 @@ export type FullUserObject = {
   getVhfAlerts?: boolean;
   isDistrictAdmin?: boolean;
   isTest?: boolean;
+  canEditNames?: boolean;
 
   lastLogin?: number;
 
@@ -107,6 +108,7 @@ export const districtAdminUserKeys = [
   'getApiAlerts',
   'getVhfAlerts',
   'getDtrAlerts',
+  'canEditNames',
   'isDistrictAdmin',
   'pagingPhone',
   'getTranscriptOnly',
@@ -162,7 +164,7 @@ export type CreateUserApi = {
     'phone' | 'talkgroups' | 'fName' | 'lName'
   >> & Pick<
     FrontendUserObject,
-    'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone'
+    'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone' | 'canEditNames'
   > & {
     department: UserDepartment;
     admin?: boolean;
@@ -286,7 +288,7 @@ export type UpdateUserApi = {
   body: OrNull<Pick<
     FrontendUserObject,
     'talkgroups' | 'fName' | 'lName' | 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts'
-    | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone'
+    | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone' | 'canEditNames'
   >>;
   responses: {
 
@@ -375,6 +377,13 @@ export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
       null: {},
     },
   },
+  canEditNames: {
+    required: false,
+    types: {
+      boolean: {},
+      null: {},
+    },
+  },
   pagingPhone: {
     required: false,
     types: {
@@ -440,6 +449,12 @@ export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
     },
   },
   isDistrictAdmin: {
+    required: false,
+    types: {
+      boolean: {},
+    },
+  },
+  canEditNames: {
     required: false,
     types: {
       boolean: {},

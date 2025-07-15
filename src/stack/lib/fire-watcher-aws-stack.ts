@@ -459,16 +459,16 @@ export class FireWatcherAwsStack extends Stack {
       TWILIO_QUEUE: twilioStatusQueue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
 
+      TABLE_DEVICES: devicesTable.tableName,
+      TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
       TABLE_ERROR: errorsTable.tableName,
-      TABLE_USER: phoneNumberTable.tableName,
       TABLE_FILE: dtrTable.tableName,
-      TABLE_TEXT: textsTable.tableName,
+      TABLE_RADIOS: radiosTable.tableName,
+      TABLE_SITE: siteTable.tableName,
       TABLE_STATUS: statusTable.tableName,
       TABLE_TALKGROUP: talkgroupTable.tableName,
-      TABLE_SITE: siteTable.tableName,
-      TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
-      TABLE_DEVICES: devicesTable.tableName,
-      TABLE_RADIOS: radiosTable.tableName,
+      TABLE_TEXT: textsTable.tableName,
+      TABLE_USER: phoneNumberTable.tableName,
 
       GLUE_TABLE: glueTableName,
       GLUE_DATABASE: glueDatabaseName,
@@ -724,15 +724,15 @@ export class FireWatcherAwsStack extends Stack {
 
     // Maps for tables and buckets for the v2 APIs
     const tableMap = {
+      DEVICES: devicesTable,
+      ERRORS: errorsTable,
       FILE: dtrTable,
-      USER: phoneNumberTable,
-      TEXT: textsTable,
+      RADIOS: radiosTable,
       SITE: siteTable,
-      TALKGROUP: talkgroupTable,
       STATUS: statusTable,
-      ERROR: errorsTable,
-      DEVICE: devicesTable,
-      RADIO: radiosTable,
+      TALKGROUP: talkgroupTable,
+      TEXT: textsTable,
+      USER: phoneNumberTable,
     } as const;
     const bucketMap = {
       FILE: bucket,
@@ -791,7 +791,7 @@ export class FireWatcherAwsStack extends Stack {
             readOnly: true,
           },
           {
-            table: 'DEVICE',
+            table: 'DEVICES',
             readOnly: true,
           },
         ],
@@ -994,6 +994,10 @@ export class FireWatcherAwsStack extends Stack {
             methods: [ 'GET', ],
             getAthena: true,
             buckets: [ { bucket: 'EVENTS', }, ],
+            tables: [ {
+              table: 'FILE',
+              readOnly: true,
+            }, ],
           }, ],
         }, ],
       },
@@ -1006,7 +1010,7 @@ export class FireWatcherAwsStack extends Stack {
           'GET',
         ],
         tables: [ {
-          table: 'ERROR',
+          table: 'ERRORS',
         }, ],
       },
       // radios
@@ -1014,10 +1018,18 @@ export class FireWatcherAwsStack extends Stack {
         pathPart: 'radios',
         fileName: 'radios',
         tables: [ {
-          table: 'RADIO',
+          table: 'RADIOS',
           readOnly: true,
         }, ],
         methods: [ 'GET', ],
+        next: [ {
+          pathPart: '{id}',
+          fileName: 'radio',
+          tables: [ {
+            table: 'RADIOS',
+          }, ],
+          methods: [ 'PATCH', ],
+        }, ],
       },
     ];
 
@@ -1033,6 +1045,10 @@ export class FireWatcherAwsStack extends Stack {
       let resourceIntegration: apigateway.Integration | undefined = undefined;
       let resourceHandler: lambdanodejs.NodejsFunction | undefined = undefined;
       if ('fileName' in config) {
+        const baseEnv: Partial<LambdaEnvironment> = {
+          ...lambdaEnv,
+        };
+
         const initialPolicy: iam.PolicyStatement[] = [];
         if (config.sendsMetrics) {
           initialPolicy.push(new iam.PolicyStatement({
@@ -1049,6 +1065,14 @@ export class FireWatcherAwsStack extends Stack {
           }));
         }
 
+        const fnTables = [
+          'TABLE_USER',
+          ...config.tables?.map(t => `TABLE_${t.table}`) || [],
+        ];
+        (Object.keys(baseEnv) as (keyof LambdaEnvironment)[])
+          .filter(key => key.startsWith('TABLE_') && !fnTables.includes(key))
+          .map(key => delete baseEnv[key]);
+
         resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
           runtime: lambda.Runtime.NODEJS_20_X,
           entry: resolve(resourceBase, 'api', 'v2', `${config.fileName}.ts`),
@@ -1057,7 +1081,7 @@ export class FireWatcherAwsStack extends Stack {
           logRetention: logs.RetentionDays.ONE_MONTH,
           initialPolicy,
           environment: {
-            ...lambdaEnv,
+            ...baseEnv,
           },
         });
 

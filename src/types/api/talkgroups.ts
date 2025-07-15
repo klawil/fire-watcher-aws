@@ -115,6 +115,10 @@ export type PatchTalkgroupApi = {
   path: '/api/v2/talkgroups/{id}/';
   method: 'PATCH';
   params: {
+
+    /**
+     * Talkgroup ID (should be an integer)
+     */
     id: number;
   };
   body: {
