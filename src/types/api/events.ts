@@ -72,16 +72,21 @@ export type GetRadioEventsApi = {
   params: {
     id: number;
   };
+  query: {
+    queryId?: string;
+  };
   responses: {
 
     /**
      * @contentType application/json
      */
-    200: {
+    200: ({
       events: (FullEventItem | FileEventItem)[];
-      nextKey: string | null;
-      queryId: string | null;
-    };
+    } | {
+      queryId: string;
+    } | {
+      status: string;
+    });
 
     /**
      * @contentType application/json
@@ -171,6 +176,15 @@ export const getEventsParamsValidator: Validator<GetRadioEventsApi['params']> = 
     parse: v => Number(v),
     types: {
       number: {},
+    },
+  },
+};
+
+export const getEventsQueryValidator: Validator<GetRadioEventsApi['query']> = {
+  queryId: {
+    required: false,
+    types: {
+      string: {},
     },
   },
 };

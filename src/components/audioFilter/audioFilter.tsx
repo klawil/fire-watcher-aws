@@ -381,21 +381,26 @@ export default function AudioFilter({
                           return false;
                         }
 
-                        if (
-                          tgFilter !== '' &&
-                          (
-                            !state.talkgroups[tg].selectName
-                              .toLowerCase()
-                              .includes(tgFilter.toLowerCase()) &&
-                            (
-                              tgFilter.match(/^[0-9]+$/) &&
-                              !tg.toString().includes(tgFilter)
-                            )
-                          )
-                        ) {
-                          return false;
-                        }
+                        const filter = tgFilter.toLowerCase();
+                        const nameMatch = state.talkgroups[tg].selectName
+                          .toLowerCase()
+                          .includes(filter);
+                        if (filter !== '') {
+                          if (
+                            filter.match(/^[0-9]+$/) &&
+                            !nameMatch &&
+                            !tg.toString().includes(filter)
+                          ) {
+                            return false;
+                          }
 
+                          if (
+                            !filter.match(/^[0-9]+$/) &&
+                            !nameMatch
+                          ) {
+                            return false;
+                          }
+                        }
                         return true;
                       })
                       .sort((a, b) =>

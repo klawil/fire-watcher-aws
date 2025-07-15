@@ -322,6 +322,42 @@ export default function EventsPage() {
           },
         });
       }
+      const queryId = results && 'queryId' in results
+        ? results.queryId
+        : null;
+      while (code === 200 && queryId !== null && results && !('events' in results)) {
+        await new Promise(res => setTimeout(res, 5000));
+        if (type === 'radio') {
+          [
+            code,
+            results,
+          ] = await typeFetch<GetRadioEventsApi>({
+            path: '/api/v2/events/radioid/{id}/',
+            method: 'GET',
+            params: {
+              id: Number(id),
+            },
+            query: {
+              queryId,
+            },
+          });
+        } else {
+          [
+            code,
+            results,
+          ] = await typeFetch<GetTalkgroupEventsApi>({
+            path: '/api/v2/events/talkgroup/{id}/',
+            method: 'GET',
+            params: {
+              id: Number(id),
+            },
+            query: {
+              queryId,
+            },
+          });
+        }
+        console.log(code, results);
+      }
       if (code !== 200 || !results || !('events' in results)) {
         console.log(code, results);
         addAlert('danger', 'Failed to get events');
@@ -392,22 +428,124 @@ export default function EventsPage() {
     ? radioNames[id]
     : talkgroups[id]?.name;
 
+  const [
+    tgFilter,
+    setTgFilter,
+  ] = useState('');
+  const [
+    radioFilter,
+    setRadioFilter,
+  ] = useState('');
+
   return <>
     {Object.keys(talkgroups).length > 0 && <Row className='justify-content-center mb-5'>
-      <Col md={6}>
-        <Form.Select
-          value={type === 'talkgroup' ? id : 'radio'}
-          onChange={e => changePage('talkgroup', e.target.value)}
-        >
-          <option disabled value='radio'>Select Talkgroup</option>
-          {Object.keys(talkgroups).sort((a, b) => {
-            return talkgroups[a].selectName.localeCompare(talkgroups[b].selectName);
-          })
-            .map(tg => <option
-              key={tg}
-              value={tg}
-            >{talkgroups[tg].selectName}</option>)}
-        </Form.Select>
+      <Col md={4}>
+        <h3>Talkgroups</h3>
+        <Form.Control
+          type='text'
+          placeholder='Search talkgroups'
+          value={tgFilter}
+          onChange={e => setTgFilter(e.target.value)}
+        />
+        <div style={{
+          height: '200px',
+          overflowY: 'scroll',
+        }}>
+          <Table>
+            <tbody>
+              {Object.keys(talkgroups)
+                .filter(tg => {
+                  const filter = tgFilter.toLowerCase();
+                  const nameMatch = talkgroups[tg].selectName
+                    .toLowerCase()
+                    .includes(filter);
+                  if (filter !== '') {
+                    if (
+                      filter.match(/^[0-9]+$/) &&
+                      !nameMatch &&
+                      !tg.toString().includes(filter)
+                    ) {
+                      return false;
+                    }
+
+                    if (
+                      !filter.match(/^[0-9]+$/) &&
+                      !nameMatch
+                    ) {
+                      return false;
+                    }
+                  }
+                  return true;
+                })
+                .sort((a, b) =>
+                  talkgroups[a].selectName
+                    .localeCompare(talkgroups[b].selectName))
+                .map(tg => <tr
+                  key={tg}
+                  onClick={() => changePage('talkgroup', tg)}
+                  className={type === 'talkgroup' && id === tg ? 'table-secondary' : ''}
+                  style={{ cursor: 'pointer', }}
+                >
+                  <td>{talkgroups[tg].selectName}</td>
+                </tr>)
+              }
+            </tbody>
+          </Table>
+        </div>
+      </Col>
+      <Col md={4}>
+        <h3>Radios</h3>
+        <Form.Control
+          type='text'
+          placeholder='Search radios'
+          value={radioFilter}
+          onChange={e => setRadioFilter(e.target.value)}
+        />
+        <div style={{
+          height: '200px',
+          overflowY: 'scroll',
+        }}>
+          <Table>
+            <tbody>
+              {Object.keys(radioNames)
+                .filter(radio => {
+                  const filter = radioFilter.toLowerCase();
+                  const nameMatch = radioNames[radio]
+                    .toLowerCase()
+                    .includes(filter);
+                  if (filter !== '') {
+                    if (
+                      filter.match(/^[0-9]+$/) &&
+                      !nameMatch &&
+                      !radio.toString().includes(filter)
+                    ) {
+                      return false;
+                    }
+
+                    if (
+                      !filter.match(/^[0-9]+$/) &&
+                      !nameMatch
+                    ) {
+                      return false;
+                    }
+                  }
+                  return true;
+                })
+                .sort((a, b) =>
+                  radioNames[a]
+                    .localeCompare(radioNames[b]))
+                .map(radio => <tr
+                  key={radio}
+                  onClick={() => changePage('radio', radio)}
+                  className={type === 'radio' && id === radio ? 'table-secondary' : ''}
+                  style={{ cursor: 'pointer', }}
+                >
+                  <td>{radioNames[radio]}</td>
+                </tr>)
+              }
+            </tbody>
+          </Table>
+        </div>
       </Col>
     </Row>}
 
