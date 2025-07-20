@@ -725,7 +725,7 @@ export class FireWatcherAwsStack extends Stack {
     // Maps for tables and buckets for the v2 APIs
     const tableMap = {
       DEVICES: devicesTable,
-      ERRORS: errorsTable,
+      ERROR: errorsTable,
       FILE: dtrTable,
       RADIOS: radiosTable,
       SITE: siteTable,
@@ -1016,7 +1016,7 @@ export class FireWatcherAwsStack extends Stack {
           'GET',
         ],
         tables: [ {
-          table: 'ERRORS',
+          table: 'ERROR',
         }, ],
       },
       // radios
