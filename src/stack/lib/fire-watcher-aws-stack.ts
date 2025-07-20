@@ -31,7 +31,9 @@ import { Construct } from 'constructs';
 import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
 
-import { LambdaEnvironment } from '@/types/backend/environment';
+import {
+  LambdaEnvironment, TableNames
+} from '@/types/backend/environment';
 
 dotenv.config({
   path: resolve(
@@ -723,8 +725,11 @@ export class FireWatcherAwsStack extends Stack {
     const apiResource = api.root.addResource('api');
 
     // Maps for tables and buckets for the v2 APIs
-    const tableMap = {
+    const tableMap: {
+      [key in TableNames]: dynamodb.Table
+    } = {
       DEVICES: devicesTable,
+      DTR_TRANSLATION: dtrTranslationTable,
       ERROR: errorsTable,
       FILE: dtrTable,
       RADIOS: radiosTable,
@@ -733,7 +738,7 @@ export class FireWatcherAwsStack extends Stack {
       TALKGROUP: talkgroupTable,
       TEXT: textsTable,
       USER: phoneNumberTable,
-    } as const;
+    };
     const bucketMap = {
       FILE: bucket,
       COSTS: costDataS3Bucket,

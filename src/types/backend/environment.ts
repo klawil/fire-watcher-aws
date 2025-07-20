@@ -1,4 +1,13 @@
-export interface LambdaEnvironment {
+export type TableNames = 'DEVICES' | 'DTR_TRANSLATION' | 'ERROR' | 'FILE' | 'RADIOS'
+  | 'SITE' | 'STATUS' | 'TALKGROUP' | 'TEXT' | 'USER';
+
+type TableEnvName = `TABLE_${TableNames}`;
+
+type TableNameMap = {
+  [key in TableEnvName]: string;
+};
+
+export interface LambdaEnvironment extends TableNameMap {
   // S3 Buckets
   COSTS_BUCKET: string;
   EVENTS_S3_BUCKET: string;
@@ -8,17 +17,17 @@ export interface LambdaEnvironment {
   JWT_SECRET: string;
   TWILIO_SECRET: string;
 
-  // DynamoDB Tables
-  TABLE_DEVICES: string;
-  TABLE_DTR_TRANSLATION: string;
-  TABLE_ERROR: string;
-  TABLE_FILE: string;
-  TABLE_RADIOS: string;
-  TABLE_SITE: string;
-  TABLE_STATUS: string;
-  TABLE_TALKGROUP: string;
-  TABLE_TEXT: string;
-  TABLE_USER: string;
+  // // DynamoDB Tables
+  // TABLE_DEVICES: string;
+  // TABLE_DTR_TRANSLATION: string;
+  // TABLE_ERROR: string;
+  // TABLE_FILE: string;
+  // TABLE_RADIOS: string;
+  // TABLE_SITE: string;
+  // TABLE_STATUS: string;
+  // TABLE_TALKGROUP: string;
+  // TABLE_TEXT: string;
+  // TABLE_USER: string;
 
   // Queues
   SQS_QUEUE: string;
