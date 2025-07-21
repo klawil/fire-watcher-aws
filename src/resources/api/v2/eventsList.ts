@@ -70,7 +70,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
 
   if (!query.queryId) {
     // Run the Athena query
-    const startDateTime = new Date(Date.now() - (6 * 28 * 24 * 60 * 60 * 1000));
+    const startDateTime = new Date(Date.now() - (2 * 28 * 24 * 60 * 60 * 1000));
     const padNum = (num: number) => num.toString().padStart(2, '0');
     const startDatetimeString = `${startDateTime.getUTCFullYear()}-${padNum(startDateTime.getMonth() + 1)}-` +
       `${padNum(startDateTime.getUTCDate())}-${padNum(startDateTime.getUTCHours())}`;
