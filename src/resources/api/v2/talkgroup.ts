@@ -93,7 +93,7 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event, user,
       api401Body,
     ];
   }
-  if (!userPerms.isDistrictAdmin) {
+  if (!userPerms.canEditNames) {
     return [
       403,
       api403Body,
