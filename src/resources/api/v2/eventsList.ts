@@ -160,7 +160,6 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   // Get the results
   const results = await athena.send(new GetQueryResultsCommand({
     QueryExecutionId: query.queryId,
-    MaxResults: MAX_RESULTS,
   }));
   if (!results.ResultSet?.Rows) {
     logger.error(`No results returned from query ID ${query.queryId}`);
@@ -202,7 +201,6 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     fileQueryConfig.TableName = TABLE_DEVICES;
     fileQueryConfig.ExpressionAttributeNames['#RadioID'] = 'RadioID';
     fileQueryConfig.ExpressionAttributeValues[':RadioID'] = params.id.toString();
-    fileQueryConfig.IndexName = 'StartTimeTgIndex';
     fileQueryConfig.KeyConditionExpression = '#RadioID = :RadioID AND #StartTime BETWEEN :StartTime AND :EndTime';
   }
   const filesQueryResult = await typedQuery<FileEventItem>(fileQueryConfig);
