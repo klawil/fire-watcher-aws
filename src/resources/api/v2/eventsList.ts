@@ -185,7 +185,6 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   >> = {
     ScanIndexForward: false,
     TableName: TABLE_FILE,
-    Limit: MAX_RESULTS,
     ExpressionAttributeNames: {
       '#StartTime': 'StartTime',
     },
