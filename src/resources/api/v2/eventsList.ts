@@ -33,6 +33,15 @@ const athena = new AthenaClient();
 
 const MAX_RESULTS = 1500;
 
+function roundToHour(ts: number, ceil: boolean) {
+  const ONE_HOUR = 60 * 60 * 1000;
+  const divided = ts / ONE_HOUR;
+  if (ceil) {
+    return Math.ceil(divided) * ONE_HOUR;
+  }
+  return Math.floor(divided) * ONE_HOUR;
+}
+
 const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async function (event) {
   logger.trace('GET', ...arguments);
 
@@ -80,10 +89,10 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     const padNum = (num: number) => num.toString().padStart(2, '0');
 
     // Start and end dates
-    const startDateTime = new Date(startTime);
+    const startDateTime = new Date(roundToHour(startTime, false));
     const startDatetimeString = `${startDateTime.getUTCFullYear()}-${padNum(startDateTime.getMonth() + 1)}-` +
       `${padNum(startDateTime.getUTCDate())}-${padNum(startDateTime.getUTCHours())}`;
-    const endDateTime = new Date(endTime);
+    const endDateTime = new Date(roundToHour(endTime, true));
     const endDatetimeString = `${endDateTime.getUTCFullYear()}-${padNum(endDateTime.getMonth() + 1)}-` +
       `${padNum(endDateTime.getUTCDate())}-${padNum(endDateTime.getUTCHours())}`;
 
@@ -92,8 +101,10 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
         FROM "${process.env.GLUE_TABLE}"
         WHERE "${queryType}" = '${params.id}'
         AND "event" != 'call'
-        AND "datetime" > '${startDatetimeString}'
+        AND "datetime" >= '${startDatetimeString}'
         AND "datetime" <= '${endDatetimeString}'
+        AND "timestamp" < ${endTime}
+        AND "timestamp" >= ${startTime}
         ORDER BY "timestamp" DESC`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString,
@@ -241,9 +252,6 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   } else if (fileResults.length) {
     firstEvent = filesFirst;
   }
-
-  // Round first event to the nearest hour
-  firstEvent = Math.ceil(firstEvent / (1000 * 60 * 60)) * 1000 * 60 * 60;
 
   // Filter out older events
   endResults = endResults.filter(v => {

@@ -86,7 +86,7 @@ function useEvents(): [
   ] = useState<number | null>(null);
 
   const loadEvents = useCallback(async (type: IdTypes, id: string, reset?: boolean) => {
-    const localStartTime = reset || startTime === null ? null : startTime - (60 * 60 * 1000);
+    const localStartTime = reset || startTime === null ? null : startTime;
     if (reset) {
       setEvents([]);
       setStartTime(null);
