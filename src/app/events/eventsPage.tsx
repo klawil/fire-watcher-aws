@@ -24,13 +24,21 @@ import {
 import {
   GetAllTalkgroupsApi, PatchTalkgroupApi
 } from '@/types/api/talkgroups';
-import { dateToStr } from '@/utils/common/dateAndFile';
+import {
+  dateTimeToTimeStr, dateToStr
+} from '@/utils/common/dateAndFile';
 import {
   AddAlertContext, LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 
 type IdTypes = 'radio' | 'talkgroup';
+
+type EventItem = (FullEventItem & {
+  type: 'event';
+}) | (FileEventItem & {
+  type: 'file';
+});
 
 enum LoadingStates {
   NOT_STARTED,
@@ -45,6 +53,145 @@ const eventFilters = {
   join: 'Join',
   recording: 'Recording',
 } as const;
+
+function useEvents(): [
+  LoadingStates,
+  string,
+  EventItem[],
+  (type: IdTypes, id: string, reset?: boolean) => void,
+  number | null
+] {
+  const addAlert = useContext(AddAlertContext);
+
+  // States for loading information
+  const [
+    loadingEvents,
+    setLoadingEvents,
+  ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
+  const [
+    queryState,
+    setQueryState,
+  ] = useState('QUEUED');
+
+  // Events storage
+  const [
+    events,
+    setEvents,
+  ] = useState<EventItem[]>([]);
+
+  // Storage for the keys needed for the next API call
+  const [
+    startTime,
+    setStartTime,
+  ] = useState<number | null>(null);
+
+  const loadEvents = useCallback(async (type: IdTypes, id: string, reset?: boolean) => {
+    const localStartTime = reset || startTime === null ? null : startTime - (60 * 60 * 1000);
+    if (reset) {
+      setEvents([]);
+      setStartTime(null);
+    }
+
+    setQueryState('QUEUED');
+    setLoadingEvents(LoadingStates.IN_PROGRESS);
+
+    async function getEventsApi(query: GetTalkgroupEventsApi['query'] = {}) {
+      if (type === 'talkgroup') {
+        return await typeFetch<GetTalkgroupEventsApi>({
+          path: '/api/v2/events/talkgroup/{id}/',
+          method: 'GET',
+          params: {
+            id: Number(id),
+          },
+          query,
+        });
+      } else {
+        return await typeFetch<GetRadioEventsApi>({
+          path: '/api/v2/events/radioid/{id}/',
+          method: 'GET',
+          params: {
+            id: Number(id),
+          },
+          query,
+        });
+      }
+    }
+
+    let code, results;
+    [
+      code,
+      results,
+    ] = await getEventsApi({
+      endTime: localStartTime === null ? Date.now() : localStartTime,
+    });
+
+    // Handle initial failures
+    if (
+      code !== 200 ||
+      !results ||
+      !('queryId' in results) ||
+      !('endTime' in results)
+    ) {
+      setLoadingEvents(LoadingStates.NOT_STARTED);
+      addAlert('danger', 'Failed to start the events query');
+      return;
+    }
+    const queryId = results.queryId;
+    const endTime = results.endTime;
+
+    // Loop until the query finishes or fails
+    while (
+      code === 200 &&
+      results &&
+      !('events' in results)
+    ) {
+      await new Promise(res => setTimeout(res, 2000));
+      [
+        code,
+        results,
+      ] = await getEventsApi({
+        queryId,
+        endTime,
+      });
+
+      if (results && 'status' in results) {
+        setQueryState(results.status);
+      }
+    }
+
+    setLoadingEvents(LoadingStates.DONE);
+
+    // Handle failure
+    if (code !== 200 || !results || !('events' in results)) {
+      console.log(code, results);
+      addAlert('danger', 'Failed to get events');
+      setQueryState('FAILED');
+      return;
+    }
+
+    // Save the results
+    setQueryState('DONE');
+    setStartTime(results.startTime);
+    setEvents(current => [
+      ...current,
+      ...results.events.map(e => ({
+        ...e,
+        type: 'radioid' in e ? 'event' : 'file',
+      })) as typeof events,
+    ]);
+  }, [
+    startTime,
+    addAlert,
+  ]);
+
+  return [
+    loadingEvents,
+    queryState,
+    events,
+    loadEvents,
+    startTime,
+  ];
+}
 
 export default function EventsPage() {
   // Contexts
@@ -87,27 +234,40 @@ export default function EventsPage() {
   ] = useState<string>('');
   const searchParams = useSearchParams();
 
+  // The events handler function
+  const [
+    loadingState,
+    queryState,
+    events,
+    loadEvents,
+    startTime,
+  ] = useEvents();
+
   // State for the renaming input
   const [
     newName,
     setNewName,
   ] = useState('');
 
-  // State for the events/recordings associated with the entity
-  const [
-    allEvents,
-    setAllEvents,
-  ] = useState<((FullEventItem & {
-    type: 'event';
-  }) | (FileEventItem & {
-    type: 'file';
-  }))[]>([]);
+  // // State for the events/recordings associated with the entity
+  // const [
+  //   allEvents,
+  //   setAllEvents,
+  // ] = useState<((FullEventItem & {
+  //   type: 'event';
+  // }) | (FileEventItem & {
+  //   type: 'file';
+  // }))[]>([]);
 
-  // Used to control spinner state
-  const [
-    loadingEvents,
-    setLoadingEvents,
-  ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
+  // // Used to control spinner state
+  // const [
+  //   loadingEvents,
+  //   setLoadingEvents,
+  // ] = useState<LoadingStates>(LoadingStates.NOT_STARTED);
+  // const [
+  //   eventsState,
+  //   setEventsState,
+  // ] = useState('QUEUED');
 
   // Used to allow the types of events to be selected
   const [
@@ -115,8 +275,8 @@ export default function EventsPage() {
     setExcludeItems,
   ] = useState<(keyof typeof eventFilters)[]>([]);
 
-  const isLoading = allEvents.length === 0 &&
-    loadingEvents !== LoadingStates.DONE;
+  // const isLoading = allEvents.length === 0 &&
+  //   loadingEvents !== LoadingStates.DONE;
   const currentName = type === 'radio'
     ? radioNames[id]
     : talkgroups[id]?.name;
@@ -202,13 +362,12 @@ export default function EventsPage() {
 
     setId(newId);
     setType(newType);
-    setAllEvents([]);
-    setLoadingEvents(LoadingStates.NOT_STARTED);
-    // setLoadingFiles(LoadingStates.NOT_STARTED);
+    loadEvents(newType, newId, true);
   }, [
     searchParams,
     type,
     id,
+    loadEvents,
   ]);
 
   // Parse an ID into a name and link
@@ -341,137 +500,143 @@ export default function EventsPage() {
     };
   }, [ user, ]);
 
-  // Load the events
-  useEffect(() => {
-    if (
-      allEvents.length > 0 ||
-      id === ''
-    ) {
-      return;
-    }
+  // // Load the events
+  // useEffect(() => {
+  //   if (
+  //     allEvents.length > 0 ||
+  //     id === ''
+  //   ) {
+  //     return;
+  //   }
 
-    let useResult = true;
-    (async () => {
-      let code, results;
-      setLoadingEvents(LoadingStates.IN_PROGRESS);
-      if (type === 'talkgroup') {
-        [
-          code,
-          results,
-        ] = await typeFetch<GetTalkgroupEventsApi>({
-          path: '/api/v2/events/talkgroup/{id}/',
-          method: 'GET',
-          params: {
-            id: Number(id),
-          },
-        });
-      } else {
-        [
-          code,
-          results,
-        ] = await typeFetch<GetRadioEventsApi>({
-          path: '/api/v2/events/radioid/{id}/',
-          method: 'GET',
-          params: {
-            id: Number(id),
-          },
-        });
-      }
-      const queryId = results && 'queryId' in results
-        ? results.queryId
-        : null;
-      while (
-        useResult &&
-        code === 200 &&
-        queryId !== null &&
-        results &&
-        !('events' in results)
-      ) {
-        await new Promise(res => setTimeout(res, 5000));
-        if (type === 'radio') {
-          [
-            code,
-            results,
-          ] = await typeFetch<GetRadioEventsApi>({
-            path: '/api/v2/events/radioid/{id}/',
-            method: 'GET',
-            params: {
-              id: Number(id),
-            },
-            query: {
-              queryId,
-            },
-          });
-        } else {
-          [
-            code,
-            results,
-          ] = await typeFetch<GetTalkgroupEventsApi>({
-            path: '/api/v2/events/talkgroup/{id}/',
-            method: 'GET',
-            params: {
-              id: Number(id),
-            },
-            query: {
-              queryId,
-            },
-          });
-        }
-      }
-      if (!useResult) {
-        return;
-      }
-      if (code !== 200 || !results || !('events' in results)) {
-        console.log(code, results);
-        addAlert('danger', 'Failed to get events');
-        setLoadingEvents(LoadingStates.DONE);
-        return;
-      }
-      setAllEvents(current => {
-        if (current.length > 0) {
-          return current;
-        }
+  //   let useResult = true;
+  //   (async () => {
+  //     let code, results;
+  //     setLoadingEvents(LoadingStates.IN_PROGRESS);
+  //     if (type === 'talkgroup') {
+  //       [
+  //         code,
+  //         results,
+  //       ] = await typeFetch<GetTalkgroupEventsApi>({
+  //         path: '/api/v2/events/talkgroup/{id}/',
+  //         method: 'GET',
+  //         params: {
+  //           id: Number(id),
+  //         },
+  //       });
+  //     } else {
+  //       [
+  //         code,
+  //         results,
+  //       ] = await typeFetch<GetRadioEventsApi>({
+  //         path: '/api/v2/events/radioid/{id}/',
+  //         method: 'GET',
+  //         params: {
+  //           id: Number(id),
+  //         },
+  //       });
+  //     }
+  //     const queryId = results && 'queryId' in results
+  //       ? results.queryId
+  //       : null;
+  //     const endTime = results && 'endTime' in results
+  //       ? results.endTime
+  //       : Date.now();
+  //     while (
+  //       useResult &&
+  //       code === 200 &&
+  //       queryId !== null &&
+  //       results &&
+  //       !('events' in results)
+  //     ) {
+  //       await new Promise(res => setTimeout(res, 5000));
+  //       if (type === 'radio') {
+  //         [
+  //           code,
+  //           results,
+  //         ] = await typeFetch<GetRadioEventsApi>({
+  //           path: '/api/v2/events/radioid/{id}/',
+  //           method: 'GET',
+  //           params: {
+  //             id: Number(id),
+  //           },
+  //           query: {
+  //             queryId,
+  //             endTime,
+  //           },
+  //         });
+  //       } else {
+  //         [
+  //           code,
+  //           results,
+  //         ] = await typeFetch<GetTalkgroupEventsApi>({
+  //           path: '/api/v2/events/talkgroup/{id}/',
+  //           method: 'GET',
+  //           params: {
+  //             id: Number(id),
+  //           },
+  //           query: {
+  //             queryId,
+  //             endTime,
+  //           },
+  //         });
+  //         if (useResult && results && 'status' in results) {
+  //           setEventsState(results.status);
+  //         }
+  //       }
+  //     }
+  //     if (!useResult) {
+  //       return;
+  //     }
+  //     if (code !== 200 || !results || !('events' in results)) {
+  //       console.log(code, results);
+  //       addAlert('danger', 'Failed to get events');
+  //       setLoadingEvents(LoadingStates.DONE);
+  //       return;
+  //     }
+  //     setAllEvents(current => {
+  //       if (current.length > 0) {
+  //         return current;
+  //       }
 
-        const newEvents = results.events.map(e => ({
-          ...e,
-          type: 'radioid' in e ? 'event' : 'file',
-        })) as typeof allEvents;
-        return newEvents.sort((a, b) => {
-          const aVal = a.type === 'file'
-            ? (a.StartTime || 0) * 1000
-            : a.timestamp;
-          const bVal = b.type === 'file'
-            ? (b.StartTime || 0) * 1000
-            : b.timestamp;
+  //       const newEvents = results.events.map(e => ({
+  //         ...e,
+  //         type: 'radioid' in e ? 'event' : 'file',
+  //       })) as typeof allEvents;
+  //       return newEvents.sort((a, b) => {
+  //         const aVal = a.type === 'file'
+  //           ? (a.StartTime || 0) * 1000
+  //           : a.timestamp;
+  //         const bVal = b.type === 'file'
+  //           ? (b.StartTime || 0) * 1000
+  //           : b.timestamp;
 
-          return aVal >= bVal ? -1 : 1;
-        });
-      });
-      setLoadingEvents(LoadingStates.DONE);
-    })();
+  //         return aVal >= bVal ? -1 : 1;
+  //       });
+  //     });
+  //     setLoadingEvents(LoadingStates.DONE);
+  //   })();
 
-    return () => {
-      useResult = false;
-    };
-  }, [
-    searchParams,
-    addAlert,
-    loadingEvents,
-    allEvents,
-    id,
-    type,
-  ]);
+  //   return () => {
+  //     useResult = false;
+  //   };
+  // }, [
+  //   searchParams,
+  //   addAlert,
+  //   loadingEvents,
+  //   allEvents,
+  //   id,
+  //   type,
+  // ]);
 
   // Parse the query string parameters on the first run
   useEffect(() => {
     if (searchParams.get('tg') !== null) {
-      setType('talkgroup');
-      setId(searchParams.get('tg') || '');
+      changePage('talkgroup', searchParams.get('tg') || '');
     } else if (searchParams.get('radioId') !== null) {
-      setType('radio');
-      setId(searchParams.get('radioId') || '');
+      changePage('radio', searchParams.get('radioId') || '');
     }
-  }, [ searchParams, ]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set the value of the renaming input when state changes
   useEffect(() => {
@@ -485,115 +650,125 @@ export default function EventsPage() {
     type,
   ]);
 
+  const eventsThrough = startTime === null
+    ? null
+    : dateTimeToTimeStr(startTime);
+
   return <>
     {(Object.keys(talkgroups).length > 0 || Object.keys(radioNames).length > 0) && <Row className='justify-content-center mb-5'>
       <Col md={4}>
         <h3>Talkgroups</h3>
-        <Form.Control
-          type='text'
-          placeholder='Search talkgroups'
-          value={tgFilter}
-          onChange={e => setTgFilter(e.target.value)}
-        />
-        <div style={{
-          height: '200px',
-          overflowY: 'scroll',
-        }}>
-          <Table>
-            <tbody>
-              {Object.keys(talkgroups)
-                .filter(tg => {
-                  const filter = tgFilter.toLowerCase();
-                  const nameMatch = talkgroups[tg].selectName
-                    .toLowerCase()
-                    .includes(filter);
-                  if (filter !== '') {
-                    if (
-                      filter.match(/^[0-9]+$/) &&
-                      !nameMatch &&
-                      !tg.toString().includes(filter)
-                    ) {
-                      return false;
-                    }
+        {Object.keys(talkgroups).length === 0 && <LoadingSpinner />}
+        {Object.keys(talkgroups).length && <>
+          <Form.Control
+            type='text'
+            placeholder='Search talkgroups'
+            value={tgFilter}
+            onChange={e => setTgFilter(e.target.value)}
+          />
+          <div style={{
+            height: '200px',
+            overflowY: 'scroll',
+          }}>
+            <Table>
+              <tbody>
+                {Object.keys(talkgroups)
+                  .filter(tg => {
+                    const filter = tgFilter.toLowerCase();
+                    const nameMatch = talkgroups[tg].selectName
+                      .toLowerCase()
+                      .includes(filter);
+                    if (filter !== '') {
+                      if (
+                        filter.match(/^[0-9]+$/) &&
+                        !nameMatch &&
+                        !tg.toString().includes(filter)
+                      ) {
+                        return false;
+                      }
 
-                    if (
-                      !filter.match(/^[0-9]+$/) &&
-                      !nameMatch
-                    ) {
-                      return false;
+                      if (
+                        !filter.match(/^[0-9]+$/) &&
+                        !nameMatch
+                      ) {
+                        return false;
+                      }
                     }
-                  }
-                  return true;
-                })
-                .sort((a, b) =>
-                  talkgroups[a].selectName
-                    .localeCompare(talkgroups[b].selectName))
-                .map(tg => <tr
-                  key={tg}
-                  onClick={() => changePage('talkgroup', tg)}
-                  className={type === 'talkgroup' && id === tg ? 'table-secondary' : ''}
-                  style={{ cursor: 'pointer', }}
-                >
-                  <td>{talkgroups[tg].selectName}</td>
-                </tr>)
-              }
-            </tbody>
-          </Table>
-        </div>
+                    return true;
+                  })
+                  .sort((a, b) =>
+                    talkgroups[a].selectName
+                      .localeCompare(talkgroups[b].selectName))
+                  .map(tg => <tr
+                    key={tg}
+                    onClick={() => changePage('talkgroup', tg)}
+                    className={type === 'talkgroup' && id === tg ? 'table-secondary' : ''}
+                    style={{ cursor: 'pointer', }}
+                  >
+                    <td>{talkgroups[tg].selectName}</td>
+                  </tr>)
+                }
+              </tbody>
+            </Table>
+          </div>
+        </>}
       </Col>
       <Col md={4}>
         <h3>Radios</h3>
-        <Form.Control
-          type='text'
-          placeholder='Search radios'
-          value={radioFilter}
-          onChange={e => setRadioFilter(e.target.value)}
-        />
-        <div style={{
-          height: '200px',
-          overflowY: 'scroll',
-        }}>
-          <Table>
-            <tbody>
-              {Object.keys(radioNames)
-                .filter(radio => {
-                  const filter = radioFilter.toLowerCase();
-                  const nameMatch = radioNames[radio]
-                    .toLowerCase()
-                    .includes(filter);
-                  if (filter !== '') {
-                    if (
-                      filter.match(/^[0-9]+$/) &&
+        {Object.keys(radioNames).length === 0 && <LoadingSpinner />}
+        {Object.keys(radioNames).length && <>
+          <Form.Control
+            type='text'
+            placeholder='Search radios'
+            value={radioFilter}
+            onChange={e => setRadioFilter(e.target.value)}
+          />
+          <div style={{
+            height: '200px',
+            overflowY: 'scroll',
+          }}>
+            <Table>
+              <tbody>
+                {Object.keys(radioNames)
+                  .filter(radio => {
+                    const filter = radioFilter.toLowerCase();
+                    const nameMatch = radioNames[radio]
+                      .toLowerCase()
+                      .includes(filter);
+                    if (filter !== '') {
+                      if (
+                        filter.match(/^[0-9]+$/) &&
                       !nameMatch &&
                       !radio.toString().includes(filter)
-                    ) {
-                      return false;
-                    }
+                      ) {
+                        return false;
+                      }
 
-                    if (
-                      !filter.match(/^[0-9]+$/) &&
+                      if (
+                        !filter.match(/^[0-9]+$/) &&
                       !nameMatch
-                    ) {
-                      return false;
+                      ) {
+                        return false;
+                      }
                     }
-                  }
-                  return true;
-                })
-                .sort((a, b) =>
-                  radioNames[a]
-                    .localeCompare(radioNames[b]))
-                .map(radio => <tr
-                  key={radio}
-                  onClick={() => changePage('radio', radio)}
-                  className={type === 'radio' && id === radio ? 'table-secondary' : ''}
-                  style={{ cursor: 'pointer', }}
-                >
-                  <td>{radioNames[radio]}</td>
-                </tr>)
-              }
-            </tbody>
-          </Table>
-        </div>
+                    return true;
+                  })
+                  .sort((a, b) =>
+                    radioNames[a]
+                      .localeCompare(radioNames[b]))
+                  .map(radio => <tr
+                    key={radio}
+                    onClick={() => changePage('radio', radio)}
+                    className={type === 'radio' && id === radio ? 'table-secondary' : ''}
+                    style={{ cursor: 'pointer', }}
+                  >
+                    <td>{radioNames[radio]}</td>
+                  </tr>)
+                }
+              </tbody>
+            </Table>
+          </div>
+        </>}
       </Col>
     </Row>}
 
@@ -624,96 +799,115 @@ export default function EventsPage() {
       </InputGroup>
     </Col>}
 
-    {isLoading && id !== '' && <LoadingSpinner />}
+    {id !== '' && <>
+      <Row className='justify-content-center mb-2'>
+        <Col md={6}>
+          <h3 className='text-center'>Events To Show</h3>
 
-    {!isLoading && <Row className='justify-content-center mb-2'>
-      <Col md={6}>
-        <h3 className='text-center'>Events To Show</h3>
+          {(Object.keys(eventFilters) as (keyof typeof eventFilters)[])
+            .map((key, idx) => <Form.Check
+              type='checkbox'
+              key={idx}
+              onChange={e => setExcludeItems(old => [
+                ...old.filter(v => v !== key),
+                ...e.target.checked ? [] : [ key, ],
+              ])}
+              checked={!excludeItems.includes(key)}
+              label={eventFilters[key]}
+            />)}
+        </Col>
+      </Row>
 
-        {(Object.keys(eventFilters) as (keyof typeof eventFilters)[]).map((key, idx) => <Form.Check
-          type='checkbox'
-          key={idx}
-          onChange={e => setExcludeItems(old => [
-            ...old.filter(v => v !== key),
-            ...e.target.checked ? [] : [ key, ],
-          ])}
-          checked={!excludeItems.includes(key)}
-          label={eventFilters[key]}
-        />)}
-      </Col>
-    </Row>}
-
-    {!isLoading && <Table
-      responsive={true}
-    >
-      <thead>
-        <tr>
-          <th></th>
-          <th>Event</th>
-          <th>Tower</th>
-          <th>Talkgroups/Radios</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {allEvents.map((v, i) => {
-          if (
-            v.type === 'file' &&
+      <Table
+        responsive={true}
+      >
+        <thead>
+          <tr>
+            <th></th>
+            <th>Event</th>
+            <th>Tower</th>
+            <th>Talkgroups/Radios</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {events.length === 0 && loadingState !== LoadingStates.IN_PROGRESS && <tr>
+            <th colSpan={5} className='text-center'>No Events Found</th>
+          </tr>}
+          {events.map((v, i) => {
+            if (
+              v.type === 'file' &&
             excludeItems.includes('recording')
-          ) {
-            return;
-          }
-          if (
-            v.type === 'event' &&
+            ) {
+              return;
+            }
+            if (
+              v.type === 'event' &&
             excludeItems.includes(v.event as keyof typeof eventFilters)
-          ) {
-            return;
-          }
+            ) {
+              return;
+            }
 
-          return <tr
-            key={i}
-            className='align-middle'
-          >
-            {v.type === 'event' && <React.Fragment>
-              <td>{dateToStr(new Date(v.timestamp))}</td>
-              <td>{v.event}</td>
-              <td>{v.tower}</td>
-              <td>
-                {[
-                  parseTalkgroup(v.talkgroup),
-                  parseRadioId(v.radioid),
-                ].filter(v => v !== '').map((v, i) => <React.Fragment
-                  key={i}
-                >
-                  {i > 0 && <br />}
-                  {v}
-                </React.Fragment>)}
-              </td>
-              <td></td>
-            </React.Fragment>}
+            return <tr
+              key={i}
+              className='align-middle'
+            >
+              {v.type === 'event' && <React.Fragment>
+                <td>{dateToStr(new Date(v.timestamp))}</td>
+                <td>{v.event}</td>
+                <td>{v.tower}</td>
+                <td>
+                  {[
+                    parseTalkgroup(v.talkgroup),
+                    parseRadioId(v.radioid),
+                  ].filter(v => v !== '').map((v, i) => <React.Fragment
+                    key={i}
+                  >
+                    {i > 0 && <br />}
+                    {v}
+                  </React.Fragment>)}
+                </td>
+                <td></td>
+              </React.Fragment>}
 
-            {v.type === 'file' && <React.Fragment>
-              <td>{dateToStr(new Date((v.StartTime || 0) * 1000))}</td>
-              <td>recording</td>
-              <td>{v.Tower}</td>
-              <td>
-                {[
-                  ...type === 'radio' ? [ parseTalkgroup(v.Talkgroup || ''), ] : [],
-                  ...v.Sources?.map(s => parseRadioId(s || '')) || [],
-                ].map((v, idx) => <React.Fragment
-                  key={idx}
-                >
-                  {idx > 0 && <br />}
-                  {v}
-                </React.Fragment>)}
-              </td>
-              <td><audio preload='none' controls>
-                <source src={`/${v.Key}`} />
-              </audio></td>
-            </React.Fragment>}
-          </tr>;
-        })}
-      </tbody>
-    </Table>}
+              {v.type === 'file' && <React.Fragment>
+                <td>{dateToStr(new Date((v.StartTime || 0) * 1000))}</td>
+                <td>recording</td>
+                <td>{v.Tower}</td>
+                <td>
+                  {[
+                    ...type === 'radio' ? [ parseTalkgroup(v.Talkgroup || ''), ] : [],
+                    ...v.Sources?.map(s => parseRadioId(s || '')) || [],
+                  ].map((v, idx) => <React.Fragment
+                    key={idx}
+                  >
+                    {idx > 0 && <br />}
+                    {v}
+                  </React.Fragment>)}
+                </td>
+                <td><audio preload='none' controls>
+                  <source src={`/${v.Key}`} />
+                </audio></td>
+              </React.Fragment>}
+            </tr>;
+          })}
+          {eventsThrough !== null && <tr>
+            <td colSpan={5} className='text-center'>Events through {eventsThrough} checked</td>
+          </tr>}
+          <tr>
+            <th colSpan={5} className='text-center'>
+              {loadingState === LoadingStates.IN_PROGRESS && id !== '' && <>
+                <LoadingSpinner />
+                <h4 className='text-center'>Query is {queryState}</h4>
+              </>}
+              {loadingState !== LoadingStates.IN_PROGRESS && <Button
+                variant='success'
+                onClick={() => loadEvents(type, id)}
+              >Load Older Events</Button>}
+            </th>
+          </tr>
+        </tbody>
+      </Table>
+    </>}
   </>;
 }

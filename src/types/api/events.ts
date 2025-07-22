@@ -74,6 +74,11 @@ export type GetRadioEventsApi = {
   };
   query: {
     queryId?: string;
+
+    /**
+     * Retrieve events up to this time (in ms since epoch)
+     */
+    endTime?: number;
   };
   responses: {
 
@@ -81,9 +86,13 @@ export type GetRadioEventsApi = {
      * @contentType application/json
      */
     200: ({
+      count: number;
       events: (FullEventItem | FileEventItem)[];
+      endTime: number;
+      startTime: number;
     } | {
       queryId: string;
+      endTime: number;
     } | {
       status: string;
     });
@@ -185,6 +194,13 @@ export const getEventsQueryValidator: Validator<GetRadioEventsApi['query']> = {
     required: false,
     types: {
       string: {},
+    },
+  },
+  endTime: {
+    required: false,
+    parse: v => Number(v),
+    types: {
+      number: {},
     },
   },
 };

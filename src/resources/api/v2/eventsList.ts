@@ -31,6 +31,8 @@ const logger = getLogger('resources/api/v2/eventsList');
 
 const athena = new AthenaClient();
 
+const MAX_RESULTS = 1500;
+
 const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async function (event) {
   logger.trace('GET', ...arguments);
 
@@ -68,17 +70,30 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     ];
   }
 
+  let endTime: number = Math.ceil(Date.now() / (60 * 60 * 1000)) * 1000 * 60 * 60;
+  if (typeof query.endTime !== 'undefined') {
+    endTime = query.endTime;
+  }
+  const startTime = endTime - (28 * 24 * 60 * 60 * 1000);
+
   if (!query.queryId) {
-    // Run the Athena query
-    const startDateTime = new Date(Date.now() - (2 * 28 * 24 * 60 * 60 * 1000));
     const padNum = (num: number) => num.toString().padStart(2, '0');
+
+    // Start and end dates
+    const startDateTime = new Date(startTime);
     const startDatetimeString = `${startDateTime.getUTCFullYear()}-${padNum(startDateTime.getMonth() + 1)}-` +
       `${padNum(startDateTime.getUTCDate())}-${padNum(startDateTime.getUTCHours())}`;
+    const endDateTime = new Date(endTime);
+    const endDatetimeString = `${endDateTime.getUTCFullYear()}-${padNum(endDateTime.getMonth() + 1)}-` +
+      `${padNum(endDateTime.getUTCDate())}-${padNum(endDateTime.getUTCHours())}`;
+
+    // Run the Athena query
     const QueryString = `SELECT *
         FROM "${process.env.GLUE_TABLE}"
         WHERE "${queryType}" = '${params.id}'
         AND "event" != 'call'
-        AND "datetime" >= '${startDatetimeString}'
+        AND "datetime" > '${startDatetimeString}'
+        AND "datetime" <= '${endDatetimeString}'
         ORDER BY "timestamp" DESC`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString,
@@ -105,6 +120,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
       200,
       {
         queryId: queryId.QueryExecutionId,
+        endTime,
       },
     ];
   }
@@ -144,7 +160,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   // Get the results
   const results = await athena.send(new GetQueryResultsCommand({
     QueryExecutionId: query.queryId,
-    MaxResults: 500,
+    MaxResults: MAX_RESULTS,
   }));
   if (!results.ResultSet?.Rows) {
     logger.error(`No results returned from query ID ${query.queryId}`);
@@ -163,39 +179,91 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     }, {})) as FullEventItem[] || [];
 
   // Get the files
-  const fileQueryConfig: TypedQueryInput<FileEventItem> = {
+  const fileQueryConfig: TypedQueryInput<FileEventItem> & Required<Pick<
+    TypedQueryInput<FileEventItem>,
+    'ExpressionAttributeNames' | 'ExpressionAttributeValues'
+  >> = {
     ScanIndexForward: false,
     TableName: TABLE_FILE,
-    Limit: 500,
+    Limit: MAX_RESULTS,
+    ExpressionAttributeNames: {
+      '#StartTime': 'StartTime',
+    },
+    ExpressionAttributeValues: {
+      ':StartTime': Math.round(startTime / 1000),
+      ':EndTime': Math.round(endTime / 1000),
+    },
   };
   if (queryType === 'talkgroup') {
-    fileQueryConfig.ExpressionAttributeNames = {
-      '#Talkgroup': 'Talkgroup',
-    };
-    fileQueryConfig.ExpressionAttributeValues = {
-      ':Talkgroup': params.id,
-    };
+    fileQueryConfig.ExpressionAttributeNames['#Talkgroup'] = 'Talkgroup';
+    fileQueryConfig.ExpressionAttributeValues[':Talkgroup'] = params.id;
     fileQueryConfig.IndexName = 'StartTimeTgIndex';
-    fileQueryConfig.KeyConditionExpression = '#Talkgroup = :Talkgroup';
+    fileQueryConfig.KeyConditionExpression = '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime AND :EndTime';
   } else {
     fileQueryConfig.TableName = TABLE_DEVICES;
-    fileQueryConfig.ExpressionAttributeNames = {
-      '#RadioID': 'RadioID',
-    };
-    fileQueryConfig.ExpressionAttributeValues = {
-      ':RadioID': params.id.toString(),
-    };
-    fileQueryConfig.KeyConditionExpression = '#RadioID = :RadioID';
+    fileQueryConfig.ExpressionAttributeNames['#RadioID'] = 'RadioID';
+    fileQueryConfig.ExpressionAttributeValues[':RadioID'] = params.id.toString();
+    fileQueryConfig.IndexName = 'StartTimeTgIndex';
+    fileQueryConfig.KeyConditionExpression = '#RadioID = :RadioID AND #StartTime BETWEEN :StartTime AND :EndTime';
   }
-  const filesResult = await typedQuery(fileQueryConfig);
+  const filesQueryResult = await typedQuery<FileEventItem>(fileQueryConfig);
+  const fileResults = filesQueryResult.Items || [];
+
+  let endResults = [
+    ...athenaResults,
+    ...fileResults,
+  ].sort((a, b) => {
+    const aVal = 'StartTime' in a
+      ? a.StartTime * 1000
+      : a.timestamp;
+    const bVal = 'StartTime' in b
+      ? b.StartTime * 1000
+      : b.timestamp;
+
+    return aVal >= bVal ? -1 : 1;
+  });
+
+  let firstEvent = startTime;
+  const athenaFirst = athenaResults.length
+    ? athenaResults[athenaResults.length - 1].timestamp
+    : 0;
+  const filesFirst = fileResults.length
+    ? fileResults[fileResults.length - 1].StartTime * 1000
+    : 0;
+  if (endResults.length >= MAX_RESULTS) {
+    const firstEventItem = endResults[MAX_RESULTS];
+    firstEvent = 'timestamp' in firstEventItem
+      ? firstEventItem.timestamp
+      : firstEventItem.StartTime * 1000;
+  } else if (athenaResults.length && fileResults.length) {
+    firstEvent = athenaFirst < filesFirst
+      ? athenaFirst
+      : filesFirst;
+  } else if (athenaResults.length) {
+    firstEvent = athenaFirst;
+  } else if (fileResults.length) {
+    firstEvent = filesFirst;
+  }
+
+  // Round first event to the nearest hour
+  firstEvent = Math.ceil(firstEvent / (1000 * 60 * 60)) * 1000 * 60 * 60;
+
+  // Filter out older events
+  endResults = endResults.filter(v => {
+    if ('StartTime' in v) {
+      return v.StartTime * 1000 >= firstEvent;
+    }
+
+    return v.timestamp >= firstEvent;
+  });
 
   return [
     200,
     {
-      events: [
-        ...athenaResults,
-        ...filesResult.Items || [],
-      ],
+      count: endResults.length,
+      events: endResults,
+      startTime: firstEvent,
+      endTime,
     },
   ];
 };

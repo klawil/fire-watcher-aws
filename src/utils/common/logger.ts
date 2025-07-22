@@ -9,7 +9,7 @@ export enum LogLevel {
 }
 export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'error';
 
-let globalLogLevel: LogLevel = LogLevel.Error;
+let globalLogLevel: LogLevel = LogLevel.Log;
 let isNodeEnv: boolean = false;
 declare const window: undefined | Window;
 if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
@@ -25,7 +25,7 @@ if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
 declare const process: undefined | NodeJS.Process;
 if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
   isNodeEnv = true;
-  globalLogLevel = LogLevel.Error;
+  globalLogLevel = LogLevel.Log;
   if (typeof process.env.DEBUG !== 'undefined') {
     globalLogLevel = LogLevel.Trace;
   }
