@@ -51,7 +51,7 @@ const PATCH: LambdaApiFunction<PatchRadioApi> = async function (event, user, use
       api401Body,
     ];
   }
-  if (!userPerms.isDistrictAdmin) {
+  if (!userPerms.canEditNames) {
     return [
       403,
       api403Body,
