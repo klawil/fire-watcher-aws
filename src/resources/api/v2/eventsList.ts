@@ -32,6 +32,7 @@ const logger = getLogger('resources/api/v2/eventsList');
 const athena = new AthenaClient();
 
 const MAX_RESULTS = 1500;
+const minDatetime = 1735689600000; // 2025-01-01 00:00 UTC
 
 function roundToHour(ts: number, ceil: boolean) {
   const ONE_HOUR = 60 * 60 * 1000;
@@ -83,7 +84,10 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   if (typeof query.endTime !== 'undefined') {
     endTime = query.endTime;
   }
-  const startTime = endTime - (28 * 24 * 60 * 60 * 1000);
+  let startTime = endTime - (28 * 24 * 60 * 60 * 1000);
+  if (startTime < minDatetime) {
+    startTime = minDatetime;
+  }
 
   if (!query.queryId) {
     const padNum = (num: number) => num.toString().padStart(2, '0');
