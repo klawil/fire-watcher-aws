@@ -1,7 +1,6 @@
 import { resolve } from 'path';
 
 import {
-  CfnOutput,
   Duration,
   Stack, StackProps, Tags
 } from 'aws-cdk-lib';
@@ -372,7 +371,7 @@ export class FireWatcherAwsStack extends Stack {
         bucketArn: eventsS3Bucket.bucketArn,
         roleArn: eventsFirehoseRole.roleArn,
         bufferingHints: {
-          intervalInSeconds: 300,
+          intervalInSeconds: 900, // Max value, 15 minutes
         },
         prefix: 'data/datetime=!{partitionKeyFromQuery:datePartition}/event=!{partitionKeyFromQuery:event}/',
         errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
@@ -1296,24 +1295,22 @@ export class FireWatcherAwsStack extends Stack {
         },
       },
     });
-    // Export the CF url
-    new CfnOutput(this, 'cf-url', {
-      value: cfDistro.domainName,
-    });
-    new s3Deploy.BucketDeployment(this, 'deploy-website', {
-      sources: [ s3Deploy.Source.asset(
-        resolve(
-          __dirname,
-          '..', // stack
-          '..', // src
-          '..', // root
-          'output',
-          'build'
-        )
-      ), ],
-      destinationBucket: reactBucket,
-      distribution: cfDistro,
-    });
+    if (process.env.DEPLOY_FRONTEND) {
+      new s3Deploy.BucketDeployment(this, 'deploy-website', {
+        sources: [ s3Deploy.Source.asset(
+          resolve(
+            __dirname,
+            '..', // stack
+            '..', // src
+            '..', // root
+            'output',
+            'build'
+          )
+        ), ],
+        destinationBucket: reactBucket,
+        distribution: cfDistro,
+      });
+    }
 
     // Add the alarms
     const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
