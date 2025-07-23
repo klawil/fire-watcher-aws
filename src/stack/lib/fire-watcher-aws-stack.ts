@@ -508,6 +508,7 @@ export class FireWatcherAwsStack extends Stack {
     queue.grantSendMessages(s3Handler);
     dtrTranslationTable.grantReadWriteData(s3Handler);
     devicesTable.grantReadWriteData(s3Handler);
+    radiosTable.grantReadWriteData(s3Handler);
 
     // Create a handler for the SQS queue
     const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {

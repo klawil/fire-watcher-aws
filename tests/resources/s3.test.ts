@@ -246,20 +246,40 @@ describe('resources/s3', () => {
       });
 
       // Get the talkgroup to make sure it is in use
-      expect(GetCommand).toBeCalledTimes(1);
-      expect(GetCommand).toBeCalledWith({
-        TableName: 'TABLE_TALKGROUP_VAL',
-        Key: {
-          ID: 1234,
-        },
-      });
+      expect(GetCommand).toBeCalledTimes(0);
 
       // Set the talkgroup to in use
-      expect(UpdateCommand).toBeCalledTimes(1);
+      expect(UpdateCommand).toBeCalledTimes(3);
       expect(UpdateCommand).toBeCalledWith({
         TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
           ID: 1234,
+        },
+        ExpressionAttributeNames: {
+          '#InUse': 'InUse',
+        },
+        ExpressionAttributeValues: {
+          ':InUse': 'Y',
+        },
+        UpdateExpression: 'SET #InUse = :InUse',
+      });
+      expect(UpdateCommand).toBeCalledWith({
+        TableName: 'TABLE_RADIOS_VAL',
+        Key: {
+          RadioID: '1',
+        },
+        ExpressionAttributeNames: {
+          '#InUse': 'InUse',
+        },
+        ExpressionAttributeValues: {
+          ':InUse': 'Y',
+        },
+        UpdateExpression: 'SET #InUse = :InUse',
+      });
+      expect(UpdateCommand).toBeCalledWith({
+        TableName: 'TABLE_RADIOS_VAL',
+        Key: {
+          RadioID: '2',
         },
         ExpressionAttributeNames: {
           '#InUse': 'InUse',
@@ -397,16 +417,10 @@ describe('resources/s3', () => {
       // Query to find possible adjacent files
       expect(QueryCommand).toBeCalledTimes(0);
 
-      // Get the talkgroup to make sure it is in use
-      expect(GetCommand).toBeCalledTimes(1);
-      expect(GetCommand).toBeCalledWith({
-        TableName: 'TABLE_TALKGROUP_VAL',
-        Key: {
-          ID: 18331,
-        },
-      });
+      // No Get commands
+      expect(GetCommand).toBeCalledTimes(0);
 
-      // Set the talkgroup to in use
+      // Set the talkgroup and radio IDs to in use
       expect(UpdateCommand).toBeCalledTimes(1);
       expect(UpdateCommand).toBeCalledWith({
         TableName: 'TABLE_TALKGROUP_VAL',

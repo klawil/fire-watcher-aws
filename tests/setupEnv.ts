@@ -13,4 +13,5 @@ process.env.COSTS_BUCKET = 'COSTS_BUCKET_VAL';
   'TALKGROUP',
   'SITE',
   'DTR_TRANSLATION',
+  'RADIOS',
 ].forEach(table => process.env[`TABLE_${table}`] = `TABLE_${table}_VAL`);

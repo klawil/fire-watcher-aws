@@ -19,6 +19,7 @@ import { FileEventItem } from '@/types/api/events';
 import {
   FileTranslationObject, FullFileObject
 } from '@/types/api/files';
+import { RadioObject } from '@/types/api/radios';
 import { FullTalkgroupObject } from '@/types/api/talkgroups';
 import { PagingTalkgroup } from '@/types/api/users';
 import { PhoneNumberAccount } from '@/types/backend/department';
@@ -28,7 +29,8 @@ import {
 import { SendPageQueueItem } from '@/types/backend/queue';
 import {
   TABLE_DEVICES,
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_TALKGROUP, typedDeleteItem, typedGet, typedPutItem,
+  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_RADIOS, TABLE_TALKGROUP,
+  typedDeleteItem, typedPutItem,
   typedQuery, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
@@ -198,8 +200,23 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           ...body.Item,
         },
       }));
+    const sourceAddItems: Promise<unknown>[] = sourceList
+      .map(sourceId => typedUpdate<RadioObject>({
+        TableName: TABLE_RADIOS,
+        Key: {
+          RadioID: sourceId.toString(),
+        },
+        ExpressionAttributeNames: {
+          '#InUse': 'InUse',
+        },
+        ExpressionAttributeValues: {
+          ':InUse': 'Y',
+        },
+        UpdateExpression: 'SET #InUse = :InUse',
+      }));
     await typedPutItem<FullFileObject>(body);
     await Promise.all(sourcePutItems);
+    await Promise.all(sourceAddItems);
 
     let doTranscriptOnly: boolean = false;
     const isPage: boolean = !!body.Item.Tone;
@@ -471,30 +488,19 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       }
     }
 
-    promises['talkgroup-update'] = (async () => {
-      const item = await typedGet<FullTalkgroupObject>({
-        TableName: TABLE_TALKGROUP,
-        Key: {
-          ID: body.Item.Talkgroup,
-        },
-      });
-
-      if (!item.Item || item.Item.InUse !== 'Y') {
-        await typedUpdate<FullTalkgroupObject>({
-          TableName: TABLE_TALKGROUP,
-          Key: {
-            ID: body.Item.Talkgroup,
-          },
-          ExpressionAttributeNames: {
-            '#InUse': 'InUse',
-          },
-          ExpressionAttributeValues: {
-            ':InUse': 'Y',
-          },
-          UpdateExpression: 'SET #InUse = :InUse',
-        });
-      }
-    })();
+    promises['talkgroup-update'] = typedUpdate<FullTalkgroupObject>({
+      TableName: TABLE_TALKGROUP,
+      Key: {
+        ID: body.Item.Talkgroup,
+      },
+      ExpressionAttributeNames: {
+        '#InUse': 'InUse',
+      },
+      ExpressionAttributeValues: {
+        ':InUse': 'Y',
+      },
+      UpdateExpression: 'SET #InUse = :InUse',
+    });
 
     let wasError = false;
     await Promise.all(Object.keys(promises).map(key => promises[key]
