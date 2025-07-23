@@ -44,12 +44,14 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
         '#InUse': 'InUse',
         '#ID': 'ID',
         '#Name': 'Name',
+        '#Count': 'Count',
+        '#EventsCount': 'EventsCount',
       },
       ExpressionAttributeValues: {
         ':InUse': 'Y',
       },
       KeyConditionExpression: '#InUse = :InUse',
-      ProjectionExpression: '#ID,#Name',
+      ProjectionExpression: '#ID,#Name,#Count,#EventsCount',
     });
   } else {
     data = await typedFullScan<FullTalkgroupObject>({
