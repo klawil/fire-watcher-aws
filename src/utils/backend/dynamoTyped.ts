@@ -10,7 +10,8 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 
 import {
-  TypedDeleteItemInput, TypedDeleteItemOutput, TypedGetInput, TypedGetOutput, TypedPutItemInput,
+  TypedDeleteItemInput, TypedDeleteItemOutput, TypedFullQueryScanOutput, TypedGetInput,
+  TypedGetOutput, TypedPutItemInput,
   TypedPutItemOutput, TypedQueryInput, TypedQueryOutput, TypedScanInput, TypedScanOutput,
   TypedUpdateInput, TypedUpdateOutput
 } from '@/types/backend/dynamo';
@@ -83,6 +84,27 @@ export async function typedQuery<T extends object>(
   return output;
 }
 
+export async function typedFullQuery<T extends object>(
+  config: TypedQueryInput<T>,
+  maxRuns: number = 5
+): Promise<TypedFullQueryScanOutput<T>> {
+  const output: TypedFullQueryScanOutput<T> = {
+    Runs: 0,
+    LastEvaluatedKey: null,
+    Items: [],
+  };
+
+  do {
+    const query = await typedQuery(config);
+    output.Items.push(...query.Items || []);
+
+    output.Runs++;
+    output.LastEvaluatedKey = query.LastEvaluatedKey || null;
+  } while (output.LastEvaluatedKey !== null && output.Runs < maxRuns);
+
+  return output;
+}
+
 export async function typedScan<T extends object>(
   config: TypedScanInput<T>
 ): Promise<TypedScanOutput<T>> {
@@ -91,6 +113,27 @@ export async function typedScan<T extends object>(
   if (output.Items) {
     output.Items = output.Items.map(v => removeSets(v));
   }
+
+  return output;
+}
+
+export async function typedFullScan<T extends object>(
+  config: TypedScanInput<T>,
+  maxRuns: number = 5
+): Promise<TypedFullQueryScanOutput<T>> {
+  const output: TypedFullQueryScanOutput<T> = {
+    Runs: 0,
+    LastEvaluatedKey: null,
+    Items: [],
+  };
+
+  do {
+    const scan = await typedScan(config);
+    output.Items.push(...scan.Items || []);
+
+    output.Runs++;
+    output.LastEvaluatedKey = scan.LastEvaluatedKey || null;
+  } while (output.LastEvaluatedKey !== null && output.Runs < maxRuns);
 
   return output;
 }

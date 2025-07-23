@@ -8,6 +8,10 @@ import {
 export interface RadioObject {
   RadioID: string;
   Name?: string;
+  InUse?: 'Y' | 'N';
+  HasEvents?: 'Y' | 'N';
+  Count?: number;
+  EventsCount?: number;
 }
 
 /**
@@ -25,6 +29,8 @@ export type GetAllRadiosApi = {
      */
     200: {
       count: number;
+      loadedAll: boolean;
+      runs: number;
       radios: RadioObject[];
     };
 

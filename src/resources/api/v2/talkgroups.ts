@@ -2,17 +2,14 @@ import {
   LambdaApiFunction,
   handleResourceApi
 } from './_base';
-import {
-  DocumentQueryConfig,
-  mergeDynamoQueriesDocClient
-} from './_utils';
 
 import { generateApi400Body } from '@/types/api/_shared';
 import {
   FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator
 } from '@/types/api/talkgroups';
-import { TypedQueryInput } from '@/types/backend/dynamo';
-import { TABLE_TALKGROUP } from '@/utils/backend/dynamoTyped';
+import {
+  TABLE_TALKGROUP, typedFullQuery, typedFullScan
+} from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
@@ -38,42 +35,48 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
     ];
   }
 
-  const baseQueryConfig: TypedQueryInput<FullTalkgroupObject> = {
-    TableName: TABLE_TALKGROUP,
-    IndexName: 'InUseIndex',
-    ExpressionAttributeNames: {
-      '#inUse': 'InUse',
-      '#id': 'ID',
-      '#name': 'Name',
-      '#count': 'Count',
-    },
-    KeyConditionExpression: '#inUse = :inUse',
-    ProjectionExpression: '#id,#name,#count,#inUse',
-  };
-
-  const partitions: ('Y' | 'N')[] = [ 'Y', ];
-  if (query.all === 'y') {
-    partitions.push('N');
+  let data;
+  if (query.all !== 'y') {
+    data = await typedFullQuery<FullTalkgroupObject>({
+      TableName: TABLE_TALKGROUP,
+      IndexName: 'InUseIndex',
+      ExpressionAttributeNames: {
+        '#InUse': 'InUse',
+        '#ID': 'ID',
+        '#Name': 'Name',
+      },
+      ExpressionAttributeValues: {
+        ':InUse': 'Y',
+      },
+      KeyConditionExpression: '#InUse = :InUse',
+      ProjectionExpression: '#ID,#Name',
+    });
+  } else {
+    data = await typedFullScan<FullTalkgroupObject>({
+      TableName: TABLE_TALKGROUP,
+      ExpressionAttributeNames: {
+        '#InUse': 'InUse',
+        '#HasEvents': 'HasEvents',
+        '#ID': 'ID',
+        '#Name': 'Name',
+        '#Count': 'Count',
+        '#EventsCount': 'EventsCount',
+      },
+      ExpressionAttributeValues: {
+        ':InUse': 'Y',
+        ':HasEvents': 'Y',
+      },
+      FilterExpression: '#InUse = :InUse OR #HasEvents = :HasEvents',
+      ProjectionExpression: '#ID,#Name,#Count,#EventsCount',
+    });
   }
-
-  // Build the query configs
-  const queryConfigs: DocumentQueryConfig<FullTalkgroupObject>[] = partitions.map(partition => ({
-    ExpressionAttributeValues: {
-      ':inUse': partition,
-    },
-  }));
-
-  const data = await mergeDynamoQueriesDocClient<GetAllTalkgroupsApi['responses']['200']['talkgroups'][number]>(
-    baseQueryConfig,
-    queryConfigs,
-    'Count'
-  );
 
   return [
     200,
     {
       count: data.Items.length,
-      loadedAll: !data.LastEvaluatedKeys.reduce((agg, key) => agg || key !== null, false),
+      loadedAll: data.LastEvaluatedKey === null,
+      runs: data.Runs,
       talkgroups: data.Items,
     },
   ];

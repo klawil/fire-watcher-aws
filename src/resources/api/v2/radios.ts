@@ -8,7 +8,7 @@ import {
   GetAllRadiosApi, RadioObject
 } from '@/types/api/radios';
 import {
-  TABLE_RADIOS, typedScan
+  TABLE_RADIOS, typedFullScan
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
@@ -25,15 +25,31 @@ const GET: LambdaApiFunction<GetAllRadiosApi> = async function (event, user) {
     ];
   }
 
-  const radios = await typedScan<RadioObject>({
+  const radios = await typedFullScan<RadioObject>({
     TableName: TABLE_RADIOS,
+    ExpressionAttributeNames: {
+      '#InUse': 'InUse',
+      '#HasEvents': 'HasEvents',
+      '#RadioID': 'RadioID',
+      '#Name': 'Name',
+      '#Count': 'Count',
+      '#EventsCount': 'EventsCount',
+    },
+    ExpressionAttributeValues: {
+      ':InUse': 'Y',
+      ':HasEvents': 'Y',
+    },
+    FilterExpression: '#InUse = :InUse OR #HasEvents = :HasEvents',
+    ProjectionExpression: '#RadioID,#Name,#Count,#EventsCount',
   });
 
   return [
     200,
     {
-      count: radios.Items?.length || 0,
-      radios: radios.Items || [],
+      count: radios.Items.length,
+      loadedAll: radios.LastEvaluatedKey === null,
+      runs: radios.Runs,
+      radios: radios.Items,
     },
   ];
 };

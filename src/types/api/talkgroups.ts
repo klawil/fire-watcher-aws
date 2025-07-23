@@ -6,8 +6,11 @@ import { Validator } from '@/types/backend/validation';
 
 export interface FullTalkgroupObject {
   ID: number;
+  Name?: string;
   InUse?: 'Y' | 'N';
+  HasEvents?: 'Y' | 'N';
   Count?: number;
+  EventsCount?: number;
 
   /**
    * Map of device ID to number of times it has been seen transmitting on this talkgroup
@@ -15,7 +18,12 @@ export interface FullTalkgroupObject {
   Devices?: {
     [key: string]: number;
   };
-  Name?: string;
+
+  /**
+   * Key of the last "Added" key that was processed
+   */
+  LastDeviceAdded?: number;
+  DoneDevices?: boolean;
 }
 type SmallTalkgroupObject = Omit<FullTalkgroupObject, 'Devices'>;
 
@@ -43,6 +51,7 @@ export type GetAllTalkgroupsApi = {
     200: {
       count: number;
       loadedAll: boolean;
+      runs: number;
       talkgroups: SmallTalkgroupObject[];
     };
 

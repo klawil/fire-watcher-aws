@@ -74,6 +74,12 @@ export interface TypedScanOutput<T extends object> extends ScanCommandOutput {
   Items?: T[];
 }
 
+export interface TypedFullQueryScanOutput<T extends object> {
+  Runs: number;
+  LastEvaluatedKey: Record<string, any> | null, // eslint-disable-line @typescript-eslint/no-explicit-any,@stylistic/max-len
+  Items: T[];
+}
+
 export interface TypedDeleteItemInput<
   T extends object
 > extends DeleteCommandInput {
