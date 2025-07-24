@@ -119,7 +119,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
       ResultReuseConfiguration: {
         ResultReuseByAgeConfiguration: {
           Enabled: true,
-          MaxAgeInMinutes: 15,
+          MaxAgeInMinutes: 60,
         },
       },
     }));

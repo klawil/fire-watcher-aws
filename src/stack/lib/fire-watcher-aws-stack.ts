@@ -476,6 +476,13 @@ export class FireWatcherAwsStack extends Stack {
       ATHENA_WORKGROUP: athenaWorkgroup.name,
     };
 
+    // Access for Athena queries
+    const athenaAccessPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'lambda-athena-policy',
+      'arn:aws:iam::aws:policy/AmazonAthenaFullAccess'
+    );
+
     // Create a handler that pushes file information into Dynamo DB
     const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
       initialPolicy: [
@@ -678,6 +685,33 @@ export class FireWatcherAwsStack extends Stack {
       }),
     });
     statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
+
+    // Update the event counts daily
+    const dailyEventsHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-daily-events', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: resolve(resourceBase, 'dailyEvents.ts'),
+      handler: 'main',
+      environment: {
+        ...lambdaEnv,
+      },
+      timeout: Duration.minutes(15),
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    devicesTable.grantReadWriteData(dailyEventsHandler);
+    radiosTable.grantReadWriteData(dailyEventsHandler);
+    talkgroupTable.grantReadWriteData(dailyEventsHandler);
+    dtrTable.grantReadData(dailyEventsHandler);
+    dailyEventsHandler.role?.addManagedPolicy(athenaAccessPolicy);
+    eventsS3Bucket.grantReadWrite(dailyEventsHandler);
+
+    // Schedule the function for 1 AM UTC
+    const dailyEventRule = new events.Rule(this, 'daily-events-rule', {
+      schedule: events.Schedule.cron({
+        hour: '1',
+        minute: '0',
+      }),
+    });
+    dailyEventRule.addTarget(new targets.LambdaFunction(dailyEventsHandler));
 
     // Create the weather updater
     const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
@@ -1043,12 +1077,6 @@ export class FireWatcherAwsStack extends Stack {
         }, ],
       },
     ];
-
-    const athenaAccessPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
-      this,
-      'lambda-athena-policy',
-      'arn:aws:iam::aws:policy/AmazonAthenaFullAccess'
-    );
     const createApi = (
       baseResource: apigateway.Resource,
       config: V2ApiConfig
@@ -1309,6 +1337,7 @@ export class FireWatcherAwsStack extends Stack {
         ), ],
         destinationBucket: reactBucket,
         distribution: cfDistro,
+        memoryLimit: 1024,
       });
     }
 
