@@ -162,8 +162,26 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
 
   // Get the results
   let nextToken: string | undefined;
-  const rows: EventQueryResultRow[] = [];
-  do {
+  const results = await athena.send(new GetQueryResultsCommand({
+    QueryExecutionId: query.queryId,
+  }));
+  if (!results.ResultSet?.Rows) {
+    logger.error(`No results returned from query ID ${query.queryId}`);
+  }
+
+  // Parse the results
+  const names = results.ResultSet?.Rows?.[0].Data?.map(c => c.VarCharValue) || [];
+  const rows: EventQueryResultRow[] = results.ResultSet?.Rows?.slice(1)
+    .map(r => r.Data?.map(c => c.VarCharValue) || [])
+    .map(r => r.reduce((agg: { [key: string]: string | undefined | number }, v, i) => {
+      agg[names[i] || 'UNK'] = v;
+      if (names[i] === 'num') {
+        agg.num = Number(agg.num);
+      }
+      return agg as EventQueryResultRow;
+    }, {})) as EventQueryResultRow[] || [];
+  nextToken = results.NextToken;
+  while (nextToken) {
     const results = await athena.send(new GetQueryResultsCommand({
       QueryExecutionId: query.queryId,
       NextToken: nextToken,
@@ -171,10 +189,6 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
     if (!results.ResultSet?.Rows) {
       logger.error(`No results returned from query ID ${query.queryId}`);
     }
-    logger.log('Next token', results.NextToken);
-
-    // Parse the results
-    const names = results.ResultSet?.Rows?.[0].Data?.map(c => c.VarCharValue) || [];
     const athenaResults = results.ResultSet?.Rows?.slice(1)
       .map(r => r.Data?.map(c => c.VarCharValue) || [])
       .map(r => r.reduce((agg: { [key: string]: string | undefined | number }, v, i) => {
@@ -186,7 +200,7 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
       }, {})) as EventQueryResultRow[] || [];
     rows.push(...athenaResults);
     nextToken = results.NextToken;
-  } while (nextToken);
+  }
 
   return [
     200,

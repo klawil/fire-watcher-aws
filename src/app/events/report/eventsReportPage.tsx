@@ -60,7 +60,6 @@ export default function EventsReportPage() {
   function addGroupBy(key: typeof groupByKeys[number]) {
     console.log('Add group by', key);
     setGroupByKeys(current => {
-      logger.log('Current group by', current);
       const newVal = [ ...current, ];
       if (!newVal.includes(key)) {
         newVal.push(key);
@@ -343,8 +342,9 @@ export default function EventsReportPage() {
       <Col md={3}>
         {startTime && endTime && <>
           Data from {new Date(startTime)
-            .toLocaleDateString()} to {new Date(endTime).toLocaleDateString()}
+            .toLocaleDateString()} to {new Date(endTime).toLocaleDateString()}<br />
         </>}
+        {numberFormat.format(rows.length)} rows
         <Form.Check
           type='switch'
           checked={idsToNames}
@@ -399,6 +399,11 @@ export default function EventsReportPage() {
             .sort((a, b) => {
               if (sortColumn === '') {
                 return 1;
+              }
+
+              if (validEventGroupKeys.includes(sortColumn as typeof validEventGroupKeys[number])) {
+                return (a[sortColumn] || '').toString()
+                  .localeCompare((b[sortColumn] || '').toString()) * (sortDir ? 1 : -1);
               }
 
               const A_GT_B = sortDir ? -1 : 1;
