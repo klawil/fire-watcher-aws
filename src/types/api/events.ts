@@ -14,6 +14,30 @@ interface EventItem {
   timestamp?: number;
 }
 
+export const validEventTypes = [
+  'location',
+  'on',
+  'off',
+  'join',
+  'call',
+  'data',
+] as const;
+type EventTypes = typeof validEventTypes[number];
+
+type GroupKeys = keyof Omit<EventItem, 'talkgroupList' | 'timestamp'>;
+export const validEventGroupKeys: GroupKeys[] = [
+  'tower',
+  'radioId',
+  'event',
+  'talkgroup',
+];
+
+export type EventQueryResultRow = {
+  [key in GroupKeys]?: string;
+} & {
+  num: number;
+};
+
 export type FullEventItem = Required<Omit<EventItem, 'radioId'> & {
   radioid: string;
 }>;
@@ -21,6 +45,53 @@ export type FullEventItem = Required<Omit<EventItem, 'radioId'> & {
 export type FileEventItem = Partial<Omit<FullFileObject, 'StartTime'>> & {
   RadioID: string;
   StartTime: number;
+};
+
+/**
+ * Query DTR events
+ * @summary Query DTR events
+ * @tags Events
+ */
+export type QueryEventsApi = {
+  path: '/api/v2/events/';
+  method: 'GET';
+  query: {
+    groupBy?: GroupKeys[];
+    timeframe?: 'day' | 'week' | 'month';
+    events?: EventTypes[];
+    queryId?: string;
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: {
+      queryId: string;
+      startTime: number;
+      endTime: number;
+    } | {
+      status: string;
+    } | {
+      count: number;
+      rows: EventQueryResultRow[];
+    };
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
 };
 
 /**
@@ -132,6 +203,55 @@ export type GetRadioEventsApi = {
  */
 export type GetTalkgroupEventsApi = Omit<GetRadioEventsApi, 'path'> & {
   path: '/api/v2/events/talkgroup/{id}/';
+};
+
+export const queryEventsQueryValidator: Validator<QueryEventsApi['query']> = {
+  events: {
+    required: false,
+    types: {
+      array: {
+        exact: [
+          'join',
+          'location',
+          'off',
+          'on',
+          'call',
+          'data',
+        ],
+      },
+    },
+  },
+  groupBy: {
+    required: false,
+    types: {
+      array: {
+        exact: [
+          'event',
+          'radioId',
+          'talkgroup',
+          'tower',
+        ],
+      },
+    },
+  },
+  timeframe: {
+    required: false,
+    types: {
+      string: {
+        exact: [
+          'day',
+          'month',
+          'week',
+        ],
+      },
+    },
+  },
+  queryId: {
+    required: false,
+    types: {
+      string: {},
+    },
+  },
 };
 
 export const eventItemValidator: Validator<EventItem> = {

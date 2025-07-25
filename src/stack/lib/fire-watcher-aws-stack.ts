@@ -1023,8 +1023,13 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'events',
         fileName: 'events',
-        methods: [ 'POST', ],
+        methods: [
+          'POST',
+          'GET',
+        ],
+        getAthena: true,
         firehoses: [ eventsFirehose, ],
+        buckets: [ { bucket: 'EVENTS', }, ],
         next: [ {
           pathPart: '{type}',
           next: [ {

@@ -19,12 +19,10 @@ import {
   FullEventItem, GetRadioEventsApi, GetTalkgroupEventsApi
 } from '@/types/api/events';
 import {
-  GetAllRadiosApi, PatchRadioApi,
-  RadioObject
+  PatchRadioApi
 } from '@/types/api/radios';
 import {
-  FullTalkgroupObject,
-  GetAllTalkgroupsApi, PatchTalkgroupApi
+  PatchTalkgroupApi
 } from '@/types/api/talkgroups';
 import {
   dateTimeToTimeStr, dateToStr
@@ -32,6 +30,13 @@ import {
 import {
   AddAlertContext, LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
+import {
+  buildFilterItemsFunc,
+  buildSortItemsFunc,
+  getItemLink,
+  getItemName,
+  useRadios, useTalkgroups
+} from '@/utils/frontend/talkgroups';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 
 type IdTypes = 'radio' | 'talkgroup';
@@ -201,18 +206,14 @@ export default function EventsPage() {
   const user = useContext(LoggedInUserContext);
 
   // Names for IDs
-  const [
+  const {
     talkgroups,
-    setTalkgroups,
-  ] = useState<{
-    [key: string]: FullTalkgroupObject;
-  }>({});
-  const [
-    radioNames,
-    setRadioNames,
-  ] = useState<{
-    [key: string]: RadioObject;
-  }>({});
+    renameTalkgroup,
+  } = useTalkgroups(true);
+  const {
+    radios,
+    renameRadio,
+  } = useRadios();
 
   // Filters for the talkgroup and radio select
   const [
@@ -257,7 +258,10 @@ export default function EventsPage() {
   ] = useState<(keyof typeof eventFilters)[]>([]);
 
   const currentName = type === 'radio'
-    ? radioNames[id]?.Name
+    ? getItemName(radios, id)
+    : getItemName(talkgroups, id);
+  const currentRawName = type === 'radio'
+    ? radios[id]?.Name
     : talkgroups[id]?.Name;
 
   // Change an entity's name
@@ -303,27 +307,17 @@ export default function EventsPage() {
     }
 
     if (type === 'radio') {
-      setRadioNames(current => ({
-        ...current,
-        [id]: {
-          ...current[id],
-          Name: newName === '' ? undefined : newName,
-        },
-      }));
+      renameRadio(id, newName);
     } else {
-      setTalkgroups(current => ({
-        ...current,
-        [id]: {
-          ...current[id],
-          Name: newName === '' ? undefined : newName,
-        },
-      }));
+      renameTalkgroup(id, newName);
     }
   }, [
     newName,
     id,
     type,
     addAlert,
+    renameRadio,
+    renameTalkgroup,
   ]);
 
   // Change the entity being displayed
@@ -353,207 +347,36 @@ export default function EventsPage() {
   ]);
 
   // Parse an ID into a name and link
-  const objToCounts = (obj: {
-    Count?: number;
-    EventsCount?: number;
-  }) => {
-    const recordings = obj.Count || 0;
-    const events = obj.EventsCount || 0;
-
-    return `[${recordings >= 1000 ? '1,000+' : recordings} Recordings, ${events >= 1000 ? '1,000+' : events} Events]`;
-  };
-  const idToName = useCallback((
-    id: number | string,
-    type: IdTypes,
-    counts: boolean = false
-  ) => {
-    const idStr = id.toString();
-    const item = type === 'radio'
-      ? radioNames[idStr]
-      : talkgroups[idStr];
-    const idNameStr = `[ID ${idStr}]`;
-
-    const name = typeof item !== 'undefined' && item.Name
-      ? `${item.Name} ${idNameStr}`
-      : idNameStr;
-
-    if (counts && item) {
-      return `${name} ${objToCounts(item)}`;
-    }
-    return name;
-  }, [
-    radioNames,
-    talkgroups,
-  ]);
   const parseTalkgroup = useCallback((tgId: number | string) => {
     if (tgId === '') {
       return '';
     }
-
     const tgIdString = tgId.toString();
-    if (type === 'talkgroup' && tgIdString === id) {
-      return <>Talkgroup {idToName(tgIdString, 'talkgroup')}</>;
-    }
 
-    const tgName = idToName(tgIdString, 'talkgroup', true);
-    return <>Talkgroup <a href={`/events/?tg=${tgId}`} onClick={e => {
-      e.preventDefault();
-      changePage('talkgroup', tgIdString);
-    }}>{tgName}</a></>;
+    const isCurrentPage = type === 'talkgroup' && tgIdString === id;
+    return <>Talkgroup {isCurrentPage
+      ? getItemName(talkgroups, tgIdString)
+      : getItemLink(talkgroups, tgIdString, 'talkgroup', true)}</>;
   }, [
     id,
     type,
-    changePage,
-    idToName,
+    talkgroups,
   ]);
   const parseRadioId = useCallback((radioId: number | string) => {
     if (radioId === '') {
       return '';
     }
+    const radioIdString = radioId.toString();
 
-    const radioIdStr = radioId.toString();
-
-    if (
-      type === 'radio' && id === radioId.toString()
-    ) {
-      return <>Radio {idToName(radioIdStr, 'radio')}</>;
-    }
-
-    const radioName = idToName(radioIdStr, 'radio', true);
-    return <>Radio <a href={`/events/?radioId=${radioId}`} onClick={e => {
-      e.preventDefault();
-      changePage('radio', radioId.toString());
-    }}>{radioName}</a></>;
+    const isCurrentPage = type === 'radio' && radioIdString === id;
+    return <>Radio {isCurrentPage
+      ? getItemName(radios, radioIdString)
+      : getItemLink(radios, radioIdString, 'radio', true)}</>;
   }, [
     id,
     type,
-    changePage,
-    idToName,
+    radios,
   ]);
-
-  // Sorting elements in the select
-  const sortSelectElems = useCallback((sortType: IdTypes) => (a: string, b: string) => {
-    const aItem = sortType === 'radio'
-      ? radioNames[a]
-      : talkgroups[a];
-    const bItem = sortType === 'radio'
-      ? radioNames[b]
-      : talkgroups[b];
-
-    const aName = aItem?.Name || '';
-    const bName = bItem?.Name || '';
-
-    if (
-      aName === '' &&
-      bName === ''
-    ) {
-      return Number(a) > Number(b) ? 1 : -1;
-    } else if (aName === '') {
-      return 1;
-    } else if (bName === '') {
-      return -1;
-    } else {
-      return aName.localeCompare(bName);
-    }
-  }, [
-    radioNames,
-    talkgroups,
-  ]);
-  const filterSelectElems = useCallback((sortType: IdTypes, filter: string) => (key: string) => {
-    if (filter === '') {
-      return true;
-    }
-
-    const item = sortType === 'radio'
-      ? radioNames[key]
-      : talkgroups[key];
-    const itemName = (item?.Name || '').toLowerCase();
-    return itemName.includes(filter) || key.includes(filter);
-  }, [
-    radioNames,
-    talkgroups,
-  ]);
-
-  // Fetch the talkgroup names
-  useEffect(() => {
-    let useResult = true;
-    (async () => {
-      const [
-        code,
-        tgData,
-      ] = await typeFetch<GetAllTalkgroupsApi>({
-        path: '/api/v2/talkgroups/',
-        method: 'GET',
-        query: {
-          all: 'y',
-        },
-      });
-
-      if (!useResult) {
-        return;
-      }
-
-      if (
-        code !== 200 ||
-        tgData === null ||
-        'message' in tgData
-      ) {
-        console.error('Failed to load talkgroup information', code, tgData);
-        addAlert('danger', 'Failed to load talkgroup information');
-        return;
-      }
-
-      setTalkgroups(tgData.talkgroups.reduce((
-        agg: typeof talkgroups,
-        item
-      ) => {
-        agg[item.ID.toString()] = {
-          ...item,
-        };
-
-        return agg;
-      }, {}));
-    })();
-
-    return () => {
-      useResult = false;
-    };
-  }, [ addAlert, ]);
-
-  // Fetch the radio ID information
-  useEffect(() => {
-    if (user === null || !user.isFinal || !user.isUser) {
-      return;
-    }
-
-    let useResult = true;
-    (async () => {
-      const [
-        code,
-        radioData,
-      ] = await typeFetch<GetAllRadiosApi>({
-        path: '/api/v2/radios/',
-        method: 'GET',
-      });
-      if (!useResult) {
-        return;
-      }
-
-      if (code !== 200 || !radioData || !('radios' in radioData)) {
-        console.log('Radio API Error', code, radioData);
-        return;
-      }
-
-      setRadioNames(radioData.radios.reduce((agg: { [key: string]: RadioObject }, line) => {
-        agg[line.RadioID] = line;
-        return agg;
-      }, {}));
-    })();
-
-    return () => {
-      useResult = false;
-    };
-  }, [ user, ]);
 
   // Parse the query string parameters on the first run
   useEffect(() => {
@@ -567,10 +390,10 @@ export default function EventsPage() {
   // Set the value of the renaming input when state changes
   useEffect(() => {
     setNewName(type === 'radio'
-      ? radioNames[id]?.Name || ''
+      ? radios[id]?.Name || ''
       : talkgroups[id]?.Name || '');
   }, [
-    radioNames,
+    radios,
     talkgroups,
     id,
     type,
@@ -599,15 +422,15 @@ export default function EventsPage() {
             <Table>
               <tbody>
                 {Object.keys(talkgroups)
-                  .filter(filterSelectElems('talkgroup', tgFilter.toLowerCase()))
-                  .sort(sortSelectElems('talkgroup'))
+                  .filter(buildFilterItemsFunc(talkgroups, tgFilter))
+                  .sort(buildSortItemsFunc(talkgroups))
                   .map(tg => <tr
                     key={tg}
                     onClick={() => changePage('talkgroup', tg)}
                     className={type === 'talkgroup' && id === tg ? 'table-secondary' : ''}
                     style={{ cursor: 'pointer', }}
                   >
-                    <td>{idToName(tg, 'talkgroup', true)}</td>
+                    <td>{getItemName(talkgroups, tg, true)}</td>
                   </tr>)
                 }
               </tbody>
@@ -617,8 +440,8 @@ export default function EventsPage() {
       </Col>
       <Col md={4}>
         <h3>Radios</h3>
-        {Object.keys(radioNames).length === 0 && <LoadingSpinner />}
-        {Object.keys(radioNames).length > 0 && <>
+        {Object.keys(radios).length === 0 && <LoadingSpinner />}
+        {Object.keys(radios).length > 0 && <>
           <Form.Control
             type='text'
             placeholder='Search radios'
@@ -631,16 +454,16 @@ export default function EventsPage() {
           }}>
             <Table>
               <tbody>
-                {Object.keys(radioNames)
-                  .filter(filterSelectElems('radio', radioFilter.toLowerCase()))
-                  .sort(sortSelectElems('radio'))
+                {Object.keys(radios)
+                  .filter(buildFilterItemsFunc(radios, radioFilter))
+                  .sort(buildSortItemsFunc(radios))
                   .map(radio => <tr
                     key={radio}
                     onClick={() => changePage('radio', radio)}
                     className={type === 'radio' && id === radio ? 'table-secondary' : ''}
                     style={{ cursor: 'pointer', }}
                   >
-                    <td>{idToName(radio, 'radio', true)}</td>
+                    <td>{getItemName(radios, radio, true)}</td>
                   </tr>)
                 }
               </tbody>
@@ -650,7 +473,7 @@ export default function EventsPage() {
       </Col>
     </Row>
 
-    {id !== '' && <h2 className='text-center'>{type === 'radio' ? parseRadioId(id) : parseTalkgroup(id)}</h2>}
+    {id !== '' && <h2 className='text-center'>{currentName}</h2>}
 
     {id !== '' && user?.canEditNames && <Col
       lg={{
@@ -671,7 +494,7 @@ export default function EventsPage() {
         />
         <Button
           variant='success'
-          disabled={newName === currentName}
+          disabled={newName === currentRawName}
           onClick={saveNewName}
         >Change Name</Button>
       </InputGroup>
