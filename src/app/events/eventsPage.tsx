@@ -6,6 +6,7 @@ import React, {
   useContext, useEffect,
   useState
 } from 'react';
+import { Spinner } from 'react-bootstrap';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
@@ -265,52 +266,63 @@ export default function EventsPage() {
     : talkgroups[id]?.Name;
 
   // Change an entity's name
+  const [
+    newNameLoad,
+    setNewNameLoad,
+  ] = useState(false);
   const saveNewName = useCallback(async () => {
-    let code, result;
-    if (type === 'radio') {
-      [
-        code,
-        result,
-      ] = await typeFetch<PatchRadioApi>({
-        path: '/api/v2/radios/{id}/',
-        method: 'PATCH',
-        params: {
-          id,
-        },
-        body: {
-          name: newName === '' ? null : newName,
-        },
-      });
-    } else {
-      [
-        code,
-        result,
-      ] = await typeFetch<PatchTalkgroupApi>({
-        path: '/api/v2/talkgroups/{id}/',
-        method: 'PATCH',
-        params: {
-          id: Number(id),
-        },
-        body: {
-          name: newName === '' ? null : newName,
-        },
-      });
-    }
+    setNewNameLoad(true);
+    try {
+      let code, result;
+      if (type === 'radio') {
+        [
+          code,
+          result,
+        ] = await typeFetch<PatchRadioApi>({
+          path: '/api/v2/radios/{id}/',
+          method: 'PATCH',
+          params: {
+            id,
+          },
+          body: {
+            name: newName === '' ? null : newName,
+          },
+        });
+      } else {
+        [
+          code,
+          result,
+        ] = await typeFetch<PatchTalkgroupApi>({
+          path: '/api/v2/talkgroups/{id}/',
+          method: 'PATCH',
+          params: {
+            id: Number(id),
+          },
+          body: {
+            name: newName === '' ? null : newName,
+          },
+        });
+      }
 
-    if (
-      code !== 200 ||
-      result === null ||
-      'message' in result
-    ) {
-      addAlert('error', 'Failed to save new name');
-      return;
-    }
+      if (
+        code !== 200 ||
+        result === null ||
+        'message' in result
+      ) {
+        throw new Error(`Code: ${code}, ${result}`);
+      }
 
-    if (type === 'radio') {
-      renameRadio(id, newName);
-    } else {
-      renameTalkgroup(id, newName);
+      if (type === 'radio') {
+        renameRadio(id, newName);
+      } else {
+        renameTalkgroup(id, newName);
+      }
+      addAlert('success', 'Saved new name');
+    } catch (e) {
+      console.error('Failed to change name', e);
+      addAlert('danger', 'Failed to save new name');
     }
+    setNewNameLoad(false);
   }, [
     newName,
     id,
@@ -494,9 +506,9 @@ export default function EventsPage() {
         />
         <Button
           variant='success'
-          disabled={newName === currentRawName}
+          disabled={newName === currentRawName || newNameLoad}
           onClick={saveNewName}
-        >Change Name</Button>
+        >{newNameLoad ? <Spinner /> : 'Change Name'}</Button>
       </InputGroup>
     </Col>}
 

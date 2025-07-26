@@ -12,7 +12,7 @@ import {
   RadioObject, patchRadioApiBodyValidator, patchRadioApiParamsValidator
 } from '@/types/api/radios';
 import {
-  TABLE_RADIOS, typedDeleteItem, typedUpdate
+  TABLE_RADIOS, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
@@ -60,11 +60,15 @@ const PATCH: LambdaApiFunction<PatchRadioApi> = async function (event, user, use
 
   // Update the radio ID
   if (body.name === null) {
-    await typedDeleteItem<RadioObject>({
+    await typedUpdate<RadioObject>({
       TableName: TABLE_RADIOS,
       Key: {
         RadioID: params.id,
       },
+      ExpressionAttributeNames: {
+        '#Name': 'Name',
+      },
+      UpdateExpression: 'REMOVE #Name',
     });
   } else {
     await typedUpdate<RadioObject>({
