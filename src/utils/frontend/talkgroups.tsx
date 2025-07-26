@@ -172,7 +172,7 @@ export const buildFilterItemsFunc = (items: BaseItemMap, filterRaw: string) => (
   const filter = filterRaw.toLowerCase();
 
   // Get the item name (if available)
-  const itemName = items[key]?.Name || '';
+  const itemName = (items[key]?.Name || '').toLowerCase();
   return itemName.includes(filter) || key.includes(filter);
 };
 

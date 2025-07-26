@@ -103,90 +103,91 @@ function useEvents(): [
     setQueryState('QUEUED');
     setLoadingEvents(LoadingStates.IN_PROGRESS);
 
-    async function getEventsApi(query: GetTalkgroupEventsApi['query'] = {}) {
-      if (type === 'talkgroup') {
-        return await typeFetch<GetTalkgroupEventsApi>({
-          path: '/api/v2/events/talkgroup/{id}/',
-          method: 'GET',
-          params: {
-            id: Number(id),
-          },
-          query,
-        });
-      } else {
-        return await typeFetch<GetRadioEventsApi>({
-          path: '/api/v2/events/radioid/{id}/',
-          method: 'GET',
-          params: {
-            id: Number(id),
-          },
-          query,
-        });
+    try {
+      async function getEventsApi(query: GetTalkgroupEventsApi['query'] = {}) {
+        if (type === 'talkgroup') {
+          return await typeFetch<GetTalkgroupEventsApi>({
+            path: '/api/v2/events/talkgroup/{id}/',
+            method: 'GET',
+            params: {
+              id: Number(id),
+            },
+            query,
+          });
+        } else {
+          return await typeFetch<GetRadioEventsApi>({
+            path: '/api/v2/events/radioid/{id}/',
+            method: 'GET',
+            params: {
+              id: Number(id),
+            },
+            query,
+          });
+        }
       }
-    }
 
-    let code, results;
-    [
-      code,
-      results,
-    ] = await getEventsApi({
-      endTime: localStartTime === null ? Date.now() : localStartTime,
-    });
-
-    // Handle initial failures
-    if (
-      code !== 200 ||
-      !results ||
-      !('queryId' in results) ||
-      !('endTime' in results)
-    ) {
-      setLoadingEvents(LoadingStates.NOT_STARTED);
-      addAlert('danger', 'Failed to start the events query');
-      return;
-    }
-    const queryId = results.queryId;
-    const endTime = results.endTime;
-
-    // Loop until the query finishes or fails
-    while (
-      code === 200 &&
-      results &&
-      !('events' in results)
-    ) {
-      await new Promise(res => setTimeout(res, 2000));
+      let code, results;
       [
         code,
         results,
       ] = await getEventsApi({
-        queryId,
-        endTime,
+        endTime: localStartTime === null ? Date.now() : localStartTime,
       });
 
-      if (results && 'status' in results) {
-        setQueryState(results.status);
+      // Handle initial failures
+      if (
+        code !== 200 ||
+      !results ||
+      !('queryId' in results) ||
+      !('endTime' in results)
+      ) {
+        throw new Error(`Failed to start the events query code ${code}, ${results}`);
       }
-    }
+      const queryId = results.queryId;
+      const endTime = results.endTime;
 
-    setLoadingEvents(LoadingStates.DONE);
+      // Loop until the query finishes or fails
+      while (
+        code === 200 &&
+      results &&
+      !('events' in results)
+      ) {
+        await new Promise(res => setTimeout(res, 2000));
+        [
+          code,
+          results,
+        ] = await getEventsApi({
+          queryId,
+          endTime,
+        });
 
-    // Handle failure
-    if (code !== 200 || !results || !('events' in results)) {
-      console.log(code, results);
+        if (results && 'status' in results) {
+          setQueryState(results.status);
+        }
+      }
+
+      // Handle failure
+      if (code !== 200 || !results || !('events' in results)) {
+        throw new Error(`Failed to get events, code ${code}, ${results}`);
+      }
+
+      // Save the results
+      setLoadingEvents(LoadingStates.DONE);
+      setQueryState('DONE');
+      setStartTime(results.startTime);
+      setEvents(current => [
+        ...current,
+        ...results.events.map(e => ({
+          ...e,
+          type: 'radioid' in e ? 'event' : 'file',
+        })) as typeof events,
+      ]);
+    } catch (e) {
+      console.error('Failed to load events', e);
       addAlert('danger', 'Failed to get events');
       setQueryState('FAILED');
-      return;
+      setLoadingEvents(LoadingStates.DONE);
     }
-
-    // Save the results
-    setQueryState('DONE');
-    setStartTime(results.startTime);
-    setEvents(current => [
-      ...current,
-      ...results.events.map(e => ({
-        ...e,
-        type: 'radioid' in e ? 'event' : 'file',
-      })) as typeof events,
-    ]);
   }, [
     startTime,
     addAlert,
