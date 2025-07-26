@@ -74,8 +74,7 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
   if (typeof query.groupBy !== 'undefined') {
     // Build the query time
     const timeframe = query.timeframe || 'month';
-    const endTime = new Date(Date.now() - (24 * 60 * 60 * 1000));
-    endTime.setUTCHours(0);
+    const endTime = new Date(Date.now() - (2 * 60 * 60 * 1000));
     endTime.setUTCMinutes(0);
     endTime.setUTCSeconds(0);
     endTime.setUTCMilliseconds(0);
@@ -99,7 +98,7 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
       ResultReuseConfiguration: {
         ResultReuseByAgeConfiguration: {
           Enabled: true,
-          MaxAgeInMinutes: 60,
+          MaxAgeInMinutes: 180,
         },
       },
     }));

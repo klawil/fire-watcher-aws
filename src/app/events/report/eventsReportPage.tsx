@@ -16,6 +16,7 @@ import {
   validEventGroupKeys,
   validEventTypes
 } from '@/types/api/events';
+import { dateToStr } from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import {
@@ -340,11 +341,10 @@ export default function EventsReportPage() {
 
     <Row className='justify-content-center mb-2'>
       <Col md={3}>
-        {startTime && endTime && <>
-          Data from {new Date(startTime)
-            .toLocaleDateString()} to {new Date(endTime).toLocaleDateString()}<br />
-        </>}
-        {numberFormat.format(rows.length)} rows
+        {startTime && endTime && <h4 className='text-center'>
+          Data from {dateToStr(new Date(startTime))} to {dateToStr(new Date(endTime))}
+        </h4>}
+        <div className='text-center'>{numberFormat.format(rows.length)} rows</div>
         <Form.Check
           type='switch'
           checked={idsToNames}
