@@ -188,7 +188,6 @@ export function useChartData(
       return;
     }
 
-    let useResults = true;
     (async () => {
       setIsLoading(true);
       try {
@@ -197,10 +196,6 @@ export function useChartData(
           data,
           newData,
         ] = await getDataBody(body);
-
-        if (!useResults) {
-          return;
-        }
 
         const chartData: {
           [key: string]: {
@@ -254,9 +249,6 @@ export function useChartData(
           datasets,
         });
       } catch (e) {
-        if (!useResults) {
-          return;
-        }
         setData(null);
         console.error(`Failed to load chart (${body})`, e);
         addAlert('danger', 'Failed to load data for a chart');
@@ -264,10 +256,6 @@ export function useChartData(
       setChartLoaded(v => v + 1);
       setIsLoading(false);
     })();
-
-    return () => {
-      useResults = false;
-    };
   }, [
     shouldLoad,
     body,
