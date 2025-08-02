@@ -24,6 +24,8 @@ where "datetime" like '{{datetime}}'
     and talkgroup != ''
 group by talkgroup`;
 
+const minStartTime = 1735689600; // Midnight Jan 1 2025 UTC
+
 const athena = new AthenaClient();
 
 const logger = getLogger('dailyEvents');
@@ -204,9 +206,7 @@ async function processTalkgroupEvents(allTalkgroups: FullTalkgroupObject[], quer
 }
 
 async function processDeviceRecordings(
-  allRadios: RadioObject[],
-  startTime: number,
-  endTime: number
+  allRadios: RadioObject[]
 ) {
   logger.log('Started processDeviceRecordings');
 
@@ -229,10 +229,9 @@ async function processDeviceRecordings(
         },
         ExpressionAttributeValues: {
           ':RadioID': radio.RadioID,
-          ':StartTime': startTime,
-          ':EndTime': endTime,
+          ':StartTime': minStartTime,
         },
-        KeyConditionExpression: '#RadioID = :RadioID AND #StartTime BETWEEN :StartTime AND :EndTime',
+        KeyConditionExpression: '#RadioID = :RadioID AND #StartTime >= :StartTime',
         Limit: 1000,
       });
 
@@ -254,9 +253,8 @@ async function processDeviceRecordings(
         ExpressionAttributeValues: {
           ':InUse': 'Y',
           ':Count': radioFiles.Items?.length || 0,
-          ':CountBase': 0,
         },
-        UpdateExpression: 'SET #InUse = :InUse, #Count = if_not_exists(#Count, :CountBase) + :Count',
+        UpdateExpression: 'SET #InUse = :InUse, #Count = :Count',
       });
     }
   };
@@ -271,9 +269,7 @@ async function processDeviceRecordings(
 }
 
 async function processTalkgroupRecordings(
-  allTalkgroups: FullTalkgroupObject[],
-  startTime: number,
-  endTime: number
+  allTalkgroups: FullTalkgroupObject[]
 ) {
   logger.log('Started processTalkgroupRecordings');
 
@@ -297,10 +293,9 @@ async function processTalkgroupRecordings(
         },
         ExpressionAttributeValues: {
           ':Talkgroup': tg.ID,
-          ':StartTime': startTime,
-          ':EndTime': endTime,
+          ':StartTime': minStartTime,
         },
-        KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime AND :EndTime',
+        KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime >= :StartTime',
         Limit: 1000,
       });
 
@@ -322,9 +317,8 @@ async function processTalkgroupRecordings(
         ExpressionAttributeValues: {
           ':InUse': 'Y',
           ':Count': tgFiles.Items?.length || 0,
-          ':CountBase': 0,
         },
-        UpdateExpression: 'SET #InUse = :InUse, #Count = if_not_exists(#Count, :CountBase) + :Count',
+        UpdateExpression: 'SET #InUse = :InUse, #Count = :Count',
       });
     }
   };
@@ -358,7 +352,6 @@ export async function main() {
   startTime.setUTCMinutes(0);
   startTime.setUTCSeconds(0);
   startTime.setUTCMilliseconds(0);
-  const endTime = new Date(startTime.getTime() + (24 * 60 * 60 * 1000));
   const queryDate = `${startTime.getUTCFullYear()}-${(startTime.getMonth() + 1).toString().padStart(2, '0')}` +
     `-${startTime.getUTCDate().toString()
       .padStart(2, '0')}-%`;
@@ -369,15 +362,11 @@ export async function main() {
     processTalkgroupEvents(allTalkgroups.Items, queryDate)
       .catch(e => logger.error('processTalkgroupEvents', e)),
     processDeviceRecordings(
-      allRadioIds.Items || [],
-      startTime.getTime() / 1000,
-      endTime.getTime() / 1000
+      allRadioIds.Items || []
     )
       .catch(e => logger.error('processDeviceRecordings', e)),
     processTalkgroupRecordings(
-      allTalkgroups.Items,
-      startTime.getTime() / 1000,
-      endTime.getTime() / 1000
+      allTalkgroups.Items
     )
       .catch(e => logger.error('processTalkgroupRecordings', e)),
   ]);
