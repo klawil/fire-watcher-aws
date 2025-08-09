@@ -29,8 +29,8 @@ function timeToStr(timestamp?: number, duration?: number) {
   }
 
   const includeMinutes = duration >= 60;
-  let durationVal = Math.round(duration * 10) / 10;
-  let timestampVal = Math.round(timestamp * 10) / 10;
+  let durationVal = Math.round(duration);
+  let timestampVal = Math.round(timestamp);
   let durationStr = '';
   let timestampStr = '';
   if (includeMinutes) {
@@ -42,8 +42,8 @@ function timeToStr(timestamp?: number, duration?: number) {
     timestampVal -= timestampMinutes * 60;
     timestampStr = `${timestampMinutes}:`;
   }
-  durationStr += `${durationVal.toFixed(1).padStart(4, '0')}`;
-  timestampStr += `${timestampVal.toFixed(1).padStart(4, '0')}`;
+  durationStr += `${durationVal.toString().padStart(2, '0')}`;
+  timestampStr += `${timestampVal.toString().padStart(2, '0')}`;
   return `${timestampStr} / ${durationStr}`;
 }
 
