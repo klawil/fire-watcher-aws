@@ -1348,13 +1348,13 @@ export class FireWatcherAwsStack extends Stack {
 
     // Add the alarms
     const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 6,
-      datapointsToAlarm: 5,
+      evaluationPeriods: 48,
+      datapointsToAlarm: 48,
       metric: new cloudwatch.Metric({
         metricName: 'Decode Rate',
         namespace: 'DTR Metrics',
         period: Duration.minutes(5),
-        statistic: cloudwatch.Stats.MINIMUM,
+        statistic: cloudwatch.Stats.AVERAGE,
         dimensionsMap: {
           Tower: 'Saguache',
         },
@@ -1362,6 +1362,24 @@ export class FireWatcherAwsStack extends Stack {
       threshold: 30,
       alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
       alarmName: 'Saguache Tower Decode Rate',
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.IGNORE,
+    };
+    const baseTowerOfflineAlarmConfig: cloudwatch.AlarmProps = {
+      evaluationPeriods: 5,
+      datapointsToAlarm: 5,
+      metric: new cloudwatch.Metric({
+        metricName: 'Decode Rate',
+        namespace: 'DTR Metrics',
+        period: Duration.minutes(1),
+        statistic: cloudwatch.Stats.MINIMUM,
+        dimensionsMap: {
+          Tower: 'Saguache',
+        },
+      }),
+      threshold: 0,
+      alarmDescription: 'The server recording Saguache tower is offline',
+      alarmName: 'Saguache Recorder Status',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.BREACHING,
     };
@@ -1390,6 +1408,33 @@ export class FireWatcherAwsStack extends Stack {
         okayAction: true,
         alarm: {
           ...baseTowerAlarmConfig,
+        },
+      },
+      { // Saguache recorder offline
+        tag: 'Dtr',
+        codeName: 'saguache-tower-offline',
+        okayAction: true,
+        alarm: {
+          ...baseTowerOfflineAlarmConfig,
+        },
+      },
+      { // Crestone recorder offline
+        tag: 'Dtr',
+        codeName: 'pool-table-offline',
+        okayAction: true,
+        alarm: {
+          ...baseTowerOfflineAlarmConfig,
+          metric: new cloudwatch.Metric({
+            metricName: 'Decode Rate',
+            namespace: 'DTR Metrics',
+            period: Duration.minutes(1),
+            statistic: cloudwatch.Stats.MINIMUM,
+            dimensionsMap: {
+              Tower: 'PoolTable',
+            },
+          }),
+          alarmDescription: 'The server recording Pool Table tower is offline',
+          alarmName: 'Crestone Recorder Status',
         },
       },
       { // Saguache tower down
