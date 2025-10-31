@@ -2,6 +2,7 @@
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import {
   useCallback, useEffect, useState
 } from 'react';
@@ -16,6 +17,7 @@ import {
   AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+import './envConfig';
 
 function useDarkMode() {
   const [
@@ -273,6 +275,7 @@ export default function RootLayout({
           </LocationContext.Provider>
         </DarkModeContext.Provider>
       </body>
+      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID as string} />
     </html>
   );
 }
