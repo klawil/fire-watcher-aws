@@ -3,11 +3,14 @@ import {
   ListTagsForResourceCommand
 } from '@aws-sdk/client-cloudwatch';
 import {
-  GetObjectCommand, PutObjectCommand, S3Client
+  PutObjectCommand, S3Client
 } from '@aws-sdk/client-s3';
 import * as lambda from 'aws-lambda';
 
 import { AlertCategory } from '@/types/backend/alerts';
+import {
+  ALARM_S3_BUCKET, ALARM_S3_KEY, getCachedAlarmData
+} from '@/utils/backend/alarmStatus';
 import { sendAlertMessage } from '@/utils/backend/texts';
 import { getLogger } from '@/utils/common/logger';
 import { dateToTimeString } from '@/utils/common/strings';
@@ -17,37 +20,6 @@ const logger = getLogger('alarms');
 const cloudWatch = new CloudWatchClient();
 const s3 = new S3Client();
 
-const S3_BUCKET = process.env.COSTS_BUCKET;
-const S3_KEY = 'alarm-data.json';
-
-interface DataCache {
-  [key: string]: {
-    type: AlertCategory;
-    lastAlarm?: number;
-    lastOk?: number;
-    lastOkSent?: number;
-    lastReason?: string;
-  };
-}
-
-async function getCachedData(): Promise<DataCache> {
-  try {
-    const rawData = await s3.send(new GetObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: S3_KEY,
-    }));
-
-    if (typeof rawData.Body === 'undefined') {
-      return {};
-    }
-
-    return JSON.parse(await rawData?.Body.transformToString('utf-8')) as DataCache;
-  } catch (e) {
-    logger.error('Failed to get cached alarm data', e);
-    throw e;
-  }
-}
-
 const minOkayTime = 15 * 60 * 1000; // 15 minutes
 
 export async function main(
@@ -55,7 +27,7 @@ export async function main(
 ): Promise<void> {
   logger.trace('main', ...arguments);
 
-  const cachedDataPromise = getCachedData();
+  const cachedDataPromise = getCachedAlarmData();
 
   let alarmChange: null | {
     name: string;
@@ -163,8 +135,8 @@ export async function main(
 
   if (cacheChanged) {
     await s3.send(new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: S3_KEY,
+      Bucket: ALARM_S3_BUCKET,
+      Key: ALARM_S3_KEY,
       Body: JSON.stringify(cachedData),
     }));
   }

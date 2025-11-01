@@ -62,6 +62,10 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
       description: 'Information about radios the DTR system has events for',
     },
     {
+      name: 'Restart',
+      description: 'APIs used by the boxes that can restart tower recorders',
+    },
+    {
       name: 'Sites',
       description: 'Information about sites the DTR system monitors',
     },

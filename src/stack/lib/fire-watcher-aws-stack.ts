@@ -1081,6 +1081,23 @@ export class FireWatcherAwsStack extends Stack {
           methods: [ 'PATCH', ],
         }, ],
       },
+      // restart
+      {
+        pathPart: 'restart',
+        next: [ {
+          pathPart: '{tower}',
+          fileName: 'restart',
+          methods: [
+            'GET',
+            'POST',
+          ],
+          buckets: [ {
+            bucket: 'COSTS',
+            readOnly: true,
+          }, ],
+          sendsMetrics: true,
+        }, ],
+      },
     ];
     const createApi = (
       baseResource: apigateway.Resource,
