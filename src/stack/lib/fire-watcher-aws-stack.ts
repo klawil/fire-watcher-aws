@@ -1299,8 +1299,18 @@ export class FireWatcherAwsStack extends Stack {
         'www.cofrn.org',
         'fire.klawil.net',
       ],
+      errorResponses: [ {
+        httpStatus: 404,
+        responsePagePath: '/404/index.html',
+        ttl: Duration.minutes(30),
+      }, ],
       defaultBehavior: {
-        origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(reactBucket),
+        origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(reactBucket, {
+          originAccessLevels: [
+            cloudfront.AccessLevel.READ,
+            cloudfront.AccessLevel.LIST,
+          ],
+        }),
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         functionAssociations: [ {
