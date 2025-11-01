@@ -9,6 +9,7 @@ import {
   restartApiValidator
 } from '@/types/api/restart';
 import { getCachedAlarmData } from '@/utils/backend/alarmStatus';
+import { sendAlertMessage } from '@/utils/backend/texts';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
@@ -71,8 +72,28 @@ const GET: LambdaApiFunction<GetShouldRestartApi> = async function (event) {
   ];
 };
 
-const POST: LambdaApiFunction<DidRestartApi> = async function () {
+const POST: LambdaApiFunction<DidRestartApi> = async function (event) {
   logger.trace('POST', ...arguments);
+
+  // Validate the parameters
+  const [
+    params,
+    paramsErrors,
+  ] = validateObject<GetShouldRestartApi['params']>(
+    event.pathParameters,
+    restartApiValidator
+  );
+  if (
+    params === null ||
+    paramsErrors.length > 0
+  ) {
+    return [
+      400,
+      generateApi400Body(paramsErrors),
+    ];
+  }
+
+  await sendAlertMessage('Dtr', `${params.tower} restarted`);
 
   return [
     200,

@@ -1095,7 +1095,11 @@ export class FireWatcherAwsStack extends Stack {
             bucket: 'COSTS',
             readOnly: true,
           }, ],
+          tables: [ {
+            table: 'TEXT',
+          }, ],
           sendsMetrics: true,
+          twilioSecret: true,
         }, ],
       },
     ];
