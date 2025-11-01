@@ -59,7 +59,11 @@ export async function handleResourceApi(
     ] = await handlers[method](event, user, userPerms);
 
     // Log details for any errors
-    if (statusCode !== 200 && statusCode !== 204) {
+    if (
+      statusCode !== 200 &&
+      statusCode !== 204 &&
+      statusCode !== 205
+    ) {
       logger.error(`${method} Error - ${statusCode}`, responseBody, event);
     }
 

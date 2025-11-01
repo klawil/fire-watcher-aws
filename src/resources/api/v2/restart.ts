@@ -66,6 +66,8 @@ const GET: LambdaApiFunction<GetShouldRestartApi> = async function (event) {
   return [
     205,
     '1',
+    {},
+    'text/plain',
   ];
 };
 
