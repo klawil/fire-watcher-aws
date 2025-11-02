@@ -21,6 +21,7 @@ describe('resources/api/v2/heartbeats', () => {
         method: 'POST',
         path: '',
         body: JSON.stringify({
+          code: process.env.API_CODE,
           Server: 'test',
           IsPrimary: true,
           IsActive: true,
@@ -82,6 +83,7 @@ describe('resources/api/v2/heartbeats', () => {
         method: 'POST',
         path: '',
         body: JSON.stringify({
+          code: process.env.API_CODE,
           Server: 'test',
           IsPrimary: true,
           IsActive: true,
@@ -173,6 +175,7 @@ describe('resources/api/v2/heartbeats', () => {
         method: 'POST',
         path: '',
         body: JSON.stringify({
+          code: 10,
           Server: 1234,
           IsPrimary: 'y',
           IsActive: 'n',
@@ -186,6 +189,7 @@ describe('resources/api/v2/heartbeats', () => {
         body: JSON.stringify({
           message: 'Invalid request body',
           errors: [
+            'code',
             'Server',
             'IsPrimary',
             'IsActive',

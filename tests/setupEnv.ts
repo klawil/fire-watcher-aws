@@ -5,6 +5,8 @@ process.env.JWT_SECRET = 'JWT_SECRET_VAL';
 process.env.TWILIO_SECRET = 'TWILIO_SECRET_VAL';
 process.env.COSTS_BUCKET = 'COSTS_BUCKET_VAL';
 
+process.env.API_CODE = 'TEST_API_CODE';
+
 [
   'TEXT',
   'USER',

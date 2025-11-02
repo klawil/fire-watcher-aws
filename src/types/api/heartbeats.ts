@@ -1,5 +1,6 @@
 import { Validator } from '../backend/validation';
 
+import { apiCodeValidator } from './_code';
 import {
   api400Body,
   api401Body, api403Body, api500Body
@@ -73,6 +74,11 @@ export type AddHeartbeatApi = {
      * Is this server actively uploading files?
      */
     IsActive: boolean;
+
+    /**
+     * The API code for validation
+     */
+    code: string;
   };
   responses: {
 
@@ -102,6 +108,7 @@ export type AddHeartbeatApi = {
 };
 
 export const addHeartbeatBodyValidator: Validator<AddHeartbeatApi['body']> = {
+  ...apiCodeValidator,
   Server: {
     required: true,
     types: { string: {}, },

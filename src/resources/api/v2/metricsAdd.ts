@@ -11,11 +11,13 @@ import {
 } from './_utils';
 
 import {
-  api200Body, generateApi400Body
+  api200Body, api401Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  AddMetricsApi, addMetricsApiBodyValidator
+  AddMetricsApi, addMetricsApiBodyValidator,
+  addMetricsQueryValidator
 } from '@/types/api/metrics';
+import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/metricsAdd');
@@ -24,6 +26,18 @@ const cloudWatch = new CloudWatchClient();
 const POST: LambdaApiFunction<AddMetricsApi> = async function (event) {
   logger.trace('POST', ...arguments);
   const eventTime = new Date();
+
+  // Validate the query (auth)
+  const [
+    query,
+    queryErrors,
+  ] = validateObject(event.queryStringParameters, addMetricsQueryValidator);
+  if (query === null || queryErrors.length > 0) {
+    return [
+      401,
+      api401Body,
+    ];
+  }
 
   // Validate the body
   const [

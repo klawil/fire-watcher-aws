@@ -16,7 +16,7 @@ import {
 import {
   AddEventsApi,
   EventQueryResultRow,
-  QueryEventsApi, eventItemValidator,
+  QueryEventsApi, addEventsQueryValidator, eventItemValidator,
   queryEventsQueryValidator
 } from '@/types/api/events';
 import { validateObject } from '@/utils/backend/validation';
@@ -213,6 +213,15 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
 const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
   logger.trace('POST', ...arguments);
   const eventTime = Date.now();
+
+  // Parse the query
+  const [
+    query,
+    queryErrors,
+  ] = validateObject(event.queryStringParameters, addEventsQueryValidator);
+  if (query === null || queryErrors.length > 0) {
+    logger.error('Missing auhtentication token');
+  }
 
   // Parse the body
   const body = JSON.parse(event.body || '');

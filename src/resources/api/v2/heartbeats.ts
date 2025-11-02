@@ -57,6 +57,8 @@ const GET: LambdaApiFunction<GetAllHeartbeatsApi> = async function (event, user,
 };
 
 const POST: LambdaApiFunction<AddHeartbeatApi> = async function (event) {
+  logger.trace('POST', ...arguments);
+
   // Parse and validate the body
   const [
     body,

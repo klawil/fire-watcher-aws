@@ -1,5 +1,6 @@
 import { Validator } from '../backend/validation';
 
+import { apiCodeValidator } from './_code';
 import {
   api200Body,
   api400Body,
@@ -109,6 +110,11 @@ export type UpdateSitesApi = {
   method: 'POST';
   body: {
     adjacent: ('' | AdjacentSiteBodyItem[])[];
+
+    /**
+     * The API code for validation
+     */
+    code: string;
   };
   responses: {
 
@@ -205,6 +211,7 @@ export const adjacentSiteItemValidator: Validator<AdjacentSiteBodyItem> = {
 };
 
 export const updateSitesBodyValidator: Validator<UpdateSitesApi['body']> = {
+  ...apiCodeValidator,
   adjacent: {
     required: true,
     types: {

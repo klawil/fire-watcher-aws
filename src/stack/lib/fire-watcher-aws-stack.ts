@@ -456,6 +456,7 @@ export class FireWatcherAwsStack extends Stack {
       TWILIO_SECRET: twilioSecret.secretArn,
       JWT_SECRET: jwtSecret.secretArn,
       TESTING_USER: process.env.TESTING_USER as string,
+      API_CODE: process.env.SERVER_API_CODE as string,
       SQS_QUEUE: queue.queueUrl,
       TWILIO_QUEUE: twilioStatusQueue.queueUrl,
       FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
