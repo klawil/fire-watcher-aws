@@ -69,12 +69,14 @@ export const pagingTalkgroupConfig: {
     linkPreset: string;
     partyBeingPaged: string;
     pagedService: string;
+    aladtecDepartment?: string[];
   };
 } = {
   8198: {
     linkPreset: 'pNSCAD',
     partyBeingPaged: 'NSCAD',
     pagedService: 'AMBO',
+    aladtecDepartment: [ 'NSCAD', ],
   },
   8332: {
     linkPreset: 'pNSCFPD',
@@ -90,6 +92,10 @@ export const pagingTalkgroupConfig: {
     linkPreset: 'pBGFD%2FBGEMS',
     partyBeingPaged: 'BGEMS/BGFD',
     pagedService: 'BACA',
+    aladtecDepartment: [
+      'Baca Fire',
+      'Baca Grande-Crestone Ambulance',
+    ],
   },
   8334: {
     linkPreset: 'tg8334',

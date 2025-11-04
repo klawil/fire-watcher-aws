@@ -34,7 +34,7 @@ export interface LambdaEnvironment extends TableNameMap {
 declare global {
   namespace NodeJS { // eslint-disable-line @typescript-eslint/no-namespace
     export interface ProcessEnv extends LambdaEnvironment {
-      OTHER: string | undefined;
+      ALADTEC_SECRET: string | undefined;
     }
   }
 }

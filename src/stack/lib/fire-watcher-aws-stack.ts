@@ -437,6 +437,11 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
 
+    // Create the secret for JWT authentication
+    const aladTecSecret = new secretsManager.Secret(this, 'cofrn-aladtec-secret', {
+      description: 'The username and password to use for logging into AladTec',
+    });
+
     // Create the athena workgroup
     const athenaWorkgroup = new athena.CfnWorkGroup(this, 'cofrn-athena-workgroup', {
       name: 'COFRN-Athena-Workgroup',
@@ -686,6 +691,29 @@ export class FireWatcherAwsStack extends Stack {
       }),
     });
     statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
+
+    // Import the AladTec schedule
+    const importAladTec = new lambdanodejs.NodejsFunction(this, 'cofrn-import-aladtec', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: resolve(resourceBase, 'importAladTec.ts'),
+      handler: 'main',
+      environment: {
+        ...lambdaEnv,
+        ALADTEC_SECRET: aladTecSecret.secretArn,
+      },
+      timeout: Duration.minutes(15),
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    costDataS3Bucket.grantReadWrite(importAladTec);
+    aladTecSecret.grantRead(importAladTec);
+
+    // Update the schedule every 6 hours
+    const importAladTecEventRule = new events.Rule(this, 'import-aladtec-rule', {
+      schedule: events.Schedule.cron({
+        hour: '*/6',
+      }),
+    });
+    importAladTecEventRule.addTarget(new targets.LambdaFunction(importAladTec));
 
     // Update the event counts daily
     const dailyEventsHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-daily-events', {
