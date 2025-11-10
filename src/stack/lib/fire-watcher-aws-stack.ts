@@ -1131,6 +1131,16 @@ export class FireWatcherAwsStack extends Stack {
           twilioSecret: true,
         }, ],
       },
+      // aladtec
+      {
+        pathPart: 'aladtec',
+        fileName: 'aladtec',
+        methods: [ 'GET', ],
+        buckets: [ {
+          bucket: 'COSTS',
+          readOnly: true,
+        }, ],
+      },
     ];
     const createApi = (
       baseResource: apigateway.Resource,

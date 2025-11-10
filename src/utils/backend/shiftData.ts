@@ -13,10 +13,10 @@ export const SHIFT_S3_KEY = 'shift-data.json';
 
 export interface ShiftData {
   people: {
-    [id: number]: string;
+    [id: string]: string;
   };
   shifts: {
-    id: number;
+    id: string;
     start: number;
     end: number;
     department: string;

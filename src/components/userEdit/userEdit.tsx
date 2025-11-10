@@ -22,13 +22,13 @@ import {
 import { OrNull } from '@/types/backend/validation';
 import { formatPhone } from '@/utils/common/strings';
 import {
-  AddAlertContext, LoggedInUserContext
+  AddAlertContext, AladTecUsersContext, LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import { UsersDispatchContext } from '@/utils/frontend/usersState';
 
 interface CheckboxConfig {
-  name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames';
+  name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames' | 'getOncallInfo';
   label: string;
   districtAdmin?: boolean;
 }
@@ -46,7 +46,6 @@ const userRoleCheckboxes: CheckboxConfig[] = [
   {
     name: 'getTranscriptOnly',
     label: 'Only Get Transcripts',
-    districtAdmin: true,
   },
   {
     name: 'getApiAlerts',
@@ -66,6 +65,11 @@ const userRoleCheckboxes: CheckboxConfig[] = [
   {
     name: 'canEditNames',
     label: 'Can Edit Names',
+    districtAdmin: true,
+  },
+  {
+    name: 'getOncallInfo',
+    label: 'Get On-Call Info',
     districtAdmin: true,
   },
 ];
@@ -110,6 +114,7 @@ export default function UserEdit({
   const loggedInUser = useContext(LoggedInUserContext);
   const dispatch = useContext(UsersDispatchContext);
   const addAlert = useContext(AddAlertContext);
+  const aladTecUsers = useContext(AladTecUsersContext);
 
   const [
     updateState,
@@ -364,6 +369,27 @@ export default function UserEdit({
           value={updateState.lName || user?.lName || ''}
           setUpdateState={setUpdateState}
         />
+        {loggedInUser?.isDistrictAdmin && aladTecUsers !== null && <InputGroup className='p-2'>
+          <InputGroup.Text>AladTec User</InputGroup.Text>
+          <Form.Select
+            isInvalid={errorFields.includes('aladTecId')}
+            onChange={e => setUpdateState({
+              aladTecId: e.target.value === '' ? null : e.target.value,
+            })}
+            value={'aladTecId' in updateState && updateState.aladTecId === null
+              ? ''
+              : 'aladTecId' in updateState && updateState.aladTecId
+                ? updateState.aladTecId
+                : user?.aladTecId || ''}
+          >
+            <option key='None' value=''>None</option>
+            {Object.keys(aladTecUsers).sort((a, b) => aladTecUsers[a].localeCompare(aladTecUsers[b] || ''))
+              .map(id => <option
+                key={id}
+                value={id}
+              >{ aladTecUsers[id] }</option>)}
+          </Form.Select>
+        </InputGroup>}
         {user === null && <>
           <Form.Select
             isInvalid={errorFields.includes('department')}

@@ -10,11 +10,14 @@ import Table from 'react-bootstrap/Table';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import UserRow from '@/components/userRow/userRow';
+import { GetAladtecUsersApi } from '@/types/api/aladtec';
 import {
   DeleteUserApi, GetAllUsersApi, validDepartments
 } from '@/types/api/users';
 import {
-  AddAlertContext
+  AddAlertContext,
+  AladTecUsersContext,
+  LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import {
@@ -61,6 +64,36 @@ export default function UserEditPage() {
       setIsLoading(false);
     })();
   }, []);
+
+  const loggedInUser = useContext(LoggedInUserContext);
+  const [
+    aladTecUsers,
+    setAladTecUsers,
+  ] = useState<null | { [key: string]: string; }>(null);
+  useEffect(() => {
+    if (loggedInUser?.isDistrictAdmin) {
+      (async () => {
+        const [
+          code,
+          apiResult,
+        ] = await typeFetch<GetAladtecUsersApi>({
+          path: '/api/v2/aladtec/',
+          method: 'GET',
+        });
+
+        if (
+          code !== 200 ||
+          apiResult === null ||
+          'message' in apiResult
+        ) {
+          console.error('Failed to get users', code, apiResult);
+          return;
+        }
+
+        setAladTecUsers(apiResult);
+      })();
+    }
+  }, [ loggedInUser, ]);
 
   const [
     isDeleting,
@@ -124,53 +157,55 @@ export default function UserEditPage() {
     {isLoading && <LoadingSpinner />}
     {!isLoading && (!state.users || state.users.length === 0) && <h1 className='text-center'>No users found</h1>}
     {state.users && state.users.length > 0 && <UsersDispatchContext.Provider value={dispatch}>
-      <Table responsive={true}>
-        <tbody>
-          {state.users
-            .map((user, idx) => <UserRow
-              key={user.phone}
-              user={user}
-              idx={idx}
-            />)}
-          <UserRow
-            user={null}
-            idx={state.users.length}
-          />
-        </tbody>
-      </Table>
+      <AladTecUsersContext.Provider value={aladTecUsers}>
+        <Table responsive={true}>
+          <tbody>
+            {state.users
+              .map((user, idx) => <UserRow
+                key={user.phone}
+                user={user}
+                idx={idx}
+              />)}
+            <UserRow
+              user={null}
+              idx={state.users.length}
+            />
+          </tbody>
+        </Table>
 
-      <Modal
-        show={!!state.deleteUserModal}
-        onHide={() => dispatch({
-          action: 'ClearDeleteModal',
-        })}
-        size='lg'
-      >
-        <Modal.Header closeButton>Are you sure?</Modal.Header>
-
-        <Modal.Body>
-          Are you sure you want to delete
-          <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
-            deleteModalDeps.length === 0
-              ? 'No Department'
-              : deleteModalDeps.join(', ')
-          })</b>?
-        </Modal.Body>
-
-        <Modal.Footer className='justify-content-between'>
-          <Button onClick={() => dispatch({
+        <Modal
+          show={!!state.deleteUserModal}
+          onHide={() => dispatch({
             action: 'ClearDeleteModal',
-          })}>No, do not delete</Button>
-          <Button
-            variant='danger'
-            onClick={() => deleteModalUser()}
-          >{
-              isDeleting
-                ? <><Spinner size='sm' /> Deleting User</>
-                : 'Yes, delete this user'
-            }</Button>
-        </Modal.Footer>
-      </Modal>
+          })}
+          size='lg'
+        >
+          <Modal.Header closeButton>Are you sure?</Modal.Header>
+
+          <Modal.Body>
+            Are you sure you want to delete
+            <b>{state.deleteUserModal?.fName} {state.deleteUserModal?.lName} ({
+              deleteModalDeps.length === 0
+                ? 'No Department'
+                : deleteModalDeps.join(', ')
+            })</b>?
+          </Modal.Body>
+
+          <Modal.Footer className='justify-content-between'>
+            <Button onClick={() => dispatch({
+              action: 'ClearDeleteModal',
+            })}>No, do not delete</Button>
+            <Button
+              variant='danger'
+              onClick={() => deleteModalUser()}
+            >{
+                isDeleting
+                  ? <><Spinner size='sm' /> Deleting User</>
+                  : 'Yes, delete this user'
+              }</Button>
+          </Modal.Footer>
+        </Modal>
+      </AladTecUsersContext.Provider>
     </UsersDispatchContext.Provider>}
   </>;
 

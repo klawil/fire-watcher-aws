@@ -39,11 +39,14 @@ export type FullUserObject = {
    */
   pagingPhone?: PhoneNumberAccount;
 
+  aladTecId?: string;
+
   getTranscript?: boolean;
   getTranscriptOnly?: boolean;
   getApiAlerts?: boolean;
   getDtrAlerts?: boolean;
   getVhfAlerts?: boolean;
+  getOncallInfo?: boolean;
   isDistrictAdmin?: boolean;
   isTest?: boolean;
   canEditNames?: boolean;
@@ -101,6 +104,7 @@ export const adminUserKeys = [
   'lastStatus',
   'lastStatusCount',
   'getTranscript',
+  'getTranscriptOnly',
   ...validDepartments,
 ] as const;
 export const districtAdminUserKeys = [
@@ -111,8 +115,9 @@ export const districtAdminUserKeys = [
   'canEditNames',
   'isDistrictAdmin',
   'pagingPhone',
-  'getTranscriptOnly',
   'isTest',
+  'getOncallInfo',
+  'aladTecId',
 ] as const;
 
 /**
@@ -165,6 +170,7 @@ export type CreateUserApi = {
   >> & Pick<
     FrontendUserObject,
     'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts' | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone' | 'canEditNames'
+    | 'getOncallInfo' | 'aladTecId'
   > & {
     department: UserDepartment;
     admin?: boolean;
@@ -288,7 +294,7 @@ export type UpdateUserApi = {
   body: OrNull<Pick<
     FrontendUserObject,
     'talkgroups' | 'fName' | 'lName' | 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getVhfAlerts'
-    | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone' | 'canEditNames'
+    | 'getDtrAlerts' | 'isDistrictAdmin' | 'pagingPhone' | 'canEditNames' | 'getOncallInfo' | 'aladTecId'
   >>;
   responses: {
 
@@ -409,6 +415,22 @@ export const updateUserApiBodyValidator: Validator<UpdateUserApi['body']> = {
       null: {},
     },
   },
+  getOncallInfo: {
+    required: false,
+    types: {
+      boolean: {},
+      null: {},
+    },
+  },
+  aladTecId: {
+    required: false,
+    types: {
+      string: {
+        regex: /^[0-9]+$/,
+      },
+      null: {},
+    },
+  },
 };
 
 export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
@@ -509,6 +531,20 @@ export const createUserApiBodyValidator: Validator<CreateUserApi['body']> = {
   getTranscriptOnly: {
     required: false,
     types: { boolean: {}, },
+  },
+  getOncallInfo: {
+    required: false,
+    types: {
+      boolean: {},
+    },
+  },
+  aladTecId: {
+    required: false,
+    types: {
+      string: {
+        regex: /^[0-9]+$/,
+      },
+    },
   },
 };
 

@@ -135,13 +135,13 @@ export async function main() {
     }
 
     // Save the name
-    if (shiftData.people[Number(id[1])] !== name) {
-      shiftData.people[Number(id[1])] = name;
+    if (shiftData.people[id[1]] !== name) {
+      shiftData.people[id[1]] = name;
     }
 
     // Save the shift
     shiftData.shifts.push({
-      id: Number(id[1]),
+      id: id[1],
       start: startDate.getTime(),
       end: endDate.getTime(),
       department,
