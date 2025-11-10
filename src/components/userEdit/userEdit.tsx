@@ -263,6 +263,30 @@ export default function UserEdit({
       return;
     }
 
+    // Perform some validations
+    if (
+      'fName' in updateState &&
+      typeof updateState.fName !== 'undefined' &&
+      updateState.fName !== null
+    ) {
+      updateState.fName = updateState.fName.slice(0, 1).toUpperCase() + updateState.fName.slice(1);
+    }
+    if (
+      'lName' in updateState &&
+      typeof updateState.lName !== 'undefined' &&
+      updateState.lName !== null
+    ) {
+      updateState.lName = updateState.lName.slice(0, 1).toUpperCase() + updateState.lName.slice(1);
+    }
+    if (
+      'department' in updateState &&
+      updateState.department === 'Baca' &&
+      typeof updateState.callSign === 'string' &&
+      updateState.callSign.slice(0, 3) !== 'BG-'
+    ) {
+      updateState.callSign = `BG-${updateState.callSign.replace(/[^0-9]/g, '')}`;
+    }
+
     setIsSaving(true);
     setErrorFields([]);
     try {

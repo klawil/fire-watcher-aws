@@ -101,6 +101,15 @@ export default function UserDepartmentRow({
       return;
     }
 
+    if (
+      'callSign' in changes &&
+      typeof changes.callSign === 'string' &&
+      dep === 'Baca' &&
+      changes.callSign.slice(0, 2) !== 'BG-'
+    ) {
+      changes.callSign = `BG-${changes.callSign.replace(/[^0-9]/g, '')}`;
+    }
+
     const apiParams: UpdateUserDepartmentApi['params'] = {
       id: user.phone,
       department: dep,
