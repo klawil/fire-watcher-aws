@@ -11,6 +11,12 @@ const s3 = new S3Client();
 export const SHIFT_S3_BUCKET = process.env.COSTS_BUCKET;
 export const SHIFT_S3_KEY = 'shift-data.json';
 
+export const shiftNameMappings: { [key: string]: string } = {
+  'Baca Grande-Crestone Ambulance': 'EMS',
+  'Baca Fire': 'Fire',
+  'NSCAD': 'EMS',
+};
+
 export interface ShiftData {
   people: {
     [id: string]: string;

@@ -38,6 +38,10 @@ import {
   typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import {
+  ShiftData,
+  getShiftData, shiftNameMappings
+} from '@/utils/backend/shiftData';
+import {
   getPageNumber, getUserRecipients, saveMessageData, sendMessage
 } from '@/utils/backend/texts';
 import { getLogger } from '@/utils/common/logger';
@@ -70,12 +74,22 @@ const welcomeMessageParts: {
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes
 
+type OnCallPeople = {
+  service: string;
+  onCall: {
+    id: string;
+    name: string;
+  }[];
+}[];
+
 function createPageMessage(
   fileKey: string,
   pageTg: PagingTalkgroup,
   number: number | null = null,
   messageId: number | null = null,
-  transcript: string | null = null
+  transcript: string | null = null,
+  onCall: OnCallPeople | null = null,
+  isOnCall: boolean = false
 ): string {
   logger.trace('createPageMessage', ...arguments);
   const pageConfig = pagingTalkgroupConfig[pageTg];
@@ -87,8 +101,21 @@ function createPageMessage(
   let pageStr = `${pageConfig.pagedService} PAGE\n`;
   pageStr += `${pageConfig.partyBeingPaged} paged `;
   pageStr += `${dateToTimeString(fNameToDate(fileKey))}\n`;
+  if (isOnCall) {
+    pageStr += '\nYOU ARE ON CALL\n\n';
+  }
   if (transcript !== null) {
     pageStr += `\n${transcript}\n\n`;
+  }
+  if (onCall !== null && onCall.length > 0) {
+    pageStr += 'On-call crew:\n';
+    onCall.forEach(group => {
+      const serviceName = typeof shiftNameMappings[group.service] !== 'undefined'
+        ? shiftNameMappings[group.service]
+        : group.service;
+      pageStr += `${serviceName}: ${group.onCall.map(o => o.name).join(', ')}\n`;
+    });
+    pageStr += '\n';
   }
   pageStr += `https://cofrn.org/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
   if (number !== null) {
@@ -98,6 +125,68 @@ function createPageMessage(
     pageStr += `&m=${messageId}`;
   }
   return pageStr;
+}
+
+async function getOnCallPeople(
+  shiftsPromise: Promise<ShiftData>,
+  time: number,
+  tg: PagingTalkgroup
+): Promise<[null | OnCallPeople, string[]]> {
+  logger.trace('getOnCallPeople', ...arguments);
+
+  try {
+    const pagingConf = pagingTalkgroupConfig[tg];
+    if (!pagingConf.aladtecDepartment) {
+      return [
+        null,
+        [],
+      ];
+    }
+    const shiftData = await shiftsPromise;
+    const onCallIds: string[] = [];
+    const onCallCrew = shiftData.shifts.reduce((agg: OnCallPeople, shift) => {
+      if (
+        shift.start > time ||
+        shift.end <= time ||
+        !pagingConf.aladtecDepartment?.includes(shift.department)
+      ) {
+        return agg;
+      }
+
+      onCallIds.push(shift.id);
+
+      for (let i = 0; i < agg.length; i++) {
+        if (agg[i].service === shift.department) {
+          agg[i].onCall.push({
+            id: shift.id,
+            name: shiftData.people[shift.id] || 'Unknown',
+          });
+          return agg;
+        }
+      }
+
+      agg.push({
+        service: shift.department,
+        onCall: [ {
+          id: shift.id,
+          name: shiftData.people[shift.id] || 'Unknown',
+        }, ],
+      });
+
+      return agg;
+    }, []);
+
+    return [
+      onCallCrew,
+      onCallIds,
+    ];
+  } catch (e) {
+    logger.error('getOnCallPeople', e);
+    return [
+      null,
+      [],
+    ];
+  }
 }
 
 interface TranscribeResult {
@@ -172,6 +261,9 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   if (!(/^\d{4,5}\-\d+$/).test(body.detail.TranscriptionJobName)) {
     throw new Error(`Invalid transcription job name - ${body.detail.TranscriptionJobName}`);
   }
+
+  // Get the on-call crew
+  const shiftDataPromise = getShiftData();
 
   // Get the transcription results
   const transcriptionInfo = await transcribe.send(new GetTranscriptionJobCommand({
@@ -249,6 +341,12 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     return;
   }
 
+  // Finish processing the shift data
+  const [
+    onCallCrew,
+    onCallIds,
+  ] = await getOnCallPeople(shiftDataPromise, fNameToDate(jobInfo.File).getTime(), tg);
+
   // Get recipients and send
   const recipients = (await getUserRecipients('all', tg))
     .filter(r => r.getTranscript);
@@ -275,7 +373,11 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
           tg,
           phone.phone,
           messageId,
-          transcript
+          transcript,
+          phone.getOncallInfo ? onCallCrew : null,
+          phone.getOncallInfo && typeof phone.aladTecId !== 'undefined'
+            ? onCallIds.includes(phone.aladTecId)
+            : false
         ),
         []
       )));
@@ -745,6 +847,13 @@ async function handlePage(body: SendPageQueueItem) {
     !!body.isTest
   );
 
+  // Get the on-call crew
+  const shiftDataPromise = getShiftData();
+  const [
+    onCallCrew,
+    onCallIds,
+  ] = await getOnCallPeople(shiftDataPromise, fNameToDate(body.key).getTime(), body.tg);
+
   // Send the messages
   await Promise.all(recipients
     .map(async phone => sendMessage(
@@ -752,7 +861,17 @@ async function handlePage(body: SendPageQueueItem) {
       messageId,
       phone.phone,
       await getPageNumber(phone),
-      createPageMessage(body.key, body.tg, phone.phone, messageId)
+      createPageMessage(
+        body.key,
+        body.tg,
+        phone.phone,
+        messageId,
+        null,
+        phone.getOncallInfo ? onCallCrew : null,
+        phone.getOncallInfo && typeof phone.aladTecId !== 'undefined'
+          ? onCallIds.includes(phone.aladTecId)
+          : false
+      )
     )));
   await insertMessagePromise;
   await metricPromise;
