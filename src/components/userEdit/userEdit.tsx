@@ -31,6 +31,7 @@ interface CheckboxConfig {
   name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames' | 'getOncallInfo';
   label: string;
   districtAdmin?: boolean;
+  invert?: boolean;
 }
 
 const userRoleCheckboxes: CheckboxConfig[] = [
@@ -40,12 +41,13 @@ const userRoleCheckboxes: CheckboxConfig[] = [
     districtAdmin: true,
   },
   {
-    name: 'getTranscript',
-    label: 'Get Transcripts',
+    name: 'getTranscriptOnly',
+    label: 'Get Texts Without Transcripts (Faster)',
+    invert: true,
   },
   {
-    name: 'getTranscriptOnly',
-    label: 'Only Get Transcripts',
+    name: 'getTranscript',
+    label: 'Get Texts With Transcripts (Slower)',
   },
   {
     name: 'getApiAlerts',
@@ -496,15 +498,21 @@ export default function UserEdit({
             key={checkbox.name}
             isInvalid={errorFields.includes(checkbox.name)}
             type='switch'
-            checked={
-              typeof updateState[checkbox.name] !== 'undefined'
+            checked={(() => {
+              const base = typeof updateState[checkbox.name] !== 'undefined'
                 ? !!updateState[checkbox.name]
                 : user
                   ? !!user[checkbox.name]
-                  : false
-            }
+                  : false;
+              if (checkbox.invert) {
+                return !base;
+              }
+              return base;
+            })()}
             onChange={e => setUpdateState({
-              [checkbox.name]: e.target.checked,
+              [checkbox.name]: checkbox.invert
+                ? !e.target.checked
+                : e.target.checked,
             })}
             label={checkbox.label}
           />)}
