@@ -319,7 +319,7 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     : result.results.transcripts[0].transcript;
 
   // Build the message
-  let messageBody: string;
+  let messageBody: string = '';
   let updateFilePromise: Promise<unknown> = new Promise(res => res(null));
   let tg: PagingTalkgroup;
   const jobInfo: { [key: string]: string; } = (transcriptionInfo.TranscriptionJob?.Tags || [])
@@ -335,13 +335,6 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     }, {});
   if (jobInfo.Talkgroup) {
     tg = Number(jobInfo.Talkgroup) as PagingTalkgroup;
-    messageBody = createPageMessage(
-      jobInfo.File as string,
-      tg,
-      null,
-      null,
-      transcript
-    );
 
     updateFilePromise = getItemToUpdate(jobInfo.FileKey as string)
       .then(item => {
@@ -395,6 +388,18 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     onCallCrew,
     onCallIds,
   ] = await getOnCallPeople(shiftDataPromise, pageTime.getTime(), tg);
+
+  if (messageBody === '') {
+    messageBody = createPageMessage(
+      jobInfo.File as string,
+      tg,
+      null,
+      null,
+      transcript,
+      onCallCrew,
+      false
+    );
+  }
 
   // Get recipients and send
   const recipients = (await getUserRecipients('all', tg))
@@ -853,7 +858,6 @@ async function handlePage(body: SendPageQueueItem) {
 
   // Build the message body
   const pageInitTime = new Date();
-  const messageBody = createPageMessage(body.key, body.tg);
   const recipients = (await getUserRecipients('all', body.tg, !!body.isTest))
     .filter(v => !v.getTranscriptOnly);
 
@@ -883,7 +887,23 @@ async function handlePage(body: SendPageQueueItem) {
     }));
   }
 
+  // Get the on-call crew
+  const shiftDataPromise = getShiftData();
+  const [
+    onCallCrew,
+    onCallIds,
+  ] = await getOnCallPeople(shiftDataPromise, fNameToDate(body.key).getTime(), body.tg);
+
   // Save the message data
+  const messageBody = createPageMessage(
+    body.key,
+    body.tg,
+    null,
+    null,
+    null,
+    onCallCrew,
+    false
+  );
   const messageId = Date.now();
   const insertMessagePromise = saveMessageData(
     'page',
@@ -896,13 +916,6 @@ async function handlePage(body: SendPageQueueItem) {
     null,
     !!body.isTest
   );
-
-  // Get the on-call crew
-  const shiftDataPromise = getShiftData();
-  const [
-    onCallCrew,
-    onCallIds,
-  ] = await getOnCallPeople(shiftDataPromise, fNameToDate(body.key).getTime(), body.tg);
 
   // Send the messages
   await Promise.all(recipients
