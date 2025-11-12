@@ -59,7 +59,7 @@ export default function EventsReportPage() {
     setGroupByKeys,
   ] = useState<NonNullable<QueryEventsApi['query']['groupBy']>>([]);
   function addGroupBy(key: typeof groupByKeys[number]) {
-    console.log('Add group by', key);
+    logger.info('Add group by', key);
     setGroupByKeys(current => {
       const newVal = [ ...current, ];
       if (!newVal.includes(key)) {

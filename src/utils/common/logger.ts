@@ -9,7 +9,7 @@ export enum LogLevel {
 }
 export type ConsoleMethods = 'trace' | 'debug' | 'info' | 'log' | 'warn' | 'error';
 
-let globalLogLevel: LogLevel = LogLevel.Log;
+let globalLogLevel: LogLevel = LogLevel.Warn;
 let isNodeEnv: boolean = false;
 declare const window: undefined | Window;
 if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
@@ -23,7 +23,11 @@ if (typeof window !== 'undefined' && typeof window.location !== 'undefined') {
   }
 }
 declare const process: undefined | NodeJS.Process;
-if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
+if (
+  typeof process !== 'undefined' &&
+  typeof process.env !== 'undefined' &&
+  Object.keys(process.env).length > 0
+) {
   isNodeEnv = true;
   globalLogLevel = LogLevel.Log;
   if (typeof process.env.DEBUG !== 'undefined') {
@@ -55,7 +59,7 @@ const maxLevelStringLen: number = levelStrings.reduce(
 );
 const resetStyleString = '\x1B[m';
 const baseLevelStyleString = 'color:{color};font-weight:bold;';
-const nameStyleString = 'color:white;';
+const nameStyleString = 'color:white;font-weight:bold;';
 const levelStyles: string[] = [
   'grey',
   'white',
@@ -96,9 +100,13 @@ class Logger {
     }
 
     // Build the logger name portion
+    const nameLen = this.name.length;
+    const nameToMax = maxLoggerNameLen - nameLen;
     const loggerNameStr = isNodeEnv
       ? this.name
-      : this.name.padEnd(maxLoggerNameLen, ' ');
+      : this.name
+        .padEnd(nameLen + Math.ceil(nameToMax / 2), ' ')
+        .padStart(maxLoggerNameLen, ' ');
     const loggerName = `[ ${stylePlaceholder}${loggerNameStr}${stylePlaceholder} ]`;
     let styles: string[] = [
       levelStyles[level],

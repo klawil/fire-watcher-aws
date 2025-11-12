@@ -19,11 +19,14 @@ import {
   PagingTalkgroup, UpdateUserApi, pagingTalkgroups, validDepartments
 } from '@/types/api/users';
 import { pagingTalkgroupConfig } from '@/types/backend/department';
+import { getLogger } from '@/utils/common/logger';
 import { formatPhone } from '@/utils/common/strings';
 import {
   AddAlertContext, LoggedInUserContext, RefreshLoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+const logger = getLogger('profilePage');
 
 const userEditableFields: {
   key: 'fName' | 'lName';
@@ -133,7 +136,7 @@ export default function ProfilePage() {
       setUserEditInfo({});
     } catch (e) {
       addAlert('danger', 'Failed to update user information');
-      console.error(`Error updating user ${user} with ${userEditInfo}`, e);
+      logger.error(`Error updating user ${user} with ${userEditInfo}`, e);
     }
     setIsSaving(false);
   }

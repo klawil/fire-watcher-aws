@@ -6,8 +6,11 @@ import {
 } from 'react';
 
 import { GetMetricsApi } from '@/types/api/metrics';
+import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+const logger = getLogger('statusChart/common');
 
 type ApiLabels = GetMetricsApi['responses'][200]['labels'];
 type ApiData = GetMetricsApi['responses'][200]['data'];
@@ -145,7 +148,7 @@ async function getDataBody(body: GetMetricsApi['body']): Promise<[
     resp === null ||
     'message' in resp
   ) {
-    console.error(code, resp);
+    logger.error('API error', body, code, resp);
     throw new Error('Unable to fetch API');
   }
 
@@ -250,7 +253,7 @@ export function useChartData(
         });
       } catch (e) {
         setData(null);
-        console.error(`Failed to load chart (${body})`, e);
+        logger.error(`Failed to load chart (${body})`, e);
         addAlert('danger', 'Failed to load data for a chart');
       }
       setChartLoaded(v => v + 1);

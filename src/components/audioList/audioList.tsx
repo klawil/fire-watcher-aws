@@ -23,6 +23,7 @@ import {
 import {
   dateToStr, findClosestFileIdx
 } from '@/utils/common/dateAndFile';
+import { getLogger } from '@/utils/common/logger';
 import { fNameToDate } from '@/utils/common/strings';
 import {
   audioReducer, defaultAudioState
@@ -32,6 +33,8 @@ import { typeFetch } from '@/utils/frontend/typeFetch';
 import {
   isElemInView, useRefIntersection
 } from '@/utils/frontend/uiUtils';
+
+const logger = getLogger('audioList');
 
 const loadAfterAddedMinWait = 10000;
 
@@ -326,7 +329,7 @@ function useLoadFiles(
         });
       } catch (e) {
         addAlert('danger', 'Failed to update the list of audio files');
-        console.error(`Failed to fetch audio files ${urlParams.toString()}`, e);
+        logger.error(`Failed to fetch audio files ${urlParams.toString()}`, e);
       }
     })();
   }, [
@@ -373,7 +376,7 @@ export default function AudioList() {
         tgData === null ||
         'message' in tgData
       ) {
-        console.error('Failed to load talkgroup information', code, tgData);
+        logger.error('Failed to load talkgroup information', code, tgData);
         addAlert('danger', 'Failed to load talkgroup information');
         return;
       }

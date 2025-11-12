@@ -43,7 +43,6 @@ async function handleMessage(id: number, events: TwilioQueueEvent[]) {
 
   // Finalize the config and execute the update
   updateConfig.UpdateExpression = 'SET ' + updateStrings.join(', ');
-  console.log(updateConfig);
   await typedUpdate(updateConfig);
 }
 

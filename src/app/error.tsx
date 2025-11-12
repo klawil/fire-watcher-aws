@@ -5,7 +5,10 @@ import Button from 'react-bootstrap/Button';
 
 import CofrnLayout from '@/components/layout';
 import { AddErrorApi } from '@/types/api/errors';
+import { getLogger } from '@/utils/common/logger';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+const logger = getLogger('error');
 
 export default function Error({
   error,
@@ -25,8 +28,8 @@ export default function Error({
         trace: error.stack || 'No Stack',
       },
     })
-      .catch(e => console.error(e));
-    console.error(error);
+      .catch(e => logger.error('Error sending error', e));
+    logger.error('Error', error);
   }, [ error, ]);
 
   return (

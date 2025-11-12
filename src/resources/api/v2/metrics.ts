@@ -92,7 +92,7 @@ function buildLambdaMetric(
   const key = buildMetricKey(metric);
   const conf = lambdaNames[metric.fn];
   if (typeof conf === 'undefined') {
-    console.log(lambdaNames);
+    logger.error('Invalid lambda function', lambdaNames);
     throw new Error(`Invalid fn - ${metric.fn}`);
   }
 

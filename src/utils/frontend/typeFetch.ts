@@ -1,5 +1,9 @@
 import { Api } from 'ts-oas';
 
+import { getLogger } from '../common/logger';
+
+const logger = getLogger('typeFetch');
+
 type TypeFetchApi<T extends Api> = Pick<T, 'path' | 'method' | 'responses'> & Partial<Pick<T, 'params' | 'query' | 'body'>>;
 type TypeFetchApiInput<T extends Api> = Omit<TypeFetchApi<T>, 'responses'>;
 type TypeFetchResponse<
@@ -13,6 +17,8 @@ export async function typeFetch<T extends Api>({
   query = undefined,
   body = undefined,
 }: TypeFetchApiInput<T>): Promise<TypeFetchResponse<T>> {
+  logger.trace('typeFetch', ...arguments);
+
   // Fill in the path params
   let apiPath = path;
   if (typeof params !== 'undefined') {
@@ -49,13 +55,13 @@ export async function typeFetch<T extends Api>({
   }
 
   // Execute the request
-  console.log('Fetching API', apiPath);
+  logger.info('Fetching API', apiPath, requestOptions);
   const fetchResponse = await fetch(apiPath, requestOptions);
   let responseBody: T['responses'][keyof T['responses']] | null = null;
   try {
     responseBody = await fetchResponse.json();
   } catch (e) {
-    console.error('Possible error fetching API', e);
+    logger.error('Possible error fetching API', e);
   }
 
   return [

@@ -19,7 +19,7 @@ import {
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
-const logger = getLogger('file');
+const logger = getLogger('resources/api/v2/talkgroup');
 
 const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
   logger.debug('GET', ...arguments);
@@ -133,7 +133,7 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event, user,
   });
 
   if (!tgUpdate.Attributes) {
-    console.log(JSON.stringify(body), JSON.stringify(tgUpdate));
+    logger.error('Failed to update talkgroup', JSON.stringify(body), JSON.stringify(tgUpdate));
     throw new Error('Failed to update talkgroup');
   }
 

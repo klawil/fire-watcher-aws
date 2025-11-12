@@ -12,7 +12,10 @@ import styles from './weather.module.css';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import { WeatherResultJson } from '@/deprecated/common/weather';
+import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
+
+const logger = getLogger('weatherPage');
 
 export default function WeatherPage() {
   const addAlert = useContext(AddAlertContext);
@@ -37,7 +40,7 @@ export default function WeatherPage() {
 
         setWeatherData(result);
       } catch (e) {
-        console.error('Failed to get weather information', e);
+        logger.error('Failed to get weather information', e);
         addAlert('danger', 'Failed to load weather information');
         setWeatherData(null);
       }

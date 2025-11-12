@@ -14,6 +14,7 @@ import { GetAladtecUsersApi } from '@/types/api/aladtec';
 import {
   DeleteUserApi, GetAllUsersApi, validDepartments
 } from '@/types/api/users';
+import { getLogger } from '@/utils/common/logger';
 import {
   AddAlertContext,
   AladTecUsersContext,
@@ -24,6 +25,8 @@ import {
   UsersDispatchContext,
   defaultUsersState, usersStateReducer
 } from '@/utils/frontend/usersState';
+
+const logger = getLogger('userEditPage');
 
 export default function UserEditPage() {
   const [
@@ -53,7 +56,7 @@ export default function UserEditPage() {
         apiResult === null ||
         'message' in apiResult
       ) {
-        console.error('Failed to get users', code, apiResult);
+        logger.error('Failed to get users', code, apiResult);
         return;
       }
 
@@ -71,7 +74,7 @@ export default function UserEditPage() {
     setAladTecUsers,
   ] = useState<null | { [key: string]: string; }>(null);
   useEffect(() => {
-    if (loggedInUser?.isDistrictAdmin) {
+    if (loggedInUser?.isFinal && loggedInUser?.isDistrictAdmin) {
       (async () => {
         const [
           code,
@@ -86,7 +89,7 @@ export default function UserEditPage() {
           apiResult === null ||
           'message' in apiResult
         ) {
-          console.error('Failed to get users', code, apiResult);
+          logger.error('Failed to get users', code, apiResult);
           return;
         }
 
@@ -141,7 +144,7 @@ export default function UserEditPage() {
         action: 'ClearDeleteModal',
       });
     } catch (e) {
-      console.error(`Failed to delete user ${state.deleteUserModal}`, e);
+      logger.error(`Failed to delete user ${state.deleteUserModal}`, e);
       addAlert('danger', `Failed to delete ${state.deleteUserModal.fName} ${state.deleteUserModal.lName}`);
     }
   }, [

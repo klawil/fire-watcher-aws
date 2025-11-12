@@ -15,6 +15,9 @@ import StatusMetricLineChart from '@/components/statusChart/statusMetricLineChar
 import StatusTimingLineChart from '@/components/statusChart/statusTimingLineChart';
 import StatusTowerLineChart from '@/components/statusChart/statusTowerLineChart';
 import { ChartConfig } from '@/types/frontend/chart';
+import { getLogger } from '@/utils/common/logger';
+
+const logger = getLogger('statusPage');
 
 ChartJS.register(
   annotationPlugin,
@@ -474,7 +477,7 @@ export default function StatusPage() {
   ] = useState<'month' | 'week' | 'day'>('week');
   useEffect(() => {
     setChartLoadedCount(0);
-    console.log('Mode:', mode);
+    logger.log('Mode:', mode);
   }, [ mode, ]);
 
   return <>

@@ -20,6 +20,7 @@ import {
   pagingTalkgroupConfig
 } from '@/types/backend/department';
 import { OrNull } from '@/types/backend/validation';
+import { getLogger } from '@/utils/common/logger';
 import { formatPhone } from '@/utils/common/strings';
 import {
   AddAlertContext, AladTecUsersContext, LoggedInUserContext
@@ -27,11 +28,14 @@ import {
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import { UsersDispatchContext } from '@/utils/frontend/usersState';
 
+const logger = getLogger('userEdit');
+
 interface CheckboxConfig {
   name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames' | 'getOncallInfo';
   label: string;
   districtAdmin?: boolean;
   invert?: boolean;
+  default?: true;
 }
 
 const userRoleCheckboxes: CheckboxConfig[] = [
@@ -48,6 +52,7 @@ const userRoleCheckboxes: CheckboxConfig[] = [
   {
     name: 'getTranscript',
     label: 'Get Texts With Transcripts (Slower)',
+    default: true,
   },
   {
     name: 'getApiAlerts',
@@ -197,6 +202,8 @@ export default function UserEdit({
   ) {
     setUpdateState({
       department: loggedInUserDepartments[0],
+      getTranscriptOnly: true,
+      getTranscript: true,
     });
   }
 
@@ -310,7 +317,7 @@ export default function UserEdit({
         apiResult === null ||
         'message' in apiResult
       ) {
-        console.error(code, apiResult, updateState);
+        logger.error('API failed', code, apiResult, updateState);
         throw new Error('Failed to create or save user');
       }
       setUpdateStateRaw({});
@@ -337,7 +344,7 @@ export default function UserEdit({
       } else {
         addAlert('danger', `Error saving changes to ${user.fName} ${user.lName}`);
       }
-      console.error(`Error saving changes to ${user}: ${updateState}`, e);
+      logger.error(`Error saving changes to ${user}`, updateState, e);
     }
     setIsSaving(false);
   }

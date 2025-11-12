@@ -7,10 +7,16 @@ import {
   S3Event, S3EventRecord
 } from 'aws-lambda';
 
+import { getLogger } from '@/utils/common/logger';
+
+const logger = getLogger('resources/eventFileQueueHandler');
+
 const glueDatabase = process.env.GLUE_DATABASE;
 const glueTable = process.env.GLUE_TABLE;
 
 export async function main(event: S3Event) {
+  logger.trace('main', ...arguments);
+
   // Get the S3 events
   const s3EventRecords: S3EventRecord[] = event.Records || [];
 
@@ -113,6 +119,6 @@ export async function main(event: S3Event) {
   }
 
   // Log the messages received
-  console.log(`Records: ${s3EventRecords.length}, ` +
+  logger.log(`Records: ${s3EventRecords.length}, ` +
     `Partitions: ${eventPartitions.length}, New Partitions: ${newPartitions.length}`);
 }

@@ -28,6 +28,7 @@ import {
 import {
   dateTimeToTimeStr, dateToStr
 } from '@/utils/common/dateAndFile';
+import { getLogger } from '@/utils/common/logger';
 import {
   AddAlertContext, LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
@@ -39,6 +40,8 @@ import {
   useRadios, useTalkgroups
 } from '@/utils/frontend/talkgroups';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+const logger = getLogger('eventsPage');
 
 type IdTypes = 'radio' | 'talkgroup';
 
@@ -183,7 +186,7 @@ function useEvents(): [
         })) as typeof events,
       ]);
     } catch (e) {
-      console.error('Failed to load events', e);
+      logger.error('Failed to load events', e);
       addAlert('danger', 'Failed to get events');
       setQueryState('FAILED');
       setLoadingEvents(LoadingStates.DONE);
@@ -320,7 +323,7 @@ export default function EventsPage() {
       }
       addAlert('success', 'Saved new name');
     } catch (e) {
-      console.error('Failed to change name', e);
+      logger.error('Failed to change name', e);
       addAlert('danger', 'Failed to save new name');
     }
     setNewNameLoad(false);

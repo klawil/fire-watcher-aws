@@ -1,5 +1,6 @@
 import { useSearchParams } from 'next/navigation';
 import {
+  useContext,
   useEffect, useRef, useState
 } from 'react';
 import Button from 'react-bootstrap/Button';
@@ -17,6 +18,10 @@ import {
   allowedNostartParams
 } from '@/types/frontend/audio';
 import { findClosestFileIdx } from '@/utils/common/dateAndFile';
+import { getLogger } from '@/utils/common/logger';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
+
+const logger = getLogger('audioPlayerBar');
 
 function timeToStr(timestamp?: number, duration?: number) {
   if (
@@ -60,6 +65,7 @@ export default function AudioPlayerBar({
     ? 0
     : Math.round(100 * state.player.timestamp / state.player.duration);
   const playerDuration = timeToStr(state.player.timestamp, state.player.duration);
+  const addAlert = useContext(AddAlertContext);
 
   const [
     autoPlay,
@@ -175,7 +181,8 @@ export default function AudioPlayerBar({
     ) {
       audioRef.current.play()
         .catch(e => {
-          console.log('Failed to play file', e);
+          logger.error('Failed to play file', e);
+          addAlert('danger', 'Failed to play file');
           dispatch({
             action: 'SetPlayerState',
             state: 'paused',
@@ -195,6 +202,7 @@ export default function AudioPlayerBar({
     state.files,
     dispatch,
     state.filter.f,
+    addAlert,
   ]);
 
   // Keep the URL updated

@@ -13,11 +13,14 @@ import Spinner from 'react-bootstrap/Spinner';
 import {
   GetLoginCodeApi, SubmitLoginCodeApi
 } from '@/types/api/auth';
+import { getLogger } from '@/utils/common/logger';
 import { formatPhone } from '@/utils/common/strings';
 import {
   AddAlertContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+const logger = getLogger('loginPage');
 
 export default function LoginPage() {
   const user = useContext(LoggedInUserContext);
@@ -117,7 +120,7 @@ export default function LoginPage() {
         stage: 'code',
       }));
     } catch (e) {
-      console.error(`Failed to get code for ${loginState}`, e);
+      logger.error(`Failed to get code for ${loginState}`, e);
       addAlert('danger', 'Failed to get a code for this user');
       setErrorFields([ 'phone', ]);
     }
@@ -176,7 +179,7 @@ export default function LoginPage() {
 
       handleRedirectAction();
     } catch (e) {
-      console.error(`Failed to login with ${loginState}`, e);
+      logger.error(`Failed to login with ${loginState}`, e);
       addAlert('danger', 'Authentication failed');
       setErrorFields([ 'code', ]);
     }

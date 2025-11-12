@@ -13,11 +13,14 @@ import { Variant } from 'react-bootstrap/esm/types';
 import {
   FrontendUserObject, FrontendUserState, GetUserApi, validDepartments
 } from '@/types/api/users';
+import { getLogger } from '@/utils/common/logger';
 import {
   AddAlertContext, DarkModeContext, LocationContext, LoggedInUserContext, RefreshLoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import './envConfig';
+
+const logger = getLogger('layout');
 
 function useDarkMode() {
   const [
@@ -106,7 +109,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
       });
     } catch (e) {
       addAlert('danger', 'Failed to update the current user\'s information');
-      console.error('Failed to fetch current user', e);
+      logger.error('Failed to fetch current user', e);
     }
   }
 
@@ -163,7 +166,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
 
     try {
       const initUser: FrontendUserObject = JSON.parse(lsUserStr);
-      console.log('Initial User:', initUser);
+      logger.log('Initial User:', initUser);
       setUser({
         fromApi: false,
         isFinal: false,
@@ -174,7 +177,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
       });
     } catch (e) {
       addAlert('danger', 'Invalid user information was found, attempting to refresh the user');
-      console.error('Failed to parse localStorage user', e);
+      logger.error('Failed to parse localStorage user', e);
       localStorage.removeItem(localStorageUserKey);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

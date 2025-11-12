@@ -20,8 +20,11 @@ import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   DynamicSiteKeys, FullSiteObject, GetAllSitesApi
 } from '@/types/api/sites';
+import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+const logger = getLogger('adjacentSites');
 
 const fadeSiteTime = 1000 * 60 * 15; // 15 minutes
 const localeTimeOptions: Intl.DateTimeFormatOptions = {
@@ -174,7 +177,7 @@ export default function AdjacentSites() {
 
       setSites(siteData.sites);
     } catch (e) {
-      console.error('Failed to get site data', e);
+      logger.error('Failed to get site data', e);
       addAlert('danger', 'Failed to retrieve DTR site data');
     }
     setIsLoading(false);

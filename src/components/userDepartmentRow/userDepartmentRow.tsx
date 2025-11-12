@@ -12,9 +12,12 @@ import {
   CreateUserDepartmentApi, DeleteUserDepartmentApi, FrontendUserObject, UpdateUserDepartmentApi,
   UserDepartment
 } from '@/types/api/users';
+import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import { UsersDispatchContext } from '@/utils/frontend/usersState';
+
+const logger = getLogger('userDepartmentRow');
 
 const baseCallSign: {
   [key in UserDepartment]: string;
@@ -178,7 +181,7 @@ export default function UserDepartmentRow({
       }
     } catch (e) {
       addAlert('danger', `Error saving department ${dep} for ${user.fName} ${user.lName}`);
-      console.error(`Error saving department ${dep} for ${user} (${changes})`, e);
+      logger.error(`Error saving department ${dep} for ${user} (${changes})`, e);
     }
     setIsSaving(false);
   }
@@ -226,7 +229,7 @@ export default function UserDepartmentRow({
       });
     } catch (e) {
       addAlert('danger', `Error deleting department ${dep} for ${user.fName} ${user.lName}`);
-      console.error(`Error deleting department ${dep} for ${user}`, e);
+      logger.error(`Error deleting department ${dep} for ${user}`, e);
     }
     setIsDeleting(false);
   }

@@ -17,12 +17,15 @@ import { validDepartments } from '@/types/api/users';
 import {
   dateTimeToTimeStr, secondsToTime
 } from '@/utils/common/dateAndFile';
+import { getLogger } from '@/utils/common/logger';
 import { fNameToDate } from '@/utils/common/strings';
 import {
   AddAlertContext, LoggedInUserContext
 } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 import { useRefIntersection } from '@/utils/frontend/uiUtils';
+
+const logger = getLogger('textsPage');
 
 const maxParallelTableLoads = 3;
 
@@ -102,7 +105,7 @@ async function getTexts(
       });
   } catch (e) {
     addAlert('danger', 'Failed to get texts for one of the tables');
-    console.error('Failed to get texts', queryBase, e);
+    logger.error('Failed to get texts', queryBase, e);
   }
   return [];
 }
