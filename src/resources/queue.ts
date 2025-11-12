@@ -142,6 +142,19 @@ async function getOnCallPeople(
         [],
       ];
     }
+
+    const aladTecIdToCallsign = await getUserRecipients('all', null)
+      .then(users => users.reduce((agg: { [key: string]: string }, user) => {
+        if (
+          typeof user.aladTecId !== 'undefined' &&
+          typeof pagingConf.department !== 'undefined' &&
+          typeof user[pagingConf.department]?.callSign !== 'undefined'
+        ) {
+          agg[user.aladTecId] = user[pagingConf.department]?.callSign as string;
+        }
+
+        return agg;
+      }, {}));
     const shiftData = await shiftsPromise;
     const onCallIds: string[] = [];
     const onCallCrew = shiftData.shifts.reduce((agg: OnCallPeople, shift) => {
@@ -157,9 +170,13 @@ async function getOnCallPeople(
 
       for (let i = 0; i < agg.length; i++) {
         if (agg[i].service === shift.department) {
+          let name = shiftData.people[shift.id] || 'Unknown';
+          if (typeof aladTecIdToCallsign[shift.id] !== 'undefined') {
+            name += ` [${aladTecIdToCallsign[shift.id]}]`;
+          }
           agg[i].onCall.push({
             id: shift.id,
-            name: shiftData.people[shift.id] || 'Unknown',
+            name,
           });
           return agg;
         }

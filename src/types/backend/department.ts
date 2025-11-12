@@ -69,7 +69,10 @@ export const pagingTalkgroupConfig: {
     linkPreset: string;
     partyBeingPaged: string;
     pagedService: string;
+
+    // Used to determine callsigns for on-call persons
     aladtecDepartment?: string[];
+    department?: UserDepartment;
   };
 } = {
   8198: {
@@ -77,6 +80,7 @@ export const pagingTalkgroupConfig: {
     partyBeingPaged: 'NSCAD',
     pagedService: 'AMBO',
     aladtecDepartment: [ 'NSCAD', ],
+    department: 'NSCAD',
   },
   8332: {
     linkPreset: 'pNSCFPD',
@@ -96,6 +100,7 @@ export const pagingTalkgroupConfig: {
       'Baca Fire',
       'Baca Grande-Crestone Ambulance',
     ],
+    department: 'Baca',
   },
   8334: {
     linkPreset: 'tg8334',
