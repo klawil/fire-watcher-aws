@@ -95,16 +95,19 @@ declare global {
   }
 }
 
-export const adminUserKeys = [
+export const selfUserKeys = [
   'fName',
   'lName',
-  'phone',
   'talkgroups',
+  'getTranscript',
+  'getTranscriptOnly',
+];
+export const adminUserKeys = [
+  ...selfUserKeys,
+  'phone',
   'lastLogin',
   'lastStatus',
   'lastStatusCount',
-  'getTranscript',
-  'getTranscriptOnly',
   ...validDepartments,
 ] as const;
 export const districtAdminUserKeys = [

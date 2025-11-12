@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  useCallback, useContext, useState
+  useCallback, useContext, useEffect, useState
 } from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
@@ -86,6 +86,15 @@ export default function ProfilePage() {
     user,
   ]);
 
+  const [
+    apiErrors,
+    setApiErrors,
+  ] = useState<string[]>([]);
+
+  useEffect(() => {
+    logger.warn('User', userEditInfo);
+  }, [ userEditInfo, ]);
+
   const hasChanges = (Object.keys(userEditInfo) as (keyof typeof userEditInfo)[])
     .filter(key => typeof userEditInfo[key] !== 'undefined')
     .length > 0;
@@ -126,6 +135,9 @@ export default function ProfilePage() {
         apiResponse === null ||
         'message' in apiResponse
       ) {
+        if (apiResponse !== null && 'errors' in apiResponse) {
+          setApiErrors(apiResponse.errors);
+        }
         throw {
           code,
           apiResponse,
@@ -184,6 +196,7 @@ export default function ProfilePage() {
             <InputGroup.Text>{field.label}</InputGroup.Text>
             <Form.Control
               type='text'
+              isInvalid={apiErrors.includes(field.key)}
               value={typeof userEditInfo[field.key] !== 'undefined'
                 ? userEditInfo[field.key] || ''
                 : user[field.key] || ''
@@ -197,19 +210,67 @@ export default function ProfilePage() {
             />
           </InputGroup>
         </Col></Row>)}
-      <Row className='justify-content-center my-3'><Col xl={3} lg={4} xs={6}>
-        <h5 className='text-center'>Pages You Will Receive</h5>
-        {pagingTalkgroups.map(tg => <Form.Check
-          key={tg}
-          type='switch'
-          checked={typeof userEditInfo.talkgroups !== 'undefined'
-            ? userEditInfo.talkgroups?.includes(tg)
-            : (user.talkgroups || []).includes(tg)
-          }
-          label={pagingTalkgroupConfig[tg].partyBeingPaged}
-          onChange={e => setUserTg(tg, e.target.checked)}
-        />)}
-      </Col></Row>
+      <Row className='justify-content-center my-3'>
+        <Col xl={3} lg={4} xs={6}>
+          <h5 className='text-center'>Pages You Will Receive</h5>
+          {pagingTalkgroups.map(tg => <Form.Check
+            key={tg}
+            isInvalid={apiErrors.includes('talkgroups')}
+            type='switch'
+            checked={typeof userEditInfo.talkgroups !== 'undefined'
+              ? userEditInfo.talkgroups?.includes(tg)
+              : (user.talkgroups || []).includes(tg)
+            }
+            label={pagingTalkgroupConfig[tg].partyBeingPaged}
+            onChange={e => setUserTg(tg, e.target.checked)}
+          />)}
+        </Col>
+        <Col xl={3} lg={4} xs={6}>
+          <h5 className='text-center'>How You Receive Pages</h5>
+          <Form.Check
+            type='switch'
+            isInvalid={apiErrors.includes('getTranscriptOnly')}
+            name='page-method'
+            checked={typeof userEditInfo.getTranscriptOnly !== 'undefined'
+              ? !userEditInfo.getTranscriptOnly
+              : !user.getTranscriptOnly
+            }
+            label={'Without Transcripts (Faster)'}
+            onChange={e => setUserEditInfo(current => ({
+              ...current,
+              getTranscriptOnly: e.target.checked === !user.getTranscriptOnly
+                ? undefined
+                : !e.target.checked,
+              ...e.target.checked
+                ? {
+                  getTranscript: false,
+                }
+                : {},
+            }))}
+          />
+          <Form.Check
+            type='switch'
+            name='page-method'
+            isInvalid={apiErrors.includes('getTranscript')}
+            checked={typeof userEditInfo.getTranscript !== 'undefined'
+              ? !!userEditInfo.getTranscript
+              : !!user.getTranscript
+            }
+            label={'With Transcripts (Slower)'}
+            onChange={e => setUserEditInfo(current => ({
+              ...current,
+              getTranscript: e.target.checked === user.getTranscript
+                ? undefined
+                : e.target.checked,
+              ...e.target.checked
+                ? {
+                  getTranscriptOnly: true,
+                }
+                : {},
+            }))}
+          />
+        </Col>
+      </Row>
 
       <Row className='justify-content-center text-center'><Col xs={2}>
         <Button

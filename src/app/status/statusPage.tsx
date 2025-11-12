@@ -335,7 +335,7 @@ const lineChartsToShow: ChartConfig[] = [
         },
         {
           type: 'timing',
-          label: 'Page at Server',
+          label: 'Transcript Done',
           namespace: 'Twilio Health',
           metricName: 'PageToTranscript',
           stat: 'p80',

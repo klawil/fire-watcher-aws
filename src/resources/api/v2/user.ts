@@ -11,6 +11,7 @@ import {
 } from '@/types/api/_shared';
 import {
   DeleteUserApi, FullUserObject, GetUserApi, UpdateUserApi, adminUserKeys, districtAdminUserKeys,
+  selfUserKeys,
   updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
 } from '@/types/api/users';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
@@ -190,7 +191,13 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event, user, use
     UpdateExpression: '',
     ReturnValues: 'ALL_NEW',
   };
-  (user.isDistrictAdmin ? districtAdminUserKeys : adminUserKeys)
+  (
+    updateType === 'SELF'
+      ? selfUserKeys
+      : user.isDistrictAdmin
+        ? districtAdminUserKeys
+        : adminUserKeys
+  )
     .forEach(keyRaw => {
       if (keyRaw in body && keyRaw !== 'phone') {
         const key = keyRaw as keyof typeof body;
