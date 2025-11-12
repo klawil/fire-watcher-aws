@@ -68,7 +68,6 @@ export const pagingTalkgroupConfig: {
   [key in PagingTalkgroup]: {
     linkPreset: string;
     partyBeingPaged: string;
-    pagedService: string;
 
     // Used to determine callsigns for on-call persons
     aladtecDepartment?: string[];
@@ -78,24 +77,20 @@ export const pagingTalkgroupConfig: {
   8198: {
     linkPreset: 'pNSCAD',
     partyBeingPaged: 'NSCAD',
-    pagedService: 'AMBO',
     aladtecDepartment: [ 'NSCAD', ],
     department: 'NSCAD',
   },
   8332: {
     linkPreset: 'pNSCFPD',
     partyBeingPaged: 'NSCFPD',
-    pagedService: 'FIRE',
   },
   18332: {
     linkPreset: 'pNSCFPD',
     partyBeingPaged: 'NSCFPD VHF',
-    pagedService: 'FIRE',
   },
   18331: {
     linkPreset: 'pBGFD%2FBGEMS',
-    partyBeingPaged: 'BGEMS/BGFD',
-    pagedService: 'BACA',
+    partyBeingPaged: 'BGES',
     aladtecDepartment: [
       'Baca Fire',
       'Baca Grande-Crestone Ambulance',
@@ -105,16 +100,13 @@ export const pagingTalkgroupConfig: {
   8334: {
     linkPreset: 'tg8334',
     partyBeingPaged: 'Center EMS/Fire',
-    pagedService: 'CENTER',
   },
   8281: {
     linkPreset: 'tg8281',
     partyBeingPaged: 'Mineral EMS/Fire',
-    pagedService: 'MINERAL',
   },
   8181: {
     linkPreset: 'pACFE',
     partyBeingPaged: 'Alamosa EMS',
-    pagedService: 'ALAMOSA EMS',
   },
 };

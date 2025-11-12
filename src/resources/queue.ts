@@ -98,22 +98,37 @@ function createPageMessage(
     return `Invalid paging talkgroup - ${pageTg} - ${fileKey}`;
   }
 
-  let pageStr = `${pageConfig.pagedService} PAGE\n`;
-  pageStr += `${pageConfig.partyBeingPaged} paged `;
-  pageStr += `${dateToTimeString(fNameToDate(fileKey))}\n`;
+  let pageStr = `${pageConfig.partyBeingPaged} paged `;
+  pageStr += `${dateToTimeString(fNameToDate(fileKey))}\n\n`;
   if (isOnCall) {
-    pageStr += '\nYOU ARE ON CALL\n\n';
+    pageStr += 'YOU ARE ON CALL\n\n';
   }
   if (transcript !== null) {
-    pageStr += `\n${transcript}\n\n`;
+    pageStr += `${transcript}\n\n`;
   }
   if (onCall !== null && onCall.length > 0) {
-    pageStr += 'On-call crew:\n';
-    onCall.forEach(group => {
-      const serviceName = typeof shiftNameMappings[group.service] !== 'undefined'
-        ? shiftNameMappings[group.service]
-        : group.service;
-      pageStr += `${serviceName}: ${group.onCall.map(o => o.name).join(', ')}\n`;
+    pageStr += 'On-call crew:';
+    if (onCall.length > 1) {
+      pageStr += '\n';
+    }
+    onCall.sort((a, b) => {
+      const aName = typeof shiftNameMappings[a.service] !== 'undefined'
+        ? shiftNameMappings[a.service]
+        : a.service;
+      const bName = typeof shiftNameMappings[b.service] !== 'undefined'
+        ? shiftNameMappings[b.service]
+        : b.service;
+      return aName.localeCompare(bName);
+    }).forEach(group => {
+      if (onCall.length > 1) {
+        const serviceName = typeof shiftNameMappings[group.service] !== 'undefined'
+          ? shiftNameMappings[group.service]
+          : group.service;
+        pageStr += `${serviceName}: `;
+      } else {
+        pageStr += ' ';
+      }
+      pageStr += `${group.onCall.map(o => o.name).join(', ')}\n`;
     });
     pageStr += '\n';
   }
