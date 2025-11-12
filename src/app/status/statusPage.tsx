@@ -280,7 +280,7 @@ const lineChartsToShow: ChartConfig[] = [
       ],
     },
   },
-  { // Text Times
+  { // Text Times (Non Transcript)
     type: 'Timing',
     title: 'Text Times',
     body: {
@@ -299,6 +299,45 @@ const lineChartsToShow: ChartConfig[] = [
           label: 'Page at Server',
           namespace: 'Twilio Health',
           metricName: 'PageToQueue',
+          stat: 'p80',
+        },
+        {
+          type: 'timing',
+          label: 'Message Sent',
+          namespace: 'Twilio Health',
+          metricName: 'SentTime',
+          stat: 'p80',
+        },
+        {
+          type: 'timing',
+          label: 'Message Delivered',
+          namespace: 'Twilio Health',
+          metricName: 'DeliveredTime',
+          stat: 'p80',
+        },
+      ],
+    },
+    convertValue: v => v > 300000 ? 300000 : v,
+  },
+  { // Text Times (Transcript)
+    type: 'Timing',
+    title: 'Text Times (With Transcript)',
+    body: {
+      period: ONE_DAY,
+      timerange: ONE_MONTH,
+      metrics: [
+        {
+          type: 'timing',
+          label: 'Page Duration',
+          namespace: 'Twilio Health',
+          metricName: 'PageDuration',
+          stat: 'p80',
+        },
+        {
+          type: 'timing',
+          label: 'Page at Server',
+          namespace: 'Twilio Health',
+          metricName: 'PageToTranscript',
           stat: 'p80',
         },
         {

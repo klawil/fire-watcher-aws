@@ -476,6 +476,10 @@ describe('resources/s3', () => {
             Value: 'y',
           },
           {
+            Key: 'Duration',
+            Value: '7',
+          },
+          {
             Key: 'CostCenter',
             Value: 'NSCAD',
           },
@@ -521,6 +525,10 @@ describe('resources/s3', () => {
           {
             Key: 'IsPage',
             Value: 'n',
+          },
+          {
+            Key: 'Duration',
+            Value: '7',
           },
         ],
         TranscriptionJobName: '1234-123456',

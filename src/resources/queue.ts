@@ -279,6 +279,8 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     throw new Error(`Invalid transcription job name - ${body.detail.TranscriptionJobName}`);
   }
 
+  const transcriptInitTime = new Date();
+
   // Get the on-call crew
   const shiftDataPromise = getShiftData();
 
@@ -358,11 +360,26 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     return;
   }
 
+  // Send the health metrics
+  const pageTime = fNameToDate(jobInfo.File);
+  const lenMs = typeof jobInfo.Duration !== 'undefined' && (/^[0-9]+$/).test(jobInfo.Duration)
+    ? Number(jobInfo.Duration) * 1000
+    : 0;
+  const metricPromise = cloudWatch.send(new PutMetricDataCommand({
+    Namespace: 'Twilio Health',
+    MetricData: [ {
+      MetricName: 'PageToTranscript',
+      Timestamp: pageTime,
+      Unit: 'Milliseconds',
+      Value: transcriptInitTime.getTime() - pageTime.getTime() - lenMs,
+    }, ],
+  }));
+
   // Finish processing the shift data
   const [
     onCallCrew,
     onCallIds,
-  ] = await getOnCallPeople(shiftDataPromise, fNameToDate(jobInfo.File).getTime(), tg);
+  ] = await getOnCallPeople(shiftDataPromise, pageTime.getTime(), tg);
 
   // Get recipients and send
   const recipients = (await getUserRecipients('all', tg))
@@ -411,6 +428,7 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   }
   await insertMessage;
   await updateFilePromise;
+  await metricPromise;
 }
 
 const applePrefixes = [

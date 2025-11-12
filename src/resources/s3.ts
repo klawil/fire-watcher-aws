@@ -438,6 +438,10 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           Key: 'IsPage',
           Value: body.Item.Tone ? 'y' : 'n',
         },
+        {
+          Key: 'Duration',
+          Value: (body.Item.Len || 0).toString(),
+        },
       ];
       if (fileTag !== null) {
         Tags.push({

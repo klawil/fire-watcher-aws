@@ -10,7 +10,7 @@ export interface TimingMetric {
   type: 'timing';
   label: string;
   namespace: 'Twilio Health' | 'DTR Metrics';
-  metricName: 'UploadTime' | 'SentTime' | 'DeliveredTime' | 'FailedTime' | 'PageDuration' | 'PageToQueue' | 'Decode Rate';
+  metricName: 'UploadTime' | 'SentTime' | 'DeliveredTime' | 'FailedTime' | 'PageDuration' | 'PageToQueue' | 'Decode Rate' | 'PageToTranscript';
   tower?: 'Saguache' | 'PoolTable' | 'SanAntonio';
   stat: 'Minimum' | 'Maximum' | 'SampleCount' | 'p50' | 'p80';
 }
@@ -242,6 +242,7 @@ export const timingMetricValidator: Validator<TimingMetric> = {
           'PageToQueue',
           'SentTime',
           'UploadTime',
+          'PageToTranscript',
         ],
       },
     },
