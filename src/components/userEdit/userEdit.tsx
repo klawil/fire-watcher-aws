@@ -318,6 +318,9 @@ export default function UserEdit({
         'message' in apiResult
       ) {
         logger.error('API failed', code, apiResult, updateState);
+        if (apiResult !== null && 'errors' in apiResult) {
+          setErrorFields(apiResult.errors);
+        }
         throw new Error('Failed to create or save user');
       }
       setUpdateStateRaw({});

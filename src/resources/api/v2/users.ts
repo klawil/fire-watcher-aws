@@ -67,6 +67,9 @@ const createUserKeys: EditKeyConfig[] = [
   {
     name: 'getTranscript',
   },
+  {
+    name: 'getTranscriptOnly',
+  },
 ];
 const districtAdminUserKeys: EditKeyConfig[] = [
   {
@@ -154,6 +157,23 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event, user, user
     return [
       400,
       generateApi400Body(errorKeys),
+    ];
+  }
+
+  // Confirm the user is only receiving one kind of paging text
+  const isReceivingTranscript = typeof body.getTranscript !== 'undefined'
+    ? !!body.getTranscript
+    : false;
+  const isReceivingNonTranscript = typeof body.getTranscriptOnly !== 'undefined'
+    ? !body.getTranscriptOnly
+    : true;
+  if (isReceivingTranscript && isReceivingNonTranscript) {
+    return [
+      400,
+      generateApi400Body([
+        'getTranscript',
+        'getTranscriptOnly',
+      ]),
     ];
   }
 

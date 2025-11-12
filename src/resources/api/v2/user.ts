@@ -133,30 +133,49 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event, user, use
   const phoneToUpdate = updateType === 'SELF'
     ? user.phone
     : params.id as number;
+  let userToEdit = user;
   if (updateType === 'OTHER') {
     // Get the user being edited
-    const userToEdit = await typedGet<FullUserObject>({
+    const userToEditQuery = await typedGet<FullUserObject>({
       TableName: TABLE_USER,
       Key: {
         phone: phoneToUpdate,
       },
     });
-    if (!userToEdit.Item) {
+    if (!userToEditQuery.Item) {
       return [
         404,
         api404Body,
       ];
     }
+    userToEdit = userToEditQuery.Item;
 
     if (
       !user.isDistrictAdmin &&
-      !userPerms.adminDepartments.some(dep => userToEdit.Item?.[dep]?.active)
+      !userPerms.adminDepartments.some(dep => userToEdit[dep]?.active)
     ) {
       return [
         403,
         api403Body,
       ];
     }
+  }
+
+  // Confirm the user is only receiving one kind of paging text
+  const isReceivingTranscript = typeof body.getTranscript !== 'undefined'
+    ? !!body.getTranscript
+    : !!userToEdit.getTranscript;
+  const isReceivingNonTranscript = typeof body.getTranscriptOnly !== 'undefined'
+    ? !body.getTranscriptOnly
+    : !userToEdit.getTranscriptOnly;
+  if (isReceivingTranscript && isReceivingNonTranscript) {
+    return [
+      400,
+      generateApi400Body([
+        'getTranscript',
+        'getTranscriptOnly',
+      ]),
+    ];
   }
 
   // Update the user record
