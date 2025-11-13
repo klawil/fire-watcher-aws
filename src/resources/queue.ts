@@ -38,7 +38,6 @@ import {
   typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import {
-  ShiftData,
   getShiftData, shiftNameMappings
 } from '@/utils/backend/shiftData';
 import {
@@ -143,7 +142,6 @@ function createPageMessage(
 }
 
 async function getOnCallPeople(
-  shiftsPromise: Promise<ShiftData>,
   time: number,
   tg: PagingTalkgroup
 ): Promise<[null | OnCallPeople, string[]]> {
@@ -158,7 +156,15 @@ async function getOnCallPeople(
       ];
     }
 
-    const aladTecIdToCallsign = await getUserRecipients('all', null)
+    const shiftsPromise = getShiftData();
+    const aladTecIdToCallsign = await typedScan<FullUserObject>({
+      TableName: TABLE_USER,
+      ExpressionAttributeNames: {
+        '#aladTecId': 'aladTecId',
+      },
+      FilterExpression: 'attribute_exists(#aladTecId)',
+    })
+      .then(r => r.Items || [])
       .then(users => users.reduce((agg: { [key: string]: string }, user) => {
         if (
           typeof user.aladTecId !== 'undefined' &&
@@ -183,12 +189,13 @@ async function getOnCallPeople(
 
       onCallIds.push(shift.id);
 
+      let name = shiftData.people[shift.id] || 'Unknown';
+      if (typeof aladTecIdToCallsign[shift.id] !== 'undefined') {
+        name += ` [${aladTecIdToCallsign[shift.id]}]`;
+      }
+
       for (let i = 0; i < agg.length; i++) {
         if (agg[i].service === shift.department) {
-          let name = shiftData.people[shift.id] || 'Unknown';
-          if (typeof aladTecIdToCallsign[shift.id] !== 'undefined') {
-            name += ` [${aladTecIdToCallsign[shift.id]}]`;
-          }
           agg[i].onCall.push({
             id: shift.id,
             name,
@@ -201,12 +208,16 @@ async function getOnCallPeople(
         service: shift.department,
         onCall: [ {
           id: shift.id,
-          name: shiftData.people[shift.id] || 'Unknown',
+          name,
         }, ],
       });
 
       return agg;
-    }, []);
+    }, [])
+      .map(crew => ({
+        ...crew,
+        onCall: crew.onCall.sort((a, b) => a.name.localeCompare(b.name)),
+      }));
 
     return [
       onCallCrew,
@@ -296,9 +307,6 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
 
   const transcriptInitTime = new Date();
 
-  // Get the on-call crew
-  const shiftDataPromise = getShiftData();
-
   // Get the transcription results
   const transcriptionInfo = await transcribe.send(new GetTranscriptionJobCommand({
     TranscriptionJobName: body.detail.TranscriptionJobName,
@@ -387,7 +395,7 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   const [
     onCallCrew,
     onCallIds,
-  ] = await getOnCallPeople(shiftDataPromise, pageTime.getTime(), tg);
+  ] = await getOnCallPeople(pageTime.getTime(), tg);
 
   if (messageBody === '') {
     messageBody = createPageMessage(
@@ -888,11 +896,10 @@ async function handlePage(body: SendPageQueueItem) {
   }
 
   // Get the on-call crew
-  const shiftDataPromise = getShiftData();
   const [
     onCallCrew,
     onCallIds,
-  ] = await getOnCallPeople(shiftDataPromise, fNameToDate(body.key).getTime(), body.tg);
+  ] = await getOnCallPeople(fNameToDate(body.key).getTime(), body.tg);
 
   // Save the message data
   const messageBody = createPageMessage(

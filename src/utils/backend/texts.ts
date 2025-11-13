@@ -82,6 +82,9 @@ export async function getUserRecipients(
       phone: testUser,
     });
   }
+  if (result.LastEvaluatedKey) {
+    logger.warn('Still more users to fetch', result.LastEvaluatedKey);
+  }
 
   return users;
 }
