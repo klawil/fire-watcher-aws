@@ -41,6 +41,12 @@ function handler(event) { // eslint-disable-line @typescript-eslint/no-unused-va
     return request;
   }
 
+  // Redirect the /text-link endpoint to the appropriate API
+  if (request.uri.includes('/text-link')) {
+    request.uri = '/api/v2/textlink';
+    return request;
+  }
+
   // Redirect the /api/infra to various places
   if (
     request.uri.includes('/api/infra') &&

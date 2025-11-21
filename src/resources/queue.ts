@@ -131,7 +131,7 @@ function createPageMessage(
     });
     pageStr += '\n';
   }
-  pageStr += `https://cofrn.org/?f=${fileKey}&tg=${pageConfig.linkPreset}`;
+  pageStr += `https://cofrn.org/text-link?f=${fileKey}&tg=${pageTg}&t=${transcript !== null ? '1' : '0'}`;
   if (number !== null) {
     pageStr += `&p=${number}`;
   }

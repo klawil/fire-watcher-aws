@@ -835,17 +835,72 @@ export class FireWatcherAwsStack extends Stack {
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
-      // metrics
+      // aladtec
       {
-        pathPart: 'metrics',
-        fileName: 'metrics',
-        methods: [ 'POST', ],
-        getMetrics: true,
+        pathPart: 'aladtec',
+        fileName: 'aladtec',
+        methods: [ 'GET', ],
+        buckets: [ {
+          bucket: 'COSTS',
+          readOnly: true,
+        }, ],
+      },
+      // departments
+      {
+        pathPart: 'departments',
         next: [ {
-          pathPart: 'add',
-          fileName: 'metricsAdd',
-          methods: [ 'POST', ],
-          sendsMetrics: true,
+          pathPart: '{id}',
+          fileName: 'department',
+          methods: [ 'GET', ],
+          buckets: [ {
+            bucket: 'COSTS',
+          }, ],
+          getCosts: true,
+          twilioSecret: true,
+        }, ],
+      },
+      // errors
+      {
+        pathPart: 'errors',
+        fileName: 'errors',
+        methods: [
+          'POST',
+          'GET',
+        ],
+        tables: [ {
+          table: 'ERROR',
+        }, ],
+      },
+      // events
+      {
+        pathPart: 'events',
+        fileName: 'events',
+        methods: [
+          'POST',
+          'GET',
+        ],
+        getAthena: true,
+        firehoses: [ eventsFirehose, ],
+        buckets: [ { bucket: 'EVENTS', }, ],
+        next: [ {
+          pathPart: '{type}',
+          next: [ {
+            pathPart: '{id}',
+            fileName: 'eventsList',
+            methods: [ 'GET', ],
+            getAthena: true,
+            buckets: [ { bucket: 'EVENTS', }, ],
+            tables: [
+              {
+                table: 'FILE',
+                readOnly: true,
+              },
+              {
+                table: 'DEVICES',
+                readOnly: true,
+              },
+            ],
+          }, ],
         }, ],
       },
       // files
@@ -873,6 +928,107 @@ export class FireWatcherAwsStack extends Stack {
           }, ],
         }, ],
       },
+      // heartbeats
+      {
+        pathPart: 'heartbeats',
+        fileName: 'heartbeats',
+        methods: [
+          'GET',
+          'POST',
+        ],
+        tables: [ {
+          table: 'STATUS',
+        }, ],
+        sendsMetrics: true,
+      },
+      // login
+      {
+        pathPart: 'login',
+        next: [ {
+          pathPart: '{id}',
+          fileName: 'login',
+          methods: [
+            'GET',
+            'POST',
+          ],
+          tables: [ {
+            table: 'USER',
+          }, ],
+          queues: [ queue, ],
+        }, ],
+      },
+      // logout
+      {
+        pathPart: 'logout',
+        fileName: 'logout',
+        methods: [ 'GET', ],
+      },
+      // metrics
+      {
+        pathPart: 'metrics',
+        fileName: 'metrics',
+        methods: [ 'POST', ],
+        getMetrics: true,
+        next: [ {
+          pathPart: 'add',
+          fileName: 'metricsAdd',
+          methods: [ 'POST', ],
+          sendsMetrics: true,
+        }, ],
+      },
+      // radios
+      {
+        pathPart: 'radios',
+        fileName: 'radios',
+        tables: [ {
+          table: 'RADIOS',
+          readOnly: true,
+        }, ],
+        methods: [ 'GET', ],
+        next: [ {
+          pathPart: '{id}',
+          fileName: 'radio',
+          tables: [ {
+            table: 'RADIOS',
+          }, ],
+          methods: [ 'PATCH', ],
+        }, ],
+      },
+      // restart
+      {
+        pathPart: 'restart',
+        next: [ {
+          pathPart: '{tower}',
+          fileName: 'restart',
+          methods: [
+            'GET',
+            'POST',
+          ],
+          buckets: [ {
+            bucket: 'COSTS',
+            readOnly: true,
+          }, ],
+          tables: [ {
+            table: 'TEXT',
+          }, ],
+          sendsMetrics: true,
+          twilioSecret: true,
+        }, ],
+      },
+      // sites
+      {
+        pathPart: 'sites',
+        fileName: 'sites',
+        methods: [
+          'GET',
+          'POST',
+        ],
+        tables: [ {
+          table: 'SITE',
+          readOnly: true,
+        }, ],
+        queues: [ queue, ],
+      },
       // talkgroups
       {
         pathPart: 'talkgroups',
@@ -894,43 +1050,13 @@ export class FireWatcherAwsStack extends Stack {
           }, ],
         }, ],
       },
-      // users
+      // textlink
       {
-        pathPart: 'users',
-        fileName: 'users',
-        methods: [
-          'GET',
-          'POST',
-        ],
+        pathPart: 'textlink',
+        fileName: 'textlink',
+        methods: [ 'GET', ],
         tables: [ {
-          table: 'USER',
-        }, ],
-        queues: [ queue, ],
-        next: [ {
-          pathPart: '{id}',
-          fileName: 'user',
-          methods: [
-            'GET',
-            'PATCH',
-            'DELETE',
-          ],
-          tables: [ {
-            table: 'USER',
-          }, ],
-          queues: [ queue, ],
-          next: [ {
-            pathPart: '{department}',
-            fileName: 'userDepartment',
-            methods: [
-              'POST',
-              'PATCH',
-              'DELETE',
-            ],
-            tables: [ {
-              table: 'USER',
-            }, ],
-            queues: [ queue, ],
-          }, ],
+          table: 'TEXT',
         }, ],
       },
       // texts
@@ -985,160 +1111,43 @@ export class FireWatcherAwsStack extends Stack {
           ],
         }, ],
       },
-      // login
+      // users
       {
-        pathPart: 'login',
+        pathPart: 'users',
+        fileName: 'users',
+        methods: [
+          'GET',
+          'POST',
+        ],
+        tables: [ {
+          table: 'USER',
+        }, ],
+        queues: [ queue, ],
         next: [ {
           pathPart: '{id}',
-          fileName: 'login',
+          fileName: 'user',
           methods: [
             'GET',
-            'POST',
+            'PATCH',
+            'DELETE',
           ],
           tables: [ {
             table: 'USER',
           }, ],
           queues: [ queue, ],
-        }, ],
-      },
-      // logout
-      {
-        pathPart: 'logout',
-        fileName: 'logout',
-        methods: [ 'GET', ],
-      },
-      // sites
-      {
-        pathPart: 'sites',
-        fileName: 'sites',
-        methods: [
-          'GET',
-          'POST',
-        ],
-        tables: [ {
-          table: 'SITE',
-          readOnly: true,
-        }, ],
-        queues: [ queue, ],
-      },
-      // heartbeats
-      {
-        pathPart: 'heartbeats',
-        fileName: 'heartbeats',
-        methods: [
-          'GET',
-          'POST',
-        ],
-        tables: [ {
-          table: 'STATUS',
-        }, ],
-        sendsMetrics: true,
-      },
-      // departments
-      {
-        pathPart: 'departments',
-        next: [ {
-          pathPart: '{id}',
-          fileName: 'department',
-          methods: [ 'GET', ],
-          buckets: [ {
-            bucket: 'COSTS',
-          }, ],
-          getCosts: true,
-          twilioSecret: true,
-        }, ],
-      },
-      // events
-      {
-        pathPart: 'events',
-        fileName: 'events',
-        methods: [
-          'POST',
-          'GET',
-        ],
-        getAthena: true,
-        firehoses: [ eventsFirehose, ],
-        buckets: [ { bucket: 'EVENTS', }, ],
-        next: [ {
-          pathPart: '{type}',
           next: [ {
-            pathPart: '{id}',
-            fileName: 'eventsList',
-            methods: [ 'GET', ],
-            getAthena: true,
-            buckets: [ { bucket: 'EVENTS', }, ],
-            tables: [
-              {
-                table: 'FILE',
-                readOnly: true,
-              },
-              {
-                table: 'DEVICES',
-                readOnly: true,
-              },
+            pathPart: '{department}',
+            fileName: 'userDepartment',
+            methods: [
+              'POST',
+              'PATCH',
+              'DELETE',
             ],
+            tables: [ {
+              table: 'USER',
+            }, ],
+            queues: [ queue, ],
           }, ],
-        }, ],
-      },
-      // errors
-      {
-        pathPart: 'errors',
-        fileName: 'errors',
-        methods: [
-          'POST',
-          'GET',
-        ],
-        tables: [ {
-          table: 'ERROR',
-        }, ],
-      },
-      // radios
-      {
-        pathPart: 'radios',
-        fileName: 'radios',
-        tables: [ {
-          table: 'RADIOS',
-          readOnly: true,
-        }, ],
-        methods: [ 'GET', ],
-        next: [ {
-          pathPart: '{id}',
-          fileName: 'radio',
-          tables: [ {
-            table: 'RADIOS',
-          }, ],
-          methods: [ 'PATCH', ],
-        }, ],
-      },
-      // restart
-      {
-        pathPart: 'restart',
-        next: [ {
-          pathPart: '{tower}',
-          fileName: 'restart',
-          methods: [
-            'GET',
-            'POST',
-          ],
-          buckets: [ {
-            bucket: 'COSTS',
-            readOnly: true,
-          }, ],
-          tables: [ {
-            table: 'TEXT',
-          }, ],
-          sendsMetrics: true,
-          twilioSecret: true,
-        }, ],
-      },
-      // aladtec
-      {
-        pathPart: 'aladtec',
-        fileName: 'aladtec',
-        methods: [ 'GET', ],
-        buckets: [ {
-          bucket: 'COSTS',
-          readOnly: true,
         }, ],
       },
     ];
@@ -1375,6 +1384,22 @@ export class FireWatcherAwsStack extends Stack {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          functionAssociations: [ {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          }, ],
+        },
+        '/text-link': {
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          origin: new cloudfrontOrigins.HttpOrigin(
+            `${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}`,
+            {
+              originPath: `/${api.deploymentStage.stageName}`,
+            }
+          ),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           functionAssociations: [ {
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
             function: redirectCfFunction,
