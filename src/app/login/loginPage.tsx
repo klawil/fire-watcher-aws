@@ -65,6 +65,8 @@ export default function LoginPage() {
     ];
     if (validRedirects.includes(destination)) {
       window.location.assign(destination);
+    } else if (validRedirects.includes(`${destination}/`)) {
+      window.location.assign(`${destination}/`);
     } else {
       window.location.assign('/');
     }

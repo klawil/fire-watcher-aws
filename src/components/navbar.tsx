@@ -21,7 +21,7 @@ export default function CofrnNavbar({
 
   const loc = useContext(LocationContext);
   const redirectTo = encodeURIComponent(loc ? `${loc?.pathname}${loc?.search}` : '');
-  const loginLink = `/login?redirectTo=${redirectTo}`;
+  const loginLink = `/login/?redirectTo=${redirectTo}`;
   const logoutLink = `/api/v2/logout/?redirectTo=${redirectTo}`;
 
   const user = useContext(LoggedInUserContext);
@@ -51,10 +51,10 @@ export default function CofrnNavbar({
             {!user.isUser && <Nav.Link href={loginLink}>Login</Nav.Link>}
             {user.isUser && <NavDropdown align='end' title={user.fName} id='nav-dropdown'>
               <NavDropdown.Item as={Nav.Link} className='px-3' href={logoutLink}>Logout</NavDropdown.Item>
-              <NavDropdown.Item as={Nav.Link} className='px-3' href='/profile'>Edit Profile</NavDropdown.Item>
-              {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/users'>Manage Users</NavDropdown.Item>}
-              {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/texts'>View Texts</NavDropdown.Item>}
-              {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/status'>System Status</NavDropdown.Item>}
+              <NavDropdown.Item as={Nav.Link} className='px-3' href='/profile/'>Edit Profile</NavDropdown.Item>
+              {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/users/'>Manage Users</NavDropdown.Item>}
+              {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/texts/'>View Texts</NavDropdown.Item>}
+              {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/status/'>System Status</NavDropdown.Item>}
             </NavDropdown>}
           </Nav>
         </Navbar.Collapse>
