@@ -31,7 +31,7 @@ import { UsersDispatchContext } from '@/utils/frontend/usersState';
 const logger = getLogger('userEdit');
 
 interface CheckboxConfig {
-  name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames' | 'getOncallInfo';
+  name: 'getTranscript' | 'getTranscriptOnly' | 'getApiAlerts' | 'getDtrAlerts' | 'getVhfAlerts' | 'isDistrictAdmin' | 'canEditNames';
   label: string;
   districtAdmin?: boolean;
   invert?: boolean;
@@ -72,11 +72,6 @@ const userRoleCheckboxes: CheckboxConfig[] = [
   {
     name: 'canEditNames',
     label: 'Can Edit Names',
-    districtAdmin: true,
-  },
-  {
-    name: 'getOncallInfo',
-    label: 'Get On-Call Info',
     districtAdmin: true,
   },
 ];

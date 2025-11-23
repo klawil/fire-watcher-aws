@@ -436,8 +436,8 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
           phone.phone,
           messageId,
           transcript,
-          phone.getOncallInfo ? onCallCrew : null,
-          phone.getOncallInfo && typeof phone.aladTecId !== 'undefined'
+          onCallCrew,
+          typeof phone.aladTecId !== 'undefined'
             ? onCallIds.includes(phone.aladTecId)
             : false
         ),
@@ -937,8 +937,8 @@ async function handlePage(body: SendPageQueueItem) {
         phone.phone,
         messageId,
         null,
-        phone.getOncallInfo ? onCallCrew : null,
-        phone.getOncallInfo && typeof phone.aladTecId !== 'undefined'
+        onCallCrew,
+        typeof phone.aladTecId !== 'undefined'
           ? onCallIds.includes(phone.aladTecId)
           : false
       )
