@@ -976,6 +976,16 @@ export class FireWatcherAwsStack extends Stack {
           sendsMetrics: true,
         }, ],
       },
+      // pages
+      {
+        pathPart: 'pages',
+        fileName: 'pages',
+        tables: [ {
+          table: 'FILE',
+          readOnly: true,
+        }, ],
+        methods: [ 'GET', ],
+      },
       // radios
       {
         pathPart: 'radios',

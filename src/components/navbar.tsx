@@ -52,6 +52,7 @@ export default function CofrnNavbar({
             {user.isUser && <NavDropdown align='end' title={user.fName} id='nav-dropdown'>
               <NavDropdown.Item as={Nav.Link} className='px-3' href={logoutLink}>Logout</NavDropdown.Item>
               <NavDropdown.Item as={Nav.Link} className='px-3' href='/profile/'>Edit Profile</NavDropdown.Item>
+              <NavDropdown.Item as={Nav.Link} className='px-3' href='/pages/'>View Past Pages</NavDropdown.Item>
               {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/users/'>Manage Users</NavDropdown.Item>}
               {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/texts/'>View Texts</NavDropdown.Item>}
               {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/status/'>System Status</NavDropdown.Item>}

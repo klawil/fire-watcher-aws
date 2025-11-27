@@ -44,7 +44,12 @@ export function validateObject<T extends object>(
     const rawValue = useMultiValue && Array.isArray(obj[key]) && obj[key].length === 1 && typeof config.types.array === 'undefined'
       ? obj[key][0]
       : obj[key];
-    const value = config.parse ? config.parse(rawValue) : rawValue;
+    const parser = config.parse;
+    const value = parser
+      ? Array.isArray(rawValue)
+        ? rawValue.map(v => parser(v))
+        : parser(rawValue)
+      : rawValue;
     let foundType = false;
 
     // Validate strings

@@ -62,6 +62,7 @@ export default function LoginPage() {
       '/profile/',
       '/texts/',
       '/weather/',
+      '/pages/',
     ];
     if (validRedirects.includes(destination)) {
       window.location.assign(destination);
