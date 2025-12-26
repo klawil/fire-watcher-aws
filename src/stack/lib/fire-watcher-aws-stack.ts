@@ -852,10 +852,6 @@ export class FireWatcherAwsStack extends Stack {
           pathPart: '{id}',
           fileName: 'department',
           methods: [ 'GET', ],
-          buckets: [ {
-            bucket: 'COSTS',
-          }, ],
-          getCosts: true,
           twilioSecret: true,
         }, ],
       },

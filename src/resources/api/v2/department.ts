@@ -1,9 +1,3 @@
-import {
-  CostExplorerClient, GetCostAndUsageCommand
-} from '@aws-sdk/client-cost-explorer';
-import {
-  GetObjectCommand, PutObjectCommand, S3Client
-} from '@aws-sdk/client-s3';
 import twilio from 'twilio';
 
 import {
@@ -26,8 +20,6 @@ import { TwilioAccounts } from '@/types/backend/department';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/department');
-const s3 = new S3Client();
-const costExporer = new CostExplorerClient();
 
 const twilioCategoryLabels: { [key: string]: string } = {
   phonenumbers: 'Phone Numbers',
@@ -38,111 +30,6 @@ const twilioCategoryLabels: { [key: string]: string } = {
   'sms-messages-carrierfees': 'SMS Carrier Fees',
   'mms-messages-carrierfees': 'MMS Carrier Fees',
 };
-
-const awsServiceUnits: { [key: string]: string } = {
-  'Amazon API Gateway': 'requests',
-  'Amazon Transcribe': 'seconds',
-};
-
-function dateToString(date: Date): string {
-  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString()
-    .padStart(2, '0')}`;
-}
-
-async function getAwsBillingData(
-  start: Date,
-  end: Date,
-  department: TwilioAccounts | null
-): Promise<BillingItem[]> {
-  const startDate = dateToString(start);
-  const endDate = dateToString(end);
-  const fileName = `${startDate}-${department !== null ? department : 'all'}.json`;
-
-  // Check for cached data
-  try {
-    const data = await s3.send(new GetObjectCommand({
-      Bucket: process.env.COSTS_BUCKET,
-      Key: fileName,
-    }));
-    if (typeof data.Body !== 'undefined') {
-      const body = JSON.parse(data.Body.toString());
-      return body.data;
-    }
-  } catch (e) {
-    if (
-      typeof e === 'object' &&
-      e !== null &&
-      'code' in e &&
-      e.code !== 'NoSuchKey'
-    ) {
-      logger.error(`Error getting ${startDate} info (${fileName})`, e);
-      throw e;
-    }
-  }
-
-  // Fetch the actual data
-  const awsData = await costExporer.send(new GetCostAndUsageCommand({
-    Granularity: 'MONTHLY',
-    Metrics: [
-      'UnblendedCost',
-      'UsageQuantity',
-    ],
-    TimePeriod: {
-      Start: startDate,
-      End: endDate,
-    },
-    GroupBy: [ {
-      Type: 'DIMENSION',
-      Key: 'SERVICE',
-    }, ],
-    ...department !== null
-      ? {
-        Filter: {
-          CostCategories: {
-            Key: 'Department',
-            Values: [ department, ],
-          },
-        },
-      }
-      : {},
-  }));
-
-  const cache: {
-    dateTimePulled: string;
-    data: BillingItem[];
-  } = {
-    dateTimePulled: new Date().toISOString(),
-    data: [],
-  };
-  if (
-    awsData.ResultsByTime &&
-    awsData.ResultsByTime.length > 0 &&
-    awsData.ResultsByTime[0].Groups
-  ) {
-    cache.data = awsData.ResultsByTime[0].Groups
-      .map(group => {
-        const cat = group.Keys?.join('|') || 'Unkown';
-
-        return {
-          type: 'aws',
-          cat: cat,
-          price: Number(group.Metrics?.UnblendedCost?.Amount || 0),
-          usage: Number(group.Metrics?.UsageQuantity?.Amount || 0),
-          usageUnit: typeof awsServiceUnits[cat] !== 'undefined'
-            ? awsServiceUnits[cat]
-            : group.Metrics?.UsageQuantity?.Unit || 'Unknown',
-        };
-      });
-  }
-
-  await s3.send(new PutObjectCommand({
-    Bucket: process.env.COSTS_BUCKET,
-    Key: fileName,
-    Body: JSON.stringify(cache),
-  }));
-
-  return cache.data;
-}
 
 const GET: LambdaApiFunction<GetDepartmentApi> = async function (
   event,
@@ -199,28 +86,62 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (
   }
 
   // Get the timeframe that we should use
-  const month = query.month || 'last';
   let endDate = new Date();
-  endDate.setUTCMilliseconds(0);
-  endDate.setUTCSeconds(0);
-  endDate.setUTCMinutes(0);
-  endDate.setUTCHours(0);
-  endDate.setDate(1);
-  let startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
-  startDate.setDate(1);
-  if (month === 'this') {
-    startDate = new Date();
-    startDate.setDate(1);
-    endDate.setDate(28);
-    endDate = new Date(endDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+  let startDate = new Date();
+  if (
+    typeof query.month !== 'undefined' ||
+    typeof query.startDate === 'undefined' ||
+    typeof query.endDate === 'undefined'
+  ) {
+    const month = query.month || 'last';
+    endDate = new Date();
+    endDate.setUTCMilliseconds(0);
+    endDate.setUTCSeconds(0);
+    endDate.setUTCMinutes(0);
+    endDate.setUTCHours(0);
     endDate.setDate(1);
-  }
-  endDate = new Date(endDate.getTime() - 1000);
+    startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
+    startDate.setDate(1);
+    if (month === 'this') {
+      startDate = new Date();
+      startDate.setDate(1);
+      endDate.setDate(28);
+      endDate = new Date(endDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+      endDate.setDate(1);
+    }
+    endDate = new Date(endDate.getTime() - 1000);
+  } else {
+    [
+      {
+        k: 'startDate',
+        d: startDate,
+      },
+      {
+        k: 'endDate',
+        d: endDate,
+      },
+    ].forEach(c => {
+      c.d.setUTCMilliseconds(0);
+      c.d.setUTCSeconds(0);
+      c.d.setUTCMinutes(0);
+      c.d.setUTCHours(0);
 
-  // Get the AWS information only for last month (cost $0.01 / request!)
-  let awsDataPromise: Promise<BillingItem[]> = new Promise(res => res([]));
-  if (month !== 'this') {
-    awsDataPromise = getAwsBillingData(startDate, endDate, params.id === 'all' ? null : params.id);
+      const val = query[c.k as 'startDate' | 'endDate'];
+      if (typeof val === 'undefined') {
+        return;
+      }
+
+      const parts = val.split('-');
+      if (parts === null) {
+        return;
+      }
+      c.d.setUTCFullYear(Number(parts[0]));
+      c.d.setUTCMonth(Number(parts[1]) - 1);
+      c.d.setUTCDate(Number(parts[2]));
+    });
+
+    // Add one day minus 1 second to the endDate to make it cover the full day
+    endDate = new Date(endDate.getTime() + (24 * 60 * 60 * 1000) - 1000);
   }
 
   // Get the Twilio auth information
@@ -258,18 +179,12 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (
           }))));
   });
 
-  // Await the AWS data
-  const awsData = await awsDataPromise;
-
   return [
     200,
     {
       start: startDate.toISOString(),
       end: endDate.toISOString(),
-      items: [
-        ...twilioData,
-        ...awsData,
-      ],
+      items: [ ...twilioData, ],
     },
   ];
 };

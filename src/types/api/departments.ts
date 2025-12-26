@@ -23,7 +23,19 @@ export type GetDepartmentApi = {
   path: '/api/v2/departments/{id}/';
   method: 'GET';
   params: { id: Exclude<TwilioAccounts, ''> | 'all'; }
-  query: { month?: 'this' | 'last'; };
+  query: {
+    month?: 'this' | 'last';
+
+    /**
+     * First day to report data for, format YYYY-MM-DD
+     */
+    startDate?: string;
+
+    /**
+     * Day to end data on (goes until midnight on this day) YYYY-MM-DD
+     */
+    endDate?: string;
+  };
   responses: {
 
     /**
@@ -86,6 +98,22 @@ export const getDepartmentApiQueryValidator: Validator<GetDepartmentApi['query']
           'last',
           'this',
         ],
+      },
+    },
+  },
+  startDate: {
+    required: false,
+    types: {
+      string: {
+        regex: /[0-9]{4}-[0-9]{2}-[0-9]{2}/,
+      },
+    },
+  },
+  endDate: {
+    required: false,
+    types: {
+      string: {
+        regex: /[0-9]{4}-[0-9]{2}-[0-9]{2}/,
       },
     },
   },
