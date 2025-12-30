@@ -503,7 +503,7 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*', ],
         }),
       ],
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 's3.ts'),
       handler: 'main',
       environment: {
@@ -536,7 +536,7 @@ export class FireWatcherAwsStack extends Stack {
           resources: [ '*', ],
         }),
       ],
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'queue.ts'),
       handler: 'main',
       environment: {
@@ -549,7 +549,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create a handler for the S3 file creation SQS queue
     const eventsS3QueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-events-s3-queue-lambda', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'eventFileQueueHandler.ts'),
       handler: 'main',
       environment: {
@@ -575,7 +575,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create a queue and handler that handles Twilio status updates
     const twilioQueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-twilio-queue-lambda', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'twilioQueueHandler.ts'),
       handler: 'main',
       environment: {
@@ -609,7 +609,7 @@ export class FireWatcherAwsStack extends Stack {
         ],
         resources: [ '*', ],
       }), ],
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'alarms.ts'),
       handler: 'main',
       timeout: Duration.seconds(30),
@@ -668,7 +668,7 @@ export class FireWatcherAwsStack extends Stack {
         actions: [ 'cloudwatch:PutMetricData', ],
         resources: [ '*', ],
       }), ],
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'status.ts'),
       handler: 'main',
       environment: {
@@ -694,7 +694,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Import the AladTec schedule
     const importAladTec = new lambdanodejs.NodejsFunction(this, 'cofrn-import-aladtec', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'importAladTec.ts'),
       handler: 'main',
       environment: {
@@ -717,7 +717,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Update the event counts daily
     const dailyEventsHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-daily-events', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'dailyEvents.ts'),
       handler: 'main',
       environment: {
@@ -744,7 +744,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the weather updater
     const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'weather.ts'),
       handler: 'main',
       environment: {
@@ -1193,7 +1193,7 @@ export class FireWatcherAwsStack extends Stack {
           .map(key => delete baseEnv[key]);
 
         resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
-          runtime: lambda.Runtime.NODEJS_20_X,
+          runtime: lambda.Runtime.NODEJS_22_X,
           entry: resolve(resourceBase, 'api', 'v2', `${config.fileName}.ts`),
           handler: 'main',
           timeout: Duration.seconds(20),
