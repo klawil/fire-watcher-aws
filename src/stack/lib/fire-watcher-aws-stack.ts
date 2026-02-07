@@ -711,6 +711,7 @@ export class FireWatcherAwsStack extends Stack {
     const importAladTecEventRule = new events.Rule(this, 'import-aladtec-rule', {
       schedule: events.Schedule.cron({
         hour: '*/6',
+        minute: '0',
       }),
     });
     importAladTecEventRule.addTarget(new targets.LambdaFunction(importAladTec));
