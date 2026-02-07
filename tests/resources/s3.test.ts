@@ -481,7 +481,7 @@ describe('resources/s3', () => {
           },
           {
             Key: 'CostCenter',
-            Value: 'NSCAD',
+            Value: 'COFRN',
           },
         ],
         TranscriptionJobName: '8198-123456',
@@ -529,6 +529,10 @@ describe('resources/s3', () => {
           {
             Key: 'Duration',
             Value: '7',
+          },
+          {
+            Key: 'CostCenter',
+            Value: 'COFRN',
           },
         ],
         TranscriptionJobName: '1234-123456',

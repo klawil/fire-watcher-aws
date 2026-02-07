@@ -68,6 +68,8 @@ export class FireWatcherAwsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    Tags.of(this).add('CostCenter', 'COFRN');
+
     // Created outside of the CDK
     const bucket = s3.Bucket.fromBucketName(this, bucketName, bucketName);
     const twilioSecret = secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn);
@@ -415,6 +417,7 @@ export class FireWatcherAwsStack extends Stack {
 
     // Create the SQS queue
     const queue = new sqs.Queue(this, 'cvfd-queue', {
+      visibilityTimeout: Duration.minutes(5),
       deadLetterQueue: {
         queue: deadLetterQueue,
         maxReceiveCount: 2,

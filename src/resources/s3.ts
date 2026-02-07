@@ -22,7 +22,6 @@ import {
 import { RadioObject } from '@/types/api/radios';
 import { FullTalkgroupObject } from '@/types/api/talkgroups';
 import { PagingTalkgroup } from '@/types/api/users';
-import { PhoneNumberAccount } from '@/types/backend/department';
 import {
   TypedDeleteItemInput, TypedPutItemInput
 } from '@/types/backend/dynamo';
@@ -69,16 +68,6 @@ interface SourceListItem {
   src: number;
 }
 
-const talkgroupsToTag: {
-  [key: string]: PhoneNumberAccount;
-} = {
-  '8198': 'NSCAD',
-  '8332': 'Crestone',
-  '18332': 'Crestone',
-  '18331': 'Baca',
-  '8331': 'Baca',
-};
-
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
   logger.trace('parseRecord', ...arguments);
   const Bucket = record.s3.bucket.name;
@@ -120,7 +109,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       tg: -1,
       freq: 0,
     };
-    let fileTag: PhoneNumberAccount | null = null;
     if (Key.indexOf('/dtr') !== -1) {
       try {
         if (typeof headInfo.Metadata?.source_list !== 'undefined') {
@@ -144,12 +132,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         Sources: sourceList,
         Talkgroup: Number(headInfo.Metadata?.talkgroup_num),
       };
-      if (
-        headInfo.Metadata?.talkgroup_num &&
-        typeof talkgroupsToTag[headInfo.Metadata?.talkgroup_num] !== 'undefined'
-      ) {
-        fileTag = talkgroupsToTag[headInfo.Metadata?.talkgroup_num];
-      }
       if (sourceList.length === 0) {
         delete body.Item.Sources;
       }
@@ -187,9 +169,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         Tower: 'vhf',
         Talkgroup: config.tg,
       };
-      if (typeof talkgroupsToTag[config.tg] !== 'undefined') {
-        fileTag = talkgroupsToTag[config.tg];
-      }
     }
     const sourcePutItems: Promise<unknown>[] = sourceList
       .map(sourceId => typedPutItem<FileEventItem>({
@@ -442,13 +421,11 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           Key: 'Duration',
           Value: (body.Item.Len || 0).toString(),
         },
-      ];
-      if (fileTag !== null) {
-        Tags.push({
+        {
           Key: 'CostCenter',
-          Value: fileTag,
-        });
-      }
+          Value: 'COFRN',
+        },
+      ];
       promises['start-transcribe'] = transcribe.send(new StartTranscriptionJobCommand({
         TranscriptionJobName: transcribeJobName,
         LanguageCode: 'en-US',
