@@ -120,6 +120,11 @@ const createVhfEvent = newS3Event(
   'audio/BG_FIRE_VHF_20250422_003158.mp3',
   'ObjectCreated'
 );
+const createVhfMed9Event = newS3Event(
+  'bucket-name',
+  'audio/MED_9_UHF_20250422_003158.mp3',
+  'ObjectCreated'
+);
 const createVhfHeadInfo = {
   Metadata: {
     datetime: '2000',
@@ -426,6 +431,87 @@ describe('resources/s3', () => {
         TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
           ID: 18331,
+        },
+        ExpressionAttributeNames: {
+          '#InUse': 'InUse',
+        },
+        ExpressionAttributeValues: {
+          ':InUse': 'Y',
+        },
+        UpdateExpression: 'SET #InUse = :InUse',
+      });
+    });
+
+    it('Handles a MED_9 UHF file being created', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createVhfHeadInfo);
+
+      await mod.main({
+        Records: [ createVhfMed9Event, ],
+      });
+
+      // Call to get the S3 information
+      expect(HeadObjectCommand).toBeCalledTimes(1);
+      expect(HeadObjectCommand).toBeCalledWith({
+        Bucket: 'bucket-name',
+        Key: createVhfMed9Event.s3.object.key,
+      });
+
+      // Add the S3 information
+      expect(PutCommand).toBeCalledTimes(1);
+      expect(PutCommand).toBeCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Item: {
+          Added: currentTime,
+          DeviceProcessed: true,
+          Emergency: 0,
+          EndTime: 17,
+          Freq: 462950000,
+          Key: createVhfMed9Event.s3.object.key,
+          Len: 15,
+          StartTime: 2,
+          Talkgroup: 18333,
+          Tone: false,
+          ToneIndex: 'n',
+          Tower: 'vhf',
+        },
+      });
+
+      // Add the VHF upload metric
+      expect(PutMetricDataCommand).toBeCalledTimes(1);
+      expect(PutMetricDataCommand).toBeCalledWith({
+        Namespace: 'CVFD API',
+        MetricData: [ {
+          Dimensions: [
+            {
+              Name: 'source',
+              Value: 'S3',
+            },
+            {
+              Name: 'action',
+              Value: 'createVHF',
+            },
+          ],
+          MetricName: 'Call',
+          Timestamp: new Date(),
+          Unit: 'Count',
+          Value: 1,
+        }, ],
+      });
+
+      // Query to find possible adjacent files
+      expect(QueryCommand).toBeCalledTimes(0);
+
+      // No Get commands
+      expect(GetCommand).toBeCalledTimes(0);
+
+      // Set the talkgroup and radio IDs to in use
+      expect(UpdateCommand).toBeCalledTimes(1);
+      expect(UpdateCommand).toBeCalledWith({
+        TableName: 'TABLE_TALKGROUP_VAL',
+        Key: {
+          ID: 18333,
         },
         ExpressionAttributeNames: {
           '#InUse': 'InUse',

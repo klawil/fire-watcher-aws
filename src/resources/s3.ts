@@ -57,6 +57,10 @@ const vhfConfig: {
     tg: 18331,
     freq: 154445000,
   },
+  'MED_9_UHF': {
+    tg: 18333,
+    freq: 462950000,
+  },
   'SAG_FIRE_VHF': {
     tg: 18332,
     freq: 154190000,
