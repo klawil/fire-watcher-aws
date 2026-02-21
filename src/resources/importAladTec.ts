@@ -147,7 +147,7 @@ export async function main() {
       department,
     });
   });
-  logger.log('Saving', shiftData);
+  logger.debug('Saving', shiftData);
 
   // Write the data
   await s3.send(new PutObjectCommand({
