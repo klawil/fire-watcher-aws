@@ -11,11 +11,12 @@ import twilio from 'twilio';
 import { RecordInstance } from 'twilio/lib/rest/api/v2010/account/usage/record';
 
 import { getTwilioSecret } from '@/deprecated/utils/general';
+import { Department } from '@/types/api/departments';
 import { InvoiceItem } from '@/types/api/invoices';
+import { TypedScanInput } from '@/types/backend/dynamo';
 import {
-  TwilioAccounts,
-  departmentConfig
-} from '@/types/backend/department';
+  TABLE_DEPARTMENT, typedScan
+} from '@/utils/backend/dynamoTyped';
 import {
   BILLING_EMAIL_ADDRESS,
   FORWARD_EMAIL_TO,
@@ -207,31 +208,52 @@ export async function main() {
 
   // Get the timeframe that we should use
   let endDate = new Date();
-  let startDate = new Date();
-  endDate = new Date();
   endDate.setUTCMilliseconds(0);
   endDate.setUTCSeconds(0);
   endDate.setUTCMinutes(0);
   endDate.setUTCHours(0);
   endDate.setDate(1);
-  startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
+  const startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
   startDate.setDate(1);
   endDate = new Date(endDate.getTime() - 1000);
+  const startDateAnnual = new Date(startDate.getTime());
+  startDateAnnual.setMonth(0);
+
+  // Determine the departments to invoice
+  const departmentsScanInput: TypedScanInput<Department> = {
+    TableName: TABLE_DEPARTMENT,
+    ExpressionAttributeNames: {
+      '#invoiceFrequency': 'invoiceFrequency',
+    },
+    ExpressionAttributeValues: {
+      ':monthly': 'monthly',
+    },
+    FilterExpression: '#invoiceFrequency = :monthly',
+  };
+  if (
+    new Date().getUTCMonth() === 2
+  ) {
+    departmentsScanInput.ExpressionAttributeValues![':annually'] = 'annually';
+    departmentsScanInput.FilterExpression += ' OR #invoiceFrequency = :annually';
+  }
+
+  // Get the departments to generate invoices for
+  const departmentsToInvoice = await typedScan<Department>(departmentsScanInput);
+  if (!departmentsToInvoice.Items) {
+    logger.warn('No departments to invoice');
+    return;
+  }
 
   // Get the Twilio auth information
-  await Promise.all(([
-    'Baca',
-    'NSCAD',
-    'Crestone',
-  ] as TwilioAccounts[]).map(async twilioAccount => {
-    const twilioSecret = await getTwilioSecret();
-    const accountSid = twilioSecret[`accountSid${twilioAccount}`];
-    const authToken = twilioSecret[`authToken${twilioAccount}`];
+  const twilioSecret = await getTwilioSecret();
+  await Promise.all(departmentsToInvoice.Items.map(async department => {
+    const accountSid = twilioSecret[`accountSid${department.id}` as keyof typeof twilioSecret];
+    const authToken = twilioSecret[`authToken${department.id}` as keyof typeof twilioSecret];
     if (
       typeof accountSid === 'undefined' ||
       typeof authToken === 'undefined'
     ) {
-      throw new Error(`Unable to find auth for account ${twilioAccount}`);
+      throw new Error(`Unable to find auth for account ${department.id}`);
     }
 
     // Get the twilio cost information
@@ -239,7 +261,9 @@ export async function main() {
       twilio(accountSid, authToken).api.v2010.account.usage.records
         .list({
           includeSubaccounts: true,
-          startDate: startDate,
+          startDate: department.invoiceFrequency === 'annually'
+            ? startDateAnnual
+            : startDate,
           endDate: endDate,
           pageSize: 1000,
         }, (err, items) => err
@@ -250,11 +274,11 @@ export async function main() {
     const issueDate = new Date();
     const dueDate = new Date(issueDate.getTime() + (30 * 24 * 60 * 60 * 1000));
     const invoiceConfig: InvoiceData = {
-      invoiceNumber: `${startDate.getFullYear()}-${monthLabels[startDate.getMonth()].slice(0,3).toUpperCase()}-${twilioAccount.toUpperCase()}`,
+      invoiceNumber: `${startDate.getUTCFullYear()}-${monthLabels[startDate.getUTCMonth()].slice(0,3).toUpperCase()}-${department.id.toUpperCase()}`,
       issueDate: issueDate.toISOString().split('T')[0],
       dueDate: dueDate.toISOString().split('T')[0],
-      invoiceMonth: `${monthLabels[startDate.getMonth()]} ${startDate.getFullYear()}`,
-      clientName: departmentConfig[twilioAccount as keyof typeof departmentConfig].name,
+      invoiceMonth: `${monthLabels[startDate.getUTCMonth()]} ${startDate.getUTCFullYear()}`,
+      clientName: department.name || 'Unknown Department',
       lineItems: twilioData.map(item => ({
         description: item.cat,
         quantity: `${item.usage} ${item.usageUnit}`,
@@ -278,18 +302,22 @@ export async function main() {
     const pdfBody = await pdfBodyS3.Body.transformToByteArray();
     await ses.send(new SendEmailCommand({
       Destination: {
-        ToAddresses: [ FORWARD_EMAIL_TO, ],
+        ToAddresses: department.invoiceEmail || [],
+        BccAddresses: [ FORWARD_EMAIL_TO, ],
       },
       FromEmailAddress: `COFRN Billing <${BILLING_EMAIL_ADDRESS}>`,
       FromEmailAddressIdentityArn: process.env.EMAIL_SOURCE_ARN,
       Content: {
         Simple: {
           Subject: {
-            Data: `[COFRN] ${departmentConfig[twilioAccount as keyof typeof departmentConfig].name} ${monthLabels[startDate.getMonth()]} Invoice`,
+            Data: `[COFRN] ${department.name || 'Unknown Department'} ${department.invoiceFrequency === 'annually' ? startDate.getUTCFullYear() : monthLabels[startDate.getUTCMonth()]} Invoice`,
           },
           Body: {
             Text: {
-              Data: `Please find attached the invoice for your COFRN usage for the month of ${invoiceConfig.invoiceMonth}. If you have any questions about this invoice, please reply to this email.`,
+              Data: `Please find attached the invoice for ${department.name}'s COFRN usage for the ${department.invoiceFrequency === 'annually'
+                ? `year of ${startDateAnnual.getUTCFullYear()}`
+                : `month of ${invoiceConfig.invoiceMonth}`
+              }. If you have any questions about this invoice, please reply to this email.`,
             },
           },
           Attachments: [ {

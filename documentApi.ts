@@ -34,6 +34,10 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
       description: 'APIs for Authentication',
     },
     {
+      name: 'Departments',
+      description: 'Access or modify Department resources',
+    },
+    {
       name: 'Errors',
       description: 'APIs that submit front end errors',
     },

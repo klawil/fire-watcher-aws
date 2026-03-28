@@ -1,5 +1,5 @@
 export type TableNames = 'DEVICES' | 'DTR_TRANSLATION' | 'ERROR' | 'FILE' | 'RADIOS'
-  | 'SITE' | 'STATUS' | 'TALKGROUP' | 'TEXT' | 'USER';
+  | 'SITE' | 'STATUS' | 'TALKGROUP' | 'TEXT' | 'USER' | 'DEPARTMENT';
 
 type TableEnvName = `TABLE_${TableNames}`;
 

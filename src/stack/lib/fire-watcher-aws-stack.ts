@@ -157,6 +157,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    const departmentsTable = new dynamodb.Table(this, 'cofrn-departments', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'id',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'AddedIndex',
@@ -481,6 +488,7 @@ export class FireWatcherAwsStack extends Stack {
       TABLE_TALKGROUP: talkgroupTable.tableName,
       TABLE_TEXT: textsTable.tableName,
       TABLE_USER: phoneNumberTable.tableName,
+      TABLE_DEPARTMENT: departmentsTable.tableName,
 
       GLUE_TABLE: glueTableName,
       GLUE_DATABASE: glueDatabaseName,
@@ -545,6 +553,7 @@ export class FireWatcherAwsStack extends Stack {
     emailS3.grantReadWrite(invoiceHandler);
     emailIdentity.grantSendEmail(invoiceHandler);
     twilioSecret.grantRead(invoiceHandler);
+    departmentsTable.grantReadData(invoiceHandler);
 
     // Run the invoice function on the 3rd of every month
     const invoiceEventRule = new events.Rule(this, 'invoice-rule', {
@@ -877,6 +886,7 @@ export class FireWatcherAwsStack extends Stack {
       TALKGROUP: talkgroupTable,
       TEXT: textsTable,
       USER: phoneNumberTable,
+      DEPARTMENT: departmentsTable,
     };
     const bucketMap = {
       FILE: bucket,
@@ -921,16 +931,26 @@ export class FireWatcherAwsStack extends Stack {
           readOnly: true,
         }, ],
       },
-      // invoices
+      // departments
       {
-        pathPart: 'invoices',
+        pathPart: 'departments',
+        fileName: 'departments',
+        methods: [
+          'GET',
+          'POST',
+        ],
+        tables: [ {
+          table: 'DEPARTMENT',
+        }, ],
         next: [ {
           pathPart: '{id}',
-          next: [ {
-            pathPart: 'items',
-            fileName: 'invoiceItems',
-            methods: [ 'GET', ],
-            twilioSecret: true,
+          fileName: 'department',
+          methods: [
+            'GET',
+            'PATCH',
+          ],
+          tables: [ {
+            table: 'DEPARTMENT',
           }, ],
         }, ],
       },
@@ -1015,6 +1035,19 @@ export class FireWatcherAwsStack extends Stack {
           table: 'STATUS',
         }, ],
         sendsMetrics: true,
+      },
+      // invoices
+      {
+        pathPart: 'invoices',
+        next: [ {
+          pathPart: '{id}',
+          next: [ {
+            pathPart: 'items',
+            fileName: 'invoiceItems',
+            methods: [ 'GET', ],
+            twilioSecret: true,
+          }, ],
+        }, ],
       },
       // login
       {
@@ -1243,8 +1276,12 @@ export class FireWatcherAwsStack extends Stack {
       let resourceIntegration: apigateway.Integration | undefined = undefined;
       let resourceHandler: lambdanodejs.NodejsFunction | undefined = undefined;
       if ('fileName' in config) {
+        // const baseEnv: Partial<LambdaEnvironment> = {
+        //   ...lambdaEnv,
+        // };
         const baseEnv: Partial<LambdaEnvironment> = {
-          ...lambdaEnv,
+          JWT_SECRET: lambdaEnv.JWT_SECRET,
+          API_CODE: lambdaEnv.API_CODE,
         };
 
         const initialPolicy: iam.PolicyStatement[] = [];
@@ -1263,13 +1300,42 @@ export class FireWatcherAwsStack extends Stack {
           }));
         }
 
-        const fnTables = [
+        if (config.getAthena) {
+          baseEnv.ATHENA_WORKGROUP = lambdaEnv.ATHENA_WORKGROUP;
+          baseEnv.GLUE_DATABASE = lambdaEnv.GLUE_DATABASE;
+          baseEnv.GLUE_TABLE = lambdaEnv.GLUE_TABLE;
+        }
+
+        const fnTables: (keyof LambdaEnvironment)[] = [
           'TABLE_USER',
-          ...config.tables?.map(t => `TABLE_${t.table}`) || [],
+          ...config.tables?.map(t => `TABLE_${t.table}` as keyof LambdaEnvironment) || [],
         ];
-        (Object.keys(baseEnv) as (keyof LambdaEnvironment)[])
-          .filter(key => key.startsWith('TABLE_') && !fnTables.includes(key))
-          .map(key => delete baseEnv[key]);
+        fnTables.forEach(key => {
+          baseEnv[key] = lambdaEnv[key];
+        });
+
+        config.buckets?.forEach(bucket => {
+          if (bucket.bucket === 'COSTS') {
+            baseEnv.COSTS_BUCKET = lambdaEnv.COSTS_BUCKET;
+          } else if (bucket.bucket === 'EVENTS') {
+            baseEnv.EVENTS_S3_BUCKET = lambdaEnv.EVENTS_S3_BUCKET;
+          } else if (bucket.bucket === 'FILE') {
+            baseEnv.S3_BUCKET = lambdaEnv.S3_BUCKET;
+          }
+        });
+
+        if (config.queues) {
+          baseEnv.SQS_QUEUE = lambdaEnv.SQS_QUEUE;
+          baseEnv.TWILIO_QUEUE = lambdaEnv.TWILIO_QUEUE;
+        }
+
+        if (config.firehoses) {
+          baseEnv.FIREHOSE_NAME = lambdaEnv.FIREHOSE_NAME;
+        }
+
+        if (config.twilioSecret) {
+          baseEnv.TWILIO_SECRET = lambdaEnv.TWILIO_SECRET;
+        }
 
         resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
           runtime: lambda.Runtime.NODEJS_22_X,

@@ -33,6 +33,7 @@ export const TABLE_STATUS = process.env.TABLE_STATUS;
 export const TABLE_TALKGROUP = process.env.TABLE_TALKGROUP;
 export const TABLE_TEXT = process.env.TABLE_TEXT;
 export const TABLE_USER = process.env.TABLE_USER;
+export const TABLE_DEPARTMENT = process.env.TABLE_DEPARTMENT;
 
 function removeSets<T extends object>(input: T): T {
   const output = { ...input, };
