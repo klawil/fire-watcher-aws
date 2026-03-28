@@ -13,6 +13,7 @@
     "lint-fix": "next lint --fix",
     "prepare": "husky",
     "synth": "cdk synth",
+    "copy-constants": "mv src/utils/backend/hidden-constants-example.ts src/utils/backend/hidden-constants.ts",
     "deploy": "npm run clean && npm run document && npm run test && npm run build && cdk deploy --all",
     "deploy-frontend": "DEPLOY_FRONTEND=y npm run deploy",
     "test": "vitest run"
