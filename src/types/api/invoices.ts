@@ -5,7 +5,7 @@ import {
 import { TwilioAccounts } from '@/types/backend/department';
 import { Validator } from '@/types/backend/validation';
 
-export interface BillingItem {
+export interface InvoiceItem {
   type: 'aws' | 'twilio';
   cat: string;
   price: number;
@@ -14,15 +14,15 @@ export interface BillingItem {
 }
 
 /**
- * Get a departments bill
- * @summary Get Department Bill
- * @tags Departments
+ * Get a departments invoiced items for a given time period
+ * @summary Get Invoice Items
+ * @tags Invoices
  * @body.contentType application/json
  */
-export type GetDepartmentApi = {
-  path: '/api/v2/departments/{id}/';
+export type GetInvoiceItemsApi = {
+  path: '/api/v2/invoices/{department}/items/';
   method: 'GET';
-  params: { id: Exclude<TwilioAccounts, ''> | 'all'; }
+  params: { department: Exclude<TwilioAccounts, ''> | 'all'; }
   query: {
     month?: 'this' | 'last';
 
@@ -35,6 +35,11 @@ export type GetDepartmentApi = {
      * Day to end data on (goes until midnight on this day) YYYY-MM-DD
      */
     endDate?: string;
+
+    /**
+     * Whether to group data by day or month, default is no grouping (all data in one bucket)
+     */
+    by?: 'day' | 'month' | 'all';
   };
   responses: {
 
@@ -44,7 +49,7 @@ export type GetDepartmentApi = {
     200: {
       start: string;
       end: string;
-      items: BillingItem[];
+      items: InvoiceItem[];
     };
 
     /**
@@ -72,8 +77,8 @@ export type GetDepartmentApi = {
   }];
 };
 
-export const getDepartmentApiParamsValidator: Validator<GetDepartmentApi['params']> = {
-  id: {
+export const getInvoiceItemsApiParamsValidator: Validator<GetInvoiceItemsApi['params']> = {
+  department: {
     required: true,
     types: {
       string: {
@@ -89,7 +94,7 @@ export const getDepartmentApiParamsValidator: Validator<GetDepartmentApi['params
   },
 };
 
-export const getDepartmentApiQueryValidator: Validator<GetDepartmentApi['query']> = {
+export const getInvoiceItemsApiQueryValidator: Validator<GetInvoiceItemsApi['query']> = {
   month: {
     required: false,
     types: {
@@ -114,6 +119,18 @@ export const getDepartmentApiQueryValidator: Validator<GetDepartmentApi['query']
     types: {
       string: {
         regex: /[0-9]{4}-[0-9]{2}-[0-9]{2}/,
+      },
+    },
+  },
+  by: {
+    required: false,
+    types: {
+      string: {
+        exact: [
+          'day',
+          'month',
+          'all',
+        ],
       },
     },
   },

@@ -1,5 +1,3 @@
-import twilio from 'twilio';
-
 import {
   LambdaApiFunction,
   handleResourceApi
@@ -13,25 +11,17 @@ import {
   api401Body, api403Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  BillingItem,
-  GetDepartmentApi, getDepartmentApiParamsValidator, getDepartmentApiQueryValidator
-} from '@/types/api/departments';
+  GetInvoiceItemsApi,
+  getInvoiceItemsApiParamsValidator,
+  getInvoiceItemsApiQueryValidator
+} from '@/types/api/invoices';
 import { TwilioAccounts } from '@/types/backend/department';
+import { getTwilioItems } from '@/utils/backend/twilio';
 import { getLogger } from '@/utils/common/logger';
 
-const logger = getLogger('resources/api/v2/department');
+const logger = getLogger('resources/api/v2/invoices');
 
-const twilioCategoryLabels: { [key: string]: string } = {
-  phonenumbers: 'Phone Numbers',
-  'sms-outbound': 'Outbound SMS',
-  'mms-outbound': 'Outbound MMS',
-  'sms-inbound': 'Inbound SMS',
-  'mms-inbound': 'Inbound MMS',
-  'sms-messages-carrierfees': 'SMS Carrier Fees',
-  'mms-messages-carrierfees': 'MMS Carrier Fees',
-};
-
-const GET: LambdaApiFunction<GetDepartmentApi> = async function (
+const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   event,
   user,
   userPerms
@@ -57,11 +47,11 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (
     params,
     query,
     validationErrors,
-  } = validateRequest<GetDepartmentApi>({
+  } = validateRequest<GetInvoiceItemsApi>({
     paramsRaw: event.pathParameters,
-    paramsValidator: getDepartmentApiParamsValidator,
+    paramsValidator: getInvoiceItemsApiParamsValidator,
     queryRaw: event.queryStringParameters || {},
-    queryValidator: getDepartmentApiQueryValidator,
+    queryValidator: getInvoiceItemsApiQueryValidator,
   });
   if (
     params === null ||
@@ -76,8 +66,8 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (
 
   // Make sure the user can access this department
   if (
-    !userPerms.isDistrictAdmin &&
-    (params.id !== 'all' && !userPerms.adminDepartments.includes(params.id))
+    !userPerms.isDistrictAdmin ||
+    (params.department !== 'all' && !userPerms.adminDepartments.includes(params.department))
   ) {
     return [
       403,
@@ -145,9 +135,9 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (
   }
 
   // Get the Twilio auth information
-  const twilioAccount: TwilioAccounts = params.id === 'all'
+  const twilioAccount: TwilioAccounts = params.department === 'all'
     ? ''
-    : params.id;
+    : params.department;
   const twilioSecret = await getTwilioSecret();
   const accountSid = twilioSecret[`accountSid${twilioAccount}`];
   const authToken = twilioSecret[`authToken${twilioAccount}`];
@@ -155,29 +145,17 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (
     typeof accountSid === 'undefined' ||
     typeof authToken === 'undefined'
   ) {
-    throw new Error(`Unable to find auth for account ${params.id} - ${twilioAccount}`);
+    throw new Error(`Unable to find auth for account ${params.department} - ${twilioAccount}`);
   }
 
   // Get the twilio cost information
-  const twilioData: BillingItem[] = await new Promise((res, rej) => {
-    twilio(accountSid, authToken).api.v2010.account.usage.records
-      .list({
-        limit: 1000,
-        includeSubaccounts: true,
-        startDate: startDate,
-        endDate: endDate,
-      }, (err, items) => err
-        ? rej(err)
-        : res(items
-          .filter(item => typeof twilioCategoryLabels[item.category] !== 'undefined')
-          .map(item => ({
-            type: 'twilio',
-            cat: twilioCategoryLabels[item.category] || item.category,
-            price: Number(item.price),
-            usage: Number(item.usage),
-            usageUnit: item.usageUnit,
-          }))));
-  });
+  const twilioData = await getTwilioItems(
+    accountSid,
+    authToken,
+    startDate,
+    endDate,
+    query.by || 'all'
+  );
 
   return [
     200,

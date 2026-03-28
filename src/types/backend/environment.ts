@@ -28,7 +28,6 @@ export interface LambdaEnvironment extends TableNameMap {
   ATHENA_WORKGROUP: string;
 
   FIREHOSE_NAME: string;
-  TESTING_USER: string;
 }
 
 declare global {

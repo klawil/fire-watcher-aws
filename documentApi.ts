@@ -34,10 +34,6 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
       description: 'APIs for Authentication',
     },
     {
-      name: 'Departments',
-      description: 'APIs about departments',
-    },
-    {
       name: 'Errors',
       description: 'APIs that submit front end errors',
     },
@@ -52,6 +48,10 @@ const baseOasSpec: OpenApiSpecData<'3.1.0'> = {
     {
       name: 'Heartbeats',
       description: 'Pings from the VHF recording servers',
+    },
+    {
+      name: 'Invoices',
+      description: 'APIs for loading invoices and getting invoice information',
     },
     {
       name: 'Metrics',

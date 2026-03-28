@@ -3,6 +3,8 @@ import {
 } from '@aws-sdk/client-cloudwatch';
 import twilio from 'twilio';
 
+import { TEST_USER_PHONE } from './hidden-constants';
+
 import {
   getTwilioSecret, twilioPhoneCategories
 } from '@/deprecated/utils/general';
@@ -26,7 +28,7 @@ import { getUserPermissions } from '@/utils/common/user';
 const logger = getLogger('stack/resources/utils/texts');
 
 const cloudWatch = new CloudWatchClient();
-const testUser = Number(process.env.TESTING_USER);
+const testUser = Number(TEST_USER_PHONE);
 
 export async function getUserRecipients(
   department: UserDepartment | 'all',

@@ -9,6 +9,7 @@ import {
 } from '../../../__mocks__/@aws-sdk/lib-dynamodb';
 import { createFn } from '../../../__mocks__/twilio';
 
+import { TEST_USER_PHONE } from '@/utils/backend/hidden-constants';
 import * as mod from '@/utils/backend/texts';
 
 describe('utils/backend/texts', () => {
@@ -21,7 +22,7 @@ describe('utils/backend/texts', () => {
       const out = await mod.getUserRecipients('all', null, true);
 
       expect(out).toEqual([ {
-        phone: 5555555555,
+        phone: Number(TEST_USER_PHONE),
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({
@@ -118,14 +119,14 @@ describe('utils/backend/texts', () => {
     it('Scans for users that are in a certain department and receive a certain page tg and have testing enabled', async () => {
       DynamoDBDocumentClientMock.setResult('scan', {
         Items: [ {
-          phone: 5555555555,
+          phone: Number(TEST_USER_PHONE),
         }, ],
       });
 
       const out = await mod.getUserRecipients('Baca', 8332, true);
 
       expect(out).toEqual([ {
-        phone: 5555555555,
+        phone: Number(TEST_USER_PHONE),
       }, ]);
       expect(ScanCommand).toBeCalledTimes(1);
       expect(ScanCommand).toBeCalledWith({

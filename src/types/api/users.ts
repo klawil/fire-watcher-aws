@@ -10,11 +10,8 @@ import {
 } from '@/types/backend/validation';
 
 export const validDepartments = [
-  'Baca',
-  'Crestone',
-  'NSCAD',
+  ...validPhoneNumberAccounts,
   'PageOnly',
-  'Saguache',
 ] as const;
 export type UserDepartment = typeof validDepartments[number];
 

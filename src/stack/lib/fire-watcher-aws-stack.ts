@@ -25,6 +25,8 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ses from 'aws-cdk-lib/aws-ses';
+import * as sesActions from 'aws-cdk-lib/aws-ses-actions';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as dotenv from 'dotenv';
@@ -55,6 +57,7 @@ const bucketName = process.env.BUCKET_NAME as string;
 const certArn = process.env.SSL_CERT_ARN as string;
 const secretArn = process.env.TWILIO_SECRET_ARN as string;
 const glueCatalogId = process.env.GLUE_CATALOG_ID as string;
+const emailDomain = process.env.EMAIL_DOMAIN as string;
 
 type AlarmTag = 'Dtr' | 'Api';
 interface CvfdAlarm {
@@ -463,7 +466,6 @@ export class FireWatcherAwsStack extends Stack {
 
       TWILIO_SECRET: twilioSecret.secretArn,
       JWT_SECRET: jwtSecret.secretArn,
-      TESTING_USER: process.env.TESTING_USER as string,
       API_CODE: process.env.SERVER_API_CODE as string,
       SQS_QUEUE: queue.queueUrl,
       TWILIO_QUEUE: twilioStatusQueue.queueUrl,
@@ -484,6 +486,75 @@ export class FireWatcherAwsStack extends Stack {
       GLUE_DATABASE: glueDatabaseName,
       ATHENA_WORKGROUP: athenaWorkgroup.name,
     };
+
+    // Create resources for sending emails
+    const emailIdentity = new ses.EmailIdentity(this, 'cvfd-email-identity', {
+      identity: ses.Identity.domain(emailDomain),
+      feedbackForwarding: true,
+    });
+    const emailS3 = new s3.Bucket(this, 'cofrn-email-bucket');
+
+    // Create the lambda for forwarding emails
+    const emailHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-email-lambda', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: resolve(resourceBase, 'emailHandler.ts'),
+      handler: 'main',
+      environment: {
+        ...lambdaEnv,
+        EMAIL_S3_BUCKET: emailS3.bucketName,
+        EMAIL_SOURCE_ARN: emailIdentity.emailIdentityArn,
+      },
+      timeout: Duration.minutes(1),
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    emailIdentity.grantSendEmail(emailHandler);
+    emailS3.grantRead(emailHandler);
+
+    // Create the logic for receiving emails
+    new ses.ReceiptRuleSet(this, 'cofrn-ses-rulest', {
+      rules: [ {
+        recipients: [ `billing@${emailDomain}`, ],
+        actions: [
+          new sesActions.S3({
+            bucket: emailS3,
+            objectKeyPrefix: 'emails/',
+          }),
+          new sesActions.Lambda({
+            function: emailHandler,
+          }),
+        ],
+      }, ],
+    });
+
+    // Invoice generation function
+    const invoiceHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-invoice-lambda', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: resolve(resourceBase, 'generateInvoices.ts'),
+      handler: 'main',
+      environment: {
+        ...lambdaEnv,
+        EMAIL_S3_BUCKET: emailS3.bucketName,
+        EMAIL_SOURCE_ARN: emailIdentity.emailIdentityArn,
+      },
+      bundling: {
+        nodeModules: [ 'pdfkit', ],
+      },
+      timeout: Duration.minutes(1),
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    emailS3.grantReadWrite(invoiceHandler);
+    emailIdentity.grantSendEmail(invoiceHandler);
+    twilioSecret.grantRead(invoiceHandler);
+
+    // Run the invoice function on the 3rd of every month
+    const invoiceEventRule = new events.Rule(this, 'invoice-rule', {
+      schedule: events.Schedule.cron({
+        day: '3',
+        hour: '9',
+        minute: '0',
+      }),
+    });
+    invoiceEventRule.addTarget(new targets.LambdaFunction(invoiceHandler));
 
     // Access for Athena queries
     const athenaAccessPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
@@ -779,6 +850,7 @@ export class FireWatcherAwsStack extends Stack {
       'I_WEATHER': weatherUpdater.functionName,
       'I_TWILIO_QUEUE': twilioQueueHandler.functionName,
       'I_EVENTS_S3_QUEUE': eventsS3QueueHandler.functionName,
+      'I_EMAIL': emailHandler.functionName,
     };
 
     // Create a rest API
@@ -849,14 +921,17 @@ export class FireWatcherAwsStack extends Stack {
           readOnly: true,
         }, ],
       },
-      // departments
+      // invoices
       {
-        pathPart: 'departments',
+        pathPart: 'invoices',
         next: [ {
           pathPart: '{id}',
-          fileName: 'department',
-          methods: [ 'GET', ],
-          twilioSecret: true,
+          next: [ {
+            pathPart: 'items',
+            fileName: 'invoiceItems',
+            methods: [ 'GET', ],
+            twilioSecret: true,
+          }, ],
         }, ],
       },
       // errors
