@@ -1,11 +1,10 @@
 import {
-  CloudWatchClient, PutMetricDataCommand,
+  CloudWatchClient, Dimension, PutMetricDataCommand,
   PutMetricDataCommandInput
 } from '@aws-sdk/client-cloudwatch';
 import {
   GetSecretValueCommand, SecretsManagerClient
 } from '@aws-sdk/client-secrets-manager';
-import * as aws from 'aws-sdk';
 
 import {
   UserDepartment
@@ -233,7 +232,7 @@ export async function incrementMetric(
     putConfig.MetricData.push({
       MetricName: name,
       Dimensions: (Object.keys(metricData) as Array<keyof typeof metricData>)
-        .reduce((agg: aws.CloudWatch.Dimensions, key) => [
+        .reduce((agg: Dimension[], key) => [
           ...agg,
           {
             Name: key,
