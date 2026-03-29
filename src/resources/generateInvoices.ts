@@ -230,9 +230,7 @@ export async function main() {
     },
     FilterExpression: '#invoiceFrequency = :monthly',
   };
-  if (
-    new Date().getUTCMonth() === 2
-  ) {
+  if (new Date().getUTCMonth() === 0) {
     departmentsScanInput.ExpressionAttributeValues![':annually'] = 'annually';
     departmentsScanInput.FilterExpression += ' OR #invoiceFrequency = :annually';
   }
