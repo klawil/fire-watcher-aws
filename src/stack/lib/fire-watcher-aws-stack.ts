@@ -558,7 +558,7 @@ export class FireWatcherAwsStack extends Stack {
     // Run the invoice function on the 3rd of every month
     const invoiceEventRule = new events.Rule(this, 'invoice-rule', {
       schedule: events.Schedule.cron({
-        day: '3',
+        day: '1',
         hour: '9',
         minute: '0',
       }),
