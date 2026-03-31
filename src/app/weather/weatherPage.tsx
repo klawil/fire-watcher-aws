@@ -180,13 +180,13 @@ export default function WeatherPage() {
             xs={12}
             className='font-monospace mb-3'
             href='https://www.spc.noaa.gov/products/fire_wx/fwdy1.html'
-          >Day 2 Fire Weather Outlook</Col>
+          >Day 1 Fire Weather Outlook</Col>
 
           <h3 className='text-center'>Tomorrow</h3>
           <a
             className={styles.imgContainer}
             ref={setImgRef}
-            href='https://www.spc.noaa.gov/products/fire_wx/fwdy1.html'
+            href='https://www.spc.noaa.gov/products/fire_wx/fwdy2.html'
             style={{
               height: `${imgNodeHeight}px`,
             }}
