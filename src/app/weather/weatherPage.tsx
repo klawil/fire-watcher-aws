@@ -104,7 +104,7 @@ export default function WeatherPage() {
               <tr>
                 <td className='px-2'>RM GACC</td>
                 <td className='px-2'>{weatherData.readiness.RMA}</td>
-                <td className='px-2'><a href='https://gacc.nifc.gov/rmcc/intell.php'>RM GACC Intel</a></td>
+                <td className='px-2'><a href='https://gacc.nifc.gov/rmcc/intelligence.php'>RM GACC Intel</a></td>
               </tr>
             </tbody></table>
           </Col>

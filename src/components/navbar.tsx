@@ -54,6 +54,7 @@ export default function CofrnNavbar({
               <NavDropdown.Item as={Nav.Link} className='px-3' href='/profile/'>Edit Profile</NavDropdown.Item>
               <NavDropdown.Item as={Nav.Link} className='px-3' href='/pages/'>View Past Pages</NavDropdown.Item>
               {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/users/'>Manage Users</NavDropdown.Item>}
+              {user.isDistrictAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/departments/'>Department Settings</NavDropdown.Item>}
               {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/texts/'>View Texts</NavDropdown.Item>}
               {user.isAdmin && <NavDropdown.Item as={Nav.Link} className='px-3' href='/status/'>System Status</NavDropdown.Item>}
             </NavDropdown>}

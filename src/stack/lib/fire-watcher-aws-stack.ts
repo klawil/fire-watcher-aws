@@ -2,7 +2,7 @@ import { resolve } from 'path';
 
 import {
   Duration,
-  Stack, StackProps, Tags
+  Stack, StackProps, Tags, TimeZone
 } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as athena from 'aws-cdk-lib/aws-athena';
@@ -24,6 +24,8 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
+import * as schedulerTargets from 'aws-cdk-lib/aws-scheduler-targets';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ses from 'aws-cdk-lib/aws-ses';
 import * as sesActions from 'aws-cdk-lib/aws-ses-actions';
@@ -555,15 +557,22 @@ export class FireWatcherAwsStack extends Stack {
     twilioSecret.grantRead(invoiceHandler);
     departmentsTable.grantReadData(invoiceHandler);
 
-    // Run the invoice function on the 3rd of every month
-    const invoiceEventRule = new events.Rule(this, 'invoice-rule', {
-      schedule: events.Schedule.cron({
-        day: '1',
-        hour: '9',
-        minute: '0',
+    // Run the invoice function on the 3rd of every month at 9 AM
+    const target = new schedulerTargets.LambdaInvoke(invoiceHandler, {
+      input: scheduler.ScheduleTargetInput.fromObject({
+        'payload': 'useful',
       }),
     });
-    invoiceEventRule.addTarget(new targets.LambdaFunction(invoiceHandler));
+    new scheduler.Schedule(this, 'cofrn-invoice-schedule', {
+      schedule: scheduler.ScheduleExpression.cron({
+        minute: '0',
+        hour: '9',
+        day: '2',
+        timeZone: TimeZone.AMERICA_DENVER,
+      }),
+      target,
+      description: 'This will generate invoices every month on the 1st at 0900 mountain time',
+    });
 
     // Access for Athena queries
     const athenaAccessPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
