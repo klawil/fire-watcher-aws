@@ -66,8 +66,8 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
 
   // Make sure the user can access this department
   if (
-    !userPerms.isDistrictAdmin ||
-    (params.department !== 'all' && !userPerms.adminDepartments.includes(params.department))
+    !userPerms.isDistrictAdmin &&
+    (params.department === 'all' || !userPerms.adminDepartments.includes(params.department))
   ) {
     return [
       403,
