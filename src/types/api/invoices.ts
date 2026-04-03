@@ -20,9 +20,9 @@ export interface InvoiceItem {
  * @body.contentType application/json
  */
 export type GetInvoiceItemsApi = {
-  path: '/api/v2/invoices/{department}/items/';
+  path: '/api/v2/invoices/{id}/items/';
   method: 'GET';
-  params: { department: Exclude<TwilioAccounts, ''> | 'all'; }
+  params: { id: Exclude<TwilioAccounts, ''> | 'all'; }
   query: {
     month?: 'this' | 'last';
 
@@ -78,7 +78,7 @@ export type GetInvoiceItemsApi = {
 };
 
 export const getInvoiceItemsApiParamsValidator: Validator<GetInvoiceItemsApi['params']> = {
-  department: {
+  id: {
     required: true,
     types: {
       string: {
