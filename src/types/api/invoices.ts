@@ -13,6 +13,116 @@ export interface InvoiceItem {
   usageUnit: string;
 }
 
+export interface Invoice {
+  id: string;
+  department?: string;
+  startDate?: string;
+  endDate?: string;
+  total?: number;
+  items?: InvoiceItem[];
+  generatedOn?: string;
+  paidOn?: string;
+}
+
+/**
+ * List invoices with filters
+ * @summary List Invoices
+ * @tags Invoices
+ * @body.contentType application/json
+ */
+export type ListInvoicesApi = {
+  path: '/api/v2/invoices/';
+  method: 'GET';
+  query: {
+    department?: Exclude<TwilioAccounts, ''> | 'all';
+
+    /**
+     * Find invoices with an end date before this date, format YYYY-MM-DD
+     */
+    before?: string;
+
+    /**
+     * Find invoices with a start date after this date, format YYYY-MM-DD
+     */
+    after?: string;
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: {
+      lastItem: string | null;
+      invoices: Invoice[];
+    };
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    cookie: [],
+  }];
+};
+
+/**
+ * Get a specific invoice's PDF file
+ * @summary Get Invoice
+ * @tags Invoices
+ * @body.contentType application/json
+ */
+export type GetInvoiceApi = {
+  path: '/api/v2/invoices/{id}/';
+  method: 'GET';
+  params: { id: string; }
+  responses: {
+
+    /**
+     * @contentType application/pdf
+     */
+    200: Buffer;
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    cookie: [],
+  }];
+};
+
 /**
  * Get a departments invoiced items for a given time period
  * @summary Get Invoice Items
@@ -20,9 +130,9 @@ export interface InvoiceItem {
  * @body.contentType application/json
  */
 export type GetInvoiceItemsApi = {
-  path: '/api/v2/invoices/{id}/items/';
+  path: '/api/v2/invoices/{department}/items/';
   method: 'GET';
-  params: { id: Exclude<TwilioAccounts, ''> | 'all'; }
+  params: { department: Exclude<TwilioAccounts, ''> | 'all'; }
   query: {
     month?: 'this' | 'last';
 
@@ -78,7 +188,7 @@ export type GetInvoiceItemsApi = {
 };
 
 export const getInvoiceItemsApiParamsValidator: Validator<GetInvoiceItemsApi['params']> = {
-  id: {
+  department: {
     required: true,
     types: {
       string: {

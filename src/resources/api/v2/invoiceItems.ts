@@ -67,7 +67,7 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   // Make sure the user can access this department
   if (
     !userPerms.isDistrictAdmin &&
-    (params.id === 'all' || !userPerms.adminDepartments.includes(params.id))
+    (params.department === 'all' || !userPerms.adminDepartments.includes(params.department))
   ) {
     return [
       403,
@@ -135,9 +135,9 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   }
 
   // Get the Twilio auth information
-  const twilioAccount: TwilioAccounts = params.id === 'all'
+  const twilioAccount: TwilioAccounts = params.department === 'all'
     ? ''
-    : params.id;
+    : params.department;
   const twilioSecret = await getTwilioSecret();
   const accountSid = twilioSecret[`accountSid${twilioAccount}`];
   const authToken = twilioSecret[`authToken${twilioAccount}`];
@@ -145,7 +145,7 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
     typeof accountSid === 'undefined' ||
     typeof authToken === 'undefined'
   ) {
-    throw new Error(`Unable to find auth for account ${params.id} - ${twilioAccount}`);
+    throw new Error(`Unable to find auth for account ${params.department} - ${twilioAccount}`);
   }
 
   // Get the twilio cost information

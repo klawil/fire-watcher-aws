@@ -40,19 +40,31 @@ const GET: LambdaApiFunction<ListDepartmentApi> = async function (event, user, u
       api403Body,
     ];
   }
+  if (!userPerms.isDistrictAdmin && userPerms.adminDepartments.length === 0) {
+    return [
+      403,
+      api403Body,
+    ];
+  }
 
   // Generate the scan input
   const scanInput: TypedScanInput<Department> = {
     TableName: TABLE_DEPARTMENT,
   };
   if (!user.isDistrictAdmin) {
+    const filterExpressionKeys: string[] = [];
+    userPerms.adminDepartments.forEach((dep, idx) => {
+      const idKey = `:id${idx}`;
+      filterExpressionKeys.push(idKey);
+      scanInput.ExpressionAttributeValues = {
+        ...scanInput.ExpressionAttributeValues,
+        [idKey]: dep,
+      };
+    });
     scanInput.ExpressionAttributeNames = {
       '#id': 'id',
     };
-    scanInput.ExpressionAttributeValues = {
-      ':ids': userPerms.adminDepartments,
-    };
-    scanInput.FilterExpression = '#id IN :ids';
+    scanInput.FilterExpression = `#id in (${filterExpressionKeys.join(',')})`;
   }
 
   // Fetch, sort, and return the results
