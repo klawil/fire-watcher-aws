@@ -157,7 +157,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
 
   // Check for a user
   const sender = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: Number(body.From.slice(2)),
     },
@@ -196,7 +196,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   const isTextCommand = typeof textCommands[body.Body] !== 'undefined';
   if (isTextCommand) {
     await typedUpdate<FullUserObject>({
-      TableName: TABLE_USER,
+      TableName: TABLE_USER(),
       Key: {
         phone: sendingUser.phone,
       },
@@ -224,7 +224,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   };
   await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: QUEUE_EVENTS,
+    QueueUrl: QUEUE_EVENTS(),
   }));
 
   return buildTwilioResponse(200);

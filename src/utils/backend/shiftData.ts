@@ -32,7 +32,7 @@ export interface ShiftData {
 export async function getShiftData(): Promise<ShiftData> {
   try {
     const rawData = await s3.send(new GetObjectCommand({
-      Bucket: BUCKET_COSTS,
+      Bucket: BUCKET_COSTS(),
       Key: SHIFT_S3_KEY,
     }));
 

@@ -27,7 +27,7 @@ const GET: LambdaApiFunction<GetAllRadiosApi> = async function (event, user) {
   }
 
   const radios = await typedFullScan<RadioObject>({
-    TableName: TABLE_RADIOS,
+    TableName: TABLE_RADIOS(),
     ExpressionAttributeNames: {
       '#InUse': 'InUse',
       '#HasEvents': 'HasEvents',

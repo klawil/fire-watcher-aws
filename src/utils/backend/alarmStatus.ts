@@ -25,7 +25,7 @@ export interface DataCache {
 export async function getCachedAlarmData(): Promise<DataCache> {
   try {
     const rawData = await s3.send(new GetObjectCommand({
-      Bucket: BUCKET_COSTS,
+      Bucket: BUCKET_COSTS(),
       Key: ALARM_S3_KEY,
     }));
 

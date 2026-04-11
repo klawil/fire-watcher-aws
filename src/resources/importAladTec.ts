@@ -23,7 +23,7 @@ const secretManager = new SecretsManagerClient();
 export async function getAuthCookie(): Promise<string> {
   logger.trace('getAuthCookie', ...arguments);
   const secretValueRaw = await secretManager.send(new GetSecretValueCommand({
-    SecretId: SECRET_ALADTEC,
+    SecretId: SECRET_ALADTEC(),
   }));
   const secretValue: {
     username: string;
@@ -152,7 +152,7 @@ export async function main() {
 
   // Write the data
   await s3.send(new PutObjectCommand({
-    Bucket: BUCKET_COSTS,
+    Bucket: BUCKET_COSTS(),
     Key: SHIFT_S3_KEY,
     Body: JSON.stringify(shiftData),
   }));

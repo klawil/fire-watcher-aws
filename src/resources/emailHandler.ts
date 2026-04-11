@@ -31,9 +31,9 @@ async function parseEvent(record: SESEventRecord) {
 
   // Pull out the email information
   const email = record.ses.mail;
-  logger.info(`Getting email from ${BUCKET_EMAIL} with key /emails/${email.messageId}`);
+  logger.info(`Getting email from ${BUCKET_EMAIL()} with key /emails/${email.messageId}`);
   const rawData = await s3.send(new GetObjectCommand({
-    Bucket: BUCKET_EMAIL,
+    Bucket: BUCKET_EMAIL(),
     Key: `emails/${email.messageId}`,
   }));
   if (typeof rawData.Body === 'undefined') {
@@ -51,7 +51,7 @@ async function parseEvent(record: SESEventRecord) {
     },
     ReplyToAddresses: [ emailParsed.from?.address || BILLING_EMAIL_ADDRESS, ],
     FromEmailAddress: `COFRN Billing <${BILLING_EMAIL_ADDRESS}>`,
-    FromEmailAddressIdentityArn: EMAIL_SOURCE,
+    FromEmailAddressIdentityArn: EMAIL_SOURCE(),
     Content: {
       Simple: {
         Subject: {

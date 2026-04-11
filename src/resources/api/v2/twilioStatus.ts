@@ -119,7 +119,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
 
   // Validate the user sent to
   const userGet = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: Number(body.To.slice(2)),
     },
@@ -145,7 +145,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     eventTime,
   };
   promises['text-update'] = sqs.send(new SendMessageCommand({
-    QueueUrl: QUEUE_TWILIO,
+    QueueUrl: QUEUE_TWILIO(),
     MessageBody: JSON.stringify(twilioQueueBody),
   }));
 
@@ -167,7 +167,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     }
 
     promises['user-update'] = typedUpdate<FullUserObject>({
-      TableName: TABLE_USER,
+      TableName: TABLE_USER(),
       Key: {
         phone: user.phone,
       },
@@ -201,7 +201,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
               .filter(dep => result.Attributes && result.Attributes[dep]?.active),
           };
           return sqs.send(new SendMessageCommand({
-            QueueUrl: QUEUE_EVENTS,
+            QueueUrl: QUEUE_EVENTS(),
             MessageBody: JSON.stringify(queueMessage),
           }));
         }

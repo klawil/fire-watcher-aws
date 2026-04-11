@@ -8,7 +8,7 @@ export const apiCodeValidator: Validator<{
     required: true,
     types: {
       string: {
-        exact: [ API_CODE, ],
+        exact: [ API_CODE(), ],
       },
     },
   },

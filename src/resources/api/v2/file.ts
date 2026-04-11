@@ -50,7 +50,7 @@ const GET: LambdaApiFunction<GetFileApi> = async function (event) {
   }
 
   const file = await typedGet<FullFileObject>({
-    TableName: TABLE_FILE,
+    TableName: TABLE_FILE(),
     Key: {
       Talkgroup: Number(idParts[1]),
       Added: Number(idParts[2]),

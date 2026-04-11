@@ -38,9 +38,9 @@ async function processDeviceEvents(allRadios: RadioObject[], queryDate: string) 
 
   const query = await athena.send(new StartQueryExecutionCommand({
     QueryString: radioIdQueryString.replace(/\{\{datetime\}\}/g, queryDate),
-    WorkGroup: ATHENA_WORKGROUP,
+    WorkGroup: ATHENA_WORKGROUP(),
     QueryExecutionContext: {
-      Database: GLUE_DATABASE,
+      Database: GLUE_DATABASE(),
     },
   }));
   if (!query.QueryExecutionId) {
@@ -101,7 +101,7 @@ async function processDeviceEvents(allRadios: RadioObject[], queryDate: string) 
     .map(row => {
       logger.log(`Updating device events for ${row.radioid}: ${row.num}`);
       return typedUpdate<RadioObject>({
-        TableName: TABLE_RADIOS,
+        TableName: TABLE_RADIOS(),
         Key: {
           RadioID: row.radioid,
         },
@@ -126,9 +126,9 @@ async function processTalkgroupEvents(allTalkgroups: FullTalkgroupObject[], quer
 
   const query = await athena.send(new StartQueryExecutionCommand({
     QueryString: talkgroupQueryString.replace(/\{\{datetime\}\}/g, queryDate),
-    WorkGroup: ATHENA_WORKGROUP,
+    WorkGroup: ATHENA_WORKGROUP(),
     QueryExecutionContext: {
-      Database: GLUE_DATABASE,
+      Database: GLUE_DATABASE(),
     },
   }));
   if (!query.QueryExecutionId) {
@@ -188,7 +188,7 @@ async function processTalkgroupEvents(allTalkgroups: FullTalkgroupObject[], quer
     .map(row => {
       logger.log(`Updating talkgroup events for ${row.talkgroup}: ${row.num}`);
       return typedUpdate<FullTalkgroupObject>({
-        TableName: TABLE_TALKGROUP,
+        TableName: TABLE_TALKGROUP(),
         Key: {
           ID: Number(row.talkgroup),
         },
@@ -225,7 +225,7 @@ async function processDeviceRecordings(
 
       const radio = radios[idx];
       const radioFiles = await typedQuery<FileEventItem>({
-        TableName: TABLE_DEVICES,
+        TableName: TABLE_DEVICES(),
         ExpressionAttributeNames: {
           '#RadioID': 'RadioID',
           '#StartTime': 'StartTime',
@@ -245,7 +245,7 @@ async function processDeviceRecordings(
       logger.log(`Updating device recordings for ${radio.RadioID}: ${radioFiles.Items?.length} (${radio.Count})`);
 
       await typedUpdate<RadioObject>({
-        TableName: TABLE_RADIOS,
+        TableName: TABLE_RADIOS(),
         Key: {
           RadioID: radio.RadioID,
         },
@@ -288,7 +288,7 @@ async function processTalkgroupRecordings(
 
       const tg = talkgroups[idx];
       const tgFiles = await typedQuery<FullFileObject>({
-        TableName: TABLE_FILE,
+        TableName: TABLE_FILE(),
         IndexName: 'StartTimeTgIndex',
         ExpressionAttributeNames: {
           '#Talkgroup': 'Talkgroup',
@@ -309,7 +309,7 @@ async function processTalkgroupRecordings(
       logger.log(`Updating talkgroup recordings for ${tg.ID}: ${tgFiles.Items?.length} (${tg.Count})`);
 
       await typedUpdate<FullTalkgroupObject>({
-        TableName: TABLE_TALKGROUP,
+        TableName: TABLE_TALKGROUP(),
         Key: {
           ID: tg.ID,
         },
@@ -337,14 +337,14 @@ async function processTalkgroupRecordings(
 
 export async function main() {
   const allRadioIds = await typedScan<RadioObject>({
-    TableName: TABLE_RADIOS,
+    TableName: TABLE_RADIOS(),
   });
   if (!allRadioIds.Items || allRadioIds.Items.length === 0) {
     return;
   }
 
   const allTalkgroups = await typedScan<FullTalkgroupObject>({
-    TableName: TABLE_TALKGROUP,
+    TableName: TABLE_TALKGROUP(),
   });
   if (!allTalkgroups.Items || allTalkgroups.Items.length === 0) {
     return;

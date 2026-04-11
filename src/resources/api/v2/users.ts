@@ -113,7 +113,7 @@ const GET: LambdaApiFunction<GetAllUsersApi> = async function (event, user, user
 
   // Get the keys that should be returned
   const scanInput: TypedScanInput<FullUserObject> = {
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
   };
   if (!user.isDistrictAdmin) {
     userPerms.adminDepartments.forEach(dep => {
@@ -195,7 +195,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event, user, user
 
   // Validate the user keys and build the insert
   const putConfig: TypedPutItemInput<FullUserObject> = {
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Item: {
       phone: body.phone,
     },
@@ -239,7 +239,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event, user, user
   };
   await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: QUEUE_EVENTS ,
+    QueueUrl: QUEUE_EVENTS(),
   }));
 
   // Return the safed user object

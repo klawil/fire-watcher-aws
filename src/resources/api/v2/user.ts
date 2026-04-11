@@ -66,7 +66,7 @@ const GET: LambdaApiFunction<GetUserApi> = async function (event, user, userPerm
 
   // Fetch the user
   const userInfo = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: params.id,
     },
@@ -139,7 +139,7 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event, user, use
   if (updateType === 'OTHER') {
     // Get the user being edited
     const userToEditQuery = await typedGet<FullUserObject>({
-      TableName: TABLE_USER,
+      TableName: TABLE_USER(),
       Key: {
         phone: phoneToUpdate,
       },
@@ -184,7 +184,7 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event, user, use
   const updateStrings: string[] = [];
   const deleteStrings: string[] = [];
   const updateConfig: TypedUpdateInput<FullUserObject> = {
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: phoneToUpdate,
     },
@@ -276,7 +276,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event, user, us
   // Validate the user exists
   const phoneToDelete = params.id;
   const changeUserGet = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: phoneToDelete,
     },
@@ -306,7 +306,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event, user, us
 
   // Delete the user
   await typedDeleteItem<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: phoneToDelete,
     },

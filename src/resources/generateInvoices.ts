@@ -235,7 +235,7 @@ export async function main() {
 
   // Determine the departments to invoice
   const departmentsScanInput: TypedScanInput<Department> = {
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
     ExpressionAttributeNames: {
       '#invoiceFrequency': 'invoiceFrequency',
     },
@@ -310,13 +310,13 @@ export async function main() {
       totalPriceComputed,
     ] = await generateInvoice(invoiceConfig);
     await s3.send(new PutObjectCommand({
-      Bucket: BUCKET_EMAIL,
+      Bucket: BUCKET_EMAIL(),
       Key: `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`,
       Body: pdf,
       ContentType: 'application/pdf',
     }));
     const pdfBodyS3 = await s3.send(new GetObjectCommand({
-      Bucket: BUCKET_EMAIL,
+      Bucket: BUCKET_EMAIL(),
       Key: `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`,
     }));
     if (typeof pdfBodyS3.Body === 'undefined') {
@@ -335,7 +335,7 @@ export async function main() {
         BccAddresses: [ FORWARD_EMAIL_TO, ],
       },
       FromEmailAddress: `COFRN Billing <${BILLING_EMAIL_ADDRESS}>`,
-      FromEmailAddressIdentityArn: EMAIL_SOURCE,
+      FromEmailAddressIdentityArn: EMAIL_SOURCE(),
       Content: {
         Simple: {
           Subject: {

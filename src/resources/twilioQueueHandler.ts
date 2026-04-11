@@ -11,7 +11,7 @@ import {
 async function handleMessage(id: number, events: TwilioQueueEvent[]) {
   // Make the base update config
   const updateConfig: TypedUpdateInput<FullTextObject> = {
-    TableName: TABLE_TEXT,
+    TableName: TABLE_TEXT(),
     Key: {
       datetime: id,
     },

@@ -39,7 +39,7 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
   let data;
   if (query.all !== 'y') {
     data = await typedFullQuery<FullTalkgroupObject>({
-      TableName: TABLE_TALKGROUP,
+      TableName: TABLE_TALKGROUP(),
       IndexName: 'InUseIndex',
       ExpressionAttributeNames: {
         '#InUse': 'InUse',
@@ -56,7 +56,7 @@ const GET: LambdaApiFunction<GetAllTalkgroupsApi> = async function (event) {
     });
   } else {
     data = await typedFullScan<FullTalkgroupObject>({
-      TableName: TABLE_TALKGROUP,
+      TableName: TABLE_TALKGROUP(),
       ExpressionAttributeNames: {
         '#InUse': 'InUse',
         '#HasEvents': 'HasEvents',

@@ -48,7 +48,7 @@ const GET: LambdaApiFunction<GetAllHeartbeatsApi> = async function (event, user,
 
   // Get the items to return
   const heartbeats = await typedScan<Heartbeat>({
-    TableName: TABLE_STATUS,
+    TableName: TABLE_STATUS(),
   });
 
   return [
@@ -91,7 +91,7 @@ const POST: LambdaApiFunction<AddHeartbeatApi> = async function (event) {
 
   // Insert the update into the status table
   await typedUpdate<Heartbeat>({
-    TableName: TABLE_STATUS,
+    TableName: TABLE_STATUS(),
     Key: {
       Server: body.Server,
     },
@@ -110,7 +110,7 @@ const POST: LambdaApiFunction<AddHeartbeatApi> = async function (event) {
 
   // Get the other heartbeats
   const data = (await typedScan<Heartbeat>({
-    TableName: TABLE_STATUS,
+    TableName: TABLE_STATUS(),
   })).Items || [];
 
   // Wait for everything to finish and send the response

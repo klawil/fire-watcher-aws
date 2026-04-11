@@ -52,7 +52,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
 
   const baseQueryConfig: TypedQueryInput<FullFileObject> = {
     ScanIndexForward: false,
-    TableName: TABLE_FILE,
+    TableName: TABLE_FILE(),
     Limit: defaultListLimit,
   };
   const queryConfigs: DocumentQueryConfig<FullFileObject>[] = [];
@@ -82,7 +82,7 @@ const GET: LambdaApiFunction<GetAllFilesApi> = async function (event) {
       },
     });
   } else if (typeof query.radioId !== 'undefined') {
-    baseQueryConfig.TableName = TABLE_DEVICES;
+    baseQueryConfig.TableName = TABLE_DEVICES();
     baseQueryConfig.ExpressionAttributeNames = {
       '#RadioID': 'RadioID',
     };

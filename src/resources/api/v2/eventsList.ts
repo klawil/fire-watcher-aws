@@ -114,9 +114,9 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
         ORDER BY "timestamp" DESC`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString,
-      WorkGroup: ATHENA_WORKGROUP,
+      WorkGroup: ATHENA_WORKGROUP(),
       QueryExecutionContext: {
-        Database: GLUE_DATABASE,
+        Database: GLUE_DATABASE(),
       },
       ResultReuseConfiguration: {
         ResultReuseByAgeConfiguration: {
@@ -200,7 +200,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     'ExpressionAttributeNames' | 'ExpressionAttributeValues'
   >> = {
     ScanIndexForward: false,
-    TableName: TABLE_FILE,
+    TableName: TABLE_FILE(),
     ExpressionAttributeNames: {
       '#StartTime': 'StartTime',
     },
@@ -215,7 +215,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
     fileQueryConfig.IndexName = 'StartTimeTgIndex';
     fileQueryConfig.KeyConditionExpression = '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime AND :EndTime';
   } else {
-    fileQueryConfig.TableName = TABLE_DEVICES;
+    fileQueryConfig.TableName = TABLE_DEVICES();
     fileQueryConfig.ExpressionAttributeNames['#RadioID'] = 'RadioID';
     fileQueryConfig.ExpressionAttributeValues[':RadioID'] = params.id.toString();
     fileQueryConfig.KeyConditionExpression = '#RadioID = :RadioID AND #StartTime BETWEEN :StartTime AND :EndTime';

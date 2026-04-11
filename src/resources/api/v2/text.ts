@@ -50,7 +50,7 @@ const PATCH: LambdaApiFunction<UpdateTextSeenApi> = async function (event) {
   // Update the message
   try {
     await typedUpdate<FullTextObject>({
-      TableName: TABLE_TEXT,
+      TableName: TABLE_TEXT(),
       Key: {
         datetime: params.id,
       },

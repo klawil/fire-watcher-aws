@@ -276,7 +276,7 @@ async function uploadFile(text: string) {
   const s3 = new S3Client();
 
   const uploadParams = {
-    Bucket: BUCKET_AUDIO,
+    Bucket: BUCKET_AUDIO(),
     Key: s3File,
     Body: text,
   };

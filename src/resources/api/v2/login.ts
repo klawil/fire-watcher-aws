@@ -70,7 +70,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event, user) {
 
   // Make sure the user is actually valid
   const userObj = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: params.id,
     },
@@ -98,7 +98,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event, user) {
   };
   await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: QUEUE_EVENTS,
+    QueueUrl: QUEUE_EVENTS(),
   }));
 
   return [
@@ -156,7 +156,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event, user)
 
   // Make sure the user is actually valid
   const userObjGet = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: params.id,
     },
@@ -192,7 +192,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event, user)
 
   // Generate the authentication token for the user
   const jwtSecret = await secretsManager.send(new GetSecretValueCommand({
-    SecretId: SECRET_JWT,
+    SecretId: SECRET_JWT(),
   }))
     .then(data => data.SecretString);
   if (typeof jwtSecret === 'undefined') {
@@ -202,7 +202,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event, user)
     expiresIn: `${loginDuration}s`,
   });
   await typedUpdate<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: params.id,
     },

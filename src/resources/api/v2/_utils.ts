@@ -267,7 +267,7 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
 
     // Use JWT to validate the user (first pass)
     const jwtSecret = await secretManager.send(new GetSecretValueCommand({
-      SecretId: SECRET_JWT,
+      SecretId: SECRET_JWT(),
     }))
       .then(data => data.SecretString);
     if (typeof jwtSecret === 'undefined') {
@@ -287,7 +287,7 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
 
     // Get the user object from DynamoDB
     const user = await typedGet<FullUserObject>({
-      TableName: TABLE_USER,
+      TableName: TABLE_USER(),
       Key: {
         phone: userPayload.phone,
       },
