@@ -15,8 +15,9 @@ import {
   updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
 } from '@/types/api/users';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import { TABLE_USER } from '@/types/backend/environment';
 import {
-  TABLE_USER, typedDeleteItem, typedGet, typedUpdate
+  typedDeleteItem, typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';

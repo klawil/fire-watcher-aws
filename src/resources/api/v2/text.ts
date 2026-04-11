@@ -13,8 +13,9 @@ import {
   FullTextObject, UpdateTextSeenApi, updateTextSeenApiBodyValidator,
   updateTextSeenApiParamsValidator
 } from '@/types/api/texts';
+import { TABLE_TEXT } from '@/types/backend/environment';
 import {
-  TABLE_TEXT, typedUpdate
+  typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 

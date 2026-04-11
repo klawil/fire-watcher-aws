@@ -30,11 +30,15 @@ import {
   TypedGetOutput, TypedUpdateInput
 } from '@/types/backend/dynamo';
 import {
+  BUCKET_COSTS,
+  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER
+} from '@/types/backend/environment';
+import {
   ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendPageQueueItem, SendUserAuthCodeQueueItem,
   SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
 } from '@/types/backend/queue';
 import {
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER, typedGet, typedQuery, typedScan,
+  typedGet, typedQuery, typedScan,
   typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import {
@@ -53,8 +57,6 @@ const logger = getLogger('queue');
 const transcribe = new TranscribeClient();
 const cloudWatch = new CloudWatchClient();
 const s3 = new S3Client();
-
-const cacheBucket = process.env.COSTS_BUCKET;
 
 type WelcomeMessageConfigKeys = 'name' | 'type' | 'pageNumber';
 const welcomeMessageParts: {
@@ -552,7 +554,7 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
         });
         await s3.send(new PutObjectCommand({
           Body: await response.bytes(),
-          Bucket: cacheBucket,
+          Bucket: BUCKET_COSTS,
           Key: key,
           ContentType: response.headers.get('content-type') || undefined,
         }));
@@ -560,7 +562,7 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
       }));
     outboundMediaUrls = await Promise.all(storedMediaUrls.map(async Key => {
       return await getSignedUrl(s3, new GetObjectCommand({
-        Bucket: cacheBucket,
+        Bucket: BUCKET_COSTS,
         Key,
       }), { expiresIn: 3600, });
     }));

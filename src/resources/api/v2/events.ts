@@ -19,13 +19,14 @@ import {
   QueryEventsApi, addEventsQueryValidator, eventItemValidator,
   queryEventsQueryValidator
 } from '@/types/api/events';
+import {
+  ATHENA_WORKGROUP, FIREHOSE_EVENTS, GLUE_DATABASE, GLUE_TABLE
+} from '@/types/backend/environment';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/events');
 const firehose = new FirehoseClient();
-
-const FIREHOSE_NAME = process.env.FIREHOSE_NAME;
 
 const queryTimeframes = {
   day: 24 * 60 * 60 * 1000,
@@ -81,7 +82,7 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
     const startTime = new Date(endTime.getTime() - queryTimeframes[timeframe]);
 
     const queryString = `SELECT ${query.groupBy.map(v => `"${v}"`).join(', ')}, COUNT(*) as num
-      FROM "${process.env.GLUE_TABLE}"
+      FROM "${GLUE_TABLE}"
       WHERE "datetime" >= '${dateToQueryDate(startTime)}' AND
         "datetime" < '${dateToQueryDate(endTime)}'` +
         (query.events
@@ -91,9 +92,9 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
       `GROUP BY ${query.groupBy.map(v => `"${v}"`).join(', ')}`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString: queryString,
-      WorkGroup: process.env.ATHENA_WORKGROUP,
+      WorkGroup: ATHENA_WORKGROUP,
       QueryExecutionContext: {
-        Database: process.env.GLUE_DATABASE,
+        Database: GLUE_DATABASE,
       },
       ResultReuseConfiguration: {
         ResultReuseByAgeConfiguration: {
@@ -256,7 +257,7 @@ const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
   if (validItems.length > 0) {
     const encoder = new TextEncoder();
     await firehose.send(new PutRecordBatchCommand({
-      DeliveryStreamName: FIREHOSE_NAME,
+      DeliveryStreamName: FIREHOSE_EVENTS,
       Records: validItems.map(item => {
         const timestamp = typeof item.timestamp !== 'undefined'
           ? item.timestamp

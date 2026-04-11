@@ -15,10 +15,13 @@ import {
 import {
   TypedQueryInput, TypedQueryOutput
 } from '@/types/backend/dynamo';
+import {
+  SECRET_JWT, TABLE_USER
+} from '@/types/backend/environment';
 import { UserPermissions } from '@/types/backend/user';
 import { Validator } from '@/types/backend/validation';
 import {
-  TABLE_USER, typedGet, typedQuery
+  typedGet, typedQuery
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
@@ -222,8 +225,6 @@ export function getSetCookieHeader(cookie: string, value: string, age: number) {
   return `${encodeURIComponent(cookie)}=${encodeURIComponent(value)}; Secure; SameSite=None; Path=/; Max-Age=${age}`;
 }
 
-const jwtSecretArn = process.env.JWT_SECRET;
-
 export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
   Readonly<FrontendUserObject | null>,
   Readonly<UserPermissions>,
@@ -266,7 +267,7 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
 
     // Use JWT to validate the user (first pass)
     const jwtSecret = await secretManager.send(new GetSecretValueCommand({
-      SecretId: jwtSecretArn,
+      SecretId: SECRET_JWT,
     }))
       .then(data => data.SecretString);
     if (typeof jwtSecret === 'undefined') {

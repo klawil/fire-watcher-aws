@@ -17,8 +17,9 @@ import {
 import {
   TypedScanInput
 } from '@/types/backend/dynamo';
+import { TABLE_DEPARTMENT } from '@/types/backend/environment';
 import {
-  TABLE_DEPARTMENT, typedGet, typedPutItem, typedScan
+  typedGet, typedPutItem, typedScan
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 

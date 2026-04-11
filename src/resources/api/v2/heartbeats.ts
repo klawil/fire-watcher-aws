@@ -19,8 +19,9 @@ import {
   GetAllHeartbeatsApi, Heartbeat,
   addHeartbeatBodyValidator
 } from '@/types/api/heartbeats';
+import { TABLE_STATUS } from '@/types/backend/environment';
 import {
-  TABLE_STATUS, typedScan,
+  typedScan,
   typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';

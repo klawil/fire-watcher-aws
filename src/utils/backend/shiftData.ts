@@ -2,13 +2,13 @@ import {
   GetObjectCommand, S3Client
 } from '@aws-sdk/client-s3';
 
+import { BUCKET_COSTS } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('utils/backend/shiftData');
 
 const s3 = new S3Client();
 
-export const SHIFT_S3_BUCKET = process.env.COSTS_BUCKET;
 export const SHIFT_S3_KEY = 'shift-data.json';
 
 export const shiftNameMappings: { [key: string]: string } = {
@@ -32,7 +32,7 @@ export interface ShiftData {
 export async function getShiftData(): Promise<ShiftData> {
   try {
     const rawData = await s3.send(new GetObjectCommand({
-      Bucket: SHIFT_S3_BUCKET,
+      Bucket: BUCKET_COSTS,
       Key: SHIFT_S3_KEY,
     }));
 

@@ -7,8 +7,9 @@ import { generateApi400Body } from '@/types/api/_shared';
 import {
   FullTalkgroupObject, GetAllTalkgroupsApi, getAllTalkgroupsApiQueryValidator
 } from '@/types/api/talkgroups';
+import { TABLE_TALKGROUP } from '@/types/backend/environment';
 import {
-  TABLE_TALKGROUP, typedFullQuery, typedFullScan
+  typedFullQuery, typedFullScan
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';

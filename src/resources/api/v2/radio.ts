@@ -11,8 +11,9 @@ import {
   PatchRadioApi,
   RadioObject, patchRadioApiBodyValidator, patchRadioApiParamsValidator
 } from '@/types/api/radios';
+import { TABLE_RADIOS } from '@/types/backend/environment';
 import {
-  TABLE_RADIOS, typedUpdate
+  typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 

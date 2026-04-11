@@ -12,6 +12,7 @@ import {
 import {
   PhoneNumberAccount, PhoneNumberTypes, TwilioAccounts, TwilioNumberTypes
 } from '@/types/backend/department';
+import { SECRET_TWILIO } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('u-gen');
@@ -51,7 +52,6 @@ type TwilioPhoneCategories = {
   [key in PhoneNumberTypes]?: PhoneNumberConfig;
 };
 
-const twilioSecretId = process.env.TWILIO_SECRET;
 let cachedTwilioPhoneCategories: null | Promise<TwilioPhoneCategories> = null;
 export const twilioPhoneCategories: () => Promise<TwilioPhoneCategories> = async () => {
   if (cachedTwilioPhoneCategories === null) {
@@ -158,7 +158,7 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
   }
 
   twilioSecret = secretManager.send(new GetSecretValueCommand({
-    SecretId: twilioSecretId,
+    SecretId: SECRET_TWILIO,
   }))
     .then(data => JSON.parse(data.SecretString as string))
     .catch(e => {

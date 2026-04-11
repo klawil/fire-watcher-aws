@@ -7,12 +7,13 @@ import {
   S3Event, S3EventRecord
 } from 'aws-lambda';
 
+import {
+  BUCKET_EVENTS,
+  GLUE_DATABASE, GLUE_TABLE
+} from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/eventFileQueueHandler');
-
-const glueDatabase = process.env.GLUE_DATABASE;
-const glueTable = process.env.GLUE_TABLE;
 
 export async function main(event: S3Event) {
   logger.trace('main', ...arguments);
@@ -59,8 +60,8 @@ export async function main(event: S3Event) {
   // Fetch the partition information
   const glue = new GlueClient();
   const existingPartitions = await glue.send(new BatchGetPartitionCommand({
-    DatabaseName: glueDatabase,
-    TableName: glueTable,
+    DatabaseName: GLUE_DATABASE,
+    TableName: GLUE_TABLE,
     PartitionsToGet: eventPartitions.map(p => ({
       Values: [
         p.datetime,
@@ -77,15 +78,15 @@ export async function main(event: S3Event) {
   // Make the new partitions
   if (newPartitions.length > 0) {
     await glue.send(new BatchCreatePartitionCommand({
-      DatabaseName: glueDatabase,
-      TableName: glueTable,
+      DatabaseName: GLUE_DATABASE,
+      TableName: GLUE_TABLE,
       PartitionInputList: newPartitions.map(p => ({
         Values: [
           p.datetime,
           p.event,
         ],
         StorageDescriptor: {
-          Location: `s3://${process.env.EVENTS_S3_BUCKET}/${p.path}`,
+          Location: `s3://${BUCKET_EVENTS}/${p.path}`,
           Columns: [
             {
               Name: 'radioid',

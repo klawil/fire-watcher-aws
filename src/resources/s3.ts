@@ -25,10 +25,11 @@ import { PagingTalkgroup } from '@/types/api/users';
 import {
   TypedDeleteItemInput, TypedPutItemInput
 } from '@/types/backend/dynamo';
+import {
+  QUEUE_EVENTS, TABLE_DEVICES, TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_RADIOS, TABLE_TALKGROUP
+} from '@/types/backend/environment';
 import { SendPageQueueItem } from '@/types/backend/queue';
 import {
-  TABLE_DEVICES,
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_RADIOS, TABLE_TALKGROUP,
   typedDeleteItem, typedPutItem,
   typedQuery, typedUpdate
 } from '@/utils/backend/dynamoTyped';
@@ -39,8 +40,6 @@ const s3 = new S3Client();
 const sqs = new SQSClient();
 const transcribe = new TranscribeClient();
 const cloudwatch = new CloudWatchClient();
-
-const sqsQueue = process.env.SQS_QUEUE;
 
 const metricSource = 'S3';
 
@@ -455,7 +454,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         };
         promises['page-sqs'] = sqs.send(new SendMessageCommand({
           MessageBody: JSON.stringify(queueMessage),
-          QueueUrl: sqsQueue,
+          QueueUrl: QUEUE_EVENTS,
         }));
       } else {
         // Exit early if we just wanted to kick off the transcript

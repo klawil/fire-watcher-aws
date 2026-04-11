@@ -22,9 +22,12 @@ import {
   GetLoginCodeApi, SubmitLoginCodeApi, loginApiCodeBodyValidator, loginApiParamsValidator
 } from '@/types/api/auth';
 import { FullUserObject } from '@/types/api/users';
+import {
+  QUEUE_EVENTS, SECRET_JWT, TABLE_USER
+} from '@/types/backend/environment';
 import { SendUserAuthCodeQueueItem } from '@/types/backend/queue';
 import {
-  TABLE_USER, typedGet, typedUpdate
+  typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
@@ -35,8 +38,6 @@ const loginDuration = 60 * 60 * 24 * 31; // Logins last 31 days
 const logger = getLogger('login');
 const sqs = new SQSClient();
 const secretsManager = new SecretsManagerClient();
-const queueUrl = process.env.SQS_QUEUE;
-const jwtSecretArn = process.env.JWT_SECRET;
 
 const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event, user) {
   logger.trace('GET', ...arguments);
@@ -97,7 +98,7 @@ const GET: LambdaApiFunction<GetLoginCodeApi> = async function (event, user) {
   };
   await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: queueUrl,
+    QueueUrl: QUEUE_EVENTS,
   }));
 
   return [
@@ -191,7 +192,7 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event, user)
 
   // Generate the authentication token for the user
   const jwtSecret = await secretsManager.send(new GetSecretValueCommand({
-    SecretId: jwtSecretArn,
+    SecretId: SECRET_JWT,
   }))
     .then(data => data.SecretString);
   if (typeof jwtSecret === 'undefined') {

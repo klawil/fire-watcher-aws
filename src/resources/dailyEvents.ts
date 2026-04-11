@@ -8,7 +8,10 @@ import { FullFileObject } from '@/types/api/files';
 import { RadioObject } from '@/types/api/radios';
 import { FullTalkgroupObject } from '@/types/api/talkgroups';
 import {
-  TABLE_DEVICES, TABLE_FILE, TABLE_RADIOS, TABLE_TALKGROUP, typedQuery, typedScan, typedUpdate
+  ATHENA_WORKGROUP, GLUE_DATABASE, TABLE_DEVICES, TABLE_FILE, TABLE_RADIOS, TABLE_TALKGROUP
+} from '@/types/backend/environment';
+import {
+  typedQuery, typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
@@ -35,9 +38,9 @@ async function processDeviceEvents(allRadios: RadioObject[], queryDate: string) 
 
   const query = await athena.send(new StartQueryExecutionCommand({
     QueryString: radioIdQueryString.replace(/\{\{datetime\}\}/g, queryDate),
-    WorkGroup: process.env.ATHENA_WORKGROUP,
+    WorkGroup: ATHENA_WORKGROUP,
     QueryExecutionContext: {
-      Database: process.env.GLUE_DATABASE,
+      Database: GLUE_DATABASE,
     },
   }));
   if (!query.QueryExecutionId) {
@@ -123,9 +126,9 @@ async function processTalkgroupEvents(allTalkgroups: FullTalkgroupObject[], quer
 
   const query = await athena.send(new StartQueryExecutionCommand({
     QueryString: talkgroupQueryString.replace(/\{\{datetime\}\}/g, queryDate),
-    WorkGroup: process.env.ATHENA_WORKGROUP,
+    WorkGroup: ATHENA_WORKGROUP,
     QueryExecutionContext: {
-      Database: process.env.GLUE_DATABASE,
+      Database: GLUE_DATABASE,
     },
   }));
   if (!query.QueryExecutionId) {

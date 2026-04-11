@@ -3,13 +3,13 @@ import {
 } from '@aws-sdk/client-s3';
 
 import { AlertCategory } from '@/types/backend/alerts';
+import { BUCKET_COSTS } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('utils/backend/alarmStatus');
 
 const s3 = new S3Client();
 
-export const ALARM_S3_BUCKET = process.env.COSTS_BUCKET;
 export const ALARM_S3_KEY = 'alarm-data.json';
 
 export interface DataCache {
@@ -25,7 +25,7 @@ export interface DataCache {
 export async function getCachedAlarmData(): Promise<DataCache> {
   try {
     const rawData = await s3.send(new GetObjectCommand({
-      Bucket: ALARM_S3_BUCKET,
+      Bucket: BUCKET_COSTS,
       Key: ALARM_S3_KEY,
     }));
 

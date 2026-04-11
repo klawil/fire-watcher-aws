@@ -35,7 +35,9 @@ import * as dotenv from 'dotenv';
 import { HTTPMethod } from 'ts-oas';
 
 import {
-  LambdaEnvironment, TableNames
+  BucketNames,
+  FirehoseNames,
+  LambdaEnvironment, QueueNames, SecretNames, TableNames
 } from '@/types/backend/environment';
 
 dotenv.config({
@@ -69,15 +71,306 @@ interface CvfdAlarm {
   alarm: cloudwatch.AlarmProps;
 }
 
+interface LambdaResources {
+  tables: {
+    [key in TableNames]?: dynamodb.ITable;
+  };
+  buckets: {
+    [key in BucketNames]?: s3.IBucket;
+  };
+  secrets: {
+    [key in SecretNames]?: secretsManager.ISecret;
+  };
+  queues: {
+    [key in QueueNames]?: sqs.IQueue;
+  };
+  firehoses: {
+    [key in FirehoseNames]?: kinesisfirehose.CfnDeliveryStream;
+  };
+  emailIdentity?: ses.IEmailIdentity;
+  athenaPolicy?: iam.IManagedPolicy;
+  gluePolicy?: iam.IManagedPolicy;
+}
+
+interface LambdaPermissions {
+  api?: true;
+
+  extra?: ('sendEmail' | 'apiCode' | 'putMetrics' | 'readMetrics' | 'readMetricsTags' | 'transcribe' | 'athena' | 'glue')[];
+
+  tables?: {
+    table: TableNames;
+    readonly: boolean;
+  }[];
+  buckets?: {
+    bucket: BucketNames;
+    readonly: boolean;
+  }[];
+  secrets?: SecretNames[];
+  queues?: {
+    queue: QueueNames;
+    read: boolean;
+    write: boolean;
+  }[];
+  firehoses?: FirehoseNames[];
+}
+
+function _addApiPermissions(permissions: LambdaPermissions): LambdaPermissions {
+  if (!permissions.api) {
+    return permissions;
+  }
+
+  const newPermissions = {
+    ...permissions,
+  };
+
+  // Add the user table
+  if (!newPermissions.tables?.some(t => t.table === 'USER')) {
+    newPermissions.tables = [
+      ...newPermissions.tables || [],
+      {
+        table: 'USER',
+        readonly: true,
+      },
+    ];
+  }
+
+  // Add the JWT secret
+  if (!newPermissions.secrets?.includes('JWT')) {
+    newPermissions.secrets = [
+      ...newPermissions.secrets || [],
+      'JWT',
+    ];
+  }
+
+  return newPermissions;
+}
+
+function buildLambdaEnvironment(
+  baseEnv: LambdaEnvironment,
+  permissions: LambdaPermissions
+): Partial<LambdaEnvironment> {
+  const env: Partial<LambdaEnvironment> = {};
+  permissions = _addApiPermissions(permissions);
+
+  // Add resources
+  permissions.tables?.forEach(t => {
+    if (!baseEnv[`TBL_${t.table}`]) {
+      throw new Error(`Table environment variable for table ${t.table} not found in base environment`);
+    }
+    env[`TBL_${t.table}`] = baseEnv[`TBL_${t.table}`];
+  });
+  (permissions.buckets || []).forEach(b => {
+    if (!baseEnv[`BKT_${b.bucket}`]) {
+      throw new Error(`Bucket environment variable for table ${b.bucket} not found in base environment`);
+    }
+    env[`BKT_${b.bucket}`] = baseEnv[`BKT_${b.bucket}`];
+  });
+  permissions.secrets?.forEach(s => {
+    if (!baseEnv[`SCRT_${s}`]) {
+      throw new Error(`Secret environment variable for table ${s} not found in base environment`);
+    }
+    env[`SCRT_${s}`] = baseEnv[`SCRT_${s}`];
+  });
+  (permissions.queues || []).forEach(q => {
+    if (!baseEnv[`Q_${q.queue}`]) {
+      throw new Error(`Queue environment variable for table ${q.queue} not found in base environment`);
+    }
+    env[`Q_${q.queue}`] = baseEnv[`Q_${q.queue}`];
+  });
+  (permissions.firehoses || []).forEach(fh => {
+    if (!baseEnv[`FH_${fh}`]) {
+      throw new Error(`Firehose environment variable for table ${fh} not found in base environment`);
+    }
+    env[`FH_${fh}`] = baseEnv[`FH_${fh}`];
+  });
+
+  // Add email related environment variables
+  if (permissions.extra?.includes('sendEmail')) {
+    if (!baseEnv.EMAIL_SOURCE) {
+      throw new Error('Email source environment variable not found in base environment');
+    }
+    env.EMAIL_SOURCE = baseEnv.EMAIL_SOURCE;
+  }
+
+  // Add the API code
+  if (permissions.extra?.includes('apiCode')) {
+    if (!baseEnv.API_CODE) {
+      throw new Error('API code environment variable not found in base environment');
+    }
+    env.API_CODE = baseEnv.API_CODE;
+  }
+
+  // Add the Athena variables
+  if (permissions.extra?.includes('athena') || permissions.extra?.includes('glue')) {
+    if (!baseEnv.GLUE_TABLE || !baseEnv.GLUE_DATABASE || !baseEnv.ATHENA_WORKGROUP) {
+      throw new Error('Glue/Athena environment variables not found in base environment');
+    }
+    env.GLUE_TABLE = baseEnv.GLUE_TABLE;
+    env.GLUE_DATABASE = baseEnv.GLUE_DATABASE;
+    env.ATHENA_WORKGROUP = baseEnv.ATHENA_WORKGROUP;
+  }
+
+  return env;
+}
+
+function grantLambdaPermissions(
+  lambda: lambda.IFunction,
+  permissions: LambdaPermissions,
+  resources: LambdaResources
+): void {
+  permissions = _addApiPermissions(permissions);
+
+  // Give permissions to send email
+  if (permissions.extra?.includes('sendEmail')) {
+    if (!resources.emailIdentity) {
+      throw new Error('Email permissions requested but email identity not found in resources');
+    }
+
+    resources.emailIdentity.grantSendEmail(lambda);
+  }
+
+  // Add permissions for metrics
+  if (permissions.extra?.includes('readMetrics')) {
+    lambda.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [ 'cloudwatch:*', ],
+      resources: [ '*', ],
+    }));
+  }
+  if (permissions.extra?.includes('putMetrics')) {
+    lambda.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [ 'cloudwatch:PutMetricData', ],
+      resources: [ '*', ],
+    }));
+  }
+  if (permissions.extra?.includes('readMetricsTags')) {
+    lambda.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'cloudwatch:PutMetricData',
+        'cloudwatch:ListTagsForResource',
+      ],
+      resources: [ '*', ],
+    }));
+  }
+
+  // Add permissions for transcribe
+  if (permissions.extra?.includes('transcribe')) {
+    lambda.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [ 'transcribe:*', ],
+      resources: [ '*', ],
+    }));
+  }
+
+  // Add permissions for athena
+  if (permissions.extra?.includes('athena')) {
+    if (!resources.athenaPolicy) {
+      throw new Error('Athena permissions requested but Athena policy not found in resources');
+    }
+    lambda.role?.addManagedPolicy(resources.athenaPolicy);
+  }
+
+  // Add permissions for glue
+  if (permissions.extra?.includes('glue')) {
+    if (!resources.gluePolicy) {
+      throw new Error('Glue permissions requested but Glue policy not found in resources');
+    }
+    lambda.role?.addManagedPolicy(resources.gluePolicy);
+  }
+
+  // Give table permissions
+  permissions.tables?.forEach(t => {
+    const table = resources.tables[t.table];
+    if (!table) {
+      throw new Error(`Table permissions requested for table ${t.table} but not found in resources`);
+    }
+
+    if (t.readonly) {
+      table.grantReadData(lambda);
+    } else {
+      table.grantReadWriteData(lambda);
+    }
+  });
+
+  // Give bucket permissions
+  permissions.buckets?.forEach(b => {
+    const bucket = resources.buckets[b.bucket];
+    if (!bucket) {
+      throw new Error(`Table permissions requested for bucket ${b.bucket} but not found in resources`);
+    }
+
+    if (b.readonly) {
+      bucket.grantRead(lambda);
+    } else {
+      bucket.grantReadWrite(lambda);
+    }
+  });
+
+  // Give secret permissions
+  permissions.secrets?.forEach(s => {
+    const secret = resources.secrets[s];
+    if (!secret) {
+      throw new Error(`Table permissions requested for secret ${s} but not found in resources`);
+    }
+
+    secret.grantRead(lambda);
+  });
+
+  // Give queue permissions
+  permissions.queues?.forEach(q => {
+    const queue = resources.queues[q.queue];
+    if (!queue) {
+      throw new Error(`Table permissions requested for queue ${q.queue} but not found in resources`);
+    }
+
+    if (q.read) {
+      queue.grantConsumeMessages(lambda);
+    }
+    if (q.write) {
+      queue.grantSendMessages(lambda);
+    }
+  });
+
+  // Give firehose permissions
+  permissions.firehoses?.forEach(fh => {
+    const firehose = resources.firehoses[fh];
+    if (!firehose) {
+      throw new Error(`Table permissions requested for firehose ${fh} but not found in resources`);
+    }
+
+    lambda.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      resources: [ firehose.attrArn, ],
+      actions: [
+        'firehose:PutRecord',
+        'firehose:PutRecordBatch',
+      ],
+    }));
+  });
+}
+
 export class FireWatcherAwsStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     Tags.of(this).add('CostCenter', 'COFRN');
 
+    // Structure to hold resources that lambda functions can be given permissions for
+    const lambdaResources: LambdaResources = {
+      tables: {},
+      buckets: {},
+      secrets: {},
+      queues: {},
+      firehoses: {},
+    };
+
     // Created outside of the CDK
     const bucket = s3.Bucket.fromBucketName(this, bucketName, bucketName);
+    lambdaResources.buckets.AUDIO = bucket;
     const twilioSecret = secretsManager.Secret.fromSecretCompleteArn(this, 'cvfd-twilio-secret', secretArn);
+    lambdaResources.secrets.TWILIO = twilioSecret;
 
     // Create the tables for dynamo DB
     const phoneNumberTable = new dynamodb.Table(this, 'cvfd-phone', {
@@ -87,6 +380,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    lambdaResources.tables.USER = phoneNumberTable;
     const dtrTable = new dynamodb.Table(this, 'cvfd-dtr-added', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -98,6 +392,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    lambdaResources.tables.FILE = dtrTable;
     const textsTable = new dynamodb.Table(this, 'cvfd-messages', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -105,6 +400,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    lambdaResources.tables.TEXT = textsTable;
     const statusTable = new dynamodb.Table(this, 'cofrn-status', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -112,6 +408,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    lambdaResources.tables.STATUS = statusTable;
     const talkgroupTable = new dynamodb.Table(this, 'cvfd-talkgroups', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -119,6 +416,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    lambdaResources.tables.TALKGROUP = talkgroupTable;
     const siteTable = new dynamodb.Table(this, 'cvfd-sites', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -126,6 +424,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    lambdaResources.tables.SITE = siteTable;
     const dtrTranslationTable = new dynamodb.Table(this, 'cvfd-dtr-translation', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -134,6 +433,7 @@ export class FireWatcherAwsStack extends Stack {
       },
       timeToLiveAttribute: 'TTL',
     });
+    lambdaResources.tables.DTR_TRANSLATION = dtrTranslationTable;
     const errorsTable = new dynamodb.Table(this, 'cofrn-frontend-errors', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -141,6 +441,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    lambdaResources.tables.ERROR = errorsTable;
     const devicesTable = new dynamodb.Table(this, 'cofrn-devices', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -152,6 +453,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.NUMBER,
       },
     });
+    lambdaResources.tables.DEVICES = devicesTable;
     const radiosTable = new dynamodb.Table(this, 'cofrn-radios', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -159,6 +461,7 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    lambdaResources.tables.RADIOS = radiosTable;
     const departmentsTable = new dynamodb.Table(this, 'cofrn-departments', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -166,6 +469,15 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    lambdaResources.tables.DEPARTMENT = departmentsTable;
+    const invoicesTable = new dynamodb.Table(this, 'cofrn-invoices', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'id',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
+    lambdaResources.tables.INVOICE = invoicesTable;
 
     dtrTable.addGlobalSecondaryIndex({
       indexName: 'AddedIndex',
@@ -275,9 +587,11 @@ export class FireWatcherAwsStack extends Stack {
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
+    lambdaResources.buckets.EVENTS = eventsS3Bucket;
 
     // Make the S3 bucket for caching cost data from AWS
     const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
+    lambdaResources.buckets.COSTS = costDataS3Bucket;
 
     // Make the Glue table
     const glueDatabaseName = 'cvfd-data-db';
@@ -423,6 +737,7 @@ export class FireWatcherAwsStack extends Stack {
         dynamicPartitioningConfiguration: { enabled: true, },
       },
     });
+    lambdaResources.firehoses.EVENTS = eventsFirehose;
 
     // Create the dead letter queue
     const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
@@ -435,11 +750,13 @@ export class FireWatcherAwsStack extends Stack {
         maxReceiveCount: 2,
       },
     });
+    lambdaResources.queues.EVENTS = queue;
 
     // Create a queue for twilio status events
     const twilioStatusQueue = new sqs.Queue(this, 'cofrn-twilio-status', {
       visibilityTimeout: Duration.minutes(5),
     });
+    lambdaResources.queues.TWILIO = twilioStatusQueue;
 
     // Create the secret for JWT authentication
     const jwtSecret = new secretsManager.Secret(this, 'cofrn-jwt-secret', {
@@ -451,11 +768,13 @@ export class FireWatcherAwsStack extends Stack {
         passwordLength: 64,
       },
     });
+    lambdaResources.secrets.JWT = jwtSecret;
 
     // Create the secret for JWT authentication
     const aladTecSecret = new secretsManager.Secret(this, 'cofrn-aladtec-secret', {
       description: 'The username and password to use for logging into AladTec',
     });
+    lambdaResources.secrets.ALADTEC = aladTecSecret;
 
     // Create the athena workgroup
     const athenaWorkgroup = new athena.CfnWorkGroup(this, 'cofrn-athena-workgroup', {
@@ -466,59 +785,86 @@ export class FireWatcherAwsStack extends Stack {
         },
       },
     });
-
-    // Build the lambda environment variables
-    const lambdaEnv: LambdaEnvironment = {
-      S3_BUCKET: bucket.bucketName,
-      COSTS_BUCKET: costDataS3Bucket.bucketName,
-      EVENTS_S3_BUCKET: eventsS3Bucket.bucketName,
-
-      TWILIO_SECRET: twilioSecret.secretArn,
-      JWT_SECRET: jwtSecret.secretArn,
-      API_CODE: process.env.SERVER_API_CODE as string,
-      SQS_QUEUE: queue.queueUrl,
-      TWILIO_QUEUE: twilioStatusQueue.queueUrl,
-      FIREHOSE_NAME: eventsFirehose.deliveryStreamName as string,
-
-      TABLE_DEVICES: devicesTable.tableName,
-      TABLE_DTR_TRANSLATION: dtrTranslationTable.tableName,
-      TABLE_ERROR: errorsTable.tableName,
-      TABLE_FILE: dtrTable.tableName,
-      TABLE_RADIOS: radiosTable.tableName,
-      TABLE_SITE: siteTable.tableName,
-      TABLE_STATUS: statusTable.tableName,
-      TABLE_TALKGROUP: talkgroupTable.tableName,
-      TABLE_TEXT: textsTable.tableName,
-      TABLE_USER: phoneNumberTable.tableName,
-      TABLE_DEPARTMENT: departmentsTable.tableName,
-
-      GLUE_TABLE: glueTableName,
-      GLUE_DATABASE: glueDatabaseName,
-      ATHENA_WORKGROUP: athenaWorkgroup.name,
-    };
+    lambdaResources.athenaPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'lambda-athena-policy',
+      'arn:aws:iam::aws:policy/AmazonAthenaFullAccess'
+    );
+    lambdaResources.gluePolicy = iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'cofrn-full-glue-access',
+      'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+    );
 
     // Create resources for sending emails
     const emailIdentity = new ses.EmailIdentity(this, 'cvfd-email-identity', {
       identity: ses.Identity.domain(emailDomain),
       feedbackForwarding: true,
     });
+    lambdaResources.emailIdentity = emailIdentity;
     const emailS3 = new s3.Bucket(this, 'cofrn-email-bucket');
+    lambdaResources.buckets.EMAIL = emailS3;
+
+    // Build the lambda environment variables
+    const lambdaEnv: LambdaEnvironment = {
+      // Tables
+      TBL_DEVICES: devicesTable.tableName,
+      TBL_DTR_TRANSLATION: dtrTranslationTable.tableName,
+      TBL_ERROR: errorsTable.tableName,
+      TBL_FILE: dtrTable.tableName,
+      TBL_RADIOS: radiosTable.tableName,
+      TBL_SITE: siteTable.tableName,
+      TBL_STATUS: statusTable.tableName,
+      TBL_TALKGROUP: talkgroupTable.tableName,
+      TBL_TEXT: textsTable.tableName,
+      TBL_USER: phoneNumberTable.tableName,
+      TBL_DEPARTMENT: departmentsTable.tableName,
+      TBL_INVOICE: invoicesTable.tableName,
+
+      // Buckets
+      BKT_AUDIO: bucket.bucketName,
+      BKT_COSTS: costDataS3Bucket.bucketName,
+      BKT_EVENTS: eventsS3Bucket.bucketName,
+      BKT_EMAIL: emailS3.bucketName,
+
+      // Secrets
+      SCRT_ALADTEC: aladTecSecret.secretArn,
+      SCRT_JWT: jwtSecret.secretArn,
+      SCRT_TWILIO: twilioSecret.secretArn,
+
+      // Queues
+      Q_EVENTS: queue.queueUrl,
+      Q_TWILIO: twilioStatusQueue.queueUrl,
+
+      // Firehoses
+      FH_EVENTS: eventsFirehose.deliveryStreamName as string,
+
+      // @TODO
+      API_CODE: process.env.SERVER_API_CODE as string,
+      EMAIL_SOURCE: emailIdentity.emailIdentityArn,
+
+      GLUE_TABLE: glueTableName,
+      GLUE_DATABASE: glueDatabaseName,
+      ATHENA_WORKGROUP: athenaWorkgroup.name,
+    };
 
     // Create the lambda for forwarding emails
+    const emailHandlerPermissions: LambdaPermissions = {
+      extra: [ 'sendEmail', ],
+      buckets: [ {
+        bucket: 'EMAIL',
+        readonly: true,
+      }, ],
+    };
     const emailHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-email-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'emailHandler.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-        EMAIL_S3_BUCKET: emailS3.bucketName,
-        EMAIL_SOURCE_ARN: emailIdentity.emailIdentityArn,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, emailHandlerPermissions),
       timeout: Duration.minutes(1),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-    emailIdentity.grantSendEmail(emailHandler);
-    emailS3.grantRead(emailHandler);
+    grantLambdaPermissions(emailHandler, emailHandlerPermissions, lambdaResources);
 
     // Create the logic for receiving emails
     new ses.ReceiptRuleSet(this, 'cofrn-ses-rulest', {
@@ -537,25 +883,36 @@ export class FireWatcherAwsStack extends Stack {
     });
 
     // Invoice generation function
+    const invoiceHandlerPermissions: LambdaPermissions = {
+      extra: [ 'sendEmail', ],
+      tables: [
+        {
+          table: 'DEPARTMENT',
+          readonly: true,
+        },
+        {
+          table: 'INVOICE',
+          readonly: false,
+        },
+      ],
+      buckets: [ {
+        bucket: 'EMAIL',
+        readonly: false,
+      }, ],
+      secrets: [ 'TWILIO', ],
+    };
     const invoiceHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-invoice-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'generateInvoices.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-        EMAIL_S3_BUCKET: emailS3.bucketName,
-        EMAIL_SOURCE_ARN: emailIdentity.emailIdentityArn,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, invoiceHandlerPermissions),
       bundling: {
         nodeModules: [ 'pdfkit', ],
       },
       timeout: Duration.minutes(1),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-    emailS3.grantReadWrite(invoiceHandler);
-    emailIdentity.grantSendEmail(invoiceHandler);
-    twilioSecret.grantRead(invoiceHandler);
-    departmentsTable.grantReadData(invoiceHandler);
+    grantLambdaPermissions(invoiceHandler, invoiceHandlerPermissions, lambdaResources);
 
     // Run the invoice function on the 3rd of every month at 9 AM
     const target = new schedulerTargets.LambdaInvoke(invoiceHandler, {
@@ -574,87 +931,112 @@ export class FireWatcherAwsStack extends Stack {
       description: 'This will generate invoices every month on the 1st at 0900 mountain time',
     });
 
-    // Access for Athena queries
-    const athenaAccessPolicy = iam.ManagedPolicy.fromManagedPolicyArn(
-      this,
-      'lambda-athena-policy',
-      'arn:aws:iam::aws:policy/AmazonAthenaFullAccess'
-    );
-
     // Create a handler that pushes file information into Dynamo DB
-    const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData', ],
-          resources: [ '*', ],
-        }),
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'transcribe:*', ],
-          resources: [ '*', ],
-        }),
+    const s3HandlerPermissions: LambdaPermissions = {
+      extra: [
+        'transcribe',
+        'putMetrics',
       ],
+      buckets: [ {
+        bucket: 'AUDIO',
+        readonly: false,
+      }, ],
+      tables: [
+        {
+          table: 'FILE',
+          readonly: false,
+        },
+        {
+          table: 'TALKGROUP',
+          readonly: false,
+        },
+        {
+          table: 'DTR_TRANSLATION',
+          readonly: false,
+        },
+        {
+          table: 'DEVICES',
+          readonly: false,
+        },
+        {
+          table: 'RADIOS',
+          readonly: false,
+        },
+      ],
+      queues: [ {
+        queue: 'EVENTS',
+        read: false,
+        write: true,
+      }, ],
+    };
+    const s3Handler = new lambdanodejs.NodejsFunction(this, 'cvfd-s3-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 's3.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, s3HandlerPermissions),
       timeout: Duration.minutes(1),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-
-    // Grant access for the S3 handler
-    bucket.grantReadWrite(s3Handler);
-    dtrTable.grantReadWriteData(s3Handler);
-    talkgroupTable.grantReadWriteData(s3Handler);
-    queue.grantSendMessages(s3Handler);
-    dtrTranslationTable.grantReadWriteData(s3Handler);
-    devicesTable.grantReadWriteData(s3Handler);
-    radiosTable.grantReadWriteData(s3Handler);
+    grantLambdaPermissions(s3Handler, s3HandlerPermissions, lambdaResources);
 
     // Create a handler for the SQS queue
-    const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
-      initialPolicy: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'cloudwatch:PutMetricData', ],
-          resources: [ '*', ],
-        }),
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [ 'transcribe:*', ],
-          resources: [ '*', ],
-        }),
+    const queueHandlerPermissions: LambdaPermissions = {
+      extra: [
+        'putMetrics',
+        'transcribe',
       ],
+      tables: [
+        {
+          table: 'USER',
+          readonly: false,
+        },
+        {
+          table: 'TEXT',
+          readonly: false,
+        },
+        {
+          table: 'FILE',
+          readonly: false,
+        },
+        {
+          table: 'DTR_TRANSLATION',
+          readonly: false,
+        },
+        {
+          table: 'SITE',
+          readonly: false,
+        },
+      ],
+      buckets: [ {
+        bucket: 'COSTS',
+        readonly: false,
+      }, ],
+      secrets: [ 'TWILIO', ],
+    };
+    const queueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-queue-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'queue.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, queueHandlerPermissions),
       timeout: Duration.minutes(1),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
     queueHandler.addEventSource(new lambdaEventSources.SqsEventSource(queue));
+    grantLambdaPermissions(queueHandler, queueHandlerPermissions, lambdaResources);
 
     // Create a handler for the S3 file creation SQS queue
+    const eventsS3QueueHandlerPermissions: LambdaPermissions = {
+      extra: [ 'glue', ],
+    };
     const eventsS3QueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-events-s3-queue-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'eventFileQueueHandler.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, eventsS3QueueHandlerPermissions),
       timeout: Duration.minutes(5),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-    eventsS3QueueHandler.role?.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(
-      this,
-      'cofrn-full-glue-access',
-      'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
-    ));
+    grantLambdaPermissions(eventsS3QueueHandler, eventsS3QueueHandlerPermissions, lambdaResources);
 
     // Pipe the S3 events to the handler
     eventsS3Bucket.addEventNotification(
@@ -666,54 +1048,57 @@ export class FireWatcherAwsStack extends Stack {
     );
 
     // Create a queue and handler that handles Twilio status updates
+    const twilioQueueHandlerPermissions: LambdaPermissions = {
+      tables: [ {
+        table: 'TEXT',
+        readonly: false,
+      }, ],
+    };
     const twilioQueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-twilio-queue-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'twilioQueueHandler.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, twilioQueueHandlerPermissions),
       timeout: Duration.minutes(1),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
+    grantLambdaPermissions(twilioQueueHandler, twilioQueueHandlerPermissions, lambdaResources);
     twilioQueueHandler.addEventSource(new lambdaEventSources.SqsEventSource(twilioStatusQueue, {
       batchSize: 10,
       maxBatchingWindow: Duration.minutes(1),
     }));
-    textsTable.grantReadWriteData(twilioQueueHandler);
-
-    // Grant access for the queue handler
-    phoneNumberTable.grantReadWriteData(queueHandler);
-    textsTable.grantReadWriteData(queueHandler);
-    dtrTable.grantReadWriteData(queueHandler);
-    twilioSecret.grantRead(queueHandler);
-    dtrTranslationTable.grantReadWriteData(queueHandler);
-    siteTable.grantReadWriteData(queueHandler);
-    costDataS3Bucket.grantReadWrite(queueHandler);
 
     // Create a queue for cloudwatch alarms
+    const alarmQueueHandlerPermissions: LambdaPermissions = {
+      extra: [
+        'putMetrics',
+        'readMetricsTags',
+      ],
+      tables: [
+        {
+          table: 'TEXT',
+          readonly: false,
+        },
+        {
+          table: 'USER',
+          readonly: true,
+        },
+      ],
+      secrets: [ 'TWILIO', ],
+      buckets: [ {
+        bucket: 'COSTS',
+        readonly: false,
+      }, ],
+    };
     const alarmQueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-alarm-queue-lambda', {
-      initialPolicy: [ new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          'cloudwatch:PutMetricData',
-          'cloudwatch:ListTagsForResource',
-        ],
-        resources: [ '*', ],
-      }), ],
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'alarms.ts'),
       handler: 'main',
       timeout: Duration.seconds(30),
       logRetention: logs.RetentionDays.ONE_MONTH,
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, alarmQueueHandlerPermissions),
     });
-    textsTable.grantReadWriteData(alarmQueueHandler);
-    phoneNumberTable.grantReadData(alarmQueueHandler);
-    twilioSecret.grantRead(alarmQueueHandler);
-    costDataS3Bucket.grantReadWrite(alarmQueueHandler);
+    grantLambdaPermissions(alarmQueueHandler, alarmQueueHandlerPermissions, lambdaResources);
 
     // Schedule the function for every 5 minutes
     const alarmEventRule = new events.Rule(this, 'alarm-rule', {
@@ -754,27 +1139,33 @@ export class FireWatcherAwsStack extends Stack {
     rule.addTarget(new targets.SqsQueue(queue));
 
     // Create the status parser function
+    const statusHandlerPermissions: LambdaPermissions = {
+      extra: [ 'putMetrics', ],
+      tables: [
+        {
+          table: 'STATUS',
+          readonly: false,
+        },
+        {
+          table: 'USER',
+          readonly: true,
+        },
+        {
+          table: 'TEXT',
+          readonly: false,
+        },
+      ],
+      secrets: [ 'TWILIO', ],
+    };
     const statusHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-status-lambda', {
-      initialPolicy: [ new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [ 'cloudwatch:PutMetricData', ],
-        resources: [ '*', ],
-      }), ],
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'status.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, statusHandlerPermissions),
       timeout: Duration.minutes(1),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-
-    // Grant access for the status handler
-    statusTable.grantReadWriteData(statusHandler);
-    phoneNumberTable.grantReadData(statusHandler);
-    textsTable.grantReadWriteData(statusHandler);
-    twilioSecret.grantRead(statusHandler);
+    grantLambdaPermissions(statusHandler, statusHandlerPermissions, lambdaResources);
 
     // Schedule the function for every minute
     const statusEventRule = new events.Rule(this, 'status-rule', {
@@ -785,19 +1176,22 @@ export class FireWatcherAwsStack extends Stack {
     statusEventRule.addTarget(new targets.LambdaFunction(statusHandler));
 
     // Import the AladTec schedule
+    const importAladTecPermissions: LambdaPermissions = {
+      secrets: [ 'ALADTEC', ],
+      buckets: [ {
+        bucket: 'COSTS',
+        readonly: false,
+      }, ],
+    };
     const importAladTec = new lambdanodejs.NodejsFunction(this, 'cofrn-import-aladtec', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'importAladTec.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-        ALADTEC_SECRET: aladTecSecret.secretArn,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, importAladTecPermissions),
       timeout: Duration.minutes(15),
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    costDataS3Bucket.grantReadWrite(importAladTec);
-    aladTecSecret.grantRead(importAladTec);
+    grantLambdaPermissions(importAladTec, importAladTecPermissions, lambdaResources);
 
     // Update the schedule every 6 hours
     const importAladTecEventRule = new events.Rule(this, 'import-aladtec-rule', {
@@ -809,22 +1203,40 @@ export class FireWatcherAwsStack extends Stack {
     importAladTecEventRule.addTarget(new targets.LambdaFunction(importAladTec));
 
     // Update the event counts daily
+    const dailyEventsHandlerPermissions: LambdaPermissions = {
+      extra: [ 'athena', ],
+      tables: [
+        {
+          table: 'DEVICES',
+          readonly: false,
+        },
+        {
+          table: 'RADIOS',
+          readonly: false,
+        },
+        {
+          table: 'TALKGROUP',
+          readonly: false,
+        },
+        {
+          table: 'FILE',
+          readonly: true,
+        },
+      ],
+      buckets: [ {
+        bucket: 'EVENTS',
+        readonly: false,
+      }, ],
+    };
     const dailyEventsHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-daily-events', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'dailyEvents.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, dailyEventsHandlerPermissions),
       timeout: Duration.minutes(15),
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    devicesTable.grantReadWriteData(dailyEventsHandler);
-    radiosTable.grantReadWriteData(dailyEventsHandler);
-    talkgroupTable.grantReadWriteData(dailyEventsHandler);
-    dtrTable.grantReadData(dailyEventsHandler);
-    dailyEventsHandler.role?.addManagedPolicy(athenaAccessPolicy);
-    eventsS3Bucket.grantReadWrite(dailyEventsHandler);
+    grantLambdaPermissions(dailyEventsHandler, dailyEventsHandlerPermissions, lambdaResources);
 
     // Schedule the function for 1 AM UTC
     const dailyEventRule = new events.Rule(this, 'daily-events-rule', {
@@ -836,19 +1248,21 @@ export class FireWatcherAwsStack extends Stack {
     dailyEventRule.addTarget(new targets.LambdaFunction(dailyEventsHandler));
 
     // Create the weather updater
+    const weatherUpdaterPermissions: LambdaPermissions = {
+      buckets: [ {
+        bucket: 'AUDIO',
+        readonly: false,
+      }, ],
+    };
     const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'weather.ts'),
       handler: 'main',
-      environment: {
-        ...lambdaEnv,
-      },
+      environment: buildLambdaEnvironment(lambdaEnv, weatherUpdaterPermissions),
       timeout: Duration.minutes(5),
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-
-    // Grant access for the status handler
-    bucket.grantReadWrite(weatherUpdater);
+    grantLambdaPermissions(weatherUpdater, weatherUpdaterPermissions, lambdaResources);
 
     // Schedule the function for every 15 minutes
     const weatherEventRule = new events.Rule(this, '-rule', {
@@ -881,52 +1295,16 @@ export class FireWatcherAwsStack extends Stack {
     });
     const apiResource = api.root.addResource('api');
 
-    // Maps for tables and buckets for the v2 APIs
-    const tableMap: {
-      [key in TableNames]: dynamodb.Table
-    } = {
-      DEVICES: devicesTable,
-      DTR_TRANSLATION: dtrTranslationTable,
-      ERROR: errorsTable,
-      FILE: dtrTable,
-      RADIOS: radiosTable,
-      SITE: siteTable,
-      STATUS: statusTable,
-      TALKGROUP: talkgroupTable,
-      TEXT: textsTable,
-      USER: phoneNumberTable,
-      DEPARTMENT: departmentsTable,
-    };
-    const bucketMap = {
-      FILE: bucket,
-      COSTS: costDataS3Bucket,
-      EVENTS: eventsS3Bucket,
-    } as const;
-
     // Add the v2 APIs
     const apiV2 = apiResource.addResource('v2');
     interface V2ApiConfigBase {
       pathPart: string;
       next?: V2ApiConfig[];
+      api: false;
     }
-    interface V2ApiConfigHandler extends V2ApiConfigBase {
+    interface V2ApiConfigHandler extends Omit<V2ApiConfigBase, 'api'>, Omit<LambdaPermissions, 'api'>, Required<Pick<LambdaPermissions, 'api'>> {
       fileName: string;
       methods: (keyof typeof HTTPMethod)[];
-      twilioSecret?: true;
-      sendsMetrics?: true;
-      getMetrics?: true;
-      getCosts?: true;
-      getAthena?: true;
-      tables?: {
-        table: keyof typeof tableMap;
-        readOnly?: true;
-      }[];
-      buckets?: {
-        bucket: keyof typeof bucketMap;
-        readOnly?: true;
-      }[];
-      firehoses?: kinesisfirehose.CfnDeliveryStream[];
-      queues?: sqs.Queue[];
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
@@ -935,31 +1313,36 @@ export class FireWatcherAwsStack extends Stack {
         pathPart: 'aladtec',
         fileName: 'aladtec',
         methods: [ 'GET', ],
+        api: true,
         buckets: [ {
           bucket: 'COSTS',
-          readOnly: true,
+          readonly: true,
         }, ],
       },
       // departments
       {
         pathPart: 'departments',
         fileName: 'departments',
+        api: true,
         methods: [
           'GET',
           'POST',
         ],
         tables: [ {
           table: 'DEPARTMENT',
+          readonly: false,
         }, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'department',
+          api: true,
           methods: [
             'GET',
             'PATCH',
           ],
           tables: [ {
             table: 'DEPARTMENT',
+            readonly: false,
           }, ],
         }, ],
       },
@@ -967,41 +1350,55 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'errors',
         fileName: 'errors',
+        api: true,
         methods: [
           'POST',
           'GET',
         ],
         tables: [ {
           table: 'ERROR',
+          readonly: false,
         }, ],
       },
       // events
       {
         pathPart: 'events',
         fileName: 'events',
+        api: true,
         methods: [
           'POST',
           'GET',
         ],
-        getAthena: true,
-        firehoses: [ eventsFirehose, ],
-        buckets: [ { bucket: 'EVENTS', }, ],
+        extra: [
+          'athena',
+          'apiCode',
+        ],
+        firehoses: [ 'EVENTS', ],
+        buckets: [ {
+          bucket: 'EVENTS',
+          readonly: false,
+        }, ],
         next: [ {
           pathPart: '{type}',
+          api: false,
           next: [ {
             pathPart: '{id}',
             fileName: 'eventsList',
+            api: true,
             methods: [ 'GET', ],
-            getAthena: true,
-            buckets: [ { bucket: 'EVENTS', }, ],
+            extra: [ 'athena', ],
+            buckets: [ {
+              bucket: 'EVENTS',
+              readonly: false,
+            }, ],
             tables: [
               {
                 table: 'FILE',
-                readOnly: true,
+                readonly: true,
               },
               {
                 table: 'DEVICES',
-                readOnly: true,
+                readonly: true,
               },
             ],
           }, ],
@@ -1011,24 +1408,26 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'files',
         fileName: 'files',
+        api: true,
         methods: [ 'GET', ],
         tables: [
           {
             table: 'FILE',
-            readOnly: true,
+            readonly: true,
           },
           {
             table: 'DEVICES',
-            readOnly: true,
+            readonly: true,
           },
         ],
         next: [ {
           pathPart: '{id}',
           fileName: 'file',
+          api: true,
           methods: [ 'GET', ],
           tables: [ {
             table: 'FILE',
-            readOnly: true,
+            readonly: true,
           }, ],
         }, ],
       },
@@ -1036,144 +1435,184 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'heartbeats',
         fileName: 'heartbeats',
+        api: true,
+        extra: [
+          'putMetrics',
+          'apiCode',
+        ],
         methods: [
           'GET',
           'POST',
         ],
         tables: [ {
           table: 'STATUS',
+          readonly: false,
         }, ],
-        sendsMetrics: true,
       },
       // invoices
       {
         pathPart: 'invoices',
+        api: false,
         next: [ {
           pathPart: '{id}',
+          api: false,
           next: [ {
             pathPart: 'items',
             fileName: 'invoiceItems',
+            api: true,
             methods: [ 'GET', ],
-            twilioSecret: true,
+            secrets: [ 'TWILIO', ],
           }, ],
         }, ],
       },
       // login
       {
         pathPart: 'login',
+        api: false,
         next: [ {
           pathPart: '{id}',
           fileName: 'login',
+          api: true,
           methods: [
             'GET',
             'POST',
           ],
           tables: [ {
             table: 'USER',
+            readonly: false,
           }, ],
-          queues: [ queue, ],
+          queues: [ {
+            queue: 'EVENTS',
+            read: false,
+            write: true,
+          }, ],
         }, ],
       },
       // logout
       {
         pathPart: 'logout',
         fileName: 'logout',
+        api: true,
         methods: [ 'GET', ],
       },
       // metrics
       {
         pathPart: 'metrics',
         fileName: 'metrics',
+        api: true,
         methods: [ 'POST', ],
-        getMetrics: true,
+        extra: [
+          'readMetrics',
+          'apiCode',
+        ],
         next: [ {
           pathPart: 'add',
           fileName: 'metricsAdd',
+          api: true,
+          extra: [
+            'putMetrics',
+            'apiCode',
+          ],
           methods: [ 'POST', ],
-          sendsMetrics: true,
         }, ],
       },
       // pages
       {
         pathPart: 'pages',
         fileName: 'pages',
+        api: true,
+        methods: [ 'GET', ],
         tables: [ {
           table: 'FILE',
-          readOnly: true,
+          readonly: true,
         }, ],
-        methods: [ 'GET', ],
       },
       // radios
       {
         pathPart: 'radios',
         fileName: 'radios',
+        api: true,
+        methods: [ 'GET', ],
         tables: [ {
           table: 'RADIOS',
-          readOnly: true,
+          readonly: true,
         }, ],
-        methods: [ 'GET', ],
         next: [ {
           pathPart: '{id}',
           fileName: 'radio',
+          api: true,
+          methods: [ 'PATCH', ],
           tables: [ {
             table: 'RADIOS',
+            readonly: false,
           }, ],
-          methods: [ 'PATCH', ],
         }, ],
       },
       // restart
       {
         pathPart: 'restart',
+        api: false,
         next: [ {
           pathPart: '{tower}',
           fileName: 'restart',
+          api: true,
           methods: [
             'GET',
             'POST',
           ],
+          extra: [ 'putMetrics', ],
           buckets: [ {
             bucket: 'COSTS',
-            readOnly: true,
+            readonly: true,
           }, ],
           tables: [ {
             table: 'TEXT',
+            readonly: false,
           }, ],
-          sendsMetrics: true,
-          twilioSecret: true,
+          secrets: [ 'TWILIO', ],
         }, ],
       },
       // sites
       {
         pathPart: 'sites',
         fileName: 'sites',
+        api: true,
         methods: [
           'GET',
           'POST',
         ],
+        extra: [ 'apiCode', ],
         tables: [ {
           table: 'SITE',
-          readOnly: true,
+          readonly: true,
         }, ],
-        queues: [ queue, ],
+        queues: [ {
+          queue: 'EVENTS',
+          read: false,
+          write: true,
+        }, ],
       },
       // talkgroups
       {
         pathPart: 'talkgroups',
         fileName: 'talkgroups',
+        api: true,
         methods: [ 'GET', ],
         tables: [ {
           table: 'TALKGROUP',
-          readOnly: true,
+          readonly: true,
         }, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'talkgroup',
+          api: true,
           methods: [
             'GET',
             'PATCH',
           ],
           tables: [ {
             table: 'TALKGROUP',
+            readonly: false,
           }, ],
         }, ],
       },
@@ -1181,30 +1620,35 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'textlink',
         fileName: 'textlink',
+        api: true,
         methods: [ 'GET', ],
         tables: [ {
           table: 'TEXT',
+          readonly: false,
         }, ],
       },
       // texts
       {
         pathPart: 'texts',
         fileName: 'texts',
+        api: true,
         methods: [ 'GET', ],
         tables: [ {
           table: 'TEXT',
-          readOnly: true,
+          readonly: true,
         }, ],
         buckets: [ {
           bucket: 'COSTS',
-          readOnly: true,
+          readonly: true,
         }, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'text',
+          api: true,
           methods: [ 'PATCH', ],
           tables: [ {
             table: 'TEXT',
+            readonly: false,
           }, ],
         }, ],
       },
@@ -1212,29 +1656,46 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'twilio',
         fileName: 'twilioBase',
+        api: true,
         methods: [ 'POST', ],
-        twilioSecret: true,
+        secrets: [ 'TWILIO', ],
         tables: [ {
           table: 'USER',
+          readonly: false,
         }, ],
-        queues: [ queue, ],
+        queues: [ {
+          queue: 'EVENTS',
+          read: false,
+          write: true,
+        }, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'twilioStatus',
+          api: true,
           methods: [ 'POST', ],
-          twilioSecret: true,
-          sendsMetrics: true,
+          extra: [ 'putMetrics', ],
+          secrets: [ 'TWILIO', ],
           tables: [
             {
               table: 'TEXT',
+              readonly: false,
             },
             {
               table: 'USER',
+              readonly: false,
             },
           ],
           queues: [
-            queue,
-            twilioStatusQueue,
+            {
+              queue: 'EVENTS',
+              read: false,
+              write: true,
+            },
+            {
+              queue: 'TWILIO',
+              read: false,
+              write: true,
+            },
           ],
         }, ],
       },
@@ -1242,17 +1703,24 @@ export class FireWatcherAwsStack extends Stack {
       {
         pathPart: 'users',
         fileName: 'users',
+        api: true,
         methods: [
           'GET',
           'POST',
         ],
         tables: [ {
           table: 'USER',
+          readonly: false,
         }, ],
-        queues: [ queue, ],
+        queues: [ {
+          queue: 'EVENTS',
+          read: false,
+          write: true,
+        }, ],
         next: [ {
           pathPart: '{id}',
           fileName: 'user',
+          api: true,
           methods: [
             'GET',
             'PATCH',
@@ -1260,11 +1728,17 @@ export class FireWatcherAwsStack extends Stack {
           ],
           tables: [ {
             table: 'USER',
+            readonly: false,
           }, ],
-          queues: [ queue, ],
+          queues: [ {
+            queue: 'EVENTS',
+            read: false,
+            write: true,
+          }, ],
           next: [ {
             pathPart: '{department}',
             fileName: 'userDepartment',
+            api: true,
             methods: [
               'POST',
               'PATCH',
@@ -1272,8 +1746,13 @@ export class FireWatcherAwsStack extends Stack {
             ],
             tables: [ {
               table: 'USER',
+              readonly: false,
             }, ],
-            queues: [ queue, ],
+            queues: [ {
+              queue: 'EVENTS',
+              read: false,
+              write: true,
+            }, ],
           }, ],
         }, ],
       },
@@ -1285,162 +1764,23 @@ export class FireWatcherAwsStack extends Stack {
       let resourceIntegration: apigateway.Integration | undefined = undefined;
       let resourceHandler: lambdanodejs.NodejsFunction | undefined = undefined;
       if ('fileName' in config) {
-        // const baseEnv: Partial<LambdaEnvironment> = {
-        //   ...lambdaEnv,
-        // };
-        const baseEnv: Partial<LambdaEnvironment> = {
-          JWT_SECRET: lambdaEnv.JWT_SECRET,
-          API_CODE: lambdaEnv.API_CODE,
-        };
-
-        const initialPolicy: iam.PolicyStatement[] = [];
-        if (config.sendsMetrics) {
-          initialPolicy.push(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [ 'cloudwatch:PutMetricData', ],
-            resources: [ '*', ],
-          }));
-        }
-        if (config.getMetrics) {
-          initialPolicy.push(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [ 'cloudwatch:*', ],
-            resources: [ '*', ],
-          }));
-        }
-
-        if (config.getAthena) {
-          baseEnv.ATHENA_WORKGROUP = lambdaEnv.ATHENA_WORKGROUP;
-          baseEnv.GLUE_DATABASE = lambdaEnv.GLUE_DATABASE;
-          baseEnv.GLUE_TABLE = lambdaEnv.GLUE_TABLE;
-        }
-
-        const fnTables: (keyof LambdaEnvironment)[] = [
-          'TABLE_USER',
-          ...config.tables?.map(t => `TABLE_${t.table}` as keyof LambdaEnvironment) || [],
-        ];
-        fnTables.forEach(key => {
-          baseEnv[key] = lambdaEnv[key];
-        });
-
-        config.buckets?.forEach(bucket => {
-          if (bucket.bucket === 'COSTS') {
-            baseEnv.COSTS_BUCKET = lambdaEnv.COSTS_BUCKET;
-          } else if (bucket.bucket === 'EVENTS') {
-            baseEnv.EVENTS_S3_BUCKET = lambdaEnv.EVENTS_S3_BUCKET;
-          } else if (bucket.bucket === 'FILE') {
-            baseEnv.S3_BUCKET = lambdaEnv.S3_BUCKET;
-          }
-        });
-
-        if (config.queues) {
-          baseEnv.SQS_QUEUE = lambdaEnv.SQS_QUEUE;
-          baseEnv.TWILIO_QUEUE = lambdaEnv.TWILIO_QUEUE;
-        }
-
-        if (config.firehoses) {
-          baseEnv.FIREHOSE_NAME = lambdaEnv.FIREHOSE_NAME;
-        }
-
-        if (config.twilioSecret) {
-          baseEnv.TWILIO_SECRET = lambdaEnv.TWILIO_SECRET;
-        }
-
         resourceHandler = new lambdanodejs.NodejsFunction(this, `cofrn-api-v2-${config.fileName}`, {
           runtime: lambda.Runtime.NODEJS_22_X,
           entry: resolve(resourceBase, 'api', 'v2', `${config.fileName}.ts`),
           handler: 'main',
           timeout: Duration.seconds(20),
           logRetention: logs.RetentionDays.ONE_MONTH,
-          initialPolicy,
-          environment: {
-            ...baseEnv,
-          },
+          environment: buildLambdaEnvironment(lambdaEnv, config),
         });
-
-        // Give athena access
-        if (config.getAthena) {
-          resourceHandler.role?.addManagedPolicy(athenaAccessPolicy);
-        }
+        grantLambdaPermissions(resourceHandler, config, lambdaResources);
 
         resourceIntegration = new apigateway.LambdaIntegration(resourceHandler, {
           requestTemplates: {
             'application/json': '{"statusCode":"200"}',
           },
         });
-        if (config.getMetrics) {
+        if (config.extra?.includes('readMetrics')) {
           lambdaNameRecips.push(resourceHandler);
-        }
-
-        // Add read ability to the users table so the user can be authenticated
-        if (!config.tables?.some(v => v.table === 'USER')) {
-          config.tables = config.tables || [];
-          config.tables.push({
-            table: 'USER',
-            readOnly: true,
-          });
-        }
-
-        // Add access to the JWT secret
-        jwtSecret.grantRead(resourceHandler);
-
-        // Add the table permissions
-        config.tables?.forEach(table => {
-          if (!resourceHandler) {
-            return;
-          }
-          if (table.readOnly) {
-            tableMap[table.table].grantReadData(resourceHandler);
-          } else {
-            tableMap[table.table].grantReadWriteData(resourceHandler);
-          }
-        });
-
-        // Add the bucket permissions
-        config.buckets?.forEach(bucket => {
-          if (!resourceHandler) {
-            return;
-          }
-          if (bucket.readOnly) {
-            bucketMap[bucket.bucket].grantRead(resourceHandler);
-          } else {
-            bucketMap[bucket.bucket].grantReadWrite(resourceHandler);
-          }
-        });
-
-        // Grant access to the SQS queue if needed
-        config.queues
-          ?.forEach(q => q.grantSendMessages(resourceHandler as lambdanodejs.NodejsFunction));
-
-        // Add the firehose permissions
-        config.firehoses
-          ?.forEach(hose => {
-            if (!resourceHandler) {
-              return;
-            }
-
-            resourceHandler.addToRolePolicy(new iam.PolicyStatement({
-              effect: iam.Effect.ALLOW,
-              resources: [ hose.attrArn, ],
-              actions: [
-                'firehose:PutRecord',
-                'firehose:PutRecordBatch',
-              ],
-            }));
-          });
-
-        // Grant access to the Twilio secret if needed
-        if (config.twilioSecret) {
-          twilioSecret.grantRead(resourceHandler);
-        }
-
-        // Grant access to the billing information if needed
-        if (config.getCosts) {
-          resourceHandler.addToRolePolicy(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            resources: [ '*', ],
-            actions: [ 'ce:GetCostAndUsage', ],
-          }));
         }
       }
 

@@ -290,7 +290,7 @@ describe('resources/api/v2/twilioStatus', () => {
         }),
       });
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'SQS_QUEUE_VAL',
+        QueueUrl: 'EVENTS_QUEUE_VAL',
         MessageBody: JSON.stringify({
           action: 'phone-issue',
           count: 10,

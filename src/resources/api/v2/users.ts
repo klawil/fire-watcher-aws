@@ -20,18 +20,20 @@ import {
 import {
   TypedPutItemInput, TypedScanInput
 } from '@/types/backend/dynamo';
+import {
+  QUEUE_EVENTS, TABLE_USER
+} from '@/types/backend/environment';
 import { ActivateUserQueueItem } from '@/types/backend/queue';
 import {
   ExceptSpecificKeys, OnlySpecificKeys
 } from '@/types/utility';
 import {
-  TABLE_USER, typedPutItem, typedScan
+  typedPutItem, typedScan
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('users');
 const sqs = new SQSClient();
-const queueUrl = process.env.SQS_QUEUE;
 
 type EditKeyConfig = {
   name: OnlySpecificKeys<keyof CreateUserApi['body'], keyof FrontendUserObject>;
@@ -237,7 +239,7 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event, user, user
   };
   await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: queueUrl,
+    QueueUrl: QUEUE_EVENTS ,
   }));
 
   // Return the safed user object
