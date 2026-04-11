@@ -1,3 +1,4 @@
+import { API_CODE } from '../backend/environment';
 import { Validator } from '../backend/validation';
 
 export const apiCodeValidator: Validator<{
@@ -7,7 +8,7 @@ export const apiCodeValidator: Validator<{
     required: true,
     types: {
       string: {
-        exact: [ process.env.API_CODE, ],
+        exact: [ API_CODE, ],
       },
     },
   },

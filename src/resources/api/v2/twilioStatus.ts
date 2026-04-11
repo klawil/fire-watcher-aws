@@ -27,18 +27,19 @@ import {
   FullUserObject, validDepartments
 } from '@/types/api/users';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import {
+  QUEUE_EVENTS, QUEUE_TWILIO, TABLE_USER
+} from '@/types/backend/environment';
 import { PhoneNumberIssueQueueItem } from '@/types/backend/queue';
 import { TwilioQueueEvent } from '@/types/backend/twilioQueue';
 import {
-  TABLE_USER, typedGet, typedUpdate
+  typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('twilioStatus');
 const sqs = new SQSClient();
 const cloudWatch = new CloudWatchClient();
-const queueUrl = process.env.SQS_QUEUE;
-const twilioQueueUrl = process.env.TWILIO_QUEUE;
 
 const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
   logger.trace('POST', ...arguments);
@@ -144,7 +145,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
     eventTime,
   };
   promises['text-update'] = sqs.send(new SendMessageCommand({
-    QueueUrl: twilioQueueUrl,
+    QueueUrl: QUEUE_TWILIO,
     MessageBody: JSON.stringify(twilioQueueBody),
   }));
 
@@ -200,7 +201,7 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
               .filter(dep => result.Attributes && result.Attributes[dep]?.active),
           };
           return sqs.send(new SendMessageCommand({
-            QueueUrl: queueUrl,
+            QueueUrl: QUEUE_EVENTS,
             MessageBody: JSON.stringify(queueMessage),
           }));
         }

@@ -7,6 +7,7 @@ import { parse } from 'node-html-parser';
 import {
   FireTypes, WeatherResultJson
 } from '@/deprecated/common/weather';
+import { BUCKET_AUDIO } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('weather');
@@ -52,7 +53,6 @@ const readiness = 'https://gacc.nifc.gov/rmcc/';
 const weatherAlertsApi = 'https://api.weather.gov/alerts/active?point=37.993%2C-105.699';
 const countyRestrictionUrl = 'https://www.google.com/maps/d/u/0/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ll=38.91583034559253%2C-106.1196738784554&z=8';
 
-const s3Bucket = process.env.S3_BUCKET;
 const s3File = 'weather.json';
 
 async function processGaccUrl(url: string): Promise<number[]> {
@@ -276,7 +276,7 @@ async function uploadFile(text: string) {
   const s3 = new S3Client();
 
   const uploadParams = {
-    Bucket: s3Bucket,
+    Bucket: BUCKET_AUDIO,
     Key: s3File,
     Body: text,
   };

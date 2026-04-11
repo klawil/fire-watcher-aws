@@ -9,8 +9,9 @@ import {
 import {
   FullFileObject, GetFileApi, getFileApiParamsValidator
 } from '@/types/api/files';
+import { TABLE_FILE } from '@/types/backend/environment';
 import {
-  TABLE_FILE, typedGet
+  typedGet
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';

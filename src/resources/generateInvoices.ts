@@ -15,7 +15,10 @@ import { Department } from '@/types/api/departments';
 import { InvoiceItem } from '@/types/api/invoices';
 import { TypedScanInput } from '@/types/backend/dynamo';
 import {
-  TABLE_DEPARTMENT, typedScan
+  BUCKET_EMAIL, EMAIL_SOURCE, TABLE_DEPARTMENT
+} from '@/types/backend/environment';
+import {
+  typedScan
 } from '@/utils/backend/dynamoTyped';
 import {
   BILLING_EMAIL_ADDRESS,
@@ -307,13 +310,13 @@ export async function main() {
       totalPriceComputed,
     ] = await generateInvoice(invoiceConfig);
     await s3.send(new PutObjectCommand({
-      Bucket: process.env.EMAIL_S3_BUCKET,
+      Bucket: BUCKET_EMAIL,
       Key: `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`,
       Body: pdf,
       ContentType: 'application/pdf',
     }));
     const pdfBodyS3 = await s3.send(new GetObjectCommand({
-      Bucket: process.env.EMAIL_S3_BUCKET,
+      Bucket: BUCKET_EMAIL,
       Key: `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`,
     }));
     if (typeof pdfBodyS3.Body === 'undefined') {
@@ -332,7 +335,7 @@ export async function main() {
         BccAddresses: [ FORWARD_EMAIL_TO, ],
       },
       FromEmailAddress: `COFRN Billing <${BILLING_EMAIL_ADDRESS}>`,
-      FromEmailAddressIdentityArn: process.env.EMAIL_SOURCE_ARN,
+      FromEmailAddressIdentityArn: EMAIL_SOURCE,
       Content: {
         Simple: {
           Subject: {

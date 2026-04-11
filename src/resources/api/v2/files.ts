@@ -14,7 +14,7 @@ import {
 import { TypedQueryInput } from '@/types/backend/dynamo';
 import {
   TABLE_DEVICES, TABLE_FILE
-} from '@/utils/backend/dynamoTyped';
+} from '@/types/backend/environment';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 

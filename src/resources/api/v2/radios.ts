@@ -7,8 +7,9 @@ import { api401Body } from '@/types/api/_shared';
 import {
   GetAllRadiosApi, RadioObject
 } from '@/types/api/radios';
+import { TABLE_RADIOS } from '@/types/backend/environment';
 import {
-  TABLE_RADIOS, typedFullScan
+  typedFullScan
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 

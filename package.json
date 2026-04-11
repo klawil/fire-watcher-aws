@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "clean": "rm -rf output",
+    "clean": "rm -rf output && rm -rf cdk.out",
     "dev": "next dev",
     "diff": "cdk diff --all",
     "document": "tsx documentApi.ts",

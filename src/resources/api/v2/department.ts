@@ -17,8 +17,9 @@ import {
   updateDepartmentApiBodyValidator
 } from '@/types/api/departments';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import { TABLE_DEPARTMENT } from '@/types/backend/environment';
 import {
-  TABLE_DEPARTMENT, typedGet,
+  typedGet,
   typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';

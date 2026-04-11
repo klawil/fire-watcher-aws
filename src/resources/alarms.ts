@@ -8,8 +8,9 @@ import {
 import * as lambda from 'aws-lambda';
 
 import { AlertCategory } from '@/types/backend/alerts';
+import { BUCKET_COSTS } from '@/types/backend/environment';
 import {
-  ALARM_S3_BUCKET, ALARM_S3_KEY, getCachedAlarmData
+  ALARM_S3_KEY, getCachedAlarmData
 } from '@/utils/backend/alarmStatus';
 import { sendAlertMessage } from '@/utils/backend/texts';
 import { getLogger } from '@/utils/common/logger';
@@ -135,7 +136,7 @@ export async function main(
 
   if (cacheChanged) {
     await s3.send(new PutObjectCommand({
-      Bucket: ALARM_S3_BUCKET,
+      Bucket: BUCKET_COSTS,
       Key: ALARM_S3_KEY,
       Body: JSON.stringify(cachedData),
     }));

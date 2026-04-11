@@ -94,7 +94,7 @@ describe('resources/api/v2/twilioBase', () => {
       // Message sent to the queue
       expect(SendMessageCommand).toHaveBeenCalledTimes(1);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'SQS_QUEUE_VAL',
+        QueueUrl: 'EVENTS_QUEUE_VAL',
         MessageBody: JSON.stringify({
           action: 'twilio-text',
           body: bodyObj,

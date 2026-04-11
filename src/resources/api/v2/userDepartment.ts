@@ -18,16 +18,18 @@ import {
   CreateUserDepartmentApi, DeleteUserDepartmentApi, FullUserObject,
   createUserDepartmentApiBodyValidator, userDepartmentApiParamsValidator
 } from '@/types/api/users';
+import {
+  QUEUE_EVENTS, TABLE_USER
+} from '@/types/backend/environment';
 import { ActivateUserQueueItem } from '@/types/backend/queue';
 import {
-  TABLE_USER, typedGet, typedUpdate
+  typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('userDepartment');
 const sqs = new SQSClient();
-const queueUrl = process.env.SQS_QUEUE;
 
 const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, user, userPerms) {
   logger.trace('POST', ...arguments);
@@ -140,7 +142,7 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, 
     };
     await sqs.send(new SendMessageCommand({
       MessageBody: JSON.stringify(queueMessage),
-      QueueUrl: queueUrl,
+      QueueUrl: QUEUE_EVENTS,
     }));
   }
 

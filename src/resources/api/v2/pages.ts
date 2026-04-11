@@ -11,8 +11,9 @@ import {
   GetPagesApi, getPagesApiQueryValidator
 } from '@/types/api/pages';
 import { TypedQueryInput } from '@/types/backend/dynamo';
+import { TABLE_FILE } from '@/types/backend/environment';
 import {
-  TABLE_FILE, typedQuery
+  typedQuery
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';

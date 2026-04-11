@@ -18,9 +18,12 @@ import {
 import { FullUserObject } from '@/types/api/users';
 import { departmentConfig } from '@/types/backend/department';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import {
+  QUEUE_EVENTS, TABLE_USER
+} from '@/types/backend/environment';
 import { TwilioTextQueueItem } from '@/types/backend/queue';
 import {
-  TABLE_USER, typedGet, typedUpdate
+  typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
@@ -29,7 +32,6 @@ import { getUserPermissions } from '@/utils/common/user';
 const logger = getLogger('twilioBase');
 
 const sqs = new SQSClient();
-const queueUrl = process.env.SQS_QUEUE;
 
 function buildTwilioResponse(
   statusCode: keyof CreateTextApi['responses'],
@@ -222,7 +224,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
   };
   await sqs.send(new SendMessageCommand({
     MessageBody: JSON.stringify(queueMessage),
-    QueueUrl: queueUrl,
+    QueueUrl: QUEUE_EVENTS,
   }));
 
   return buildTwilioResponse(200);

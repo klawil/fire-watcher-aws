@@ -22,7 +22,9 @@ import {
 } from '@/types/api/events';
 import { TypedQueryInput } from '@/types/backend/dynamo';
 import {
-  TABLE_DEVICES, TABLE_FILE,
+  ATHENA_WORKGROUP, GLUE_DATABASE, GLUE_TABLE, TABLE_DEVICES, TABLE_FILE
+} from '@/types/backend/environment';
+import {
   typedQuery
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
@@ -102,7 +104,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
 
     // Run the Athena query
     const QueryString = `SELECT *
-        FROM "${process.env.GLUE_TABLE}"
+        FROM "${GLUE_TABLE}"
         WHERE "${queryType}" = '${params.id}'
         AND "event" != 'call'
         AND "datetime" >= '${startDatetimeString}'
@@ -112,9 +114,9 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
         ORDER BY "timestamp" DESC`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString,
-      WorkGroup: process.env.ATHENA_WORKGROUP,
+      WorkGroup: ATHENA_WORKGROUP,
       QueryExecutionContext: {
-        Database: process.env.GLUE_DATABASE,
+        Database: GLUE_DATABASE,
       },
       ResultReuseConfiguration: {
         ResultReuseByAgeConfiguration: {

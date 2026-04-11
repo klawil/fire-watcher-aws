@@ -2,9 +2,10 @@ import { SQSEvent } from 'aws-lambda';
 
 import { FullTextObject } from '@/types/api/texts';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import { TABLE_TEXT } from '@/types/backend/environment';
 import { TwilioQueueEvent } from '@/types/backend/twilioQueue';
 import {
-  TABLE_TEXT, typedUpdate
+  typedUpdate
 } from '@/utils/backend/dynamoTyped';
 
 async function handleMessage(id: number, events: TwilioQueueEvent[]) {

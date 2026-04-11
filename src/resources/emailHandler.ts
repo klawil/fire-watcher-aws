@@ -11,6 +11,9 @@ import {
 import PostalMime from 'postal-mime';
 
 import {
+  BUCKET_EMAIL, EMAIL_SOURCE
+} from '@/types/backend/environment';
+import {
   BILLING_EMAIL_ADDRESS, FORWARD_EMAIL_TO
 } from '@/utils/backend/hidden-constants';
 import {
@@ -22,18 +25,15 @@ const logger = getLogger('resources/emailHandler');
 const s3 = new S3Client();
 const ses = new SESv2Client();
 
-const EMAIL_S3_BUCKET = process.env.EMAIL_S3_BUCKET || '';
-const EMAIL_SOURCE_ARN = process.env.EMAIL_SOURCE_ARN || '';
-
 async function parseEvent(record: SESEventRecord) {
   logger.trace('parseEvent', ...arguments);
   logger.info('Record', record);
 
   // Pull out the email information
   const email = record.ses.mail;
-  logger.info(`Getting email from ${EMAIL_S3_BUCKET} with key /emails/${email.messageId}`);
+  logger.info(`Getting email from ${BUCKET_EMAIL} with key /emails/${email.messageId}`);
   const rawData = await s3.send(new GetObjectCommand({
-    Bucket: EMAIL_S3_BUCKET,
+    Bucket: BUCKET_EMAIL,
     Key: `emails/${email.messageId}`,
   }));
   if (typeof rawData.Body === 'undefined') {
@@ -51,7 +51,7 @@ async function parseEvent(record: SESEventRecord) {
     },
     ReplyToAddresses: [ emailParsed.from?.address || BILLING_EMAIL_ADDRESS, ],
     FromEmailAddress: `COFRN Billing <${BILLING_EMAIL_ADDRESS}>`,
-    FromEmailAddressIdentityArn: EMAIL_SOURCE_ARN,
+    FromEmailAddressIdentityArn: EMAIL_SOURCE,
     Content: {
       Simple: {
         Subject: {

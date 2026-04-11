@@ -23,9 +23,12 @@ import {
   adjacentSiteItemValidator,
   updateSitesBodyValidator
 } from '@/types/api/sites';
+import {
+  QUEUE_EVENTS, TABLE_SITE
+} from '@/types/backend/environment';
 import { SiteStatusQueueItem } from '@/types/backend/queue';
 import {
-  TABLE_SITE, typedQuery
+  typedQuery
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
@@ -166,7 +169,7 @@ const POST: LambdaApiFunction<UpdateSitesApi> = async function (event) {
 
     // Send the message
     await sqs.send(new SendMessageCommand({
-      QueueUrl: process.env.SQS_QUEUE,
+      QueueUrl: QUEUE_EVENTS,
       MessageBody: JSON.stringify(queueMessage),
     }));
   }

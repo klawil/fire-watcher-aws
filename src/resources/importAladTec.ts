@@ -6,7 +6,10 @@ import {
 } from '@aws-sdk/client-secrets-manager';
 
 import {
-  SHIFT_S3_BUCKET, SHIFT_S3_KEY,
+  BUCKET_COSTS, SECRET_ALADTEC
+} from '@/types/backend/environment';
+import {
+  SHIFT_S3_KEY,
   getShiftData
 } from '@/utils/backend/shiftData';
 import { getLogger } from '@/utils/common/logger';
@@ -17,12 +20,10 @@ const s3 = new S3Client();
 
 const secretManager = new SecretsManagerClient();
 
-const credentialSecret = process.env.ALADTEC_SECRET as string;
-
 export async function getAuthCookie(): Promise<string> {
   logger.trace('getAuthCookie', ...arguments);
   const secretValueRaw = await secretManager.send(new GetSecretValueCommand({
-    SecretId: credentialSecret,
+    SecretId: SECRET_ALADTEC,
   }));
   const secretValue: {
     username: string;
@@ -151,7 +152,7 @@ export async function main() {
 
   // Write the data
   await s3.send(new PutObjectCommand({
-    Bucket: SHIFT_S3_BUCKET,
+    Bucket: BUCKET_COSTS,
     Key: SHIFT_S3_KEY,
     Body: JSON.stringify(shiftData),
   }));

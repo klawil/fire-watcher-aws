@@ -20,7 +20,10 @@ import {
   TypedScanInput, TypedUpdateInput
 } from '@/types/backend/dynamo';
 import {
-  TABLE_TEXT, TABLE_USER, typedScan, typedUpdate
+  TABLE_TEXT, TABLE_USER
+} from '@/types/backend/environment';
+import {
+  typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 import { getUserPermissions } from '@/utils/common/user';

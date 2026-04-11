@@ -16,7 +16,10 @@ import {
 } from '@/types/api/texts';
 import { TypedQueryInput } from '@/types/backend/dynamo';
 import {
-  TABLE_TEXT, typedQuery
+  BUCKET_COSTS, TABLE_TEXT
+} from '@/types/backend/environment';
+import {
+  typedQuery
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';
@@ -24,7 +27,6 @@ import { getLogger } from '@/utils/common/logger';
 const logger = getLogger('texts');
 
 const s3 = new S3Client();
-const cacheBucket = process.env.COSTS_BUCKET;
 
 const anyAdminTextTypes: FullTextObject['type'][] = [
   'page',
@@ -192,7 +194,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event, user, user
         textIdx,
         idx,
         url: await getSignedUrl(s3, new GetObjectCommand({
-          Bucket: cacheBucket,
+          Bucket: BUCKET_COSTS,
           Key: url,
         })),
       }))());

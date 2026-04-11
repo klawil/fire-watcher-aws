@@ -11,8 +11,9 @@ import {
 } from '@/types/api/textlink';
 import { FullTextObject } from '@/types/api/texts';
 import { pagingTalkgroupConfig } from '@/types/backend/department';
+import { TABLE_TEXT } from '@/types/backend/environment';
 import {
-  TABLE_TEXT, typedUpdate
+  typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { validateObject } from '@/utils/backend/validation';
 import { getLogger } from '@/utils/common/logger';

@@ -637,7 +637,7 @@ describe('resources/s3', () => {
       // Check for the SQS queue message
       expect(SendMessageCommand).toHaveBeenCalledTimes(1);
       expect(SendMessageCommand).toHaveBeenCalledWith({
-        QueueUrl: 'SQS_QUEUE_VAL',
+        QueueUrl: 'EVENTS_QUEUE_VAL',
         MessageBody: JSON.stringify({
           action: 'page',
           tg: 8198,

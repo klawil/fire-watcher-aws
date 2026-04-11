@@ -13,8 +13,9 @@ import {
   AddErrorApi,
   ErrorTableItem, GetErrorsApi, errorItemValidator
 } from '@/types/api/errors';
+import { TABLE_ERROR } from '@/types/backend/environment';
 import {
-  TABLE_ERROR, typedPutItem,
+  typedPutItem,
   typedScan
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';

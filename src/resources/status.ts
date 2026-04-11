@@ -1,7 +1,8 @@
 import { Heartbeat } from '@/types/api/heartbeats';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
+import { TABLE_STATUS } from '@/types/backend/environment';
 import {
-  TABLE_STATUS, typedScan, typedUpdate
+  typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 import { sendAlertMessage } from '@/utils/backend/texts';
 import { getLogger } from '@/utils/common/logger';
