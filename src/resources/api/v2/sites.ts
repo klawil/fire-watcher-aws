@@ -59,7 +59,7 @@ const GET: LambdaApiFunction<GetAllSitesApi> = async function (
 
   // Retrieve the sites
   const sites = await typedQuery<FullSiteObject>({
-    TableName: TABLE_SITE,
+    TableName: TABLE_SITE(),
     IndexName: 'active',
     ExpressionAttributeNames: { '#IsActive': 'IsActive', },
     ExpressionAttributeValues: { ':IsActive': 'y', },
@@ -169,7 +169,7 @@ const POST: LambdaApiFunction<UpdateSitesApi> = async function (event) {
 
     // Send the message
     await sqs.send(new SendMessageCommand({
-      QueueUrl: QUEUE_EVENTS,
+      QueueUrl: QUEUE_EVENTS(),
       MessageBody: JSON.stringify(queueMessage),
     }));
   }

@@ -41,7 +41,7 @@ const GET: LambdaApiFunction<GetErrorsApi> = async function (event, user, userPe
 
   // Retrieve the errors
   const errors = await typedScan<ErrorTableItem>({
-    TableName: TABLE_ERROR,
+    TableName: TABLE_ERROR(),
     Limit: 100,
   });
 
@@ -80,7 +80,7 @@ const POST: LambdaApiFunction<AddErrorApi> = async function (event, user) {
 
   // Add to the table
   await typedPutItem<ErrorTableItem>({
-    TableName: TABLE_ERROR,
+    TableName: TABLE_ERROR(),
     Item: {
       Datetime: eventTime,
       Url: body.url,

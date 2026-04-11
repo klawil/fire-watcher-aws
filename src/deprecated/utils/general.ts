@@ -158,7 +158,7 @@ export async function getTwilioSecret(): Promise<TwilioConfig> {
   }
 
   twilioSecret = secretManager.send(new GetSecretValueCommand({
-    SecretId: SECRET_TWILIO,
+    SecretId: SECRET_TWILIO(),
   }))
     .then(data => JSON.parse(data.SecretString as string))
     .catch(e => {

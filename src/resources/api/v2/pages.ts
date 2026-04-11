@@ -60,7 +60,7 @@ const GET: LambdaApiFunction<GetPagesApi> = async function (event, user, userPer
     'ExpressionAttributeNames' | 'ExpressionAttributeValues' | 'KeyConditionExpression'
   >> = {
     ScanIndexForward: false,
-    TableName: TABLE_FILE,
+    TableName: TABLE_FILE(),
     Limit: defaultListLimit,
     IndexName: 'ToneIndex',
     ExpressionAttributeNames: {

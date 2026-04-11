@@ -44,7 +44,7 @@ const GET: LambdaApiFunction<GetTalkgroupApi> = async function (event) {
   }
 
   const talkgroup = await typedGet<FullTalkgroupObject>({
-    TableName: TABLE_TALKGROUP,
+    TableName: TABLE_TALKGROUP(),
     Key: {
       ID: params.id,
     },
@@ -103,7 +103,7 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event, user,
 
   // Verify that the talkgroup exists
   const tgObj = await typedGet<FullTalkgroupObject>({
-    TableName: TABLE_TALKGROUP,
+    TableName: TABLE_TALKGROUP(),
     Key: {
       ID: params.id,
     },
@@ -117,7 +117,7 @@ const PATCH: LambdaApiFunction<PatchTalkgroupApi> = async function (event, user,
 
   // Update the talkgroup
   const tgUpdate = await typedUpdate({
-    TableName: TABLE_TALKGROUP,
+    TableName: TABLE_TALKGROUP(),
     Key: {
       ID: params.id,
     },

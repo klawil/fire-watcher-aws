@@ -1027,6 +1027,10 @@ export class FireWatcherAwsStack extends Stack {
     // Create a handler for the S3 file creation SQS queue
     const eventsS3QueueHandlerPermissions: LambdaPermissions = {
       extra: [ 'glue', ],
+      buckets: [ {
+        bucket: 'EVENTS',
+        readonly: true,
+      }, ],
     };
     const eventsS3QueueHandler = new lambdanodejs.NodejsFunction(this, 'cvfd-events-s3-queue-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,

@@ -48,7 +48,7 @@ const GET: LambdaApiFunction<TextLinkApi> = async function (event) {
   ) {
     try {
       await typedUpdate<FullTextObject>({
-        TableName: TABLE_TEXT,
+        TableName: TABLE_TEXT(),
         Key: {
           datetime: query.m,
         },

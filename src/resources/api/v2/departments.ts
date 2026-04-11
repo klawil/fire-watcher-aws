@@ -50,7 +50,7 @@ const GET: LambdaApiFunction<ListDepartmentApi> = async function (event, user, u
 
   // Generate the scan input
   const scanInput: TypedScanInput<Department> = {
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
   };
   if (!user.isDistrictAdmin) {
     const filterExpressionKeys: string[] = [];
@@ -117,7 +117,7 @@ const POST: LambdaApiFunction<CreateDepartmentApi> = async function (event, user
 
   // Confirm the department doesn't already exist
   const getResult = await typedGet<Department>({
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
     Key: {
       id: body.id,
     },
@@ -131,7 +131,7 @@ const POST: LambdaApiFunction<CreateDepartmentApi> = async function (event, user
 
   // Insert the item
   await typedPutItem<Department>({
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
     Item: {
       id: body.id,
       name: body.name,

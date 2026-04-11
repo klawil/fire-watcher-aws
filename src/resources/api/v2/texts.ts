@@ -88,7 +88,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event, user, user
   >>) | null = null;
   if (typeof query.type !== 'undefined') {
     queryInput = {
-      TableName: TABLE_TEXT,
+      TableName: TABLE_TEXT(),
       IndexName: 'typeIndex',
       ScanIndexForward: false,
       ExpressionAttributeNames: {
@@ -102,7 +102,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event, user, user
     };
   } else if (typeof query.department !== 'undefined') {
     queryInput = {
-      TableName: TABLE_TEXT,
+      TableName: TABLE_TEXT(),
       IndexName: 'departmentIndex',
       ScanIndexForward: false,
       ExpressionAttributeNames: {
@@ -194,7 +194,7 @@ const GET: LambdaApiFunction<GetAllTextsApi> = async function (event, user, user
         textIdx,
         idx,
         url: await getSignedUrl(s3, new GetObjectCommand({
-          Bucket: BUCKET_COSTS,
+          Bucket: BUCKET_COSTS(),
           Key: url,
         })),
       }))());

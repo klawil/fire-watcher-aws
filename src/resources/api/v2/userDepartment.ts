@@ -85,7 +85,7 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, 
 
   // Make sure the phone exists
   const currentUser = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: phoneToEdit,
     },
@@ -100,7 +100,7 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, 
   // Build the update
   const currentDepConfig = currentUser.Item[departmentToEdit] || {};
   const updateResult = await typedUpdate<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: phoneToEdit,
     },
@@ -142,7 +142,7 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, 
     };
     await sqs.send(new SendMessageCommand({
       MessageBody: JSON.stringify(queueMessage),
-      QueueUrl: QUEUE_EVENTS,
+      QueueUrl: QUEUE_EVENTS(),
     }));
   }
 
@@ -202,7 +202,7 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
 
   // Run the deletion of the department
   const result = await typedUpdate<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: phoneToEdit,
     },

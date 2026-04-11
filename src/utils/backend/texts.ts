@@ -42,7 +42,7 @@ export async function getUserRecipients(
 
   // Build out the scanning information
   const scanInput: TypedScanInput<FullUserObject> = {
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
   };
   const filterExpressions: string[] = [];
   if (pageTg !== null) {
@@ -119,7 +119,7 @@ export async function saveMessageData(
 
   // Build the insert/update statement
   const updateItem: TypedUpdateInput<FullTextObject> & Required<Pick<TypedUpdateInput<FullTextObject>, 'ExpressionAttributeValues'>> = {
-    TableName: TABLE_TEXT,
+    TableName: TABLE_TEXT(),
     Key: {
       datetime: messageId,
     },

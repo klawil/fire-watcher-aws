@@ -95,7 +95,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
 
     const addedTime = Date.now();
     const body: TypedPutItemInput<FullFileObject> = {
-      TableName: TABLE_FILE,
+      TableName: TABLE_FILE(),
       Item: {
         Key: Key,
         Added: addedTime,
@@ -175,7 +175,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     }
     const sourcePutItems: Promise<unknown>[] = sourceList
       .map(sourceId => typedPutItem<FileEventItem>({
-        TableName: TABLE_DEVICES,
+        TableName: TABLE_DEVICES(),
         Item: {
           RadioID: sourceId.toString(),
           StartTime: 0,
@@ -184,7 +184,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       }));
     const sourceAddItems: Promise<unknown>[] = sourceList
       .map(sourceId => typedUpdate<RadioObject>({
-        TableName: TABLE_RADIOS,
+        TableName: TABLE_RADIOS(),
         Key: {
           RadioID: sourceId.toString(),
         },
@@ -208,7 +208,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       const startTime = body.Item.StartTime as number;
       const endTime = body.Item.EndTime as number;
       const existingItems = await typedQuery<FullFileObject>({
-        TableName: TABLE_FILE,
+        TableName: TABLE_FILE(),
         IndexName: 'StartTimeTgIndex',
         ExpressionAttributeNames: {
           '#Talkgroup': 'Talkgroup',
@@ -284,7 +284,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             logger.debug('body', body.Item);
           }
           promises['delete-dups'] = Promise.all(itemsToDelete.map(item => typedDeleteItem<FullFileObject>({
-            TableName: TABLE_FILE,
+            TableName: TABLE_FILE(),
             Key: {
               Talkgroup: item.Talkgroup,
               Added: item.Added,
@@ -296,7 +296,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             }
 
             return Promise.all(item.Sources.map(sourceId => typedDeleteItem<FileEventItem>({
-              TableName: TABLE_DEVICES,
+              TableName: TABLE_DEVICES(),
               Key: {
                 RadioID: sourceId.toString(),
                 StartTime: item.StartTime || 0,
@@ -315,7 +315,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           }));
           if (shouldDoTranscript && !keepingCurrentItem) {
             promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
-              TableName: TABLE_FILE_TRANSLATION,
+              TableName: TABLE_FILE_TRANSLATION(),
               Item: {
                 Key: item.Key || '',
                 NewKey: keptItem.Key || '',
@@ -325,7 +325,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           }
           if (transcript !== null && keepingCurrentItem) {
             promises['add-transcript'] = typedUpdate<FullFileObject>({
-              TableName: TABLE_FILE,
+              TableName: TABLE_FILE(),
               Key: {
                 Talkgroup: keptItem.Talkgroup,
                 Added: keptItem.Added,
@@ -349,7 +349,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             // Update the current item to indicate a page will have been sent
             doTranscriptOnly = false;
             promises['set-page-sent'] = typedUpdate<FullFileObject>({
-              TableName: TABLE_FILE,
+              TableName: TABLE_FILE(),
               Key: {
                 Talkgroup: keptItem.Talkgroup,
                 Added: keptItem.Added,
@@ -383,7 +383,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           }
         } else if (isPage) {
           promises['set-page-sent-nodup'] = typedUpdate<FullFileObject>({
-            TableName: TABLE_FILE,
+            TableName: TABLE_FILE(),
             Key: {
               Talkgroup: body.Item.Talkgroup,
               Added: body.Item.Added,
@@ -454,7 +454,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         };
         promises['page-sqs'] = sqs.send(new SendMessageCommand({
           MessageBody: JSON.stringify(queueMessage),
-          QueueUrl: QUEUE_EVENTS,
+          QueueUrl: QUEUE_EVENTS(),
         }));
       } else {
         // Exit early if we just wanted to kick off the transcript
@@ -473,7 +473,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     }
 
     promises['talkgroup-update'] = typedUpdate<FullTalkgroupObject>({
-      TableName: TABLE_TALKGROUP,
+      TableName: TABLE_TALKGROUP(),
       Key: {
         ID: body.Item.Talkgroup,
       },
@@ -501,7 +501,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       action: 'delete',
     }, false);
     const dynamoQuery = await typedQuery<FullFileObject>({
-      TableName: TABLE_FILE,
+      TableName: TABLE_FILE(),
       IndexName: 'KeyIndex',
       ExpressionAttributeNames: {
         '#Key': 'Key',
@@ -518,7 +518,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           Talkgroup: dynamoQuery.Items[0].Talkgroup,
           Added: dynamoQuery.Items[0].Added,
         },
-        TableName: TABLE_FILE,
+        TableName: TABLE_FILE(),
       };
       logger.info('parseRecord', 'delete', body);
       await typedDeleteItem<FullFileObject>(body);

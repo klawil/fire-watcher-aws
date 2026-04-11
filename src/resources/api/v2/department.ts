@@ -71,7 +71,7 @@ const GET: LambdaApiFunction<GetDepartmentApi> = async function (event, user, us
 
   // Fetch the department
   const departmentInfo = await typedGet<Department>({
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
     Key: {
       id: params.id,
     },
@@ -142,7 +142,7 @@ const PATCH: LambdaApiFunction<UpdateDepartmentApi> = async function (event, use
 
   // Fetch the department
   const departmentInfo = await typedGet<Department>({
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
     Key: {
       id: params.id,
     },
@@ -156,7 +156,7 @@ const PATCH: LambdaApiFunction<UpdateDepartmentApi> = async function (event, use
 
   // Update the department
   const updateConfig: TypedUpdateInput<Department> = {
-    TableName: TABLE_DEPARTMENT,
+    TableName: TABLE_DEPARTMENT(),
     Key: {
       id: params.id,
     },

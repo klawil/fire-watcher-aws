@@ -60,8 +60,8 @@ export async function main(event: S3Event) {
   // Fetch the partition information
   const glue = new GlueClient();
   const existingPartitions = await glue.send(new BatchGetPartitionCommand({
-    DatabaseName: GLUE_DATABASE,
-    TableName: GLUE_TABLE,
+    DatabaseName: GLUE_DATABASE(),
+    TableName: GLUE_TABLE(),
     PartitionsToGet: eventPartitions.map(p => ({
       Values: [
         p.datetime,
@@ -78,15 +78,15 @@ export async function main(event: S3Event) {
   // Make the new partitions
   if (newPartitions.length > 0) {
     await glue.send(new BatchCreatePartitionCommand({
-      DatabaseName: GLUE_DATABASE,
-      TableName: GLUE_TABLE,
+      DatabaseName: GLUE_DATABASE(),
+      TableName: GLUE_TABLE(),
       PartitionInputList: newPartitions.map(p => ({
         Values: [
           p.datetime,
           p.event,
         ],
         StorageDescriptor: {
-          Location: `s3://${BUCKET_EVENTS}/${p.path}`,
+          Location: `s3://${BUCKET_EVENTS()}/${p.path}`,
           Columns: [
             {
               Name: 'radioid',

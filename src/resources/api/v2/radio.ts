@@ -62,7 +62,7 @@ const PATCH: LambdaApiFunction<PatchRadioApi> = async function (event, user, use
   // Update the radio ID
   if (body.name === null) {
     await typedUpdate<RadioObject>({
-      TableName: TABLE_RADIOS,
+      TableName: TABLE_RADIOS(),
       Key: {
         RadioID: params.id,
       },
@@ -73,7 +73,7 @@ const PATCH: LambdaApiFunction<PatchRadioApi> = async function (event, user, use
     });
   } else {
     await typedUpdate<RadioObject>({
-      TableName: TABLE_RADIOS,
+      TableName: TABLE_RADIOS(),
       Key: {
         RadioID: params.id,
       },

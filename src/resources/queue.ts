@@ -160,7 +160,7 @@ async function getOnCallPeople(
 
     const shiftsPromise = getShiftData();
     const aladTecIdToCallsign = await typedScan<FullUserObject>({
-      TableName: TABLE_USER,
+      TableName: TABLE_USER(),
       ExpressionAttributeNames: {
         '#aladTecId': 'aladTecId',
       },
@@ -272,7 +272,7 @@ async function getItemToUpdate(key: string | null): Promise<FullFileObject | nul
   let count = 0;
   do {
     const result = await typedQuery<FullFileObject>({
-      TableName: TABLE_FILE,
+      TableName: TABLE_FILE(),
       IndexName: 'KeyIndex',
       ExpressionAttributeNames: {
         '#Key': 'Key',
@@ -285,7 +285,7 @@ async function getItemToUpdate(key: string | null): Promise<FullFileObject | nul
 
     if (!result.Items || result.Items.length === 0) {
       const resultMap: TypedGetOutput<FileTranslationObject> = await typedGet({
-        TableName: TABLE_FILE_TRANSLATION,
+        TableName: TABLE_FILE_TRANSLATION(),
         Key: {
           Key: key,
         },
@@ -353,7 +353,7 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
         }
 
         return typedUpdate<FullFileObject>({
-          TableName: TABLE_FILE,
+          TableName: TABLE_FILE(),
           Key: {
             Talkgroup: item.Talkgroup,
             Added: item.Added,
@@ -554,7 +554,7 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
         });
         await s3.send(new PutObjectCommand({
           Body: await response.bytes(),
-          Bucket: BUCKET_COSTS,
+          Bucket: BUCKET_COSTS(),
           Key: key,
           ContentType: response.headers.get('content-type') || undefined,
         }));
@@ -562,7 +562,7 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
       }));
     outboundMediaUrls = await Promise.all(storedMediaUrls.map(async Key => {
       return await getSignedUrl(s3, new GetObjectCommand({
-        Bucket: BUCKET_COSTS,
+        Bucket: BUCKET_COSTS(),
         Key,
       }), { expiresIn: 3600, });
     }));
@@ -645,7 +645,7 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 
   // Get the user's information
   const userGet = await typedGet<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: body.phone,
     },
@@ -701,7 +701,7 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
 
   // Send a message to the admins
   promises.push(typedScan<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     ExpressionAttributeNames: {
       '#admin': 'admin',
       '#department': body.department,
@@ -746,7 +746,7 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
   // Send a sample page
   if (user.talkgroups && user.talkgroups.length > 0) {
     promises.push(typedQuery<FullFileObject>({
-      TableName: TABLE_FILE,
+      TableName: TABLE_FILE(),
       IndexName: 'ToneIndex',
       ExpressionAttributeValues: {
         ':ToneIndex': 'y',
@@ -789,7 +789,7 @@ async function handleSiteStatus(body: SiteStatusQueueItem) {
     const systemShortNames: string[] = [];
 
     const updateConfig: TypedUpdateInput<FullSiteObject> = {
-      TableName: TABLE_SITE,
+      TableName: TABLE_SITE(),
       Key: {
         SiteId: siteId,
       },
@@ -834,7 +834,7 @@ async function handleAuthCode(body: SendUserAuthCodeQueueItem) {
   const codeTimeout = Date.now() + codeTtl;
 
   const updateResult = await typedUpdate<FullUserObject>({
-    TableName: TABLE_USER,
+    TableName: TABLE_USER(),
     Key: {
       phone: body.phone,
     },

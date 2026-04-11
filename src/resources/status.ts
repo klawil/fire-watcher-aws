@@ -17,7 +17,7 @@ export async function main() {
 
   // Get all of the heartbeats
   const heartbeatsScan = await typedScan<Heartbeat>({
-    TableName: TABLE_STATUS,
+    TableName: TABLE_STATUS(),
   });
   const heartbeats = heartbeatsScan.Items || [];
 
@@ -35,7 +35,7 @@ export async function main() {
     hb.IsFailed = !hb.IsFailed;
 
     const updateConfig: TypedUpdateInput<Heartbeat> = {
-      TableName: TABLE_STATUS,
+      TableName: TABLE_STATUS(),
       Key: {
         Server: hb.Server,
       },

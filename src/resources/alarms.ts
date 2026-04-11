@@ -136,7 +136,7 @@ export async function main(
 
   if (cacheChanged) {
     await s3.send(new PutObjectCommand({
-      Bucket: BUCKET_COSTS,
+      Bucket: BUCKET_COSTS(),
       Key: ALARM_S3_KEY,
       Body: JSON.stringify(cachedData),
     }));
