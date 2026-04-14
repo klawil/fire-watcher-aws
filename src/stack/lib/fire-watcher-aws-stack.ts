@@ -1390,7 +1390,10 @@ export class FireWatcherAwsStack extends Stack {
             fileName: 'eventsList',
             api: true,
             methods: [ 'GET', ],
-            extra: [ 'athena', ],
+            extra: [
+              'athena',
+              'apiCode',
+            ],
             buckets: [ {
               bucket: 'EVENTS',
               readonly: false,
