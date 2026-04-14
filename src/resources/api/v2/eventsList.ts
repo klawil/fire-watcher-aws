@@ -104,7 +104,7 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
 
     // Run the Athena query
     const QueryString = `SELECT *
-        FROM "${GLUE_TABLE}"
+        FROM "${GLUE_TABLE()}"
         WHERE "${queryType}" = '${params.id}'
         AND "event" != 'call'
         AND "datetime" >= '${startDatetimeString}'
