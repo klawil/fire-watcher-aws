@@ -16,12 +16,12 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   department?: string;
+  total?: number;
   startDate?: string;
   endDate?: string;
-  total?: number;
-  items?: InvoiceItem[];
-  generatedOn?: string;
-  paidOn?: string;
+  generatedDate?: string;
+  paidDate?: string;
+  s3Location?: string;
 }
 
 /**

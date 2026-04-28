@@ -78,6 +78,7 @@ export const TABLE_DEVICES = getEnvVariableOrError('TBL_DEVICES');
 export const TABLE_ERROR = getEnvVariableOrError('TBL_ERROR');
 export const TABLE_FILE = getEnvVariableOrError('TBL_FILE');
 export const TABLE_FILE_TRANSLATION = getEnvVariableOrError('TBL_DTR_TRANSLATION');
+export const TABLE_INVOICE = getEnvVariableOrError('TBL_INVOICE');
 export const TABLE_RADIOS = getEnvVariableOrError('TBL_RADIOS');
 export const TABLE_SITE = getEnvVariableOrError('TBL_SITE');
 export const TABLE_STATUS = getEnvVariableOrError('TBL_STATUS');
