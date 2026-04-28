@@ -12,12 +12,16 @@ import { RecordInstance } from 'twilio/lib/rest/api/v2010/account/usage/record';
 
 import { getTwilioSecret } from '@/deprecated/utils/general';
 import { Department } from '@/types/api/departments';
-import { InvoiceItem } from '@/types/api/invoices';
+import {
+  Invoice, InvoiceItem
+} from '@/types/api/invoices';
 import { TypedScanInput } from '@/types/backend/dynamo';
 import {
-  BUCKET_EMAIL, EMAIL_SOURCE, TABLE_DEPARTMENT
+  BUCKET_EMAIL, EMAIL_SOURCE, TABLE_DEPARTMENT,
+  TABLE_INVOICE
 } from '@/types/backend/environment';
 import {
+  typedPutItem,
   typedScan
 } from '@/utils/backend/dynamoTyped';
 import {
@@ -309,15 +313,28 @@ export async function main() {
       pdf,
       totalPriceComputed,
     ] = await generateInvoice(invoiceConfig);
+    const invoiceS3Key = `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`;
+    const dynamoPromise = typedPutItem<Invoice>({
+      TableName: TABLE_INVOICE(),
+      Item: {
+        id: invoiceConfig.invoiceNumber,
+        department: department.id,
+        total: totalPriceComputed,
+        startDate: invoiceConfig.startDate,
+        endDate: invoiceConfig.endDate,
+        generatedDate: invoiceConfig.issueDate,
+        s3Location: invoiceS3Key,
+      },
+    });
     await s3.send(new PutObjectCommand({
       Bucket: BUCKET_EMAIL(),
-      Key: `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`,
+      Key: invoiceS3Key,
       Body: pdf,
       ContentType: 'application/pdf',
     }));
     const pdfBodyS3 = await s3.send(new GetObjectCommand({
       Bucket: BUCKET_EMAIL(),
-      Key: `invoices/invoice-${invoiceConfig.invoiceNumber}.pdf`,
+      Key: invoiceS3Key,
     }));
     if (typeof pdfBodyS3.Body === 'undefined') {
       throw new Error('Unable to retrieve PDF from S3 after upload');
@@ -359,5 +376,6 @@ export async function main() {
         },
       },
     }));
+    await dynamoPromise.catch(e => logger.error('Error saving invoice in dynamo', e));
   }));
 }
