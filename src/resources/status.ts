@@ -67,10 +67,10 @@ export async function main() {
       const secondaryHeartbeats = heartbeats.filter(hb2 => !hb2.IsPrimary);
 
       const parts = {
-        changed: `${hb.IsPrimary ? 'Primary' : 'Secondary'} ${programCaps} server (${hb.Server})`,
+        changed: `${hb.IsPrimary ? 'NSCFPD' : 'BGES'} ${programCaps} server (${hb.Server})`,
         all: `All ${programCaps} servers (${heartbeats.map(hb2 => hb2.Server).join(', ')})`,
-        primary: `primary ${programCaps} server (${primaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
-        secondary: `secondary ${programCaps} server (${secondaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
+        primary: `primary NSCFPD VHF server (${primaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
+        secondary: `primary BGES VHF server (${secondaryHeartbeats.map(hb2 => hb2.Server).join(', ')})`,
       };
 
       const primaryUp = primaryHeartbeats
@@ -79,36 +79,33 @@ export async function main() {
       const secondaryUp = secondaryHeartbeats
         .filter(hb2 => !hb2.IsFailed)
         .length > 0;
-      const isSecondary = secondaryHeartbeats.length > 0;
 
       if (primaryUp && secondaryUp) {
         if (hb.IsPrimary) {
-          return `${parts.changed} is back online. Switching back to ${hb.Server}.`;
+          return `${parts.changed} is back online. Switching NSCFPD VHF paging back to ${hb.Server}.`;
         } else {
-          return `${parts.changed} is back online. ${parts.all} are online.`;
+          return `${parts.changed} is back online. BGES paging is back online.`;
         }
       } else if (!primaryUp && secondaryUp) {
         if (hb.IsPrimary) {
-          return `${parts.changed} is down. Switching to ${parts.secondary}.`;
+          return `${parts.changed} is down. Switching NSCFPD VHF paging to ${parts.secondary}.`;
         } else {
-          return `${parts.changed} is back online. Switching to ${parts.secondary}, ${parts.primary} is still offline.`;
+          return `${parts.changed} is back online. BGES paging is back online. Switching NSCFPD VHF paging to ${parts.secondary}, ${parts.primary} is still offline.`;
         }
-      } else if (primaryUp && !isSecondary) {
-        return `${parts.changed} is back online. ${programCaps} recording now occuring.`;
       } else if (primaryUp && !secondaryUp) {
         if (hb.IsPrimary) {
-          return `${parts.changed} is back online. Switching to ${parts.primary}, ${parts.secondary} is still offline.`;
+          return `${parts.changed} is back online. Switching NSCFPD VHF paging to ${parts.primary}. BGES paging is still offline.`;
         } else {
-          return `${parts.changed} is offline. Continuing to record ${programCaps} on ${parts.primary}.`;
+          return `${parts.changed} is offline. BGES paging is offline. NSCFPD VHF paging is still online.`;
         }
-      } else if (!primaryUp && (!secondaryUp || !isSecondary)) {
+      } else if (!primaryUp && !secondaryUp) {
         if (hb.IsPrimary) {
-          return `${parts.changed} is offline. ${programCaps} recording is no longer occuring${isSecondary ? ` because ${parts.secondary} is still offline` : ''}.`;
+          return `${parts.changed} is offline. BGES and NSCFPD VHF paging are offline because ${parts.secondary} is still offline.`;
         } else {
-          return `${parts.changed} is offline. ${programCaps} recording is no longer occuring because ${parts.primary} is still offline.`;
+          return `${parts.changed} is offline. BGES and NSCFPD VHF paging are offline because ${parts.primary} is still offline.`;
         }
       } else {
-        return `Unkown state. IsPrimary: ${hb.IsPrimary}, primaryUp: ${primaryUp}, secondaryUp: ${secondaryUp}, isSecondary: ${isSecondary}. MEOW.`;
+        return `Unkown state. IsPrimary: ${hb.IsPrimary}, primaryUp: ${primaryUp}, secondaryUp: ${secondaryUp}. MEOW.`;
       }
     });
 
