@@ -4,7 +4,10 @@ import React, {
   useCallback, useContext, useEffect, useReducer, useState
 } from 'react';
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
+import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 
@@ -12,8 +15,9 @@ import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import UserRow from '@/components/userRow/userRow';
 import { GetAladtecUsersApi } from '@/types/api/aladtec';
 import {
-  DeleteUserApi, GetAllUsersApi, validDepartments
+  DeleteUserApi, GetAllUsersApi, UserDepartment, validDepartments
 } from '@/types/api/users';
+import { departmentConfig } from '@/types/backend/department';
 import { getLogger } from '@/utils/common/logger';
 import {
   AddAlertContext,
@@ -102,6 +106,26 @@ export default function UserEditPage() {
     isDeleting,
     setIsDeleting,
   ] = useState(false);
+
+  const [
+    departmentFilter,
+    setDepartmentFilter,
+  ] = useState<UserDepartment | ''>('');
+
+  const [
+    roleFilter,
+    setRoleFilter,
+  ] = useState<'districtAdmin' | 'admin' | 'user' | ''>('');
+
+  const [
+    canEditNamesFilter,
+    setCanEditNamesFilter,
+  ] = useState<'all' | 'yes' | 'no'>('all');
+
+  const [
+    receivesAlertsFilter,
+    setReceivesAlertsFilter,
+  ] = useState<'all' | 'yes' | 'no'>('all');
   const deleteModalUser = useCallback(async () => {
     if (!state.deleteUserModal) {
       return;
@@ -156,14 +180,106 @@ export default function UserEditPage() {
     .filter(dep => state.deleteUserModal?.[dep]?.active)
     .map(dep => `${dep} ${state.deleteUserModal?.[dep]?.callSign}`);
 
+  const filteredUsers = state.users.filter(user => {
+    if (departmentFilter !== '' && !user[departmentFilter]?.active) {
+      return false;
+    }
+
+    if (roleFilter === 'districtAdmin' && !user.isDistrictAdmin) {
+      return false;
+    }
+    if (roleFilter === 'admin' && (user.isDistrictAdmin || !validDepartments.some(d => user[d]?.admin))) {
+      return false;
+    }
+    if (roleFilter === 'user' && (user.isDistrictAdmin || validDepartments.some(d => user[d]?.admin))) {
+      return false;
+    }
+
+    if (canEditNamesFilter === 'yes' && !user.canEditNames) {
+      return false;
+    }
+    if (canEditNamesFilter === 'no' && user.canEditNames) {
+      return false;
+    }
+
+    const receivesAlerts = !!(user.getApiAlerts || user.getDtrAlerts || user.getVhfAlerts);
+    if (receivesAlertsFilter === 'yes' && !receivesAlerts) {
+      return false;
+    }
+    if (receivesAlertsFilter === 'no' && receivesAlerts) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const adminDepartments = loggedInUser === null
+    ? []
+    : validDepartments.filter(dep => loggedInUser[dep]?.active && loggedInUser[dep].admin);
+
   return <>
     {isLoading && <LoadingSpinner />}
     {!isLoading && (!state.users || state.users.length === 0) && <h1 className='text-center'>No users found</h1>}
     {state.users && state.users.length > 0 && <UsersDispatchContext.Provider value={dispatch}>
       <AladTecUsersContext.Provider value={aladTecUsers}>
+        <Row className='mb-3 g-2'>
+          {
+            (adminDepartments.length > 1 || !!loggedInUser?.isDistrictAdmin) &&
+            <Col xs={12} sm={6} md={3}>
+              <Form.Select
+                value={departmentFilter}
+                onChange={e => setDepartmentFilter(e.target.value as UserDepartment | '')}
+                aria-label='Filter by department'
+              >
+                <option value=''>All Departments</option>
+                {validDepartments.map(dep =>
+                  <option key={dep} value={dep}>{departmentConfig[dep].shortName}</option>)}
+              </Form.Select>
+            </Col>
+          }
+          <Col xs={12} sm={6} md={3}>
+            <Form.Select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value as typeof roleFilter)}
+              aria-label='Filter by role'
+            >
+              <option value=''>All Roles</option>
+              {!!loggedInUser?.isDistrictAdmin && <option value='districtAdmin'>District Admin</option>}
+              <option value='admin'>Department Admin</option>
+              <option value='user'>User</option>
+            </Form.Select>
+          </Col>
+          { !!loggedInUser?.isDistrictAdmin && <Col xs={12} sm={6} md={3}>
+            <Form.Select
+              value={canEditNamesFilter}
+              onChange={e => setCanEditNamesFilter(e.target.value as typeof canEditNamesFilter)}
+              aria-label='Filter by can edit names'
+            >
+              <option value='all'>Can Edit Names: Any</option>
+              <option value='yes'>Can Edit Names: Yes</option>
+              <option value='no'>Can Edit Names: No</option>
+            </Form.Select>
+          </Col> }
+          { !!loggedInUser?.isDistrictAdmin && <Col xs={12} sm={6} md={3}>
+            <Form.Select
+              value={receivesAlertsFilter}
+              onChange={e => setReceivesAlertsFilter(e.target.value as typeof receivesAlertsFilter)}
+              aria-label='Filter by receives alerts'
+            >
+              <option value='all'>Receives Alerts: Any</option>
+              <option value='yes'>Receives Alerts: Yes</option>
+              <option value='no'>Receives Alerts: No</option>
+            </Form.Select>
+          </Col> }
+        </Row>
         <Table responsive={true}>
           <tbody>
-            {state.users
+            {filteredUsers.length === 0 && <tr>
+              <td colSpan={4}>
+                <h1 className='text-center'>No users found with filters</h1>
+              </td>
+            </tr>}
+            {filteredUsers
               .map((user, idx) => <UserRow
                 key={user.phone}
                 user={user}
