@@ -286,11 +286,12 @@ describe('resources/api/v2/_base', () => {
     it('Returns only the allowed keys from the user object', () => {
       expect(getFrontendUserObj({
         phone: 5555555555,
-        Baca: {
+        departments: [ {
+          id: 'Baca',
           active: true,
           admin: true,
           callSign: 'BG-ID',
-        },
+        }, ],
         isDistrictAdmin: true,
         isTest: true,
         getApiAlerts: true,
@@ -298,11 +299,12 @@ describe('resources/api/v2/_base', () => {
         codeExpiry: 1234567,
       })).toEqual({
         phone: 5555555555,
-        Baca: {
+        departments: [ {
+          id: 'Baca',
           active: true,
           admin: true,
           callSign: 'BG-ID',
-        },
+        }, ],
         isDistrictAdmin: true,
         isTest: true,
         getApiAlerts: true,

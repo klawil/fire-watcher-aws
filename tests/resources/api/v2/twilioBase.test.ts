@@ -49,10 +49,11 @@ describe('resources/api/v2/twilioBase', () => {
       DynamoDBDocumentClientMock.setResult('get', {
         Item: {
           phone: 5555555555,
-          Baca: {
-            admin: true,
+          departments: [ {
+            id: 'Baca',
             active: true,
-          },
+            admin: true,
+          }, ],
           fName: 'TestF',
           lName: 'TestL',
         },
@@ -100,10 +101,11 @@ describe('resources/api/v2/twilioBase', () => {
           body: bodyObj,
           user: {
             phone: 5555555555,
-            Baca: {
-              admin: true,
+            departments: [ {
+              id: 'Baca',
               active: true,
-            },
+              admin: true,
+            }, ],
             fName: 'TestF',
             lName: 'TestL',
             isTest: false,

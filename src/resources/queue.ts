@@ -171,9 +171,10 @@ async function getOnCallPeople(
         if (
           typeof user.aladTecId !== 'undefined' &&
           typeof pagingConf.department !== 'undefined' &&
-          typeof user[pagingConf.department]?.callSign !== 'undefined'
+          user.departments?.some(d => d.id === pagingConf.department && d.callSign)
         ) {
-          agg[user.aladTecId] = user[pagingConf.department]?.callSign as string;
+          agg[user.aladTecId] = user.departments?.find(d => d.id === pagingConf.department)
+            ?.callSign as string;
         }
 
         return agg;
@@ -525,7 +526,9 @@ async function handleTwilioText(body: TwilioTextQueueItem) {
     });
 
   // Build the message
-  const sendingUserCallsign = body.user[phoneNumberConfig.department]?.callSign || null;
+  const sendingUserCallsign = body.user.departments
+    ?.find(d => d.id === phoneNumberConfig.department)
+    ?.callSign || null;
   const sendingUserInfo = `${body.user.fName} ${body.user.lName}${sendingUserCallsign !== null ? ` (${sendingUserCallsign})` : ''}`;
   const messageBody = `${isAnnouncement ? `${depConfig.shortName} Announcement` : sendingUserInfo}: ${body.body.Body}${isAnnouncement ? ` - ${sendingUserInfo}` : ''}`;
   const mediaUrls: string[] = Object.keys(body.body)
@@ -608,7 +611,7 @@ async function handlePhoneIssue(body: PhoneNumberIssueQueueItem) {
 
       for (let i = 0; i < body.department.length; i++) {
         const dep = body.department[i];
-        if (u[dep]?.admin && u[dep].active) {
+        if (u.departments?.some(d => d.id === dep && d.active && d.admin)) {
           return true;
         }
       }

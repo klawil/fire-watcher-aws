@@ -432,9 +432,10 @@ describe('utils/backend/texts', () => {
     it('Returns the page number from the users only department', async () => {
       expect(await mod.getPageNumber({
         phone: 5555555555,
-        Baca: {
+        departments: [ {
+          id: 'Baca',
           active: true,
-        },
+        }, ],
       })).toEqual('pageBaca');
     });
 
@@ -447,24 +448,32 @@ describe('utils/backend/texts', () => {
     it('Returns the default number if multiple departments are available with no pagingPhone', async () => {
       expect(await mod.getPageNumber({
         phone: 5555555555,
-        Baca: {
-          active: true,
-        },
-        NSCAD: {
-          active: true,
-        },
+        departments: [
+          {
+            id: 'Baca',
+            active: true,
+          },
+          {
+            id: 'NSCAD',
+            active: true,
+          },
+        ],
       })).toEqual('page');
     });
 
     it('Returns the default number if multiple departments are available with a pagingPhone that doesn\'t match the user', async () => {
       expect(await mod.getPageNumber({
         phone: 5555555555,
-        Baca: {
-          active: true,
-        },
-        NSCAD: {
-          active: true,
-        },
+        departments: [
+          {
+            id: 'Baca',
+            active: true,
+          },
+          {
+            id: 'NSCAD',
+            active: true,
+          },
+        ],
         pagingPhone: 'Crestone',
       })).toEqual('page');
     });
@@ -472,12 +481,16 @@ describe('utils/backend/texts', () => {
     it('Returns the pagingPhone number if multiple departments are available with a pagingPhone', async () => {
       expect(await mod.getPageNumber({
         phone: 5555555555,
-        Baca: {
-          active: true,
-        },
-        NSCAD: {
-          active: true,
-        },
+        departments: [
+          {
+            id: 'Baca',
+            active: true,
+          },
+          {
+            id: 'NSCAD',
+            active: true,
+          },
+        ],
         pagingPhone: 'NSCAD',
       })).toEqual('pageNSCAD');
     });

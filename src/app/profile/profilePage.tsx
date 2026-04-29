@@ -16,7 +16,7 @@ import {
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
-  PagingTalkgroup, UpdateUserApi, pagingTalkgroups, validDepartments
+  PagingTalkgroup, UpdateUserApi, pagingTalkgroups
 } from '@/types/api/users';
 import { pagingTalkgroupConfig } from '@/types/backend/department';
 import { getLogger } from '@/utils/common/logger';
@@ -177,13 +177,12 @@ export default function ProfilePage() {
             <th>Admin</th>
           </tr></thead>
           <tbody className='align-middle text-center'>
-            {validDepartments
-              .filter(dep => typeof user[dep] !== 'undefined')
-              .map(dep => <tr key={dep}>
-                <td>{dep}</td>
-                <td>{user[dep]?.active ? <BsCheckCircleFill className='text-success' /> : <BsXCircleFill className='text-danger' />}</td>
-                <td>{user[dep]?.callSign || 'N/A'}</td>
-                <td>{user[dep]?.admin ? <BsCheckCircleFill className='text-success' /> : <BsXCircleFill className='text-danger' />}</td>
+            {user.departments
+              ?.map(dep => <tr key={dep.id}>
+                <td>{dep.id}</td>
+                <td>{dep.active ? <BsCheckCircleFill className='text-success' /> : <BsXCircleFill className='text-danger' />}</td>
+                <td>{dep.callSign || 'N/A'}</td>
+                <td>{dep.admin ? <BsCheckCircleFill className='text-success' /> : <BsXCircleFill className='text-danger' />}</td>
               </tr>)}
           </tbody>
         </Table></Col>

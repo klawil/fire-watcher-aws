@@ -246,9 +246,10 @@ describe('resources/api/v2/twilioStatus', () => {
           lastStatusCount: 10,
           fName: 'TestF',
           lName: 'TestL',
-          Baca: {
+          departments: [ {
+            id: 'Baca',
             active: true,
-          },
+          }, ],
         },
       });
 

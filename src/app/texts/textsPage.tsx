@@ -310,10 +310,8 @@ export default function TextsPage() {
     },
   ];
   validDepartments
-    .filter(dep => user.isDistrictAdmin || (
-      user[dep]?.active &&
-      user[dep].admin
-    ))
+    .filter(dep => user.isDistrictAdmin ||
+      user.departments?.some(d => d.id === dep && d.active && d.admin))
     .forEach(dep => tablesToLoad.push({
       title: `${dep} Texts`,
       query: {

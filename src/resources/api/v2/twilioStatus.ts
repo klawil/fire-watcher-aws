@@ -24,7 +24,7 @@ import {
   createTextQueryValidator, updateTextStatusBodyValidator, updateTextStatusParamsValidator
 } from '@/types/api/twilio';
 import {
-  FullUserObject, validDepartments
+  FullUserObject
 } from '@/types/api/users';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
 import {
@@ -197,8 +197,8 @@ const POST: LambdaApiFunction<UpdateTextStatusApi> = async function (event) {
             count: result.Attributes.lastStatusCount,
             name: `${result.Attributes.fName} ${result.Attributes.lName}`,
             number: result.Attributes.phone,
-            department: validDepartments
-              .filter(dep => result.Attributes && result.Attributes[dep]?.active),
+            department: result.Attributes.departments?.filter(dep => dep.active)
+              .map(dep => dep.id) || [],
           };
           return sqs.send(new SendMessageCommand({
             QueueUrl: QUEUE_EVENTS(),

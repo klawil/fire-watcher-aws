@@ -49,19 +49,20 @@ export default function UserDepartmentRow({
         ...oldValue,
         ...vals,
       };
+      const oldDep = user.departments?.find(d => d.id === dep);
 
       (Object.keys(newValue) as (keyof typeof newValue)[]).forEach(key => {
         if (
-          typeof user[dep]?.[key] === typeof newValue[key] &&
+          typeof oldDep?.[key] === typeof newValue[key] &&
           (
-            typeof user[dep]?.[key] === 'undefined' ||
-            user[dep][key] === newValue[key]
+            typeof oldDep?.[key] === 'undefined' ||
+            oldDep[key] === newValue[key]
           )
         ) {
           delete newValue[key];
         }
 
-        if (typeof user[dep]?.[key] === 'undefined' && newValue[key] === false) {
+        if (typeof oldDep?.[key] === 'undefined' && newValue[key] === false) {
           delete newValue[key];
         }
 
@@ -73,7 +74,7 @@ export default function UserDepartmentRow({
       if (
         typeof newValue.callSign !== 'undefined' &&
         newValue.callSign !== '' &&
-        !user[dep]?.active &&
+        !oldDep?.active &&
         !newValue.active
       ) {
         newValue.active = true;
@@ -126,7 +127,7 @@ export default function UserDepartmentRow({
     try {
       let code;
       let apiResult;
-      if (!user[dep]) {
+      if (!user.departments?.some(d => d.id === dep)) {
         [
           code,
           apiResult,
@@ -172,9 +173,10 @@ export default function UserDepartmentRow({
           action: 'UpdateUser',
           phone: user.phone,
           user: {
-            [dep]: {
-              ...apiResult[dep] || {},
-            },
+            departments: [
+              ...(user.departments || []).filter(d => d.id !== dep),
+              ...(apiResult.departments || []).filter(d => d.id === dep),
+            ],
           },
         });
         setChangesRaw({});
@@ -191,7 +193,7 @@ export default function UserDepartmentRow({
     setIsDeleting,
   ] = useState(false);
   async function deleteDepartment() {
-    if (!user[dep]) {
+    if (!user.departments?.some(d => d.id === dep)) {
       return;
     }
 
@@ -241,7 +243,7 @@ export default function UserDepartmentRow({
       checked={
         typeof changes?.active !== 'undefined'
           ? changes.active || false
-          : !!user[dep]?.active
+          : !!user.departments?.find(d => d.id === dep)?.active
       }
       label={dep}
       onChange={e => setChanges({
@@ -255,7 +257,7 @@ export default function UserDepartmentRow({
         value={
           typeof changes?.callSign !== 'undefined'
             ? changes.callSign
-            : user[dep]?.callSign || ''
+            : user.departments?.find(d => d.id === dep)?.callSign || ''
         }
         onChange={e => setChanges({
           callSign: e.target.value.toUpperCase(),
@@ -272,7 +274,7 @@ export default function UserDepartmentRow({
       checked={
         typeof changes?.admin !== 'undefined'
           ? changes.admin || false
-          : !!user[dep]?.admin
+          : user.departments?.find(d => d.id === dep)?.admin || false
       }
       onChange={e => setChanges({
         admin: e.target.checked,
@@ -287,7 +289,7 @@ export default function UserDepartmentRow({
         disabled={!hasChanges || isSaving}
         onClick={saveChanges}
       >{isSaving ? <Spinner size='sm' /> : <BsSave />}</Button>
-      {typeof user[dep] !== 'undefined' && <Button
+      {!!user.departments?.some(d => d.id === dep) && <Button
         variant='danger'
         className='m-1'
         disabled={!loggedInUserDepartments.includes(dep)}

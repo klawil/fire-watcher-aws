@@ -14,7 +14,6 @@ import {
 import styles from './userRow.module.css';
 
 import UserEdit from '@/components/userEdit/userEdit';
-import { validDepartments } from '@/types/api/users';
 import { UsersState } from '@/types/frontend/users';
 import { formatPhone } from '@/utils/common/strings';
 import { LoggedInUserContext } from '@/utils/frontend/clientContexts';
@@ -30,12 +29,12 @@ export default function UserRow({
   const dispatch = useContext(UsersDispatchContext);
   const loggedInUser = useContext(LoggedInUserContext);
 
-  const userDepartments = user === null
+  const userDepartments = user === null || !user.departments
     ? []
-    : validDepartments.filter(dep => user[dep]?.active);
-  const adminDepartments = loggedInUser === null
+    : user.departments.filter(d => d.active).map(d => d.id);
+  const adminDepartments = loggedInUser === null || !loggedInUser.departments
     ? []
-    : validDepartments.filter(dep => loggedInUser[dep]?.active && loggedInUser[dep].admin);
+    : loggedInUser.departments.filter(d => d.active && d.admin).map(d => d.id);
   const canDeleteUser = loggedInUser !== null && (
     loggedInUser?.isDistrictAdmin ||
     userDepartments.filter(dep => adminDepartments.includes(dep))
@@ -93,9 +92,8 @@ export default function UserRow({
         {showDangerIcon && <BsEnvelopeExclamation className='me-2 mb-1' />}
         {user.lName}, {user.fName}
       </td>
-      <td className='d-none d-sm-table-cell'>{validDepartments
-        .filter(dep => user[dep]?.active)
-        .map(dep => `${dep} (${user[dep]?.callSign || '??'})`)
+      <td className='d-none d-sm-table-cell'>{user.departments?.filter(d => d.active)
+        .map(d => `${d.id} (${d.callSign || '??'})`)
         .join(', ')
       }</td>
       <td>

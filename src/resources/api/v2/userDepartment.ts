@@ -98,29 +98,35 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, 
   }
 
   // Build the update
-  const currentDepConfig = currentUser.Item[departmentToEdit] || {};
+  const currentDepConfig: NonNullable<FullUserObject['departments']>[number] =
+    currentUser.Item.departments?.find(d => d.id === departmentToEdit) || {
+      id: departmentToEdit,
+    };
+  if (typeof body.active !== 'undefined') {
+    currentDepConfig.active = body.active === null ? undefined : body.active;
+  }
+  if (typeof body.admin !== 'undefined') {
+    currentDepConfig.admin = body.admin === null ? undefined : body.admin;
+  }
+  if (typeof body.callSign !== 'undefined') {
+    currentDepConfig.callSign = body.callSign === null ? undefined : body.callSign;
+  }
+  const newDepartments = [
+    ...currentUser.Item.departments?.filter(d => d.id !== departmentToEdit) || [],
+    currentDepConfig,
+  ];
   const updateResult = await typedUpdate<FullUserObject>({
     TableName: TABLE_USER(),
     Key: {
       phone: phoneToEdit,
     },
     ExpressionAttributeNames: {
-      [`#${departmentToEdit}`]: departmentToEdit,
+      '#departments': 'departments',
     },
     ExpressionAttributeValues: {
-      [`:${departmentToEdit}`]: {
-        active: typeof body.active === 'undefined'
-          ? currentDepConfig.active || undefined
-          : body.active === null ? undefined : body.active,
-        admin: typeof body.admin === 'undefined'
-          ? currentDepConfig.admin || undefined
-          : body.admin === null ? undefined : body.admin,
-        callSign: typeof body.callSign === 'undefined'
-          ? currentDepConfig.callSign || ''
-          : body.callSign,
-      },
+      ':departments': newDepartments,
     },
-    UpdateExpression: `SET #${departmentToEdit} = :${departmentToEdit}`,
+    UpdateExpression: 'SET #departments = :departments',
     ReturnValues: 'ALL_NEW',
   });
   if (!updateResult.Attributes) {
@@ -132,7 +138,7 @@ const POST: LambdaApiFunction<CreateUserDepartmentApi> = async function (event, 
 
   // Send the activation message (if needed)
   if (
-    !currentDepConfig.active &&
+    !currentUser.Item.departments?.find(d => d.id === departmentToEdit)?.active &&
     body.active
   ) {
     const queueMessage: ActivateUserQueueItem = {
@@ -200,28 +206,59 @@ const DELETE: LambdaApiFunction<DeleteUserDepartmentApi> = async function (event
     ];
   }
 
-  // Run the deletion of the department
-  const result = await typedUpdate<FullUserObject>({
+  // Get the user so we know which department index to delete
+  const userToEdit = await typedGet<FullUserObject>({
     TableName: TABLE_USER(),
     Key: {
       phone: phoneToEdit,
     },
-    ExpressionAttributeNames: {
-      [`#${departmentToEdit}`]: departmentToEdit,
-    },
-    UpdateExpression: `REMOVE #${departmentToEdit}`,
-    ReturnValues: 'ALL_NEW',
   });
-  if (!result.Attributes) {
+  if (!userToEdit.Item) {
     return [
-      500,
-      api500Body,
+      404,
+      api404Body,
+    ];
+  }
+
+  const newDepartments = userToEdit.Item.departments?.filter(d => d.id !== departmentToEdit) || [];
+
+  // Run the deletion of the department
+  if (newDepartments.length !== userToEdit.Item.departments?.length || 0) {
+    const result = await typedUpdate<FullUserObject>({
+      TableName: TABLE_USER(),
+      Key: {
+        phone: phoneToEdit,
+      },
+      ExpressionAttributeNames: {
+        '#departments': 'departments',
+      },
+      UpdateExpression: newDepartments.length > 0
+        ? 'SET #departments = :departments'
+        : 'REMOVE #departments',
+      ReturnValues: 'ALL_NEW',
+      ...newDepartments.length > 0
+        ? {
+          ExpressionAttributeValues: {
+            ':departments': newDepartments,
+          },
+        }
+        : {},
+    });
+    if (!result.Attributes) {
+      return [
+        500,
+        api500Body,
+      ];
+    }
+    return [
+      200,
+      getFrontendUserObj(result.Attributes as FullUserObject),
     ];
   }
 
   return [
     200,
-    getFrontendUserObj(result.Attributes as FullUserObject),
+    getFrontendUserObj(userToEdit.Item),
   ];
 };
 

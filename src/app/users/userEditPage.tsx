@@ -176,22 +176,21 @@ export default function UserEditPage() {
     addAlert,
   ]);
 
-  const deleteModalDeps = validDepartments
-    .filter(dep => state.deleteUserModal?.[dep]?.active)
-    .map(dep => `${dep} ${state.deleteUserModal?.[dep]?.callSign}`);
+  const deleteModalDeps = state.deleteUserModal?.departments
+    ?.filter(d => d.active).map(d => `${d.id} ${d.callSign}`) || [];
 
   const filteredUsers = state.users.filter(user => {
-    if (departmentFilter !== '' && !user[departmentFilter]?.active) {
+    if (departmentFilter !== '' && !user.departments?.some(d => d.id === departmentFilter && d.active)) {
       return false;
     }
 
     if (roleFilter === 'districtAdmin' && !user.isDistrictAdmin) {
       return false;
     }
-    if (roleFilter === 'admin' && (user.isDistrictAdmin || !validDepartments.some(d => user[d]?.admin))) {
+    if (roleFilter === 'admin' && !user.departments?.some(d => d.active && d.admin)) {
       return false;
     }
-    if (roleFilter === 'user' && (user.isDistrictAdmin || validDepartments.some(d => user[d]?.admin))) {
+    if (roleFilter === 'user' && !user.departments?.some(d => d.active && !d.admin)) {
       return false;
     }
 
@@ -215,7 +214,7 @@ export default function UserEditPage() {
 
   const adminDepartments = loggedInUser === null
     ? []
-    : validDepartments.filter(dep => loggedInUser[dep]?.active && loggedInUser[dep].admin);
+    : loggedInUser.departments?.filter(d => d.active && d.admin).map(d => d.id) || [];
 
   return <>
     {isLoading && <LoadingSpinner />}

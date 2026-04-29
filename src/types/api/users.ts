@@ -60,15 +60,16 @@ export type FullUserObject = {
    */
   talkgroups?: PagingTalkgroup[];
 
-  // Temporary code for user login
-  code?: string;
-  codeExpiry?: number;
-} & {
-  [key in UserDepartment]?: {
+  departments?: {
+    id: UserDepartment;
     active?: boolean;
     admin?: boolean;
     callSign?: string;
-  };
+  }[];
+
+  // Temporary code for user login
+  code?: string;
+  codeExpiry?: number;
 };
 export type FrontendUserObject = Omit<
   FullUserObject,
@@ -104,6 +105,7 @@ export const adminUserKeys = [
   'lastLogin',
   'lastStatus',
   'lastStatusCount',
+  'departments',
   ...validDepartments,
 ] as const;
 export const districtAdminUserKeys = [
