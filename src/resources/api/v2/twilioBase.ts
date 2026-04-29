@@ -185,7 +185,7 @@ const POST: LambdaApiFunction<CreateTextApi> = async function (event) {
       'This number is not able to receive messages'
     );
   }
-  if (!sendingUser[phoneNumberConf.department]?.active) {
+  if (!sendingUser.departments?.find(d => d.id === phoneNumberConf.department)?.active) {
     return buildTwilioResponse(
       200,
       `You are not an active member of the ${phoneNumberConf.department} department`

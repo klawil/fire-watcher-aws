@@ -33,9 +33,10 @@ describe('utils/common/user', () => {
     it('Returns the correct permissions for a user with only active departments', () => {
       expect(mod.getUserPermissions({
         phone: 5555555555,
-        Baca: {
+        departments: [ {
+          id: 'Baca',
           active: true,
-        },
+        }, ],
       })).toEqual({
         isUser: true,
         isAdmin: false,
@@ -47,12 +48,16 @@ describe('utils/common/user', () => {
 
       expect(mod.getUserPermissions({
         phone: 5555555555,
-        Baca: {
-          active: true,
-        },
-        NSCAD: {
-          active: true,
-        },
+        departments: [
+          {
+            id: 'Baca',
+            active: true,
+          },
+          {
+            id: 'NSCAD',
+            active: true,
+          },
+        ],
       })).toEqual({
         isUser: true,
         isAdmin: false,
@@ -69,10 +74,11 @@ describe('utils/common/user', () => {
     it('Returns the correct permissions for a user with mixed departments', () => {
       expect(mod.getUserPermissions({
         phone: 5555555555,
-        Baca: {
+        departments: [ {
+          id: 'Baca',
           active: true,
           admin: true,
-        },
+        }, ],
       })).toEqual({
         isUser: true,
         isAdmin: true,
@@ -84,13 +90,17 @@ describe('utils/common/user', () => {
 
       expect(mod.getUserPermissions({
         phone: 5555555555,
-        Baca: {
-          active: true,
-        },
-        NSCAD: {
-          active: true,
-          admin: true,
-        },
+        departments: [
+          {
+            id: 'Baca',
+            active: true,
+          },
+          {
+            id: 'NSCAD',
+            active: true,
+            admin: true,
+          },
+        ],
       })).toEqual({
         isUser: true,
         isAdmin: true,
@@ -131,9 +141,10 @@ describe('utils/common/user', () => {
 
       expect(mod.getUserPermissions({
         phone: 5555555555,
-        Baca: {
+        departments: [ {
+          id: 'Baca',
           active: true,
-        },
+        }, ],
         isDistrictAdmin: true,
       })).toEqual({
         isUser: true,

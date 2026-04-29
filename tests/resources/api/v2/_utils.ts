@@ -105,16 +105,17 @@ export function mockUserRequest(
     phone: 5555555555,
     fName: 'TestF',
     lName: 'TestL',
-    Baca: {
+    departments: [ {
+      id: 'Baca',
       active: isActive,
       callSign: 'BG-TEST',
-    },
+    }, ],
   };
   if (isAdmin) {
-    userObj.Baca = {
-      ...userObj.Baca || {},
+    userObj.departments?.map(d => ({
+      ...d,
       admin: true,
-    };
+    }));
   }
   if (isDistrictAdmin) {
     userObj.isDistrictAdmin = true;

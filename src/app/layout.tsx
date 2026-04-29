@@ -11,7 +11,7 @@ import Container from 'react-bootstrap/Container';
 import { Variant } from 'react-bootstrap/esm/types';
 
 import {
-  FrontendUserObject, FrontendUserState, GetUserApi, validDepartments
+  FrontendUserObject, FrontendUserState, GetUserApi
 } from '@/types/api/users';
 import { getLogger } from '@/utils/common/logger';
 import {
@@ -104,7 +104,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
         isFinal: true,
         isUser: true,
         isDistrictAdmin: false,
-        isAdmin: validDepartments.some(dep => apiResult[dep]?.active && apiResult[dep].admin),
+        isAdmin: apiResult.departments?.some(dep => dep.active && dep.admin) ?? false,
         ...apiResult,
       });
     } catch (e) {
@@ -172,7 +172,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
         isFinal: false,
         isUser: true,
         isDistrictAdmin: true,
-        isAdmin: validDepartments.some(dep => initUser[dep]?.active && initUser[dep].admin),
+        isAdmin: initUser.departments?.some(dep => dep.active && dep.admin) ?? false,
         ...initUser,
       });
     } catch (e) {

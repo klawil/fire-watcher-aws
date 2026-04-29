@@ -1,5 +1,5 @@
 import {
-  FrontendUserObject, validDepartments
+  FrontendUserObject
 } from '@/types/api/users';
 import { UserPermissions } from '@/types/backend/user';
 
@@ -17,8 +17,9 @@ export function getUserPermissions(user: FrontendUserObject | null): UserPermiss
   }
 
   // Determine the permissions
-  userPerms.activeDepartments = validDepartments.filter(dep => user[dep]?.active);
-  userPerms.adminDepartments = userPerms.activeDepartments.filter(dep => user[dep]?.admin);
+  userPerms.activeDepartments = user.departments?.filter(d => d.active).map(d => d.id) || [];
+  userPerms.adminDepartments = user.departments?.filter(d => d.active && d.admin)
+    .map(d => d.id) || [];
   userPerms.isUser = userPerms.activeDepartments.length > 0;
   userPerms.isAdmin = userPerms.adminDepartments.length > 0;
   userPerms.isDistrictAdmin = userPerms.isUser && !!user.isDistrictAdmin;

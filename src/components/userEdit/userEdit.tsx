@@ -184,11 +184,12 @@ export default function UserEdit({
     };
   }), [ user, ]);
 
-  const userDepartments = validDepartments.filter(dep => user && user[dep]);
+  const userDepartments = user?.departments?.map(d => d.id) || [];
 
-  const loggedInUserDepartments = validDepartments
-    .filter(dep => loggedInUser?.isDistrictAdmin ||
-      (loggedInUser && loggedInUser[dep]?.active && loggedInUser[dep]?.admin));
+  const loggedInUserDepartments = loggedInUser?.isDistrictAdmin
+    ? [ ...validDepartments, ]
+    : loggedInUser?.departments?.filter(d => d.active && d.admin)
+      .map(d => d.id) || [];
 
   // Set the default department for a user being created
   if (
@@ -567,7 +568,8 @@ export default function UserEdit({
         </tr></thead>
         <tbody>
           {validDepartments
-            .filter(dep => loggedInUserDepartments.includes(dep) || user[dep])
+            .filter(dep => loggedInUserDepartments.includes(dep) ||
+              user.departments?.find(d => d.id === dep))
             .map(dep => <UserDepartmentRow
               key={dep}
               user={user}

@@ -52,6 +52,9 @@ const createUserKeys: EditKeyConfig[] = [
     name: 'lName',
   },
   {
+    name: 'aladTecId',
+  },
+  {
     name: 'department',
     partOfDepartment: true,
   },
@@ -74,9 +77,6 @@ const createUserKeys: EditKeyConfig[] = [
   },
 ];
 const districtAdminUserKeys: EditKeyConfig[] = [
-  {
-    name: 'getTranscriptOnly',
-  },
   {
     name: 'getApiAlerts',
   },
@@ -210,13 +210,22 @@ const POST: LambdaApiFunction<CreateUserApi> = async function (event, user, user
     // Add to the update item config
     if ('partOfDepartment' in item) {
       const dep = body.department;
-      putConfig.Item[dep] = putConfig.Item[dep] || {};
+      const depObj: NonNullable<FullUserObject['departments']>[number] = putConfig.Item.departments?.find(d => d.id === dep) || {
+        id: dep,
+      };
+      if (!putConfig.Item.departments?.find(d => d.id === dep)) {
+        putConfig.Item.departments = [
+          ...putConfig.Item.departments || [],
+          depObj,
+        ];
+      }
       if (item.name === 'department') {
-        putConfig.Item[dep].active = true;
+        depObj.active = true;
       } else {
         const name = item.name;
-        putConfig.Item[dep][name as 'admin'] = body[name] as boolean;
+        depObj[name as 'admin'] = body[name] as boolean;
       }
+      putConfig.Item.departments = [ depObj, ];
     } else {
       putConfig.Item[item.name as 'fName'] = value as string;
     }

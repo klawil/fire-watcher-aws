@@ -12,7 +12,7 @@ import {
 import {
   DeleteUserApi, FullUserObject, GetUserApi, UpdateUserApi, adminUserKeys, districtAdminUserKeys,
   selfUserKeys,
-  updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator, validDepartments
+  updateUserApiBodyValidator, userApiDeleteParamsValidator, userApiParamsValidator
 } from '@/types/api/users';
 import { TypedUpdateInput } from '@/types/backend/dynamo';
 import { TABLE_USER } from '@/types/backend/environment';
@@ -154,7 +154,7 @@ const PATCH: LambdaApiFunction<UpdateUserApi> = async function (event, user, use
 
     if (
       !user.isDistrictAdmin &&
-      !userPerms.adminDepartments.some(dep => userToEdit[dep]?.active)
+      !userToEdit.departments?.some(d => d.active && userPerms.adminDepartments.includes(d.id))
     ) {
       return [
         403,
@@ -290,8 +290,7 @@ const DELETE: LambdaApiFunction<DeleteUserApi> = async function (event, user, us
   const changeUser = changeUserGet.Item;
 
   // Validate the logged in user has the correct permissions
-  const changeUserDepartments = validDepartments
-    .filter(dep => typeof changeUser[dep] !== 'undefined');
+  const changeUserDepartments = changeUser.departments?.map(d => d.id) || [];
   if (
     !user.isDistrictAdmin &&
     changeUserDepartments
