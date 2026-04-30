@@ -15,9 +15,17 @@ import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import UserRow from '@/components/userRow/userRow';
 import { GetAladtecUsersApi } from '@/types/api/aladtec';
 import {
-  DeleteUserApi, GetAllUsersApi, UserDepartment, validDepartments
+  DeleteUserApi,
+  GetAllUsersApi,
+  PagingTalkgroup,
+  UserDepartment,
+  pagingTalkgroups,
+  validDepartments
 } from '@/types/api/users';
-import { departmentConfig } from '@/types/backend/department';
+import {
+  departmentConfig,
+  pagingTalkgroupConfig
+} from '@/types/backend/department';
 import { getLogger } from '@/utils/common/logger';
 import {
   AddAlertContext,
@@ -126,6 +134,12 @@ export default function UserEditPage() {
     receivesAlertsFilter,
     setReceivesAlertsFilter,
   ] = useState<'all' | 'yes' | 'no'>('all');
+
+  const [
+    talkgroupTextsFilter,
+    setTalkgroupTextsFilter,
+  ] = useState<PagingTalkgroup | ''>('');
+
   const deleteModalUser = useCallback(async () => {
     if (!state.deleteUserModal) {
       return;
@@ -209,6 +223,13 @@ export default function UserEditPage() {
       return false;
     }
 
+    if (
+      talkgroupTextsFilter !== '' &&
+      !user.talkgroups?.includes(talkgroupTextsFilter)
+    ) {
+      return false;
+    }
+
     return true;
   });
 
@@ -270,6 +291,21 @@ export default function UserEditPage() {
               <option value='no'>Receives Alerts: No</option>
             </Form.Select>
           </Col> }
+          <Col xs={12} sm={6} md={3}>
+            <Form.Select
+              value={talkgroupTextsFilter}
+              onChange={e => setTalkgroupTextsFilter(e.target.value === ''
+                ? ''
+                : Number(e.target.value) as PagingTalkgroup)}
+              aria-label='Filter by text talkgroup'
+            >
+              <option value=''>Receives Text Talkgroup: Any</option>
+              {pagingTalkgroups.map(tg =>
+                <option key={tg} value={tg}>
+                  {pagingTalkgroupConfig[tg].partyBeingPaged} ({tg})
+                </option>)}
+            </Form.Select>
+          </Col>
         </Row>
         <Table responsive={true}>
           <tbody>
