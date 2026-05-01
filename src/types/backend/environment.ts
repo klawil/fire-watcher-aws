@@ -60,6 +60,9 @@ const getEnvVariableOrError = (name: string): ENV_VAR_FN => {
   return () => {
     const val = process.env[name];
     if (typeof val === 'undefined') {
+      if (typeof window !== 'undefined') {
+        return '';
+      }
       throw new Error(`Environment variable ${name} is not defined`);
     }
 
