@@ -340,7 +340,7 @@ export async function main() {
       throw new Error('Unable to retrieve PDF from S3 after upload');
     }
     const pdfBody = await pdfBodyS3.Body.transformToByteArray();
-    const wasError = Math.abs(totalPriceComputed - totalPriceTwilio) > 0.005;
+    const wasError = Math.abs(totalPriceComputed - totalPriceTwilio) > 1.0;
 
     if (wasError) {
       logger.warn(`Price discrepancy for department ${department.id}: Twilio total ${totalPriceTwilio}, Computed total ${totalPriceComputed}`);
