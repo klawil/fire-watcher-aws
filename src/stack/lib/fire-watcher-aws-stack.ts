@@ -477,6 +477,13 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    invoicesTable.addGlobalSecondaryIndex({
+      indexName: 'departmentIndex',
+      partitionKey: {
+        name: 'department',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
     lambdaResources.tables.INVOICE = invoicesTable;
 
     dtrTable.addGlobalSecondaryIndex({
@@ -1459,10 +1466,29 @@ export class FireWatcherAwsStack extends Stack {
       // invoices
       {
         pathPart: 'invoices',
-        api: false,
+        fileName: 'invoices',
+        api: true,
+        methods: [ 'GET', ],
+        tables: [ {
+          table: 'INVOICE',
+          readonly: true,
+        }, ],
         next: [ {
           pathPart: '{id}',
-          api: false,
+          fileName: 'invoice',
+          api: true,
+          methods: [
+            'GET',
+            'PATCH',
+          ],
+          tables: [ {
+            table: 'INVOICE',
+            readonly: false,
+          }, ],
+          buckets: [ {
+            bucket: 'EMAIL',
+            readonly: true,
+          }, ],
           next: [ {
             pathPart: 'items',
             fileName: 'invoiceItems',

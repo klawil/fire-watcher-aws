@@ -1,12 +1,16 @@
 'use client';
 
 import React, {
-  useCallback, useContext, useEffect, useState
+  useCallback, useContext, useEffect, useMemo, useState
 } from 'react';
-import Button from 'react-bootstrap/Button';
-import Table from 'react-bootstrap/Table';
+import Col from 'react-bootstrap/Col';
+import Form from 'react-bootstrap/Form';
+import Nav from 'react-bootstrap/Nav';
+import Row from 'react-bootstrap/Row';
+import Tab from 'react-bootstrap/Tab';
 
-import DepartmentSettingsModal from '@/components/departmentSettings/DepartmentSettingsModal';
+import DepartmentSettingsForm from '@/components/departmentSettings/DepartmentSettingsForm';
+import InvoiceList from '@/components/invoiceList/InvoiceList';
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   Department, ListDepartmentApi
@@ -68,23 +72,31 @@ export default function DepartmentsPage() {
 
   // Filter departments based on user permissions
   const userPerms = getUserPermissions(loggedInUser as FrontendUserObject);
-  const filteredDepartments = departments?.filter(dept => {
-    if (userPerms.isDistrictAdmin) {
-      return true; // District admins see all
+  const filteredDepartments = useMemo(() => {
+    return departments?.filter(dept => {
+      if (userPerms.isDistrictAdmin) {
+        return true; // District admins see all
+      }
+      // Department admins see only their departments
+      return userPerms.adminDepartments.includes(dept.id as UserDepartment);
+    }) ?? [];
+  }, [
+    departments,
+    userPerms.adminDepartments,
+    userPerms.isDistrictAdmin,
+  ]);
+
+  // Auto-select if only one department
+  useEffect(() => {
+    if (!selectedDepartment && filteredDepartments.length === 1) {
+      setSelectedDepartment(filteredDepartments[0]);
     }
-    // Department admins see only their departments
-    return userPerms.adminDepartments.includes(dept.id as UserDepartment);
-  }) ?? [];
+  }, [
+    filteredDepartments,
+    selectedDepartment,
+  ]);
 
-  const handleEditClick = useCallback((dept: Department) => {
-    setSelectedDepartment(dept);
-  }, []);
-
-  const handleModalClose = useCallback(() => {
-    setSelectedDepartment(null);
-  }, []);
-
-  const handleUpdate = useCallback(() => {
+  const handleSettingsUpdate = useCallback(() => {
     // Refetch departments after update
     (async () => {
       const [
@@ -105,49 +117,84 @@ export default function DepartmentsPage() {
       }
 
       setDepartments(apiResult);
-      setSelectedDepartment(null);
       addAlert('success', 'Department updated successfully');
     })();
   }, [ addAlert, ]);
+
+  const showDepartmentSelector = filteredDepartments.length > 1;
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  if (!departments || filteredDepartments.length === 0) {
-    return <h1 className='text-center'>No departments found</h1>;
+  if (!departments) {
+    return <LoadingSpinner />;
+  }
+
+  if (filteredDepartments.length === 0) {
+    return <h5 className='text-center text-muted'>No departments found</h5>;
   }
 
   return <>
-    <Table responsive={true} striped bordered>
-      <thead>
-        <tr>
-          <th>Department Name</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {filteredDepartments.map(dept => {
-          return <tr key={dept.id}>
-            <td>{dept.name || dept.id}</td>
-            <td>
-              <Button
-                variant='primary'
-                size='sm'
-                onClick={() => handleEditClick(dept)}
-              >
-                Edit
-              </Button>
-            </td>
-          </tr>;
-        })}
-      </tbody>
-    </Table>
+    {showDepartmentSelector &&
+      <Row className='mb-4'>
+        <Col md={4}>
+          <Form.Select
+            value={selectedDepartment?.id || ''}
+            onChange={e => {
+              const dept = filteredDepartments.find(d => d.id === e.target.value);
+              setSelectedDepartment(dept || null);
+            }}
+            aria-label='Select department'
+          >
+            <option value=''>Select a Department</option>
+            {filteredDepartments.map(dept =>
+              <option key={dept.id} value={dept.id}>
+                {dept.name || dept.id}
+              </option>)}
+          </Form.Select>
+        </Col>
+      </Row>
+    }
 
-    {selectedDepartment && <DepartmentSettingsModal
-      department={selectedDepartment}
-      onClose={handleModalClose}
-      onUpdate={handleUpdate}
-    />}
+    {selectedDepartment &&
+      <Tab.Container defaultActiveKey='settings'>
+        <Nav variant='tabs' className='mb-3'>
+          <Nav.Item>
+            <Nav.Link eventKey='settings'>Settings</Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link eventKey='invoices'>Invoices</Nav.Link>
+          </Nav.Item>
+        </Nav>
+
+        <Tab.Content>
+          <Tab.Pane eventKey='settings'>
+            <DepartmentSettingsForm
+              department={selectedDepartment}
+              onSuccess={handleSettingsUpdate}
+              onCancel={() => {}}
+            />
+          </Tab.Pane>
+
+          <Tab.Pane eventKey='invoices'>
+            <InvoiceList
+              departments={
+                userPerms.isDistrictAdmin
+                  ? filteredDepartments.map(d => d.id)
+                  : userPerms.adminDepartments
+              }
+              isDistrictAdmin={userPerms.isDistrictAdmin}
+            />
+          </Tab.Pane>
+        </Tab.Content>
+      </Tab.Container>
+    }
+
+    {!selectedDepartment && filteredDepartments.length > 0 && !showDepartmentSelector &&
+      <div className='alert alert-info'>
+        Selected: {filteredDepartments[0]?.name || filteredDepartments[0]?.id}
+      </div>
+    }
   </>;
 }

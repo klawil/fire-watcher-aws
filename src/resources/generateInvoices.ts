@@ -324,6 +324,7 @@ export async function main() {
         endDate: invoiceConfig.endDate,
         generatedDate: invoiceConfig.issueDate,
         s3Location: invoiceS3Key,
+        dueDate: invoiceConfig.dueDate,
       },
     });
     await s3.send(new PutObjectCommand({

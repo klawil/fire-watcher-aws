@@ -1,5 +1,5 @@
 import {
-  api400Body, api401Body, api403Body, api500Body
+  api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
 
 import { TwilioAccounts } from '@/types/backend/department';
@@ -22,7 +22,12 @@ export interface Invoice {
   generatedDate?: string;
   paidDate?: string;
   s3Location?: string;
+  dueDate?: string;
 }
+
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+const invoiceIdRegex = /^.+$/;
+const invoiceDepartmentsRegex = /^[^,]+(?:,[^,]+)*$/;
 
 /**
  * List invoices with filters
@@ -35,6 +40,7 @@ export type ListInvoicesApi = {
   method: 'GET';
   query: {
     department?: Exclude<TwilioAccounts, ''> | 'all';
+    departments?: string;
 
     /**
      * Find invoices with an end date before this date, format YYYY-MM-DD
@@ -45,6 +51,16 @@ export type ListInvoicesApi = {
      * Find invoices with a start date after this date, format YYYY-MM-DD
      */
     after?: string;
+
+    /**
+     * Maximum invoices returned in a single response
+     */
+    limit?: number;
+
+    /**
+     * Base64-encoded pagination cursor returned from the previous request
+     */
+    lastKey?: string;
   };
   responses: {
 
@@ -74,11 +90,70 @@ export type ListInvoicesApi = {
     /**
      * @contentType application/json
      */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
   security: [{
     cookie: [],
   }];
+};
+
+export const listInvoicesApiQueryValidator: Validator<ListInvoicesApi['query']> = {
+  department: {
+    required: false,
+    types: {
+      string: {
+        exact: [
+          'all',
+          'Baca',
+          'Crestone',
+          'NSCAD',
+          'Saguache',
+        ],
+      },
+    },
+  },
+  departments: {
+    required: false,
+    types: {
+      string: {
+        regex: invoiceDepartmentsRegex,
+      },
+    },
+  },
+  before: {
+    required: false,
+    types: {
+      string: {
+        regex: dateRegex,
+      },
+    },
+  },
+  after: {
+    required: false,
+    types: {
+      string: {
+        regex: dateRegex,
+      },
+    },
+  },
+  limit: {
+    required: false,
+    parse: v => Number(v),
+    types: {
+      number: {},
+    },
+  },
+  lastKey: {
+    required: false,
+    types: {
+      string: {},
+    },
+  },
 };
 
 /**
@@ -116,11 +191,93 @@ export type GetInvoiceApi = {
     /**
      * @contentType application/json
      */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
   security: [{
     cookie: [],
   }];
+};
+
+export const invoiceApiParamsValidator: Validator<GetInvoiceApi['params']> = {
+  id: {
+    required: true,
+    types: {
+      string: {
+        regex: invoiceIdRegex,
+      },
+    },
+  },
+};
+
+/**
+ * Update invoice paid status
+ * @summary Update Invoice
+ * @tags Invoices
+ * @body.contentType application/json
+ */
+export type UpdateInvoiceApi = {
+  path: '/api/v2/invoices/{id}/';
+  method: 'PATCH';
+  params: { id: string; };
+  body: {
+
+    /**
+     * Date the invoice was paid, format YYYY-MM-DD. Set to null to unmark as paid.
+     */
+    paidDate?: string | null;
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: Invoice;
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    cookie: [],
+  }];
+};
+
+export const updateInvoiceApiBodyValidator: Validator<UpdateInvoiceApi['body']> = {
+  paidDate: {
+    required: false,
+    types: {
+      string: {
+        regex: dateRegex,
+      },
+      null: {},
+    },
+  },
 };
 
 /**
