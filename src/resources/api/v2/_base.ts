@@ -88,10 +88,7 @@ export async function handleResourceApi(
         'Content-Type': contentType,
       };
     }
-    if (
-      typeof responseBody === 'string' &&
-      !Buffer.isBuffer(responseBody)
-    ) {
+    if (typeof responseBody === 'string') {
       response.body = responseBody;
     }
 

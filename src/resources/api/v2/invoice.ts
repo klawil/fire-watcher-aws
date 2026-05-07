@@ -253,8 +253,13 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
         ':paidDate': body.paidDate,
       };
       updateInput.UpdateExpression = 'SET #paidDate = :paidDate';
-    } else {
+    } else if (body.paidDate === null) {
       updateInput.UpdateExpression = 'REMOVE #paidDate';
+    } else {
+      return [
+        400,
+        generateApi400Body('No updatable fields were provided'),
+      ];
     }
 
     const result = await typedUpdate<Invoice>(updateInput);
