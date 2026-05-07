@@ -483,6 +483,10 @@ export class FireWatcherAwsStack extends Stack {
         name: 'department',
         type: dynamodb.AttributeType.STRING,
       },
+      sortKey: {
+        name: 'generatedDate',
+        type: dynamodb.AttributeType.STRING,
+      },
     });
     lambdaResources.tables.INVOICE = invoicesTable;
 

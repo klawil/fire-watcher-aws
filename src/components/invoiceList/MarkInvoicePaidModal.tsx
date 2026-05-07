@@ -15,6 +15,9 @@ import { typeFetch } from '@/utils/frontend/typeFetch';
 
 const logger = getLogger('MarkInvoicePaidModal');
 
+const getTodayDateStringUtc = () => new Date().toISOString()
+  .slice(0, 10);
+
 interface MarkInvoicePaidModalProps {
   invoiceId: string;
   onClose: () => void;
@@ -30,8 +33,7 @@ export default function MarkInvoicePaidModal({
     paidDate,
     setPaidDate,
   ] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return getTodayDateStringUtc();
   });
   const [
     isSubmitting,
@@ -49,12 +51,7 @@ export default function MarkInvoicePaidModal({
       return;
     }
 
-    const paidDateObj = new Date(paidDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    paidDateObj.setHours(0, 0, 0, 0);
-
-    if (paidDateObj > today) {
+    if (paidDate > getTodayDateStringUtc()) {
       setError('Payment date cannot be in the future');
       return;
     }
@@ -121,8 +118,7 @@ export default function MarkInvoicePaidModal({
               value={paidDate}
               onChange={e => setPaidDate(e.target.value)}
               disabled={isSubmitting}
-              max={new Date().toISOString()
-                .split('T')[0]}
+              max={getTodayDateStringUtc()}
             />
             <Form.Text className='text-muted'>
               Enter the date the invoice was paid

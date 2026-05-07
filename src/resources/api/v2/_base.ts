@@ -72,6 +72,12 @@ export async function handleResourceApi(
       statusCode,
       body: JSON.stringify(responseBody),
     };
+
+    if (Buffer.isBuffer(responseBody)) {
+      response.body = responseBody.toString('base64');
+      response.isBase64Encoded = true;
+    }
+
     if (responseHeaders) {
       response.multiValueHeaders = responseHeaders;
     } else {
@@ -82,7 +88,10 @@ export async function handleResourceApi(
         'Content-Type': contentType,
       };
     }
-    if (typeof responseBody === 'string') {
+    if (
+      typeof responseBody === 'string' &&
+      !Buffer.isBuffer(responseBody)
+    ) {
       response.body = responseBody;
     }
 

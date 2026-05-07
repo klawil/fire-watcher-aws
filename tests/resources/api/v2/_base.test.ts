@@ -167,6 +167,40 @@ describe('resources/api/v2/_base', () => {
       });
     });
 
+    it('Encodes Buffer responses as base64 payloads', async () => {
+      const event = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+      });
+
+      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .mockReturnValue([
+          200,
+          Buffer.from([ 1, 2, 3, ]),
+          {
+            'content-type': [ 'application/pdf', ],
+          },
+          'application/pdf',
+        ]);
+
+      const result = await handleResourceApi(
+        handlers,
+        event
+      );
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: Buffer.from([ 1, 2, 3, ]).toString('base64'),
+        isBase64Encoded: true,
+        multiValueHeaders: {
+          'content-type': [ 'application/pdf', ],
+        },
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+      });
+    });
+
     it('Logs an error if the status code is not 200 or 204', async () => {
       const logger = getLogger('');
       logger.setLevel(LogLevel.Error);

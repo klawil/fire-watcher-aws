@@ -21,6 +21,11 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('api/v2/invoices');
 
+function getTodayDateStringUtc() {
+  return new Date().toISOString()
+    .slice(0, 10);
+}
+
 const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
@@ -55,19 +60,42 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
     ];
   }
 
-  const departmentsParam = query.departments;
+  const departmentsParam = query.departments || (
+    query.department && query.department !== 'all'
+      ? query.department
+      : undefined
+  );
   const beforeDate = query.before;
   const afterDate = query.after;
   const lastKeyParam = query.lastKey;
 
-  // Parse limit and lastKey
+  // Parse and validate limit / lastKey
   const limit = typeof query.limit === 'number'
-    ? Math.min(query.limit, 100)
+    ? query.limit
     : 50;
-  let lastKey: Record<string, string> | undefined;
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > 100
+  ) {
+    return [
+      400,
+      generateApi400Body([ 'limit', ]),
+    ];
+  }
+
+  let lastKey: Record<string, unknown> | undefined;
   if (lastKeyParam) {
     try {
-      lastKey = JSON.parse(Buffer.from(lastKeyParam, 'base64').toString()) as Record<string, string>;
+      const parsed = JSON.parse(Buffer.from(lastKeyParam, 'base64').toString());
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
+        throw new Error('Invalid lastKey');
+      }
+      lastKey = parsed as Record<string, unknown>;
     } catch {
       return [
         400,
@@ -80,7 +108,17 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
   let departmentsToQuery: string[] = [];
   if (departmentsParam) {
     // Parse comma-separated departments
-    departmentsToQuery = departmentsParam.split(',').map(d => d.trim());
+    departmentsToQuery = [ ...new Set(departmentsParam
+      .split(',')
+      .map(d => d.trim())
+      .filter(Boolean)), ];
+
+    if (departmentsToQuery.length === 0) {
+      return [
+        400,
+        generateApi400Body([ 'departments', ]),
+      ];
+    }
 
     // Verify user has access to all requested departments
     if (!user.isDistrictAdmin) {
@@ -109,64 +147,97 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
   // Fetch invoices
   try {
     let allInvoices: Invoice[] = [];
-    let finalLastKey = lastKey;
+    let finalLastKey: Record<string, unknown> | undefined;
 
-    if (departmentsToQuery.length === 0) {
-      // District admin with no departments specified - scan all
+    // Query directly when scoped to a single department; use a filtered scan otherwise.
+    if (departmentsToQuery.length === 1) {
+      const filterParts: string[] = [];
+      const expressionAttributeNames: Record<string, string> = {
+        '#dept': 'department',
+      };
+      const expressionAttributeValues: Record<string, unknown> = {
+        ':dept': departmentsToQuery[0],
+      };
+
+      if (beforeDate) {
+        expressionAttributeNames['#endDate'] = 'endDate';
+        expressionAttributeValues[':beforeDate'] = beforeDate;
+        filterParts.push('#endDate < :beforeDate');
+      }
+      if (afterDate) {
+        expressionAttributeNames['#startDate'] = 'startDate';
+        expressionAttributeValues[':afterDate'] = afterDate;
+        filterParts.push('#startDate > :afterDate');
+      }
+
+      const queryInput: TypedQueryInput<Invoice> = {
+        TableName: TABLE_INVOICE(),
+        IndexName: 'departmentIndex',
+        KeyConditionExpression: '#dept = :dept',
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ScanIndexForward: false,
+        Limit: limit,
+        ExclusiveStartKey: lastKey,
+      };
+
+      if (filterParts.length > 0) {
+        queryInput.FilterExpression = filterParts.join(' AND ');
+      }
+
+      const queryResult = await typedQuery<Invoice>(queryInput);
+      allInvoices = queryResult.Items || [];
+      finalLastKey = queryResult.LastEvaluatedKey;
+    } else {
+      const filterParts: string[] = [];
+      const expressionAttributeNames: Record<string, string> = {};
+      const expressionAttributeValues: Record<string, unknown> = {};
+
+      if (departmentsToQuery.length > 0) {
+        expressionAttributeNames['#department'] = 'department';
+        const deptPlaceholders = departmentsToQuery.map((dept, index) => {
+          const key = `:dept${index}`;
+          expressionAttributeValues[key] = dept;
+          return key;
+        });
+        filterParts.push(`#department IN (${deptPlaceholders.join(', ')})`);
+      }
+
+      if (beforeDate) {
+        expressionAttributeNames['#endDate'] = 'endDate';
+        expressionAttributeValues[':beforeDate'] = beforeDate;
+        filterParts.push('#endDate < :beforeDate');
+      }
+      if (afterDate) {
+        expressionAttributeNames['#startDate'] = 'startDate';
+        expressionAttributeValues[':afterDate'] = afterDate;
+        filterParts.push('#startDate > :afterDate');
+      }
+
       const scanResult = await typedScan<Invoice>({
         TableName: TABLE_INVOICE(),
         Limit: limit,
         ExclusiveStartKey: lastKey,
+        ...filterParts.length > 0
+          ? {
+            FilterExpression: filterParts.join(' AND '),
+            ExpressionAttributeNames: expressionAttributeNames,
+            ExpressionAttributeValues: expressionAttributeValues,
+          }
+          : {},
       });
 
       allInvoices = scanResult.Items || [];
       finalLastKey = scanResult.LastEvaluatedKey;
-    } else {
-      // Query specific departments
-      for (const dept of departmentsToQuery) {
-        const queryInput: TypedQueryInput<Invoice> = {
-          TableName: TABLE_INVOICE(),
-          IndexName: 'departmentIndex',
-          KeyConditionExpression: '#dept = :dept',
-          ExpressionAttributeNames: {
-            '#dept': 'department',
-          },
-          ExpressionAttributeValues: {
-            ':dept': dept,
-          },
-          ScanIndexForward: false, // Most recent first
-        };
+    }
 
-        // Add date filters if provided
-        if (beforeDate) {
-          queryInput.KeyConditionExpression += ' AND #endDate < :beforeDate';
-          queryInput.ExpressionAttributeNames = queryInput.ExpressionAttributeNames || {};
-          queryInput.ExpressionAttributeValues = queryInput.ExpressionAttributeValues || {};
-          queryInput.ExpressionAttributeNames['#endDate'] = 'endDate';
-          queryInput.ExpressionAttributeValues[':beforeDate'] = beforeDate;
-        }
-        if (afterDate) {
-          queryInput.KeyConditionExpression += ' AND #startDate > :afterDate';
-          queryInput.ExpressionAttributeNames = queryInput.ExpressionAttributeNames || {};
-          queryInput.ExpressionAttributeValues = queryInput.ExpressionAttributeValues || {};
-          queryInput.ExpressionAttributeNames['#startDate'] = 'startDate';
-          queryInput.ExpressionAttributeValues[':afterDate'] = afterDate;
-        }
-
-        const queryResult = await typedQuery<Invoice>(queryInput);
-        allInvoices.push(...queryResult.Items || []);
-      }
-
-      // Sort combined results by generated date descending
-      allInvoices.sort((a, b) => {
-        const aDate = new Date(a.generatedDate || '').getTime();
-        const bDate = new Date(b.generatedDate || '').getTime();
-        return bDate - aDate;
+    // Defensive fallback for old data without dates.
+    if (beforeDate && afterDate && beforeDate < afterDate) {
+      logger.warn('Received before date earlier than after date', {
+        beforeDate,
+        afterDate,
+        today: getTodayDateStringUtc(),
       });
-
-      // Handle pagination - just take the limit
-      finalLastKey = allInvoices.length > limit ? { id: allInvoices[limit - 1].id, } : undefined;
-      allInvoices = allInvoices.slice(0, limit);
     }
 
     return [

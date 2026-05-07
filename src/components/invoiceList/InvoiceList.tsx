@@ -26,11 +26,31 @@ interface InvoiceListProps {
   isDistrictAdmin: boolean;
 }
 
+const parseDateOnlyLocal = (dateStr: string): Date | null => {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) {
+    return null;
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = parts;
+
+  return new Date(year, month - 1, day);
+};
+
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) {
     return '-';
   }
-  const date = new Date(dateStr);
+
+  const date = parseDateOnlyLocal(dateStr);
+  if (date === null) {
+    return '-';
+  }
+
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -42,10 +62,15 @@ const calculateDaysUntilDue = (dueDate?: string): number | null => {
   if (!dueDate) {
     return null;
   }
-  const due = new Date(dueDate);
+
+  const due = parseDateOnlyLocal(dueDate);
+  if (due === null) {
+    return null;
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
+
   return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 

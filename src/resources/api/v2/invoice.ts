@@ -30,6 +30,28 @@ import { getLogger } from '@/utils/common/logger';
 const logger = getLogger('api/v2/invoice');
 const s3 = new S3Client();
 
+function getTodayDateStringUtc() {
+  return new Date().toISOString()
+    .slice(0, 10);
+}
+
+function isS3NotFoundError(error: unknown) {
+  const err = error as {
+    name?: string;
+    Code?: string;
+    code?: string;
+    $metadata?: {
+      httpStatusCode?: number;
+    };
+  };
+
+  return err.name === 'NoSuchKey' ||
+    err.name === 'NotFound' ||
+    err.Code === 'NoSuchKey' ||
+    err.code === 'NoSuchKey' ||
+    err.$metadata?.httpStatusCode === 404;
+}
+
 const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
@@ -84,11 +106,13 @@ const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userP
 
   // Check permissions - user must be admin of the department
   if (
-    typeof invoice.department !== 'undefined' &&
-    !userPerms.adminDepartments.includes(
-      invoice.department as typeof userPerms.adminDepartments[number]
-    ) &&
-    !user.isDistrictAdmin
+    typeof invoice.department !== 'string' ||
+    (
+      !userPerms.adminDepartments.includes(
+        invoice.department as typeof userPerms.adminDepartments[number]
+      ) &&
+      !user.isDistrictAdmin
+    )
   ) {
     return [
       403,
@@ -126,12 +150,21 @@ const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userP
         'content-disposition': [ `attachment; filename="invoice-${invoiceId}.pdf"`, ],
         'content-type': [ 'application/pdf', ],
       },
+      'application/pdf',
     ];
   } catch (e) {
     logger.error(`Error retrieving invoice ${invoiceId} from S3`, e);
+
+    if (isS3NotFoundError(e)) {
+      return [
+        404,
+        api404Body,
+      ];
+    }
+
     return [
-      404,
-      api404Body,
+      500,
+      api500Body,
     ];
   }
 };
@@ -178,11 +211,8 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
 
   // Validate paidDate format if provided
   if (typeof body.paidDate === 'string') {
-    // Validate date is not in the future
-    const paidDate = new Date(body.paidDate);
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    if (paidDate > today) {
+    // Compare date-only strings in UTC.
+    if (body.paidDate > getTodayDateStringUtc()) {
       return [
         400,
         generateApi400Body([ 'paidDate: Date cannot be in the future', ]),
