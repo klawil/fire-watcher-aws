@@ -26,6 +26,70 @@ function getTodayDateStringUtc() {
     .slice(0, 10);
 }
 
+interface InvoiceCursorKey {
+  id: string;
+  department: string;
+  generatedDate: string;
+}
+
+interface MultiDepartmentCursor {
+  mode: 'multi';
+  departmentKeys: Record<string, InvoiceCursorKey | null>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isInvoiceCursorKey(value: unknown): value is InvoiceCursorKey {
+  return isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.department === 'string' &&
+    typeof value.generatedDate === 'string';
+}
+
+function getInvoiceCursorKey(item: Invoice): InvoiceCursorKey | null {
+  if (
+    typeof item.id !== 'string' ||
+    typeof item.department !== 'string' ||
+    typeof item.generatedDate !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    department: item.department,
+    generatedDate: item.generatedDate,
+  };
+}
+
+function isMultiDepartmentCursor(
+  value: unknown,
+  departmentsToQuery: string[]
+): value is MultiDepartmentCursor {
+  if (!isRecord(value) || value.mode !== 'multi' || !isRecord(value.departmentKeys)) {
+    return false;
+  }
+
+  for (const department of departmentsToQuery) {
+    const departmentValue = value.departmentKeys[department];
+    if (departmentValue === null) {
+      continue;
+    }
+
+    if (!isInvoiceCursorKey(departmentValue)) {
+      return false;
+    }
+
+    if (departmentValue.department !== department) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
@@ -84,18 +148,11 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
     ];
   }
 
-  let lastKey: Record<string, unknown> | undefined;
+  let parsedLastKey: unknown;
   if (lastKeyParam) {
     try {
       const parsed = JSON.parse(Buffer.from(lastKeyParam, 'base64').toString());
-      if (
-        typeof parsed !== 'object' ||
-        parsed === null ||
-        Array.isArray(parsed)
-      ) {
-        throw new Error('Invalid lastKey');
-      }
-      lastKey = parsed as Record<string, unknown>;
+      parsedLastKey = parsed;
     } catch {
       return [
         400,
@@ -148,27 +205,51 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
   try {
     let allInvoices: Invoice[] = [];
     let finalLastKey: Record<string, unknown> | undefined;
+    let responseLastItem: string | null = null;
+    const queryFilterParts: string[] = [];
+    const queryExpressionAttributeNames: Record<string, string> = {
+      '#dept': 'department',
+    };
+    const queryExpressionAttributeValues: Record<string, unknown> = {};
 
-    // Query directly when scoped to a single department; use a filtered scan otherwise.
+    if (beforeDate) {
+      queryExpressionAttributeNames['#endDate'] = 'endDate';
+      queryExpressionAttributeValues[':beforeDate'] = beforeDate;
+      queryFilterParts.push('#endDate < :beforeDate');
+    }
+    if (afterDate) {
+      queryExpressionAttributeNames['#startDate'] = 'startDate';
+      queryExpressionAttributeValues[':afterDate'] = afterDate;
+      queryFilterParts.push('#startDate > :afterDate');
+    }
+
+    // Query directly when scoped to a single department.
     if (departmentsToQuery.length === 1) {
-      const filterParts: string[] = [];
+      if (typeof parsedLastKey !== 'undefined' && !isInvoiceCursorKey(parsedLastKey)) {
+        return [
+          400,
+          generateApi400Body([ 'lastKey', ]),
+        ];
+      }
+
+      const singleDepartmentLastKey = parsedLastKey as InvoiceCursorKey | undefined;
+      if (
+        singleDepartmentLastKey &&
+        singleDepartmentLastKey.department !== departmentsToQuery[0]
+      ) {
+        return [
+          400,
+          generateApi400Body([ 'lastKey', ]),
+        ];
+      }
+
       const expressionAttributeNames: Record<string, string> = {
-        '#dept': 'department',
+        ...queryExpressionAttributeNames,
       };
       const expressionAttributeValues: Record<string, unknown> = {
+        ...queryExpressionAttributeValues,
         ':dept': departmentsToQuery[0],
       };
-
-      if (beforeDate) {
-        expressionAttributeNames['#endDate'] = 'endDate';
-        expressionAttributeValues[':beforeDate'] = beforeDate;
-        filterParts.push('#endDate < :beforeDate');
-      }
-      if (afterDate) {
-        expressionAttributeNames['#startDate'] = 'startDate';
-        expressionAttributeValues[':afterDate'] = afterDate;
-        filterParts.push('#startDate > :afterDate');
-      }
 
       const queryInput: TypedQueryInput<Invoice> = {
         TableName: TABLE_INVOICE(),
@@ -178,57 +259,155 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
         ExpressionAttributeValues: expressionAttributeValues,
         ScanIndexForward: false,
         Limit: limit,
-        ExclusiveStartKey: lastKey,
+        ExclusiveStartKey: singleDepartmentLastKey,
       };
 
-      if (filterParts.length > 0) {
-        queryInput.FilterExpression = filterParts.join(' AND ');
+      if (queryFilterParts.length > 0) {
+        queryInput.FilterExpression = queryFilterParts.join(' AND ');
       }
 
       const queryResult = await typedQuery<Invoice>(queryInput);
       allInvoices = queryResult.Items || [];
       finalLastKey = queryResult.LastEvaluatedKey;
-    } else {
-      const filterParts: string[] = [];
-      const expressionAttributeNames: Record<string, string> = {};
-      const expressionAttributeValues: Record<string, unknown> = {};
-
-      if (departmentsToQuery.length > 0) {
-        expressionAttributeNames['#department'] = 'department';
-        const deptPlaceholders = departmentsToQuery.map((dept, index) => {
-          const key = `:dept${index}`;
-          expressionAttributeValues[key] = dept;
-          return key;
-        });
-        filterParts.push(`#department IN (${deptPlaceholders.join(', ')})`);
+      responseLastItem = finalLastKey
+        ? Buffer.from(JSON.stringify(finalLastKey)).toString('base64')
+        : null;
+    } else if (departmentsToQuery.length > 1) {
+      if (
+        typeof parsedLastKey !== 'undefined' &&
+        !isMultiDepartmentCursor(parsedLastKey, departmentsToQuery)
+      ) {
+        return [
+          400,
+          generateApi400Body([ 'lastKey', ]),
+        ];
       }
+
+      const multiCursor = parsedLastKey as MultiDepartmentCursor | undefined;
+      const queryResults = await Promise.all(departmentsToQuery.map(async department => {
+        const queryInput: TypedQueryInput<Invoice> = {
+          TableName: TABLE_INVOICE(),
+          IndexName: 'departmentIndex',
+          KeyConditionExpression: '#dept = :dept',
+          ExpressionAttributeNames: {
+            ...queryExpressionAttributeNames,
+          },
+          ExpressionAttributeValues: {
+            ...queryExpressionAttributeValues,
+            ':dept': department,
+          },
+          ScanIndexForward: false,
+          Limit: limit,
+          ExclusiveStartKey: multiCursor?.departmentKeys[department] || undefined,
+        };
+
+        if (queryFilterParts.length > 0) {
+          queryInput.FilterExpression = queryFilterParts.join(' AND ');
+        }
+
+        return {
+          department,
+          result: await typedQuery<Invoice>(queryInput),
+        };
+      }));
+
+      const mergedInvoices = queryResults
+        .flatMap(v => v.result.Items || [])
+        .sort((a, b) => {
+          const aDate = typeof a.generatedDate === 'string' ? a.generatedDate : '';
+          const bDate = typeof b.generatedDate === 'string' ? b.generatedDate : '';
+          if (aDate === bDate) {
+            return a.id.localeCompare(b.id);
+          }
+          return bDate.localeCompare(aDate);
+        });
+
+      allInvoices = mergedInvoices.slice(0, limit);
+
+      const consumedByDepartment = allInvoices.reduce<Record<string, number>>((acc, invoice) => {
+        if (typeof invoice.department === 'string') {
+          acc[invoice.department] = (acc[invoice.department] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      const nextDepartmentKeys: Record<string, InvoiceCursorKey | null> = {};
+      let hasMore = false;
+
+      for (const {
+        department,
+        result,
+      } of queryResults) {
+        const items = result.Items || [];
+        const consumed = consumedByDepartment[department] || 0;
+        const currentStartKey = multiCursor?.departmentKeys[department] || null;
+
+        if (consumed <= 0) {
+          nextDepartmentKeys[department] = currentStartKey;
+          if (items.length > 0 || result.LastEvaluatedKey) {
+            hasMore = true;
+          }
+          continue;
+        }
+
+        if (consumed >= items.length) {
+          const nextKey = isInvoiceCursorKey(result.LastEvaluatedKey)
+            ? result.LastEvaluatedKey
+            : null;
+          nextDepartmentKeys[department] = nextKey;
+          if (nextKey) {
+            hasMore = true;
+          }
+          continue;
+        }
+
+        const resumeKey = getInvoiceCursorKey(items[consumed - 1]);
+        nextDepartmentKeys[department] = resumeKey;
+        if (resumeKey) {
+          hasMore = true;
+        }
+      }
+
+      responseLastItem = hasMore
+        ? Buffer.from(JSON.stringify({
+          mode: 'multi',
+          departmentKeys: nextDepartmentKeys,
+        })).toString('base64')
+        : null;
+    } else {
+      const scanFilterParts: string[] = [];
+      const scanExpressionAttributeNames: Record<string, string> = {};
+      const scanExpressionAttributeValues: Record<string, unknown> = {};
 
       if (beforeDate) {
-        expressionAttributeNames['#endDate'] = 'endDate';
-        expressionAttributeValues[':beforeDate'] = beforeDate;
-        filterParts.push('#endDate < :beforeDate');
+        scanExpressionAttributeNames['#endDate'] = 'endDate';
+        scanExpressionAttributeValues[':beforeDate'] = beforeDate;
+        scanFilterParts.push('#endDate < :beforeDate');
       }
       if (afterDate) {
-        expressionAttributeNames['#startDate'] = 'startDate';
-        expressionAttributeValues[':afterDate'] = afterDate;
-        filterParts.push('#startDate > :afterDate');
+        scanExpressionAttributeNames['#startDate'] = 'startDate';
+        scanExpressionAttributeValues[':afterDate'] = afterDate;
+        scanFilterParts.push('#startDate > :afterDate');
       }
 
       const scanResult = await typedScan<Invoice>({
         TableName: TABLE_INVOICE(),
         Limit: limit,
-        ExclusiveStartKey: lastKey,
-        ...filterParts.length > 0
+        ExclusiveStartKey: undefined,
+        ...scanFilterParts.length > 0
           ? {
-            FilterExpression: filterParts.join(' AND '),
-            ExpressionAttributeNames: expressionAttributeNames,
-            ExpressionAttributeValues: expressionAttributeValues,
+            FilterExpression: scanFilterParts.join(' AND '),
+            ExpressionAttributeNames: scanExpressionAttributeNames,
+            ExpressionAttributeValues: scanExpressionAttributeValues,
           }
           : {},
       });
 
       allInvoices = scanResult.Items || [];
       finalLastKey = scanResult.LastEvaluatedKey;
+      responseLastItem = finalLastKey
+        ? Buffer.from(JSON.stringify(finalLastKey)).toString('base64')
+        : null;
     }
 
     // Defensive fallback for old data without dates.
@@ -243,7 +422,7 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
     return [
       200,
       {
-        lastItem: finalLastKey ? Buffer.from(JSON.stringify(finalLastKey)).toString('base64') : null,
+        lastItem: responseLastItem,
         invoices: allInvoices,
       },
     ];

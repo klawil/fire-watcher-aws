@@ -209,6 +209,13 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
   }
   const invoiceId = params.id;
 
+  if (typeof body.paidDate === 'undefined') {
+    return [
+      400,
+      generateApi400Body('No updatable fields were provided'),
+    ];
+  }
+
   // Validate paidDate format if provided
   if (typeof body.paidDate === 'string') {
     // Compare date-only strings in UTC.
@@ -255,11 +262,6 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
       updateInput.UpdateExpression = 'SET #paidDate = :paidDate';
     } else if (body.paidDate === null) {
       updateInput.UpdateExpression = 'REMOVE #paidDate';
-    } else {
-      return [
-        400,
-        generateApi400Body('No updatable fields were provided'),
-      ];
     }
 
     const result = await typedUpdate<Invoice>(updateInput);

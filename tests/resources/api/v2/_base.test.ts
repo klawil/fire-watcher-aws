@@ -176,7 +176,11 @@ describe('resources/api/v2/_base', () => {
       (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
         .mockReturnValue([
           200,
-          Buffer.from([ 1, 2, 3, ]),
+          Buffer.from([
+            1,
+            2,
+            3,
+          ]),
           {
             'content-type': [ 'application/pdf', ],
           },
@@ -190,7 +194,11 @@ describe('resources/api/v2/_base', () => {
 
       expect(result).toEqual({
         statusCode: 200,
-        body: Buffer.from([ 1, 2, 3, ]).toString('base64'),
+        body: Buffer.from([
+          1,
+          2,
+          3,
+        ]).toString('base64'),
         isBase64Encoded: true,
         multiValueHeaders: {
           'content-type': [ 'application/pdf', ],

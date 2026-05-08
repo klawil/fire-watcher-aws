@@ -4,8 +4,7 @@ import {
 
 import {
   DynamoDBDocumentClientMock,
-  QueryCommand,
-  ScanCommand
+  QueryCommand
 } from '../../../../__mocks__/@aws-sdk/lib-dynamodb';
 
 import {
@@ -61,12 +60,10 @@ describe('resources/api/v2/invoices', () => {
       mockUserRequest(req, true, true, true);
 
       DynamoDBDocumentClientMock.setResult('query', {
-        Items: [
-          {
-            id: 'inv-002',
-            department: 'Baca',
-          },
-        ],
+        Items: [ {
+          id: 'inv-002',
+          department: 'Baca',
+        }, ],
         LastEvaluatedKey: {
           id: 'inv-002',
           department: 'Baca',
@@ -84,12 +81,10 @@ describe('resources/api/v2/invoices', () => {
         },
       });
       expect(JSON.parse(response.body)).toEqual({
-        invoices: [
-          {
-            id: 'inv-002',
-            department: 'Baca',
-          },
-        ],
+        invoices: [ {
+          id: 'inv-002',
+          department: 'Baca',
+        }, ],
         lastItem: Buffer.from(JSON.stringify({
           id: 'inv-002',
           department: 'Baca',
@@ -118,7 +113,41 @@ describe('resources/api/v2/invoices', () => {
       });
     });
 
-    it('Uses Scan with department/date filter when multiple departments are requested', async () => {
+    it('Returns 400 for an invalid single-department cursor shape', async () => {
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        queryStringParameters: {
+          departments: 'Baca',
+          lastKey: Buffer.from(JSON.stringify({
+            id: 'inv-001',
+            department: 'Baca',
+          })).toString('base64'),
+        },
+      });
+      mockUserRequest(req, true, true, true);
+
+      expect(await main(req)).toEqual({
+        statusCode: 400,
+        multiValueHeaders: {},
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          errors: [ 'lastKey', ],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
+    it('Uses Query for each department when multiple departments are requested', async () => {
+      const cursor = {
+        mode: 'multi',
+        departmentKeys: {
+          Baca: null,
+          Crestone: null,
+        },
+      };
       const req = generateApiEvent({
         method: 'GET',
         path: '',
@@ -126,17 +155,13 @@ describe('resources/api/v2/invoices', () => {
           departments: 'Baca,Crestone',
           before: '2026-05-01',
           after: '2026-01-01',
+          lastKey: Buffer.from(JSON.stringify(cursor)).toString('base64'),
         },
       });
       mockUserRequest(req, true, true, true);
 
-      DynamoDBDocumentClientMock.setResult('scan', {
-        Items: [
-          {
-            id: 'inv-003',
-            department: 'Crestone',
-          },
-        ],
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [],
       });
 
       const response = await main(req);
@@ -149,31 +174,48 @@ describe('resources/api/v2/invoices', () => {
         },
       });
       expect(JSON.parse(response.body)).toEqual({
-        invoices: [
-          {
-            id: 'inv-003',
-            department: 'Crestone',
-          },
-        ],
+        invoices: [],
         lastItem: null,
       });
 
-      expect(ScanCommand).toHaveBeenCalledWith({
+      expect(QueryCommand).toHaveBeenCalledTimes(2);
+      expect(QueryCommand).toHaveBeenCalledWith({
         TableName: 'TABLE_INVOICE_VAL',
-        Limit: 50,
-        ExclusiveStartKey: undefined,
-        FilterExpression: '#department IN (:dept0, :dept1) AND #endDate < :beforeDate AND #startDate > :afterDate',
+        IndexName: 'departmentIndex',
+        KeyConditionExpression: '#dept = :dept',
         ExpressionAttributeNames: {
-          '#department': 'department',
+          '#dept': 'department',
           '#endDate': 'endDate',
           '#startDate': 'startDate',
         },
         ExpressionAttributeValues: {
-          ':dept0': 'Baca',
-          ':dept1': 'Crestone',
+          ':dept': 'Baca',
           ':beforeDate': '2026-05-01',
           ':afterDate': '2026-01-01',
         },
+        FilterExpression: '#endDate < :beforeDate AND #startDate > :afterDate',
+        ScanIndexForward: false,
+        Limit: 50,
+        ExclusiveStartKey: undefined,
+      });
+      expect(QueryCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_INVOICE_VAL',
+        IndexName: 'departmentIndex',
+        KeyConditionExpression: '#dept = :dept',
+        ExpressionAttributeNames: {
+          '#dept': 'department',
+          '#endDate': 'endDate',
+          '#startDate': 'startDate',
+        },
+        ExpressionAttributeValues: {
+          ':dept': 'Crestone',
+          ':beforeDate': '2026-05-01',
+          ':afterDate': '2026-01-01',
+        },
+        FilterExpression: '#endDate < :beforeDate AND #startDate > :afterDate',
+        ScanIndexForward: false,
+        Limit: 50,
+        ExclusiveStartKey: undefined,
       });
     });
 

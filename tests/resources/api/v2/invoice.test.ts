@@ -3,7 +3,6 @@ import {
 } from 'vitest';
 
 import { S3Mock } from '../../../../__mocks__/@aws-sdk/client-s3';
-
 import {
   DynamoDBDocumentClientMock,
   GetCommand,
@@ -39,13 +38,21 @@ describe('resources/api/v2/invoice', () => {
       });
       S3Mock.setResult('get', {
         Body: {
-          transformToByteArray: async () => Uint8Array.from([ 1, 2, 3, ]),
+          transformToByteArray: async () => Uint8Array.from([
+            1,
+            2,
+            3,
+          ]),
         },
       });
 
       expect(await main(req)).toEqual({
         statusCode: 200,
-        body: Buffer.from([ 1, 2, 3, ]).toString('base64'),
+        body: Buffer.from([
+          1,
+          2,
+          3,
+        ]).toString('base64'),
         isBase64Encoded: true,
         multiValueHeaders: {
           'content-disposition': [ 'attachment; filename="invoice-inv-001.pdf"', ],
@@ -212,6 +219,83 @@ describe('resources/api/v2/invoice', () => {
         },
         UpdateExpression: 'SET #paidDate = :paidDate',
         ReturnValues: 'ALL_NEW',
+      });
+    });
+
+    it('Clears paidDate when paidDate is null', async () => {
+      const req = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+        pathParameters: {
+          id: 'inv-001',
+        },
+        body: JSON.stringify({
+          paidDate: null,
+        }),
+      });
+      mockUserRequest(req, true, true, true);
+
+      DynamoDBDocumentClientMock.setResult('get', {
+        Item: {
+          id: 'inv-001',
+          department: 'Baca',
+          paidDate: '2026-04-29',
+        },
+      });
+      DynamoDBDocumentClientMock.setResult('update', {
+        Attributes: {
+          id: 'inv-001',
+          paidDate: undefined,
+        },
+      });
+
+      expect(await main(req)).toEqual({
+        statusCode: 200,
+        body: JSON.stringify({
+          id: 'inv-001',
+          department: 'Baca',
+          paidDate: undefined,
+        }),
+        multiValueHeaders: {},
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      expect(UpdateCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_INVOICE_VAL',
+        Key: {
+          id: 'inv-001',
+        },
+        ExpressionAttributeNames: {
+          '#paidDate': 'paidDate',
+        },
+        UpdateExpression: 'REMOVE #paidDate',
+        ReturnValues: 'ALL_NEW',
+      });
+    });
+
+    it('Returns 400 when no updatable fields are provided', async () => {
+      const req = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+        pathParameters: {
+          id: 'inv-001',
+        },
+        body: JSON.stringify({}),
+      });
+      mockUserRequest(req, true, true, true);
+
+      expect(await main(req)).toEqual({
+        statusCode: 400,
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          errors: 'No updatable fields were provided',
+        }),
+        multiValueHeaders: {},
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
     });
   });

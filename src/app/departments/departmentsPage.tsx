@@ -40,6 +40,10 @@ export default function DepartmentsPage() {
     selectedDepartment,
     setSelectedDepartment,
   ] = useState<Department | null>(null);
+  const [
+    settingsFormVersion,
+    setSettingsFormVersion,
+  ] = useState(0);
   const loggedInUser = useContext(LoggedInUserContext);
   const addAlert = useContext(AddAlertContext);
 
@@ -171,9 +175,12 @@ export default function DepartmentsPage() {
         <Tab.Content>
           <Tab.Pane eventKey='settings'>
             <DepartmentSettingsForm
+              key={`${selectedDepartment.id}-${settingsFormVersion}`}
               department={selectedDepartment}
               onSuccess={handleSettingsUpdate}
-              onCancel={() => {}}
+              onCancel={() => {
+                setSettingsFormVersion(prev => prev + 1);
+              }}
             />
           </Tab.Pane>
 
