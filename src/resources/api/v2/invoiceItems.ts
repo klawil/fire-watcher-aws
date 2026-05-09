@@ -25,7 +25,7 @@ import { typedGet } from '@/utils/backend/dynamoTyped';
 import { getTwilioItems } from '@/utils/backend/twilio';
 import { getLogger } from '@/utils/common/logger';
 
-const logger = getLogger('resources/api/v2/invoiceItems');
+const logger = getLogger('api/v2/invoiceItems');
 
 const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   event,
