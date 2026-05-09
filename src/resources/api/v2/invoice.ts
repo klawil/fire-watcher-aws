@@ -1,6 +1,9 @@
 import {
   GetObjectCommand, S3Client
 } from '@aws-sdk/client-s3';
+import {
+  getSignedUrl
+} from '@aws-sdk/s3-request-presigner';
 
 import {
   LambdaApiFunction,
@@ -9,6 +12,7 @@ import {
 import { validateRequest } from './_utils';
 
 import {
+  api302Body,
   api401Body, api403Body, api404Body, api500Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
@@ -50,10 +54,6 @@ function isS3NotFoundError(error: unknown) {
     err.Code === 'NoSuchKey' ||
     err.code === 'NoSuchKey' ||
     err.$metadata?.httpStatusCode === 404;
-}
-
-function sanitizeInvoiceFilenamePart(id: string) {
-  return id.replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userPerms) {
@@ -133,29 +133,19 @@ const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userP
   }
 
   try {
-    const safeInvoiceId = sanitizeInvoiceFilenamePart(invoiceId);
-    const s3Result = await s3.send(new GetObjectCommand({
+    const s3Destination = await getSignedUrl(s3, new GetObjectCommand({
       Bucket: BUCKET_EMAIL(),
       Key: invoice.s3Location,
-    }));
-
-    if (!s3Result.Body) {
-      return [
-        404,
-        api404Body,
-      ];
-    }
-
-    const pdfBuffer = await s3Result.Body.transformToByteArray();
+    }), {
+      expiresIn: 60, // URL valid for 60 seconds
+    });
 
     return [
-      200,
-      Buffer.from(pdfBuffer),
+      302,
+      api302Body,
       {
-        'content-disposition': [ `attachment; filename="invoice-${safeInvoiceId}.pdf"`, ],
-        'content-type': [ 'application/pdf', ],
+        'location': [ s3Destination, ],
       },
-      'application/pdf',
     ];
   } catch (e) {
     logger.error(`Error retrieving invoice ${invoiceId} from S3`, e);

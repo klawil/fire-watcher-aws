@@ -162,17 +162,24 @@ export default function DepartmentsPage() {
     }
 
     {selectedDepartment &&
-      <Tab.Container defaultActiveKey='settings'>
+      <Tab.Container defaultActiveKey='invoices'>
         <Nav variant='tabs' className='mb-3'>
           <Nav.Item>
-            <Nav.Link eventKey='settings'>Settings</Nav.Link>
+            <Nav.Link eventKey='invoices'>Invoices</Nav.Link>
           </Nav.Item>
           <Nav.Item>
-            <Nav.Link eventKey='invoices'>Invoices</Nav.Link>
+            <Nav.Link eventKey='settings'>Settings</Nav.Link>
           </Nav.Item>
         </Nav>
 
         <Tab.Content>
+          <Tab.Pane eventKey='invoices'>
+            <InvoiceList
+              department={selectedDepartment.id}
+              isDistrictAdmin={userPerms.isDistrictAdmin}
+            />
+          </Tab.Pane>
+
           <Tab.Pane eventKey='settings'>
             <DepartmentSettingsForm
               key={`${selectedDepartment.id}-${settingsFormVersion}`}
@@ -181,13 +188,6 @@ export default function DepartmentsPage() {
               onCancel={() => {
                 setSettingsFormVersion(prev => prev + 1);
               }}
-            />
-          </Tab.Pane>
-
-          <Tab.Pane eventKey='invoices'>
-            <InvoiceList
-              department={selectedDepartment.id}
-              isDistrictAdmin={userPerms.isDistrictAdmin}
             />
           </Tab.Pane>
         </Tab.Content>

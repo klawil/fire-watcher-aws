@@ -1,4 +1,5 @@
 import {
+  api302Body,
   api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
 
@@ -181,10 +182,9 @@ export type GetInvoiceApi = {
   responses: {
 
     /**
-     * @contentType application/pdf
-      * Binary response. Do not use `typeFetch`; use `fetch` and read as `blob()` / `arrayBuffer()`.
+     * Redirect to a pre-signed S3 URL for the invoice PDF. The URL is valid for 1 minute.
      */
-    200: Buffer;
+    302: typeof api302Body;
 
     /**
      * @contentType application/json

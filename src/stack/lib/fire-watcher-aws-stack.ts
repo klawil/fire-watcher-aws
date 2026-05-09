@@ -1307,6 +1307,7 @@ export class FireWatcherAwsStack extends Stack {
       deployOptions: {
         loggingLevel: apigateway.MethodLoggingLevel.ERROR,
       },
+      binaryMediaTypes: [ 'application/pdf', ],
     });
     const apiResource = api.root.addResource('api');
 

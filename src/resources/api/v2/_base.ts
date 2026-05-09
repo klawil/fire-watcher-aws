@@ -73,8 +73,8 @@ export async function handleResourceApi(
       body: '',
     };
 
-    if (Buffer.isBuffer(responseBody)) {
-      response.body = responseBody.toString('base64');
+    if (Buffer.isBuffer(responseBody) || contentType === 'application/pdf') {
+      response.body = (responseBody as Buffer).toString('base64');
       response.isBase64Encoded = true;
     } else if (typeof responseBody === 'string') {
       response.body = responseBody;

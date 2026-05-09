@@ -186,25 +186,12 @@ export default function InvoiceList({
 
   const handleDownload = useCallback(async (invoiceId: string) => {
     try {
-      const response = await fetch(`/api/v2/invoices/${invoiceId}/`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        logger.error('Failed to download invoice', response.status);
-        setError('Failed to download invoice');
-        return;
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = `/api/v2/invoices/${invoiceId}/`;
       link.download = `invoice-${invoiceId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (e) {
       logger.error('Error downloading invoice', e);
       setError('Failed to download invoice');
