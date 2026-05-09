@@ -212,7 +212,7 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
   if (typeof body.paidDate === 'undefined') {
     return [
       400,
-      generateApi400Body('No updatable fields were provided'),
+      generateApi400Body([ 'No updatable fields were provided', ]),
     ];
   }
 

@@ -290,7 +290,7 @@ describe('resources/api/v2/invoice', () => {
         statusCode: 400,
         body: JSON.stringify({
           message: 'Invalid request body',
-          errors: 'No updatable fields were provided',
+          errors: [ 'No updatable fields were provided', ],
         }),
         multiValueHeaders: {},
         headers: {
