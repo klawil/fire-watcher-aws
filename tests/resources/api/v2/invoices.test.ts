@@ -63,6 +63,33 @@ describe('resources/api/v2/invoices', () => {
       });
     });
 
+    it('Returns 400 for impossible before and after ranges', async () => {
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        queryStringParameters: {
+          before: '2026-01-01',
+          after: '2026-05-01',
+        },
+      });
+      mockUserRequest(req, true, true, true);
+
+      expect(await main(req)).toEqual({
+        statusCode: 400,
+        multiValueHeaders: {},
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          errors: [
+            'before',
+            'after',
+          ],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
     it('Uses Query with limit, cursor, and date filters for a single department', async () => {
       const cursor = {
         id: 'inv-001',

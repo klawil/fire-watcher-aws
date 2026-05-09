@@ -22,11 +22,6 @@ import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('api/v2/invoices');
 
-function getTodayDateStringUtc() {
-  return new Date().toISOString()
-    .slice(0, 10);
-}
-
 interface InvoiceCursorKey {
   id: string;
   department: string;
@@ -133,6 +128,20 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
   const beforeDate = query.before;
   const afterDate = query.after;
   const lastKeyParam = query.lastKey;
+
+  if (
+    typeof beforeDate === 'string' &&
+    typeof afterDate === 'string' &&
+    beforeDate < afterDate
+  ) {
+    return [
+      400,
+      generateApi400Body([
+        'before',
+        'after',
+      ]),
+    ];
+  }
 
   // Parse and validate limit / lastKey
   const limit = typeof query.limit === 'number'
@@ -382,15 +391,6 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
       }
       allInvoices = [];
       responseLastItem = null;
-    }
-
-    // Defensive fallback for old data without dates.
-    if (beforeDate && afterDate && beforeDate < afterDate) {
-      logger.warn('Received before date earlier than after date', {
-        beforeDate,
-        afterDate,
-        today: getTodayDateStringUtc(),
-      });
     }
 
     return [
