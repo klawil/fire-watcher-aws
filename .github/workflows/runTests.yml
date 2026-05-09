@@ -38,6 +38,10 @@ jobs:
         run: |
           npm run lint
 
+      - name: Type Check
+        run: |
+          npm run type-check
+
       - name: Test
         continue-on-error: true
         run: |

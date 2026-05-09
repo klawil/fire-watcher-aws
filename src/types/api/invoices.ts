@@ -1,8 +1,12 @@
 import {
-  api400Body, api401Body, api403Body, api500Body
+  api302Body,
+  api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
 
-import { TwilioAccounts } from '@/types/backend/department';
+import {
+  TwilioAccounts,
+  validPhoneNumberAccounts
+} from '@/types/backend/department';
 import { Validator } from '@/types/backend/validation';
 
 export interface InvoiceItem {
@@ -22,6 +26,22 @@ export interface Invoice {
   generatedDate?: string;
   paidDate?: string;
   s3Location?: string;
+  dueDate?: string;
+}
+
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+const invoiceIdRegex = /^[A-Za-z0-9_-]+$/;
+const invoiceDepartmentsRegex = /^[^,]+(?:,[^,]+)*$/;
+
+function normalizeInvoiceDepartments(value: string) {
+  const departments = value.split(',')
+    .map(v => v.trim());
+
+  if (departments.some(v => v.length === 0)) {
+    return '';
+  }
+
+  return departments.join(',');
 }
 
 /**
@@ -35,6 +55,7 @@ export type ListInvoicesApi = {
   method: 'GET';
   query: {
     department?: Exclude<TwilioAccounts, ''> | 'all';
+    departments?: string;
 
     /**
      * Find invoices with an end date before this date, format YYYY-MM-DD
@@ -45,6 +66,16 @@ export type ListInvoicesApi = {
      * Find invoices with a start date after this date, format YYYY-MM-DD
      */
     after?: string;
+
+    /**
+     * Maximum invoices returned in a single response
+     */
+    limit?: number;
+
+    /**
+     * Base64-encoded pagination cursor returned from the previous request
+     */
+    lastKey?: string;
   };
   responses: {
 
@@ -74,11 +105,68 @@ export type ListInvoicesApi = {
     /**
      * @contentType application/json
      */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
   security: [{
     cookie: [],
   }];
+};
+
+export const listInvoicesApiQueryValidator: Validator<ListInvoicesApi['query']> = {
+  department: {
+    required: false,
+    types: {
+      string: {
+        exact: [
+          'all',
+          ...validPhoneNumberAccounts,
+        ],
+      },
+    },
+  },
+  departments: {
+    required: false,
+    parse: normalizeInvoiceDepartments,
+    types: {
+      string: {
+        regex: invoiceDepartmentsRegex,
+      },
+    },
+  },
+  before: {
+    required: false,
+    types: {
+      string: {
+        regex: dateRegex,
+      },
+    },
+  },
+  after: {
+    required: false,
+    types: {
+      string: {
+        regex: dateRegex,
+      },
+    },
+  },
+  limit: {
+    required: false,
+    parse: v => Number(v),
+    types: {
+      number: {},
+    },
+  },
+  lastKey: {
+    required: false,
+    types: {
+      string: {},
+    },
+  },
 };
 
 /**
@@ -94,9 +182,9 @@ export type GetInvoiceApi = {
   responses: {
 
     /**
-     * @contentType application/pdf
+     * Redirect to a pre-signed S3 URL for the invoice PDF. The URL is valid for 1 minute.
      */
-    200: Buffer;
+    302: typeof api302Body;
 
     /**
      * @contentType application/json
@@ -116,6 +204,11 @@ export type GetInvoiceApi = {
     /**
      * @contentType application/json
      */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
   security: [{
@@ -123,16 +216,93 @@ export type GetInvoiceApi = {
   }];
 };
 
+export const invoiceApiParamsValidator: Validator<GetInvoiceApi['params']> = {
+  id: {
+    required: true,
+    types: {
+      string: {
+        regex: invoiceIdRegex,
+      },
+    },
+  },
+};
+
 /**
- * Get a departments invoiced items for a given time period
+ * Update invoice paid status
+ * @summary Update Invoice
+ * @tags Invoices
+ * @body.contentType application/json
+ */
+export type UpdateInvoiceApi = {
+  path: '/api/v2/invoices/{id}/';
+  method: 'PATCH';
+  params: { id: string; };
+  body: {
+
+    /**
+     * Date the invoice was paid, format YYYY-MM-DD. Set to null to unmark as paid.
+     */
+    paidDate?: string | null;
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: Invoice;
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    cookie: [],
+  }];
+};
+
+export const updateInvoiceApiBodyValidator: Validator<UpdateInvoiceApi['body']> = {
+  paidDate: {
+    required: false,
+    types: {
+      string: {
+        regex: dateRegex,
+      },
+      null: {},
+    },
+  },
+};
+
+/**
+ * Get invoice itemized costs for the invoice's department in a given time period
  * @summary Get Invoice Items
  * @tags Invoices
  * @body.contentType application/json
  */
 export type GetInvoiceItemsApi = {
-  path: '/api/v2/invoices/{department}/items/';
+  path: '/api/v2/invoices/{id}/items/';
   method: 'GET';
-  params: { department: Exclude<TwilioAccounts, ''> | 'all'; }
+  params: { id: string; }
   query: {
     month?: 'this' | 'last';
 
@@ -180,6 +350,11 @@ export type GetInvoiceItemsApi = {
     /**
      * @contentType application/json
      */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
   security: [{
@@ -188,17 +363,11 @@ export type GetInvoiceItemsApi = {
 };
 
 export const getInvoiceItemsApiParamsValidator: Validator<GetInvoiceItemsApi['params']> = {
-  department: {
+  id: {
     required: true,
     types: {
       string: {
-        exact: [
-          'all',
-          'Baca',
-          'Crestone',
-          'NSCAD',
-          'Saguache',
-        ],
+        regex: invoiceIdRegex,
       },
     },
   },

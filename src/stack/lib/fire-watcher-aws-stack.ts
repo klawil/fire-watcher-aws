@@ -477,6 +477,17 @@ export class FireWatcherAwsStack extends Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    invoicesTable.addGlobalSecondaryIndex({
+      indexName: 'departmentIndex',
+      partitionKey: {
+        name: 'department',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'generatedDate',
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
     lambdaResources.tables.INVOICE = invoicesTable;
 
     dtrTable.addGlobalSecondaryIndex({
@@ -1296,6 +1307,7 @@ export class FireWatcherAwsStack extends Stack {
       deployOptions: {
         loggingLevel: apigateway.MethodLoggingLevel.ERROR,
       },
+      binaryMediaTypes: [ 'application/pdf', ],
     });
     const apiResource = api.root.addResource('api');
 
@@ -1459,16 +1471,39 @@ export class FireWatcherAwsStack extends Stack {
       // invoices
       {
         pathPart: 'invoices',
-        api: false,
+        fileName: 'invoices',
+        api: true,
+        methods: [ 'GET', ],
+        tables: [ {
+          table: 'INVOICE',
+          readonly: true,
+        }, ],
         next: [ {
           pathPart: '{id}',
-          api: false,
+          fileName: 'invoice',
+          api: true,
+          methods: [
+            'GET',
+            'PATCH',
+          ],
+          tables: [ {
+            table: 'INVOICE',
+            readonly: false,
+          }, ],
+          buckets: [ {
+            bucket: 'EMAIL',
+            readonly: true,
+          }, ],
           next: [ {
             pathPart: 'items',
             fileName: 'invoiceItems',
             api: true,
             methods: [ 'GET', ],
             secrets: [ 'TWILIO', ],
+            tables: [ {
+              table: 'INVOICE',
+              readonly: true,
+            }, ],
           }, ],
         }, ],
       },

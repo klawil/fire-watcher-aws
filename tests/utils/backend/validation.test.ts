@@ -207,6 +207,16 @@ describe('utils/backend/validation', () => {
     });
 
     it('Flags exact value requirement failures', () => {
+      const validatorWithExactNumber: Validator<TestObject> = {
+        ...testObjectValidator,
+        numberReq: {
+          required: true,
+          types: {
+            number: { exact: [ 1234, ], },
+          },
+        },
+      };
+
       const [
         parsed,
         errs,
@@ -219,15 +229,7 @@ describe('utils/backend/validation', () => {
           'value',
           'other',
         ],
-      }, {
-        ...testObjectValidator,
-        numberReq: {
-          required: true,
-          types: {
-            number: { exact: [ 1234, ], },
-          },
-        },
-      });
+      }, validatorWithExactNumber);
 
       expect(parsed).toEqual(null);
       expect(errs).toEqual([
