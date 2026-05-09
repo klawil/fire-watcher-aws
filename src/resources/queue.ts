@@ -983,7 +983,7 @@ async function parseRecord(event: lambda.SQSRecord) {
       response = await handlePage(body);
       break;
     default:
-      throw new Error(`Unkown body - ${JSON.stringify(body)}`);
+      throw new Error(`Unknown body - ${JSON.stringify(body)}`);
   }
   return response;
 }

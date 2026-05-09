@@ -701,7 +701,7 @@ describe('resources/s3', () => {
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
-      vi.mocked(typedQuery).mockResolvedValue({
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
         Items: [
           createDtrItem,
           getFileItem(
@@ -755,7 +755,7 @@ describe('resources/s3', () => {
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
-      vi.mocked(typedQuery).mockResolvedValue({
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
         Items: [
           createDtrItem,
           getFileItem(
@@ -811,7 +811,7 @@ describe('resources/s3', () => {
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
-      vi.mocked(typedQuery).mockResolvedValue({
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
         Items: [
           createDtrItem,
           getFileItem(
@@ -864,7 +864,7 @@ describe('resources/s3', () => {
 
       S3Mock.setResult('head', createDtrPageHeadInfo);
 
-      vi.mocked(typedQuery).mockResolvedValue({
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
         Items: [
           createDtrItem,
           getFileItem(

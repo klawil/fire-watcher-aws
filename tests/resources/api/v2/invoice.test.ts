@@ -111,6 +111,42 @@ describe('resources/api/v2/invoice', () => {
   });
 
   describe('PATCH', () => {
+    testUserAuth({
+      method: 'PATCH',
+      path: '',
+      pathParameters: {
+        id: 'inv-001',
+      },
+      body: JSON.stringify({
+        paidDate: '2026-05-01',
+      }),
+    }, main, true);
+
+    it('Returns 403 for PATCH when user is not district admin', async () => {
+      const req = generateApiEvent({
+        method: 'PATCH',
+        path: '',
+        pathParameters: {
+          id: 'inv-001',
+        },
+        body: JSON.stringify({
+          paidDate: '2026-05-01',
+        }),
+      });
+      mockUserRequest(req, true, true, false);
+
+      expect(await main(req)).toEqual({
+        statusCode: 403,
+        body: JSON.stringify({
+          message: 'Missing Authentication Token',
+        }),
+        multiValueHeaders: {},
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
     it('Returns 400 for future paidDate values', async () => {
       const req = generateApiEvent({
         method: 'PATCH',
