@@ -18,12 +18,22 @@
 
 - Install deps: `npm install`
 - Local frontend dev server: `npm run dev`
+- Type check: `npm run type-check`
 - Lint: `npm run lint`
 - Tests: `npm run test`
 - Build production static export: `npm run build`
 - Regenerate OpenAPI spec: `npm run document`
 - Synthesize CDK: `npm run synth`
 - Diff CDK changes: `npm run diff`
+
+## Interpreting `npm run synth` Results
+
+- Treat `npm run synth` as passing only when the command exits with code `0`.
+- Large CloudFormation YAML output is expected and does not mean failure by itself.
+- If terminal output is truncated or unavailable, rerun synth with captured logs and check the exit code explicitly, for example: `npm run synth > /tmp/fire-watcher-synth.log 2>&1; echo $?`.
+- On failure, identify the first error line in synth output and map it back to the owning CDK construct, usually in `src/stack/lib/fire-watcher-aws-stack.ts`.
+- Use `npm run diff` after synth passes to review intended infrastructure changes and catch accidental resource updates before finishing.
+- Do not treat warning-only output as a synth failure unless the command exits non-zero.
 
 ## Required Setup Before Lint/Test
 
@@ -57,4 +67,4 @@
 
 - For UI work, inspect the matching page in `src/app` and the nearest reusable component in `src/components` before editing.
 - For backend/API work, inspect the handler, the matching type definition in `src/types/api`, and the CDK wiring if permissions or environment variables are involved.
-- After each code change, iterate until all of these commands pass: `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.
+- After each code change, iterate until all of these commands pass in this order: `npm run type-check`, `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.

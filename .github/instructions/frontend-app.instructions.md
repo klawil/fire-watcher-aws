@@ -17,4 +17,5 @@ applyTo:
 - This app is built as a static export in production. If a change depends on server-only runtime behavior, verify it still fits the `next.config.ts` export model and the local rewrite behavior.
 - Keep UI changes consistent with the existing React Bootstrap usage unless the surrounding feature already uses a different local pattern.
 - When changing a screen that depends on API data, verify the backend contract still matches the frontend assumptions instead of patching around mismatches in the UI.
-- After each frontend change, iterate until all of these commands pass: `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.
+- After each frontend change, iterate until all of these commands pass in this order: `npm run type-check`, `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.
+- Consider `npm run synth` successful only on exit code `0`; verbose template output is expected, and truncated output should be rerun with captured logs plus explicit exit-code checking.

@@ -16,7 +16,8 @@
     "copy-constants": "mv src/utils/backend/hidden-constants-example.ts src/utils/backend/hidden-constants.ts",
     "deploy": "npm run clean && npm run document && npm run test && npm run build && cdk deploy --all",
     "deploy-frontend": "DEPLOY_FRONTEND=y npm run deploy",
-    "test": "vitest run"
+    "test": "vitest run",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-athena": "^3.840.0",
