@@ -2,7 +2,10 @@ import {
   api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
 
-import { TwilioAccounts } from '@/types/backend/department';
+import {
+  TwilioAccounts,
+  validPhoneNumberAccounts
+} from '@/types/backend/department';
 import { Validator } from '@/types/backend/validation';
 
 export interface InvoiceItem {
@@ -109,10 +112,7 @@ export const listInvoicesApiQueryValidator: Validator<ListInvoicesApi['query']> 
       string: {
         exact: [
           'all',
-          'Baca',
-          'Crestone',
-          'NSCAD',
-          'Saguache',
+          ...validPhoneNumberAccounts,
         ],
       },
     },
