@@ -16,7 +16,10 @@ import {
   getInvoiceItemsApiParamsValidator,
   getInvoiceItemsApiQueryValidator
 } from '@/types/api/invoices';
-import { TwilioAccounts } from '@/types/backend/department';
+import {
+  PhoneNumberAccount,
+  validPhoneNumberAccounts
+} from '@/types/backend/department';
 import { TABLE_INVOICE } from '@/types/backend/environment';
 import { typedGet } from '@/utils/backend/dynamoTyped';
 import { getTwilioItems } from '@/utils/backend/twilio';
@@ -87,6 +90,7 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   // Make sure the user can access this invoice's department
   if (
     typeof invoice.department !== 'string' ||
+    !validPhoneNumberAccounts.includes(invoice.department as PhoneNumberAccount) ||
     (
       !userPerms.isDistrictAdmin &&
       !userPerms.adminDepartments.includes(
@@ -99,6 +103,8 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
       api403Body,
     ];
   }
+
+  const department = invoice.department as PhoneNumberAccount;
 
   // Get the timeframe that we should use
   let endDate = new Date();
@@ -160,15 +166,14 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   }
 
   // Get the Twilio auth information
-  const twilioAccount: TwilioAccounts = invoice.department as TwilioAccounts;
   const twilioSecret = await getTwilioSecret();
-  const accountSid = twilioSecret[`accountSid${twilioAccount}`];
-  const authToken = twilioSecret[`authToken${twilioAccount}`];
+  const accountSid = twilioSecret[`accountSid${department}`];
+  const authToken = twilioSecret[`authToken${department}`];
   if (
     typeof accountSid === 'undefined' ||
     typeof authToken === 'undefined'
   ) {
-    throw new Error(`Unable to find auth for account ${invoice.department} - ${twilioAccount}`);
+    throw new Error(`Unable to find auth for account ${department}`);
   }
 
   // Get the twilio cost information
