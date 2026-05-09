@@ -273,9 +273,17 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
       ];
     }
 
+    const updatedInvoice: Invoice = {
+      ...invoiceResult.Item,
+      ...result.Attributes,
+    };
+    if (body.paidDate === null) {
+      delete updatedInvoice.paidDate;
+    }
+
     return [
       200,
-      result.Attributes,
+      updatedInvoice,
     ];
   } catch (e) {
     logger.error(`Error updating invoice ${invoiceId}`, e);
