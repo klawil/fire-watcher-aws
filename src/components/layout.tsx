@@ -105,6 +105,8 @@ export default function CofrnLayout({
             />
           </Navbar.Brand>
           <Nav.Link className='mx-4' href='/about'>About Us</Nav.Link>
+          <Nav.Link className='mx-4' href='/about/privacy-policy'>Privacy Policy</Nav.Link>
+          <Nav.Link className='mx-4' href='/about/terms-of-service'>Terms of Service</Nav.Link>
           <Navbar.Text className='mx-4'>© 2025 First Responder Notifications, LLC</Navbar.Text>
         </Container>
       </Navbar>

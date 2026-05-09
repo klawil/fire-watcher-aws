@@ -880,7 +880,10 @@ export class FireWatcherAwsStack extends Stack {
     // Create the logic for receiving emails
     new ses.ReceiptRuleSet(this, 'cofrn-ses-rulest', {
       rules: [ {
-        recipients: [ `billing@${emailDomain}`, ],
+        recipients: [
+          `billing@${emailDomain}`,
+          `help@${emailDomain}`,
+        ],
         actions: [
           new sesActions.S3({
             bucket: emailS3,
