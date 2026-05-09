@@ -2,7 +2,10 @@ import {
   describe, expect, it, vi
 } from 'vitest';
 
-import { PutMetricDataCommand } from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
+import {
+  CloudWatchClientMock,
+  PutMetricDataCommand
+} from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
 import {
   DynamoDBDocumentClientMock,
   ScanCommand, UpdateCommand
@@ -199,6 +202,39 @@ describe('resources/api/v2/heartbeats', () => {
           'Content-Type': 'application/json',
         },
       });
+    });
+
+    it('Returns 400 when code value does not match API_CODE', async () => {
+      const req = generateApiEvent({
+        method: 'POST',
+        path: '',
+        body: JSON.stringify({
+          code: 'WRONG_CODE',
+          Server: 'test',
+          IsPrimary: true,
+          IsActive: true,
+        }),
+      });
+
+      const res = await main(req);
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('Throws when CloudWatch metric submission fails', async () => {
+      CloudWatchClientMock.send.mockRejectedValueOnce(new Error('cloudwatch down'));
+
+      const req = generateApiEvent({
+        method: 'POST',
+        path: '',
+        body: JSON.stringify({
+          code: process.env.API_CODE,
+          Server: 'test',
+          IsPrimary: true,
+          IsActive: true,
+        }),
+      });
+
+      await expect(main(req)).rejects.toThrow('cloudwatch down');
     });
   });
 
