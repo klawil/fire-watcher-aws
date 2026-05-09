@@ -273,14 +273,9 @@ const PATCH: LambdaApiFunction<UpdateInvoiceApi> = async function (event, user, 
       ];
     }
 
-    const updatedInvoice: Invoice = {
-      ...invoiceResult.Item,
-      ...result.Attributes,
-    };
-
     return [
       200,
-      updatedInvoice,
+      result.Attributes,
     ];
   } catch (e) {
     logger.error(`Error updating invoice ${invoiceId}`, e);

@@ -189,6 +189,7 @@ describe('resources/api/v2/invoice', () => {
       DynamoDBDocumentClientMock.setResult('update', {
         Attributes: {
           id: 'inv-001',
+          department: 'Baca',
           paidDate: '2026-05-01',
         },
       });
@@ -245,7 +246,7 @@ describe('resources/api/v2/invoice', () => {
       DynamoDBDocumentClientMock.setResult('update', {
         Attributes: {
           id: 'inv-001',
-          paidDate: undefined,
+          department: 'Baca',
         },
       });
 
@@ -254,7 +255,6 @@ describe('resources/api/v2/invoice', () => {
         body: JSON.stringify({
           id: 'inv-001',
           department: 'Baca',
-          paidDate: undefined,
         }),
         multiValueHeaders: {},
         headers: {

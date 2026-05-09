@@ -8,14 +8,17 @@ import {
 
 import { getTwilioSecret } from '@/deprecated/utils/general';
 import {
-  api401Body, api403Body, generateApi400Body
+  api401Body, api403Body, api404Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
   GetInvoiceItemsApi,
+  Invoice,
   getInvoiceItemsApiParamsValidator,
   getInvoiceItemsApiQueryValidator
 } from '@/types/api/invoices';
 import { TwilioAccounts } from '@/types/backend/department';
+import { TABLE_INVOICE } from '@/types/backend/environment';
+import { typedGet } from '@/utils/backend/dynamoTyped';
 import { getTwilioItems } from '@/utils/backend/twilio';
 import { getLogger } from '@/utils/common/logger';
 
@@ -64,10 +67,32 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
     ];
   }
 
-  // Make sure the user can access this department
+  // Look up the invoice to determine the department
+  const invoiceResult = await typedGet<Invoice>({
+    TableName: TABLE_INVOICE(),
+    Key: {
+      id: params.id,
+    },
+  });
+
+  if (!invoiceResult.Item) {
+    return [
+      404,
+      api404Body,
+    ];
+  }
+
+  const invoice = invoiceResult.Item;
+
+  // Make sure the user can access this invoice's department
   if (
-    !userPerms.isDistrictAdmin &&
-    (params.id === 'all' || !userPerms.adminDepartments.includes(params.id))
+    typeof invoice.department !== 'string' ||
+    (
+      !userPerms.isDistrictAdmin &&
+      !userPerms.adminDepartments.includes(
+        invoice.department as typeof userPerms.adminDepartments[number]
+      )
+    )
   ) {
     return [
       403,
@@ -135,9 +160,7 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
   }
 
   // Get the Twilio auth information
-  const twilioAccount: TwilioAccounts = params.id === 'all'
-    ? ''
-    : params.id;
+  const twilioAccount: TwilioAccounts = invoice.department as TwilioAccounts;
   const twilioSecret = await getTwilioSecret();
   const accountSid = twilioSecret[`accountSid${twilioAccount}`];
   const authToken = twilioSecret[`authToken${twilioAccount}`];
@@ -145,7 +168,7 @@ const GET: LambdaApiFunction<GetInvoiceItemsApi> = async function (
     typeof accountSid === 'undefined' ||
     typeof authToken === 'undefined'
   ) {
-    throw new Error(`Unable to find auth for account ${params.id} - ${twilioAccount}`);
+    throw new Error(`Unable to find auth for account ${invoice.department} - ${twilioAccount}`);
   }
 
   // Get the twilio cost information

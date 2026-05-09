@@ -4,7 +4,8 @@ import {
 
 import {
   DynamoDBDocumentClientMock,
-  QueryCommand
+  QueryCommand,
+  ScanCommand
 } from '../../../../__mocks__/@aws-sdk/lib-dynamodb';
 
 import {
@@ -216,6 +217,91 @@ describe('resources/api/v2/invoices', () => {
         ScanIndexForward: false,
         Limit: 50,
         ExclusiveStartKey: undefined,
+      });
+    });
+
+    it('Uses Scan with ExclusiveStartKey for district admin with no departments filter', async () => {
+      const scanCursor = {
+        id: 'inv-001',
+      };
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        queryStringParameters: {
+          before: '2026-05-01',
+          after: '2026-01-01',
+          lastKey: Buffer.from(JSON.stringify(scanCursor)).toString('base64'),
+        },
+      });
+      mockUserRequest(req, true, true, true);
+
+      DynamoDBDocumentClientMock.setResult('scan', {
+        Items: [ {
+          id: 'inv-002',
+          department: 'Baca',
+        }, ],
+        LastEvaluatedKey: {
+          id: 'inv-002',
+        },
+      });
+
+      const response = await main(req);
+      expect(response).toEqual({
+        statusCode: 200,
+        multiValueHeaders: {},
+        body: response.body,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      expect(JSON.parse(response.body)).toEqual({
+        invoices: [ {
+          id: 'inv-002',
+          department: 'Baca',
+        }, ],
+        lastItem: Buffer.from(JSON.stringify({
+          id: 'inv-002',
+        })).toString('base64'),
+      });
+
+      expect(ScanCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_INVOICE_VAL',
+        Limit: 50,
+        ExclusiveStartKey: scanCursor,
+        FilterExpression: '#endDate < :beforeDate AND #startDate > :afterDate',
+        ExpressionAttributeNames: {
+          '#endDate': 'endDate',
+          '#startDate': 'startDate',
+        },
+        ExpressionAttributeValues: {
+          ':beforeDate': '2026-05-01',
+          ':afterDate': '2026-01-01',
+        },
+      });
+    });
+
+    it('Returns 400 for an invalid scan cursor shape', async () => {
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        queryStringParameters: {
+          lastKey: Buffer.from(JSON.stringify({
+            notId: 'something',
+          })).toString('base64'),
+        },
+      });
+      mockUserRequest(req, true, true, true);
+
+      expect(await main(req)).toEqual({
+        statusCode: 400,
+        multiValueHeaders: {},
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          errors: [ 'lastKey', ],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
     });
 

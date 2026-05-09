@@ -289,7 +289,7 @@ export const updateInvoiceApiBodyValidator: Validator<UpdateInvoiceApi['body']> 
 export type GetInvoiceItemsApi = {
   path: '/api/v2/invoices/{id}/items/';
   method: 'GET';
-  params: { id: Exclude<TwilioAccounts, ''> | 'all'; }
+  params: { id: string; }
   query: {
     month?: 'this' | 'last';
 
@@ -337,6 +337,11 @@ export type GetInvoiceItemsApi = {
     /**
      * @contentType application/json
      */
+    404: typeof api404Body;
+
+    /**
+     * @contentType application/json
+     */
     500: typeof api500Body;
   };
   security: [{
@@ -349,13 +354,7 @@ export const getInvoiceItemsApiParamsValidator: Validator<GetInvoiceItemsApi['pa
     required: true,
     types: {
       string: {
-        exact: [
-          'all',
-          'Baca',
-          'Crestone',
-          'NSCAD',
-          'Saguache',
-        ],
+        regex: invoiceIdRegex,
       },
     },
   },

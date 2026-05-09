@@ -32,6 +32,10 @@ interface InvoiceCursorKey {
   generatedDate: string;
 }
 
+interface ScanCursorKey {
+  id: string;
+}
+
 interface MultiDepartmentCursor {
   mode: 'multi';
   departmentKeys: Record<string, InvoiceCursorKey | null>;
@@ -46,6 +50,10 @@ function isInvoiceCursorKey(value: unknown): value is InvoiceCursorKey {
     typeof value.id === 'string' &&
     typeof value.department === 'string' &&
     typeof value.generatedDate === 'string';
+}
+
+function isScanCursorKey(value: unknown): value is ScanCursorKey {
+  return isRecord(value) && typeof value.id === 'string';
 }
 
 function getInvoiceCursorKey(item: Invoice): InvoiceCursorKey | null {
@@ -375,6 +383,14 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
         })).toString('base64')
         : null;
     } else {
+      if (typeof parsedLastKey !== 'undefined' && !isScanCursorKey(parsedLastKey)) {
+        return [
+          400,
+          generateApi400Body([ 'lastKey', ]),
+        ];
+      }
+
+      const scanCursor = parsedLastKey as ScanCursorKey | undefined;
       const scanFilterParts: string[] = [];
       const scanExpressionAttributeNames: Record<string, string> = {};
       const scanExpressionAttributeValues: Record<string, unknown> = {};
@@ -393,7 +409,7 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
       const scanResult = await typedScan<Invoice>({
         TableName: TABLE_INVOICE(),
         Limit: limit,
-        ExclusiveStartKey: undefined,
+        ExclusiveStartKey: scanCursor,
         ...scanFilterParts.length > 0
           ? {
             FilterExpression: scanFilterParts.join(' AND '),

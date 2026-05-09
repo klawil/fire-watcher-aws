@@ -1499,6 +1499,10 @@ export class FireWatcherAwsStack extends Stack {
             api: true,
             methods: [ 'GET', ],
             secrets: [ 'TWILIO', ],
+            tables: [ {
+              table: 'INVOICE',
+              readonly: true,
+            }, ],
           }, ],
         }, ],
       },
