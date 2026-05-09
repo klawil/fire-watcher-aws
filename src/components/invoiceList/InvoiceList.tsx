@@ -311,6 +311,7 @@ export default function InvoiceList({
                             size='sm'
                             onClick={() => handleDownload(invoice.id)}
                             title='Download PDF'
+                            aria-label='Download invoice PDF'
                           >
                             <BsDownload />
                           </Button>
