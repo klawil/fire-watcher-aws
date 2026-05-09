@@ -52,6 +52,10 @@ function isS3NotFoundError(error: unknown) {
     err.$metadata?.httpStatusCode === 404;
 }
 
+function sanitizeInvoiceFilenamePart(id: string) {
+  return id.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
 const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userPerms) {
   logger.debug('GET', ...arguments);
 
@@ -62,7 +66,7 @@ const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userP
       api401Body,
     ];
   }
-  if (!userPerms.isAdmin) {
+  if (!userPerms.isAdmin && !userPerms.isDistrictAdmin) {
     return [
       403,
       api403Body,
@@ -129,6 +133,7 @@ const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userP
   }
 
   try {
+    const safeInvoiceId = sanitizeInvoiceFilenamePart(invoiceId);
     const s3Result = await s3.send(new GetObjectCommand({
       Bucket: BUCKET_EMAIL(),
       Key: invoice.s3Location,
@@ -147,7 +152,7 @@ const GET: LambdaApiFunction<GetInvoiceApi> = async function (event, user, userP
       200,
       Buffer.from(pdfBuffer),
       {
-        'content-disposition': [ `attachment; filename="invoice-${invoiceId}.pdf"`, ],
+        'content-disposition': [ `attachment; filename="invoice-${safeInvoiceId}.pdf"`, ],
         'content-type': [ 'application/pdf', ],
       },
       'application/pdf',

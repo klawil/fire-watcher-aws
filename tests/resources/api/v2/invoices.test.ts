@@ -4,8 +4,7 @@ import {
 
 import {
   DynamoDBDocumentClientMock,
-  QueryCommand,
-  ScanCommand
+  QueryCommand
 } from '../../../../__mocks__/@aws-sdk/lib-dynamodb';
 
 import {
@@ -220,9 +219,15 @@ describe('resources/api/v2/invoices', () => {
       });
     });
 
-    it('Uses Scan with ExclusiveStartKey for district admin with no departments filter', async () => {
-      const scanCursor = {
-        id: 'inv-001',
+    it('Uses per-department queries for district admin with no departments filter', async () => {
+      const cursor = {
+        mode: 'multi',
+        departmentKeys: {
+          Baca: null,
+          NSCAD: null,
+          Crestone: null,
+          Saguache: null,
+        },
       };
       const req = generateApiEvent({
         method: 'GET',
@@ -230,18 +235,20 @@ describe('resources/api/v2/invoices', () => {
         queryStringParameters: {
           before: '2026-05-01',
           after: '2026-01-01',
-          lastKey: Buffer.from(JSON.stringify(scanCursor)).toString('base64'),
+          lastKey: Buffer.from(JSON.stringify(cursor)).toString('base64'),
         },
       });
-      mockUserRequest(req, true, true, true);
+      mockUserRequest(req, true, false, true);
 
-      DynamoDBDocumentClientMock.setResult('scan', {
+      DynamoDBDocumentClientMock.setResult('query', {
         Items: [ {
           id: 'inv-002',
           department: 'Baca',
         }, ],
         LastEvaluatedKey: {
           id: 'inv-002',
+          department: 'Baca',
+          generatedDate: '2026-02-01',
         },
       });
 
@@ -255,29 +262,40 @@ describe('resources/api/v2/invoices', () => {
         },
       });
       expect(JSON.parse(response.body)).toEqual({
-        invoices: [ {
-          id: 'inv-002',
-          department: 'Baca',
-        }, ],
+        invoices: [
+          {
+            id: 'inv-002',
+            department: 'Baca',
+          },
+          {
+            id: 'inv-002',
+            department: 'Baca',
+          },
+          {
+            id: 'inv-002',
+            department: 'Baca',
+          },
+          {
+            id: 'inv-002',
+            department: 'Baca',
+          },
+        ],
         lastItem: Buffer.from(JSON.stringify({
-          id: 'inv-002',
+          mode: 'multi',
+          departmentKeys: {
+            Baca: {
+              id: 'inv-002',
+              department: 'Baca',
+              generatedDate: '2026-02-01',
+            },
+            NSCAD: null,
+            Crestone: null,
+            Saguache: null,
+          },
         })).toString('base64'),
       });
 
-      expect(ScanCommand).toHaveBeenCalledWith({
-        TableName: 'TABLE_INVOICE_VAL',
-        Limit: 50,
-        ExclusiveStartKey: scanCursor,
-        FilterExpression: '#endDate < :beforeDate AND #startDate > :afterDate',
-        ExpressionAttributeNames: {
-          '#endDate': 'endDate',
-          '#startDate': 'startDate',
-        },
-        ExpressionAttributeValues: {
-          ':beforeDate': '2026-05-01',
-          ':afterDate': '2026-01-01',
-        },
-      });
+      expect(QueryCommand).toHaveBeenCalledTimes(4);
     });
 
     it('Returns 400 for an invalid scan cursor shape', async () => {

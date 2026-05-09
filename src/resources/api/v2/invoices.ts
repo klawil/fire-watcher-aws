@@ -12,10 +12,11 @@ import {
   ListInvoicesApi,
   listInvoicesApiQueryValidator
 } from '@/types/api/invoices';
+import { validPhoneNumberAccounts } from '@/types/backend/department';
 import { TypedQueryInput } from '@/types/backend/dynamo';
 import { TABLE_INVOICE } from '@/types/backend/environment';
 import {
-  typedQuery, typedScan
+  typedQuery
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
@@ -32,10 +33,6 @@ interface InvoiceCursorKey {
   generatedDate: string;
 }
 
-interface ScanCursorKey {
-  id: string;
-}
-
 interface MultiDepartmentCursor {
   mode: 'multi';
   departmentKeys: Record<string, InvoiceCursorKey | null>;
@@ -50,10 +47,6 @@ function isInvoiceCursorKey(value: unknown): value is InvoiceCursorKey {
     typeof value.id === 'string' &&
     typeof value.department === 'string' &&
     typeof value.generatedDate === 'string';
-}
-
-function isScanCursorKey(value: unknown): value is ScanCursorKey {
-  return isRecord(value) && typeof value.id === 'string';
 }
 
 function getInvoiceCursorKey(item: Invoice): InvoiceCursorKey | null {
@@ -108,7 +101,7 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
       api401Body,
     ];
   }
-  if (!userPerms.isAdmin) {
+  if (!userPerms.isAdmin && !userPerms.isDistrictAdmin) {
     return [
       403,
       api403Body,
@@ -201,8 +194,8 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
   } else {
     // If no departments specified, use user's admin departments
     if (user.isDistrictAdmin) {
-      // District admin gets all departments - use scan instead
-      departmentsToQuery = [];
+      // District admin gets all supported departments.
+      departmentsToQuery = [ ...validPhoneNumberAccounts, ];
     } else {
       // Department admin gets their departments
       departmentsToQuery = userPerms.adminDepartments;
@@ -212,7 +205,6 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
   // Fetch invoices
   try {
     let allInvoices: Invoice[] = [];
-    let finalLastKey: Record<string, unknown> | undefined;
     let responseLastItem: string | null = null;
     const queryFilterParts: string[] = [];
     const queryExpressionAttributeNames: Record<string, string> = {
@@ -276,9 +268,8 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
 
       const queryResult = await typedQuery<Invoice>(queryInput);
       allInvoices = queryResult.Items || [];
-      finalLastKey = queryResult.LastEvaluatedKey;
-      responseLastItem = finalLastKey
-        ? Buffer.from(JSON.stringify(finalLastKey)).toString('base64')
+      responseLastItem = queryResult.LastEvaluatedKey
+        ? Buffer.from(JSON.stringify(queryResult.LastEvaluatedKey)).toString('base64')
         : null;
     } else if (departmentsToQuery.length > 1) {
       if (
@@ -383,47 +374,14 @@ const GET: LambdaApiFunction<ListInvoicesApi> = async function (event, user, use
         })).toString('base64')
         : null;
     } else {
-      if (typeof parsedLastKey !== 'undefined' && !isScanCursorKey(parsedLastKey)) {
+      if (typeof parsedLastKey !== 'undefined') {
         return [
           400,
           generateApi400Body([ 'lastKey', ]),
         ];
       }
-
-      const scanCursor = parsedLastKey as ScanCursorKey | undefined;
-      const scanFilterParts: string[] = [];
-      const scanExpressionAttributeNames: Record<string, string> = {};
-      const scanExpressionAttributeValues: Record<string, unknown> = {};
-
-      if (beforeDate) {
-        scanExpressionAttributeNames['#endDate'] = 'endDate';
-        scanExpressionAttributeValues[':beforeDate'] = beforeDate;
-        scanFilterParts.push('#endDate < :beforeDate');
-      }
-      if (afterDate) {
-        scanExpressionAttributeNames['#startDate'] = 'startDate';
-        scanExpressionAttributeValues[':afterDate'] = afterDate;
-        scanFilterParts.push('#startDate > :afterDate');
-      }
-
-      const scanResult = await typedScan<Invoice>({
-        TableName: TABLE_INVOICE(),
-        Limit: limit,
-        ExclusiveStartKey: scanCursor,
-        ...scanFilterParts.length > 0
-          ? {
-            FilterExpression: scanFilterParts.join(' AND '),
-            ExpressionAttributeNames: scanExpressionAttributeNames,
-            ExpressionAttributeValues: scanExpressionAttributeValues,
-          }
-          : {},
-      });
-
-      allInvoices = scanResult.Items || [];
-      finalLastKey = scanResult.LastEvaluatedKey;
-      responseLastItem = finalLastKey
-        ? Buffer.from(JSON.stringify(finalLastKey)).toString('base64')
-        : null;
+      allInvoices = [];
+      responseLastItem = null;
     }
 
     // Defensive fallback for old data without dates.

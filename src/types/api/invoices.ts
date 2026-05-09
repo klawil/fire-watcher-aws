@@ -26,7 +26,7 @@ export interface Invoice {
 }
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-const invoiceIdRegex = /^.+$/;
+const invoiceIdRegex = /^[A-Za-z0-9_-]+$/;
 const invoiceDepartmentsRegex = /^[^,]+(?:,[^,]+)*$/;
 
 /**
@@ -170,6 +170,7 @@ export type GetInvoiceApi = {
 
     /**
      * @contentType application/pdf
+      * Binary response. Do not use `typeFetch`; use `fetch` and read as `blob()` / `arrayBuffer()`.
      */
     200: Buffer;
 
@@ -281,7 +282,7 @@ export const updateInvoiceApiBodyValidator: Validator<UpdateInvoiceApi['body']> 
 };
 
 /**
- * Get a departments invoiced items for a given time period
+ * Get invoice itemized costs for the invoice's department in a given time period
  * @summary Get Invoice Items
  * @tags Invoices
  * @body.contentType application/json

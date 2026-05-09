@@ -19,6 +19,57 @@ import { main } from '@/resources/api/v2/invoice';
 
 describe('resources/api/v2/invoice', () => {
   describe('GET', () => {
+    it('Allows district admins without department admin roles', async () => {
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        pathParameters: {
+          id: 'inv-001',
+        },
+      });
+      mockUserRequest(req, true, false, true);
+
+      DynamoDBDocumentClientMock.setResult('get', {
+        Item: {
+          id: 'inv-001',
+          department: 'Baca',
+          s3Location: 'invoices/inv-001.pdf',
+        },
+      });
+      S3Mock.setResult('get', {
+        Body: {
+          transformToByteArray: async () => Uint8Array.from([ 1, ]),
+        },
+      });
+
+      const result = await main(req);
+      expect(result.statusCode).toEqual(200);
+      expect(result.isBase64Encoded).toEqual(true);
+    });
+
+    it('Returns 400 for invoice ids with unsafe characters', async () => {
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        pathParameters: {
+          id: 'inv bad',
+        },
+      });
+      mockUserRequest(req, true, true, true);
+
+      expect(await main(req)).toEqual({
+        statusCode: 400,
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          errors: [ 'id', ],
+        }),
+        multiValueHeaders: {},
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
     it('Returns a base64 encoded PDF response for an accessible invoice', async () => {
       const req = generateApiEvent({
         method: 'GET',
