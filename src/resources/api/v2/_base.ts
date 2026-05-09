@@ -70,12 +70,16 @@ export async function handleResourceApi(
     // Build the response
     const response: APIGatewayProxyResult = {
       statusCode,
-      body: JSON.stringify(responseBody),
+      body: '',
     };
 
     if (Buffer.isBuffer(responseBody)) {
       response.body = responseBody.toString('base64');
       response.isBase64Encoded = true;
+    } else if (typeof responseBody === 'string') {
+      response.body = responseBody;
+    } else {
+      response.body = JSON.stringify(responseBody);
     }
 
     if (responseHeaders) {
@@ -87,9 +91,6 @@ export async function handleResourceApi(
       response.headers = {
         'Content-Type': contentType,
       };
-    }
-    if (typeof responseBody === 'string') {
-      response.body = responseBody;
     }
 
     return response;
