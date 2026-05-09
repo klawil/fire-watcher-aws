@@ -5,7 +5,6 @@ import React, {
 } from 'react';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
 import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 import { BsDownload } from 'react-icons/bs';
@@ -22,7 +21,7 @@ import { typeFetch } from '@/utils/frontend/typeFetch';
 const logger = getLogger('InvoiceList');
 
 interface InvoiceListProps {
-  departments: string[];
+  department: string;
   isDistrictAdmin: boolean;
 }
 
@@ -76,7 +75,7 @@ const calculateDaysUntilDue = (dueDate?: string): number | null => {
 
 const getRowClass = (invoice: Invoice): string => {
   if (invoice.paidDate) {
-    return 'table-secondary';
+    return '';
   }
 
   const daysUntilDue = calculateDaysUntilDue(invoice.dueDate);
@@ -96,7 +95,7 @@ const getRowClass = (invoice: Invoice): string => {
 };
 
 export default function InvoiceList({
-  departments,
+  department,
   isDistrictAdmin,
 }: InvoiceListProps) {
   const [
@@ -112,10 +111,6 @@ export default function InvoiceList({
     setError,
   ] = useState<string | null>(null);
   const [
-    departmentFilter,
-    setDepartmentFilter,
-  ] = useState('');
-  const [
     lastKey,
     setLastKey,
   ] = useState<string | null>(null);
@@ -129,7 +124,7 @@ export default function InvoiceList({
   ] = useState<{ invoiceId: string; } | null>(null);
 
   const fetchInvoices = useCallback(async (pageLastKey?: string) => {
-    if (departments.length === 0) {
+    if (!department) {
       setInvoices([]);
       setIsLoading(false);
       return;
@@ -140,12 +135,8 @@ export default function InvoiceList({
 
     try {
       const query: ListInvoicesApi['query'] = {
-        departments: departments.join(','),
+        departments: department,
       };
-
-      if (departmentFilter) {
-        query.departments = departmentFilter;
-      }
 
       if (pageLastKey) {
         query.lastKey = pageLastKey;
@@ -187,10 +178,7 @@ export default function InvoiceList({
     } finally {
       setIsLoading(false);
     }
-  }, [
-    departments,
-    departmentFilter,
-  ]);
+  }, [ department, ]);
 
   useEffect(() => {
     fetchInvoices();
@@ -237,24 +225,6 @@ export default function InvoiceList({
         </Alert>
       }
 
-      <div className='mb-3'>
-        <Form.Select
-          value={departmentFilter}
-          onChange={e => {
-            setDepartmentFilter(e.target.value);
-            setLastKey(null);
-            setHasMore(false);
-          }}
-          aria-label='Filter by department'
-        >
-          <option value=''>All Departments</option>
-          {departments.map(dept =>
-            <option key={dept} value={dept}>
-              {dept}
-            </option>)}
-        </Form.Select>
-      </div>
-
       {isLoading && invoices.length === 0 && <LoadingSpinner />}
 
       {!isLoading && invoices.length === 0 &&
@@ -281,7 +251,7 @@ export default function InvoiceList({
               </thead>
               <tbody>
                 {invoices.map(invoice => {
-                  const rowClass = getRowClass(invoice);
+                  const rowClass = 'align-middle ' + getRowClass(invoice);
                   const daysUntilDue = calculateDaysUntilDue(invoice.dueDate);
                   const statusText = invoice.paidDate
                     ? `Paid on ${formatDate(invoice.paidDate)}`

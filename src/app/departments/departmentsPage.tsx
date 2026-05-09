@@ -186,11 +186,7 @@ export default function DepartmentsPage() {
 
           <Tab.Pane eventKey='invoices'>
             <InvoiceList
-              departments={
-                userPerms.isDistrictAdmin
-                  ? filteredDepartments.map(d => d.id)
-                  : userPerms.adminDepartments
-              }
+              department={selectedDepartment.id}
               isDistrictAdmin={userPerms.isDistrictAdmin}
             />
           </Tab.Pane>
