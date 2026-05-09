@@ -40,6 +40,29 @@ describe('resources/api/v2/invoices', () => {
       });
     });
 
+    it('Returns 400 for departments values with blank segments', async () => {
+      const req = generateApiEvent({
+        method: 'GET',
+        path: '',
+        queryStringParameters: {
+          departments: 'Baca, ',
+        },
+      });
+      mockUserRequest(req, true, true, true);
+
+      expect(await main(req)).toEqual({
+        statusCode: 400,
+        multiValueHeaders: {},
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          errors: [ 'departments', ],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
     it('Uses Query with limit, cursor, and date filters for a single department', async () => {
       const cursor = {
         id: 'inv-001',

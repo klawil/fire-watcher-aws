@@ -32,6 +32,17 @@ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const invoiceIdRegex = /^[A-Za-z0-9_-]+$/;
 const invoiceDepartmentsRegex = /^[^,]+(?:,[^,]+)*$/;
 
+function normalizeInvoiceDepartments(value: string) {
+  const departments = value.split(',')
+    .map(v => v.trim());
+
+  if (departments.some(v => v.length === 0)) {
+    return '';
+  }
+
+  return departments.join(',');
+}
+
 /**
  * List invoices with filters
  * @summary List Invoices
@@ -119,6 +130,7 @@ export const listInvoicesApiQueryValidator: Validator<ListInvoicesApi['query']> 
   },
   departments: {
     required: false,
+    parse: normalizeInvoiceDepartments,
     types: {
       string: {
         regex: invoiceDepartmentsRegex,
