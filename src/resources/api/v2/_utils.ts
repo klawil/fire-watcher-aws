@@ -214,15 +214,45 @@ export function getFrontendUserObj(
   return newUser;
 }
 
-const authUserCookie = 'cofrn-user';
 const authTokenCookie = 'cofrn-token';
+
+type SameSiteValue = 'Strict' | 'Lax' | 'None';
+
+interface SetCookieOptions {
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: SameSiteValue;
+}
 
 export function getDeleteCookieHeader(cookie: string) {
   return `${encodeURIComponent(cookie)}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 }
 
-export function getSetCookieHeader(cookie: string, value: string, age: number) {
-  return `${encodeURIComponent(cookie)}=${encodeURIComponent(value)}; Secure; SameSite=None; Path=/; Max-Age=${age}`;
+export function getSetCookieHeader(
+  cookie: string,
+  value: string,
+  age: number,
+  {
+    httpOnly = false,
+    secure = true,
+    sameSite = 'Lax',
+  }: SetCookieOptions = {}
+) {
+  const cookieParts = [
+    `${encodeURIComponent(cookie)}=${encodeURIComponent(value)}`,
+    'Path=/',
+    `Max-Age=${age}`,
+    `SameSite=${sameSite}`,
+  ];
+
+  if (secure) {
+    cookieParts.push('Secure');
+  }
+  if (httpOnly) {
+    cookieParts.push('HttpOnly');
+  }
+
+  return cookieParts.join('; ');
 }
 
 export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
@@ -258,10 +288,7 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
     }
 
     // Check for the authentication cookies
-    if (
-      !(authUserCookie in cookies) ||
-      !(authTokenCookie in cookies)
-    ) {
+    if (!(authTokenCookie in cookies)) {
       return response;
     }
 
@@ -293,7 +320,7 @@ export async function getCurrentUser(event: APIGatewayProxyEvent): Promise<[
       },
     });
     if (!user.Item) {
-      logger.warn('getCurrentUser', 'failed', `Invalid user from cookie - ${cookies[authUserCookie]}`);
+      logger.warn('getCurrentUser', 'failed', `Invalid user from token payload - ${userPayload.phone}`);
       return response;
     }
 
