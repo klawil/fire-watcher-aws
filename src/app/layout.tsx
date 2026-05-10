@@ -87,15 +87,24 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
         },
       });
 
+      if (code === 401) {
+        localStorage.removeItem(localStorageUserKey);
+        setUser({
+          fromApi: true,
+          isFinal: true,
+          isUser: false,
+          isAdmin: false,
+          isDistrictAdmin: false,
+        });
+        return;
+      }
+
       if (
         code !== 200 ||
         apiResult === null ||
         'message' in apiResult
       ) {
-        throw {
-          code,
-          apiResult,
-        };
+        throw new Error(`Unexpected auth bootstrap response: ${code}`);
       }
 
       localStorage.setItem(localStorageUserKey, JSON.stringify(apiResult));
@@ -110,6 +119,21 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
     } catch (e) {
       addAlert('danger', 'Failed to update the current user\'s information');
       logger.error('Failed to fetch current user', e);
+
+      // End loading state on API failures that are not auth-related.
+      setUser(cur => {
+        if (cur && cur.isFinal) {
+          return cur;
+        }
+
+        return {
+          fromApi: true,
+          isFinal: true,
+          isUser: false,
+          isAdmin: false,
+          isDistrictAdmin: false,
+        };
+      });
     }
   }
 
@@ -118,40 +142,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
       return;
     }
 
-    // Parse information out of the cookies
-    const cookies: {
-      [key: string]: string | null;
-    } = {};
-    document.cookie.split('; ').forEach(cookie => {
-      const eqSign = cookie.indexOf('=');
-      if (eqSign === -1) {
-        cookies[cookie] = null;
-        return;
-      }
-
-      cookies[cookie.slice(0, eqSign)] = decodeURIComponent(cookie.slice(eqSign + 1));
-    });
-
-    // Check the cookies for an active user
-    if (
-      !cookies['cofrn-token'] ||
-      !cookies['cofrn-user']
-    ) {
-      localStorage.removeItem(localStorageUserKey);
-      setUser({
-        fromApi: false,
-        isFinal: true,
-        isUser: false,
-        isAdmin: false,
-        isDistrictAdmin: false,
-      });
-      return;
-    }
-
-    // Start the process of fetching the user info from the API
-    getUserFromApi();
-
-    // Check localStorage for a user
+    // Seed from localStorage for a faster optimistic render while API auth is verified.
     const lsUserStr = localStorage.getItem(localStorageUserKey);
     if (lsUserStr === null) {
       setUser({
@@ -161,6 +152,7 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
         isAdmin: false,
         isDistrictAdmin: false,
       });
+      getUserFromApi();
       return;
     }
 
@@ -175,10 +167,21 @@ function useUser(addAlert: (type: Variant, message: string) => void): [
         isAdmin: initUser.departments?.some(dep => dep.active && dep.admin) ?? false,
         ...initUser,
       });
+
+      getUserFromApi();
     } catch (e) {
       addAlert('danger', 'Invalid user information was found, attempting to refresh the user');
       logger.error('Failed to parse localStorage user', e);
       localStorage.removeItem(localStorageUserKey);
+
+      setUser({
+        fromApi: false,
+        isFinal: false,
+        isUser: false,
+        isAdmin: false,
+        isDistrictAdmin: false,
+      });
+      getUserFromApi();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
