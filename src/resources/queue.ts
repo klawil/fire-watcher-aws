@@ -66,11 +66,11 @@ const welcomeMessageParts: {
   pageGroup: string;
   howToLeave: string;
 } = {
-  welcome: 'Welcome to the {{name}} {{type}} group!',
-  textGroup: 'This number will be used to send and receive messages from other members of the department.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.\n\nYou will receive important announcements from {{pageNumber}}. No-one except department administrators will be able to send announcements from that number.',
-  textPageGroup: 'This number will be used to send and receive messages from other members of the department.\n\nIn a moment, you will receive a text from {{pageNumber}} with a link to a sample page similar to what you will receive. That number will only ever send you pages or important announcements.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.',
-  pageGroup: 'This number will be used to send pages or important announcements.\n\nIn a moment, you will receive a text with a link to a sample page like that you will receive.',
-  howToLeave: 'You can leave this group at any time by texting "STOP" to this number.',
+  welcome: 'Welcome to the {{name}} {{type}} group powered by COFRN!',
+  textGroup: 'This number will be used to send and receive messages from other members of the department. Message frequency varies.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.',
+  textPageGroup: 'This number will be used to send and receive messages from other members of the department. Message frequency varies.\n\nIn a moment, you will receive a sample page notification.\n\nTo send a message to other members of your department, just send a text to this number. Any message you send will show up for others with your name and callsign attached.',
+  pageGroup: 'This number will be used to send pages or important announcements. Message frequency varies.\n\nIn a moment, you will receive a sample page notification.',
+  howToLeave: 'Msg & data rates may apply. Reply HELP for help, STOP to cancel.',
 };
 
 const codeTtl = 1000 * 60 * 5; // 5 minutes

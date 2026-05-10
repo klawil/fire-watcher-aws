@@ -94,14 +94,11 @@ export default function CofrnLayout({
         >
           <Navbar.Brand href='#'>
             <img // eslint-disable-line @next/next/no-img-element
-              src='/favicon.png'
-              width='30'
-              height='24'
+              src='/logo.png'
+              width='50'
+              height='50'
               className='d-inline-block align-top'
               alt='COFRN'
-              style={{
-                filter: `invert(${colorModeName === 'dark' ? 1 : 0})`,
-              }}
             />
           </Navbar.Brand>
           <Nav.Link className='mx-4' href='/about'>About Us</Nav.Link>

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import CofrnLayout from '@/components/layout';
 
 export const metadata = {
@@ -22,9 +24,11 @@ export default function Page() {
       organization to these terms.</p>
 
     <h4>2. Purpose of Service</h4>
-    <p>The Service provides event alerts and intra-agency chat tools intended for professional first
-      responders. <strong>The Service is a supplemental tool and should not be relied upon as a
-        primary or sole life-safety communication system.</strong></p>
+    <p>The Service provides paging alerts and intra-agency chat tools intended for professional
+      first responders. <strong>The Service is a supplemental tool and should not be relied upon as
+        a primary or sole life-safety communication system.</strong> Message frequency varies
+      based on the number of pages your department receives and amount of activity in the department
+      group chats.</p>
 
     <h4>3. User Accounts & Eligibility</h4>
     <ul>
@@ -33,12 +37,16 @@ export default function Page() {
       <li><strong>Security:</strong> You are responsible for maintaining the confidentiality of your
         login credentials.</li>
       <li><strong>Accuracy:</strong> You agree to provide accurate and current contact information
-        to ensure the delivery of alerts.</li>
+        to ensure the delivery of alerts. If you change your mobile number, please update your
+        preferences.</li>
     </ul>
 
     <h4>4. Payment Terms (Institutional)</h4>
     <p>For Institutional Users, payment is accepted via check. We reserve the right to suspend or
       terminate access if payments are not received within the specified timeframe.</p>
+
+    <p>Message and data rates may apply to the recipients of any text or RCS based
+      communications.</p>
 
     <h4>5. User Generated Content & Chat</h4>
     <ul>
@@ -73,14 +81,20 @@ export default function Page() {
       <li><strong>Limitation of Liability:</strong> To the maximum extent permitted by law, we shall
         not be liable for any indirect, incidental, or consequential damages arising out of the use
         of the Service.</li>
+      <li>Carriers are not liable for any delayed or undelivered messages.</li>
     </ul>
 
     <h4>8. Termination</h4>
     <p>We reserve the right to terminate or suspend your access to the Service at our sole
       discretion, without notice, for conduct that violates these Terms.</p>
 
+    <p><strong>If you wish to terminate receipt of any notifications, reply &quot;STOP&quot; or opt
+      out on your account settings page after logging into this website.</strong></p>
+
     <h4>9. Governing Law</h4>
     <p>These Terms shall be governed by and construed in accordance with the laws of the United
       States of America and the state of Colorado.</p>
+
+    <p>For help or questions contact <Link href='mailto:help@cofrn.org'>help@cofrn.org</Link>.</p>
   </CofrnLayout>;
 }

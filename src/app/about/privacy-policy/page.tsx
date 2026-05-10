@@ -54,14 +54,17 @@ export default function Page() {
 
     <h4>5. Data Storage and Third Parties</h4>
 
-    <p>We do not sell, rent, or trade your personal information to third parties.</p>
+    <p>We do not sell, rent, or trade your personal information to third parties. This explicitly
+      includes text messaging originator opt-in data and consent; this information will not be
+      shared with any third parties, excluding aggregators and providers of the Text Message
+      services.</p>
 
-    <p>Hosting: Your data is stored in a secure cloud environment hosted by Amazon Web Services
-      (AWS).</p>
+    <p><strong>Hosting:</strong> Your data is stored in a secure cloud environment hosted by Amazon
+      Web Services (AWS).</p>
 
-    <p>Service Providers: We use Google Analytics to understand site traffic. Google may use the
-      data collected to track and examine the use of our site; you can review Google’s privacy
-      documentation for further details on their data handling.</p>
+    <p><strong>Service Providers:</strong> We use Google Analytics to understand site traffic.
+      Google may use the data collected to track and examine the use of our site; you can review
+      Google&apos;s privacy documentation for further details on their data handling.</p>
 
     <h4>6. Data Retention and Security</h4>
 
