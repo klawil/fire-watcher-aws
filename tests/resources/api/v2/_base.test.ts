@@ -369,12 +369,19 @@ describe('resources/api/v2/_base', () => {
   describe('getSetCookieHeader', () => {
     it('Returns a cookie string that will result in the cookie being set', () => {
       expect(getSetCookieHeader('test-cookie', 'test-value', 20))
-        .toEqual('test-cookie=test-value; Secure; SameSite=None; Path=/; Max-Age=20');
+        .toEqual('test-cookie=test-value; Path=/; Max-Age=20; SameSite=Lax; Secure');
     });
 
     it('Encodes the cookie name and value in a URL safe manner', () => {
       expect(getSetCookieHeader('test cookie', 'test;value', 20))
-        .toEqual('test%20cookie=test%3Bvalue; Secure; SameSite=None; Path=/; Max-Age=20');
+        .toEqual('test%20cookie=test%3Bvalue; Path=/; Max-Age=20; SameSite=Lax; Secure');
+    });
+
+    it('Supports secure HttpOnly cookies when requested', () => {
+      expect(getSetCookieHeader('auth', 'token', 30, {
+        httpOnly: true,
+      }))
+        .toEqual('auth=token; Path=/; Max-Age=30; SameSite=Lax; Secure; HttpOnly');
     });
   });
 
@@ -485,9 +492,21 @@ describe('resources/api/v2/_base', () => {
       expect(headers).toEqual({});
     });
 
-    it('Deletes cookies if the cofrn-user cookie is not present', async () => {
+    it('Authenticates with token cookie even if the cofrn-user cookie is not present', async () => {
       // JWT library mock
-      verify.mockReturnValue('none');
+      verify.mockReturnValue({
+        phone: 5555555555,
+      });
+
+      // User perms
+      vi.mocked(getUserPermissions).mockReturnValue({
+        isUser: true,
+        isAdmin: false,
+        isDistrictAdmin: false,
+        activeDepartments: [ 'Baca', ],
+        adminDepartments: [],
+        canEditNames: false,
+      });
 
       // DynamoDB get
       DynamoDBDocumentClientMock.setResult('get', {
@@ -515,35 +534,54 @@ describe('resources/api/v2/_base', () => {
         headers,
       ] = await getCurrentUser(req);
 
-      // Validate that no steps were taken
-      expect(GetSecretValueCommand).toHaveBeenCalledTimes(0);
-      expect(verify).toHaveBeenCalledTimes(0);
-      expect(GetCommand).toHaveBeenCalledTimes(0);
+      // Validate authentication steps were taken
+      expect(GetSecretValueCommand).toHaveBeenCalledTimes(1);
+      expect(GetSecretValueCommand).toHaveBeenCalledWith({
+        SecretId: 'JWT_SECRET_VAL',
+      });
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(verify).toHaveBeenCalledWith(
+        '1234567890',
+        'JWT-Secret-Value'
+      );
+      expect(GetCommand).toHaveBeenCalledTimes(1);
+      expect(GetCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_USER_VAL',
+        Key: {
+          phone: 5555555555,
+        },
+      });
 
       // Validate the perms were acquired correctly
-      expect(getUserPermissions).toHaveBeenCalledTimes(1);
+      expect(getUserPermissions).toHaveBeenCalledTimes(2);
       expect(getUserPermissions).toHaveBeenCalledWith(null);
+      expect(getUserPermissions).toHaveBeenCalledWith({
+        phone: 5555555555,
+        Baca: {
+          active: true,
+        },
+      });
 
       // Validate the response - front end user object
-      expect(user).toEqual(null);
+      expect(user).toEqual({
+        phone: 5555555555,
+        Baca: {
+          active: true,
+        },
+      });
 
       // Validate the response - permissions
       expect(perms).toEqual({
-        isUser: false,
+        isUser: true,
         isAdmin: false,
         isDistrictAdmin: false,
-        activeDepartments: [],
+        activeDepartments: [ 'Baca', ],
         adminDepartments: [],
         canEditNames: false,
       });
 
       // Validate the response - headers
-      expect(headers).toEqual({
-        'Set-Cookie': [
-          'cofrn-other=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-          'cofrn-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-        ],
-      });
+      expect(headers).toEqual({});
     });
 
     it('Deletes cookies if the cofrn-token cookie is not present', async () => {

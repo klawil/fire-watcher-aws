@@ -32,6 +32,9 @@ describe('resources/api/v2/logout', () => {
     const res = await main(req);
     expect(res.statusCode).toBe(302);
     expect(res.multiValueHeaders?.Location).toEqual([ '/login', ]);
-    expect((res.multiValueHeaders?.['Set-Cookie'] || []).length).toBeGreaterThanOrEqual(1);
+    const setCookies = (res.multiValueHeaders?.['Set-Cookie'] || [])
+      .filter((value): value is string => typeof value === 'string');
+    expect(setCookies.some(v => v.startsWith('cofrn-user='))).toBe(true);
+    expect(setCookies.some(v => v.startsWith('cofrn-token='))).toBe(true);
   });
 });
