@@ -2,6 +2,7 @@
 
 [![Test Results Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fklawil.github.io%2Ffire-watcher-aws%2FtestResults.json)](https://klawil.github.io/fire-watcher-aws/)
 [![Code Coverage Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fklawil.github.io%2Ffire-watcher-aws%2Fcoverage.json)](https://klawil.github.io/fire-watcher-aws/coverage/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 **COFRN** is a text-based notification platform that alerts first responders of emergency requests via SMS. It continuously monitors radio channels for events and pages, automatically routing notifications to the appropriate personnel. The system also provides department management tools, radio traffic playback, and text messaging coordination.
 
