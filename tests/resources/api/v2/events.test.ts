@@ -1,6 +1,3 @@
-import {
-  describe, expect, it, vi
-} from 'vitest';
 
 import {
   AthenaClient
@@ -8,6 +5,9 @@ import {
 import {
   FirehoseClient
 } from '@aws-sdk/client-firehose';
+import {
+  describe, expect, it, vi
+} from 'vitest';
 
 import {
   generateApiEvent, mockUserRequest
@@ -17,20 +17,29 @@ import { main } from '@/resources/api/v2/events';
 
 describe('resources/api/v2/events', () => {
   it('Returns 401 when user is missing on GET', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     const res = await main(req);
     expect(res.statusCode).toBe(401);
   });
 
   it('Returns 401 when user is inactive on GET', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, false, false, false);
     const res = await main(req);
     expect(res.statusCode).toBe(401);
   });
 
   it('Returns 400 for malformed GET query', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, true, true);
 
     const res = await main(req);
@@ -46,7 +55,7 @@ describe('resources/api/v2/events', () => {
       method: 'GET',
       path: '',
       multiValueQueryStringParameters: {
-        groupBy: [ 'event' ],
+        groupBy: [ 'event', ],
       },
     });
     mockUserRequest(req, true, false, false);
@@ -113,8 +122,18 @@ describe('resources/api/v2/events', () => {
       .mockResolvedValueOnce({
         ResultSet: {
           Rows: [
-            { Data: [ { VarCharValue: 'event', }, { VarCharValue: 'num', }, ], },
-            { Data: [ { VarCharValue: 'call', }, { VarCharValue: '1', }, ], },
+            {
+              Data: [
+                { VarCharValue: 'event', },
+                { VarCharValue: 'num', },
+              ],
+            },
+            {
+              Data: [
+                { VarCharValue: 'call', },
+                { VarCharValue: '1', },
+              ],
+            },
           ],
         },
         NextToken: 'next-token',
@@ -122,8 +141,18 @@ describe('resources/api/v2/events', () => {
       .mockResolvedValueOnce({
         ResultSet: {
           Rows: [
-            { Data: [ { VarCharValue: 'event', }, { VarCharValue: 'num', }, ], },
-            { Data: [ { VarCharValue: 'join', }, { VarCharValue: '2', }, ], },
+            {
+              Data: [
+                { VarCharValue: 'event', },
+                { VarCharValue: 'num', },
+              ],
+            },
+            {
+              Data: [
+                { VarCharValue: 'join', },
+                { VarCharValue: '2', },
+              ],
+            },
           ],
         },
       } as never);
@@ -148,7 +177,7 @@ describe('resources/api/v2/events', () => {
     const req = generateApiEvent({
       method: 'POST',
       path: '',
-      body: JSON.stringify({ not: 'an-array' }),
+      body: JSON.stringify({ not: 'an-array', }),
     });
 
     const res = await main(req);
@@ -161,13 +190,11 @@ describe('resources/api/v2/events', () => {
     const req = generateApiEvent({
       method: 'POST',
       path: '',
-      body: JSON.stringify([
-        {
-          event: 'call',
-          talkgroup: '1234',
-          timestamp: Date.now(),
-        },
-      ]),
+      body: JSON.stringify([ {
+        event: 'call',
+        talkgroup: '1234',
+        timestamp: Date.now(),
+      }, ]),
     });
 
     const res = await main(req);

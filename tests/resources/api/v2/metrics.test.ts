@@ -1,9 +1,10 @@
 import {
-  CloudWatchClientMock
-} from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
-import {
   describe, expect, it
 } from 'vitest';
+
+import {
+  CloudWatchClientMock
+} from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
 
 import {
   generateApiEvent, mockUserRequest
@@ -13,13 +14,19 @@ import { main } from '@/resources/api/v2/metrics';
 
 describe('resources/api/v2/metrics', () => {
   it('Returns 401 for missing user', async () => {
-    const req = generateApiEvent({ method: 'POST', path: '' });
+    const req = generateApiEvent({
+      method: 'POST',
+      path: '',
+    });
     const res = await main(req);
     expect(res.statusCode).toBe(401);
   });
 
   it('Returns 403 for non-admin user', async () => {
-    const req = generateApiEvent({ method: 'POST', path: '' });
+    const req = generateApiEvent({
+      method: 'POST',
+      path: '',
+    });
     mockUserRequest(req, true, false, false);
 
     const res = await main(req);
@@ -30,7 +37,7 @@ describe('resources/api/v2/metrics', () => {
     const req = generateApiEvent({
       method: 'POST',
       path: '',
-      body: JSON.stringify({ metrics: 'bad' }),
+      body: JSON.stringify({ metrics: 'bad', }),
     });
     mockUserRequest(req, true, true, true);
 
@@ -46,14 +53,12 @@ describe('resources/api/v2/metrics', () => {
         period: 3600,
         startTime: 1735689600000,
         endTime: 1735776000000,
-        metrics: [
-          {
-            type: 'count',
-            namespace: 'DTR Metrics',
-            metricName: 'Decode Rate',
-            label: 'Decode Rate',
-          },
-        ],
+        metrics: [ {
+          type: 'count',
+          namespace: 'DTR Metrics',
+          metricName: 'Decode Rate',
+          label: 'Decode Rate',
+        }, ],
       }),
     });
     mockUserRequest(req, true, true, true);
@@ -82,14 +87,12 @@ describe('resources/api/v2/metrics', () => {
       method: 'POST',
       path: '',
       body: JSON.stringify({
-        metrics: [
-          {
-            type: 'lambda',
-            fn: 'missing_fn',
-            metric: 'Invocations',
-            stat: 'Sum',
-          },
-        ],
+        metrics: [ {
+          type: 'lambda',
+          fn: 'missing_fn',
+          metric: 'Invocations',
+          stat: 'Sum',
+        }, ],
       }),
     });
     mockUserRequest(req, true, true, true);
@@ -104,14 +107,12 @@ describe('resources/api/v2/metrics', () => {
       method: 'POST',
       path: '',
       body: JSON.stringify({
-        metrics: [
-          {
-            type: 'lambda',
-            fn: 'all',
-            metric: 'Invocations',
-            stat: 'Sum',
-          },
-        ],
+        metrics: [ {
+          type: 'lambda',
+          fn: 'all',
+          metric: 'Invocations',
+          stat: 'Sum',
+        }, ],
       }),
     });
     mockUserRequest(req, true, true, true);
@@ -128,14 +129,14 @@ describe('resources/api/v2/metrics', () => {
         {
           Id: 'count_CVFD_API_Call',
           Label: 'API Calls',
-          Timestamps: [ new Date('2026-01-01T00:00:00.000Z') ],
-          Values: [ 4 ],
+          Timestamps: [ new Date('2026-01-01T00:00:00.000Z'), ],
+          Values: [ 4, ],
         },
         {
           Id: 'timing_Twilio_Health_PageDuration_p50',
           Label: 'Page Duration',
-          Timestamps: [ new Date('2026-01-01T00:00:00.000Z') ],
-          Values: [ 2500 ],
+          Timestamps: [ new Date('2026-01-01T00:00:00.000Z'), ],
+          Values: [ 2500, ],
         },
       ],
     });

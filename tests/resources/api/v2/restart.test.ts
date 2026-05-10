@@ -13,7 +13,7 @@ describe('resources/api/v2/restart', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { tower: 'bad' },
+      pathParameters: { tower: 'bad', },
     });
 
     const res = await main(req);
@@ -25,7 +25,7 @@ describe('resources/api/v2/restart', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { tower: 'PoolTable' },
+      pathParameters: { tower: 'PoolTable', },
     });
 
     const res = await main(req);
@@ -38,7 +38,7 @@ describe('resources/api/v2/restart', () => {
     const req = generateApiEvent({
       method: 'POST',
       path: '',
-      pathParameters: { tower: 'PoolTable' },
+      pathParameters: { tower: 'PoolTable', },
     });
 
     const res = await main(req);

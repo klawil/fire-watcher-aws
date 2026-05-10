@@ -17,7 +17,7 @@ describe('resources/api/v2/userDepartment', () => {
     const req = generateApiEvent({
       method: 'POST',
       path: '',
-      body: JSON.stringify({ active: true }),
+      body: JSON.stringify({ active: true, }),
     });
 
     const res = await main(req);
@@ -31,7 +31,7 @@ describe('resources/api/v2/userDepartment', () => {
       id: '5555551111',
       department: 'Baca',
     },
-    body: JSON.stringify({ active: true }),
+    body: JSON.stringify({ active: true, }),
   }, main, true);
 
   it('Returns 404 when user not found on POST', async () => {
@@ -60,9 +60,10 @@ describe('resources/api/v2/userDepartment', () => {
         phone: 5555551111,
         fName: 'A',
         lName: 'B',
-        departments: [
-          { id: 'Baca', active: false },
-        ],
+        departments: [ {
+          id: 'Baca',
+          active: false,
+        }, ],
       },
     });
     (vi.mocked(typedUpdate) as any).mockResolvedValue({
@@ -70,9 +71,10 @@ describe('resources/api/v2/userDepartment', () => {
         phone: 5555551111,
         fName: 'A',
         lName: 'B',
-        departments: [
-          { id: 'Baca', active: true },
-        ],
+        departments: [ {
+          id: 'Baca',
+          active: true,
+        }, ],
       },
     });
 
@@ -118,7 +120,7 @@ describe('resources/api/v2/userDepartment', () => {
       id: '5555551111',
       department: 'Baca',
     },
-    body: JSON.stringify({ active: true }),
+    body: JSON.stringify({ active: true, }),
   }, main, true);
 
   it('Updates user department via PATCH', async () => {
@@ -127,9 +129,10 @@ describe('resources/api/v2/userDepartment', () => {
         phone: 5555551111,
         fName: 'A',
         lName: 'B',
-        departments: [
-          { id: 'Baca', active: true },
-        ],
+        departments: [ {
+          id: 'Baca',
+          active: true,
+        }, ],
       },
     });
     (vi.mocked(typedUpdate) as any).mockResolvedValue({
@@ -137,9 +140,10 @@ describe('resources/api/v2/userDepartment', () => {
         phone: 5555551111,
         fName: 'A',
         lName: 'B',
-        departments: [
-          { id: 'Baca', active: false },
-        ],
+        departments: [ {
+          id: 'Baca',
+          active: false,
+        }, ],
       },
     });
 
@@ -194,8 +198,14 @@ describe('resources/api/v2/userDepartment', () => {
         fName: 'A',
         lName: 'B',
         departments: [
-          { id: 'Baca', active: true },
-          { id: 'Other', active: true },
+          {
+            id: 'Baca',
+            active: true,
+          },
+          {
+            id: 'Other',
+            active: true,
+          },
         ],
       },
     });
@@ -204,9 +214,10 @@ describe('resources/api/v2/userDepartment', () => {
         phone: 5555551111,
         fName: 'A',
         lName: 'B',
-        departments: [
-          { id: 'Other', active: true },
-        ],
+        departments: [ {
+          id: 'Other',
+          active: true,
+        }, ],
       },
     });
 
@@ -230,9 +241,10 @@ describe('resources/api/v2/userDepartment', () => {
         phone: 5555551111,
         fName: 'A',
         lName: 'B',
-        departments: [
-          { id: 'Other', active: true },
-        ],
+        departments: [ {
+          id: 'Other',
+          active: true,
+        }, ],
       },
     });
 

@@ -38,7 +38,7 @@ describe('resources/api/v2/eventsList', () => {
   });
 
   it('Starts query and returns query id', async () => {
-    vi.spyOn(AthenaClient.prototype, 'send').mockResolvedValueOnce({ QueryExecutionId: 'q1' } as never);
+    vi.spyOn(AthenaClient.prototype, 'send').mockResolvedValueOnce({ QueryExecutionId: 'q1', } as never);
 
     const req = generateApiEvent({
       method: 'GET',
@@ -126,24 +126,32 @@ describe('resources/api/v2/eventsList', () => {
 
   it('Returns merged events when query is complete', async () => {
     vi.spyOn(AthenaClient.prototype, 'send')
-      .mockResolvedValueOnce({ QueryExecution: { Status: { State: 'SUCCEEDED' } } } as never)
+      .mockResolvedValueOnce({ QueryExecution: { Status: { State: 'SUCCEEDED', }, }, } as never)
       .mockResolvedValueOnce({
         ResultSet: {
           Rows: [
-            { Data: [ { VarCharValue: 'event' }, { VarCharValue: 'timestamp' } ] },
-            { Data: [ { VarCharValue: 'tone' }, { VarCharValue: '1735689700000' } ] },
+            {
+              Data: [
+                { VarCharValue: 'event', },
+                { VarCharValue: 'timestamp', },
+              ],
+            },
+            {
+              Data: [
+                { VarCharValue: 'tone', },
+                { VarCharValue: '1735689700000', },
+              ],
+            },
           ],
         },
       } as never);
     (vi.mocked(typedQuery) as any).mockResolvedValue({
-      Items: [
-        {
-          StartTime: 1735689700,
-          Added: 1735689701,
-          Talkgroup: 8198,
-          Key: 'audio/file.m4a',
-        },
-      ],
+      Items: [ {
+        StartTime: 1735689700,
+        Added: 1735689701,
+        Talkgroup: 8198,
+        Key: 'audio/file.m4a',
+      }, ],
     });
 
     const req = generateApiEvent({

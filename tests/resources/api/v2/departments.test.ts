@@ -12,10 +12,16 @@ import {
 } from '@/utils/backend/dynamoTyped';
 
 describe('resources/api/v2/departments', () => {
-  testUserAuth({ method: 'GET', path: '' }, main, true);
+  testUserAuth({
+    method: 'GET',
+    path: '',
+  }, main, true);
 
   it('Returns 403 for GET when admin has no department scope', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, true, false);
 
     const res = await main(req);
@@ -23,12 +29,25 @@ describe('resources/api/v2/departments', () => {
   });
 
   it('Returns sorted departments for admin', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, true, true);
     (vi.mocked(typedScan) as any).mockResolvedValue({
       Items: [
-        { id: 'b', name: 'B', pagingTalkgroups: [], type: 'page' },
-        { id: 'a', name: 'A', pagingTalkgroups: [], type: 'page' },
+        {
+          id: 'b',
+          name: 'B',
+          pagingTalkgroups: [],
+          type: 'page',
+        },
+        {
+          id: 'a',
+          name: 'A',
+          pagingTalkgroups: [],
+          type: 'page',
+        },
       ],
     });
 
@@ -43,10 +62,10 @@ describe('resources/api/v2/departments', () => {
     body: JSON.stringify({
       id: 'test',
       name: 'Test',
-      pagingTalkgroups: [ 8198 ],
+      pagingTalkgroups: [ 8198, ],
       type: 'page',
       invoiceFrequency: 'monthly',
-      invoiceEmail: [ 'billing@example.com' ],
+      invoiceEmail: [ 'billing@example.com', ],
     }),
   }, main, true);
 
@@ -57,10 +76,10 @@ describe('resources/api/v2/departments', () => {
       body: JSON.stringify({
         id: 'test',
         name: 'Test',
-        pagingTalkgroups: [ 8198 ],
+        pagingTalkgroups: [ 8198, ],
         type: 'page',
         invoiceFrequency: 'monthly',
-        invoiceEmail: [ 'billing@example.com' ],
+        invoiceEmail: [ 'billing@example.com', ],
       }),
     });
     mockUserRequest(req, true, true, false);
@@ -102,10 +121,10 @@ describe('resources/api/v2/departments', () => {
       body: JSON.stringify({
         id: 'test',
         name: 'Test',
-        pagingTalkgroups: [ 8198 ],
+        pagingTalkgroups: [ 8198, ],
         type: 'page',
         invoiceFrequency: 'monthly',
-        invoiceEmail: [ 'billing@example.com' ],
+        invoiceEmail: [ 'billing@example.com', ],
       }),
     });
     mockUserRequest(req, true, true, true);
@@ -124,10 +143,10 @@ describe('resources/api/v2/departments', () => {
       body: JSON.stringify({
         id: 'test',
         name: 'Test',
-        pagingTalkgroups: [ 8198 ],
+        pagingTalkgroups: [ 8198, ],
         type: 'page',
         invoiceFrequency: 'monthly',
-        invoiceEmail: [ 'billing@example.com' ],
+        invoiceEmail: [ 'billing@example.com', ],
       }),
     });
     mockUserRequest(req, true, true, true);

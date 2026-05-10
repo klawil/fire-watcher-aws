@@ -6,8 +6,8 @@ import {
   generateApiEvent, mockUserRequest
 } from './_utils';
 
-import { main } from '@/resources/api/v2/invoiceItems';
 import { getTwilioSecret } from '@/deprecated/utils/general';
+import { main } from '@/resources/api/v2/invoiceItems';
 import { typedGet } from '@/utils/backend/dynamoTyped';
 import { getTwilioItems } from '@/utils/backend/twilio';
 
@@ -20,7 +20,7 @@ describe('resources/api/v2/invoiceItems', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
+      pathParameters: { id: '2026-JAN-BACA', },
     });
 
     const res = await main(req);
@@ -31,7 +31,7 @@ describe('resources/api/v2/invoiceItems', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
+      pathParameters: { id: '2026-JAN-BACA', },
     });
     mockUserRequest(req, true, false, false);
 
@@ -45,8 +45,8 @@ describe('resources/api/v2/invoiceItems', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
-      queryStringParameters: { month: 'last' },
+      pathParameters: { id: '2026-JAN-BACA', },
+      queryStringParameters: { month: 'last', },
     });
     mockUserRequest(req, true, true, true);
 
@@ -65,8 +65,8 @@ describe('resources/api/v2/invoiceItems', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
-      queryStringParameters: { month: 'last' },
+      pathParameters: { id: '2026-JAN-BACA', },
+      queryStringParameters: { month: 'last', },
     });
     mockUserRequest(req, true, true, false);
 
@@ -81,23 +81,21 @@ describe('resources/api/v2/invoiceItems', () => {
         department: 'Baca',
       },
     });
-    (vi.mocked(getTwilioItems) as any).mockResolvedValue([
-      {
-        type: 'twilio',
-        cat: 'Outbound SMS',
-        usage: 10,
-        usageUnit: 'messages',
-        price: 1.2,
-        start: '2026-01-01',
-        end: '2026-01-31',
-      },
-    ]);
+    (vi.mocked(getTwilioItems) as any).mockResolvedValue([ {
+      type: 'twilio',
+      cat: 'Outbound SMS',
+      usage: 10,
+      usageUnit: 'messages',
+      price: 1.2,
+      start: '2026-01-01',
+      end: '2026-01-31',
+    }, ]);
 
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
-      queryStringParameters: { month: 'last' },
+      pathParameters: { id: '2026-JAN-BACA', },
+      queryStringParameters: { month: 'last', },
     });
     mockUserRequest(req, true, true, true);
 
@@ -118,8 +116,8 @@ describe('resources/api/v2/invoiceItems', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
-      queryStringParameters: { month: 'last' },
+      pathParameters: { id: '2026-JAN-BACA', },
+      queryStringParameters: { month: 'last', },
     });
     mockUserRequest(req, true, true, true);
 
@@ -138,8 +136,8 @@ describe('resources/api/v2/invoiceItems', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '2026-JAN-BACA' },
-      queryStringParameters: { month: 'last' },
+      pathParameters: { id: '2026-JAN-BACA', },
+      queryStringParameters: { month: 'last', },
     });
     mockUserRequest(req, true, true, true);
 

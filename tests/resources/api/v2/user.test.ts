@@ -18,7 +18,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '5555555555' },
+      pathParameters: { id: '5555555555', },
     });
 
     const res = await main(req);
@@ -29,7 +29,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: 'current' },
+      pathParameters: { id: 'current', },
     });
     mockUserRequest(req, true, false, false);
 
@@ -42,7 +42,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '5555550001' },
+      pathParameters: { id: '5555550001', },
     });
     mockUserRequest(req, true, false, false);
 
@@ -56,7 +56,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '5555550001' },
+      pathParameters: { id: '5555550001', },
     });
     mockUserRequest(req, true, true, true);
 
@@ -68,7 +68,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: 'current' },
+      pathParameters: { id: 'current', },
       body: JSON.stringify({
         getTranscript: true,
         getTranscriptOnly: false,
@@ -84,7 +84,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: 'current' },
+      pathParameters: { id: 'current', },
       body: JSON.stringify({
         fName: 'New',
       }),
@@ -98,7 +98,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: '5555550001' },
+      pathParameters: { id: '5555550001', },
       body: JSON.stringify({
         fName: 'New',
       }),
@@ -115,7 +115,10 @@ describe('resources/api/v2/user', () => {
         phone: 5555555555,
         fName: 'Old',
         lName: 'Name',
-        departments: [ { id: 'Baca', active: true } ],
+        departments: [ {
+          id: 'Baca',
+          active: true,
+        }, ],
       },
     });
     (vi.mocked(typedUpdate) as any).mockResolvedValue({
@@ -128,7 +131,7 @@ describe('resources/api/v2/user', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: '5555555555' },
+      pathParameters: { id: '5555555555', },
       body: JSON.stringify({
         fName: 'New',
       }),
@@ -143,9 +146,10 @@ describe('resources/api/v2/user', () => {
     (vi.mocked(typedGet) as any).mockResolvedValue({
       Item: {
         phone: 5555550001,
-        departments: [
-          { id: 'Baca', active: true },
-        ],
+        departments: [ {
+          id: 'Baca',
+          active: true,
+        }, ],
       },
     });
     (vi.mocked(typedDeleteItem) as any).mockResolvedValue({});

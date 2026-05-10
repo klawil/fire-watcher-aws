@@ -210,6 +210,15 @@ const eslintConfig = [
       '@stylistic/wrap-regex': 'error',
     },
   },
+  {
+    files: [
+      'tests/**/*.ts',
+      '__mocks__/**/*.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;

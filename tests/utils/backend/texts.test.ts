@@ -340,7 +340,7 @@ describe('utils/backend/texts', () => {
         'account',
         null,
         5555555555,
-        'alertTest' as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        'alertTest' as any,
         'test-body'
       )).rejects.toThrow();
     });

@@ -9,7 +9,10 @@ import { typedUpdate } from '@/utils/backend/dynamoTyped';
 
 describe('resources/api/v2/textlink', () => {
   it('Returns 400 for invalid query', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     const res = await main(req);
     expect(res.statusCode).toBe(400);
   });

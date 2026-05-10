@@ -4,11 +4,11 @@ import {
 
 import { S3Mock } from '../../__mocks__/@aws-sdk/client-s3';
 
+import { getTwilioSecret } from '@/deprecated/utils/general';
 import { main } from '@/resources/generateInvoices';
 import {
   typedPutItem, typedScan
 } from '@/utils/backend/dynamoTyped';
-import { getTwilioSecret } from '@/deprecated/utils/general';
 
 vi.mock('pdfkit', () => {
   return {
@@ -52,7 +52,14 @@ vi.mock('twilio', () => ({
         account: {
           usage: {
             records: {
-              list: vi.fn((_: unknown, cb: (err: unknown, items: Array<{ category: string; price: string; usage: string; usageUnit: string; startDate: string; endDate: string }>) => void) => cb(null, [
+              list: vi.fn((_: unknown, cb: (err: unknown, items: Array<{
+                category: string;
+                price: string;
+                usage: string;
+                usageUnit: string;
+                startDate: string;
+                endDate: string
+              }>) => void) => cb(null, [
                 {
                   category: 'sms-outbound',
                   price: '1.25',
@@ -78,7 +85,7 @@ vi.mock('twilio', () => ({
   })),
 }));
 
-const { sesSendMock } = vi.hoisted(() => ({
+const { sesSendMock, } = vi.hoisted(() => ({
   sesSendMock: vi.fn().mockResolvedValue({}),
 }));
 vi.mock('@aws-sdk/client-sesv2', () => ({
@@ -97,14 +104,12 @@ describe('resources/generateInvoices', () => {
 
   it('Generates and stores invoices for monthly departments', async () => {
     (vi.mocked(typedScan) as any).mockResolvedValue({
-      Items: [
-        {
-          id: 'Baca',
-          name: 'Baca Fire',
-          invoiceFrequency: 'monthly',
-          invoiceEmail: [ 'billing@example.com' ],
-        },
-      ],
+      Items: [ {
+        id: 'Baca',
+        name: 'Baca Fire',
+        invoiceFrequency: 'monthly',
+        invoiceEmail: [ 'billing@example.com', ],
+      }, ],
     });
     (vi.mocked(getTwilioSecret) as any).mockResolvedValue({
       accountSidBaca: 'sid',
@@ -113,7 +118,11 @@ describe('resources/generateInvoices', () => {
 
     S3Mock.setResult('get', {
       Body: {
-        transformToByteArray: async () => Uint8Array.from([ 1, 2, 3 ]),
+        transformToByteArray: async () => Uint8Array.from([
+          1,
+          2,
+          3,
+        ]),
       },
     });
 

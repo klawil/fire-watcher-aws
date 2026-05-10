@@ -13,7 +13,11 @@ import {
 
 describe('resources/api/v2/department', () => {
   describe('GET', () => {
-    testUserAuth({ method: 'GET', path: '', pathParameters: { id: 'Baca' } }, main, true);
+    testUserAuth({
+      method: 'GET',
+      path: '',
+      pathParameters: { id: 'Baca', },
+    }, main, true);
 
     it('Returns 403 when user lacks department access', async () => {
       const req = generateApiEvent({

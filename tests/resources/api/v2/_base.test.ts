@@ -41,11 +41,11 @@ describe('resources/api/v2/_base', () => {
         POST: vi.fn().mockReturnValue(Promise.resolve([
           200,
           {},
-        ])) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        ])) as any,
         PATCH: vi.fn().mockReturnValue(Promise.resolve([
           201,
           {},
-        ])) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        ])) as any,
       };
     });
 
@@ -120,7 +120,7 @@ describe('resources/api/v2/_base', () => {
         path: '',
       });
 
-      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      (handlers.PATCH as any)
         .mockReturnValue([
           204,
           '',
@@ -144,7 +144,7 @@ describe('resources/api/v2/_base', () => {
         path: '',
       });
 
-      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      (handlers.PATCH as any)
         .mockReturnValue([
           200,
           '<Response>Test</Response>',
@@ -173,7 +173,7 @@ describe('resources/api/v2/_base', () => {
         path: '',
       });
 
-      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      (handlers.PATCH as any)
         .mockReturnValue([
           200,
           Buffer.from([
@@ -220,7 +220,7 @@ describe('resources/api/v2/_base', () => {
         path: '',
       });
 
-      (handlers.PATCH as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      (handlers.PATCH as any)
         .mockReturnValue([
           400,
           [
