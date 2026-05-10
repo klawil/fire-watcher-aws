@@ -13,7 +13,10 @@ import {
 
 describe('resources/api/v2/talkgroup', () => {
   it('Returns 400 for invalid params', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     const res = await main(req);
     expect(res.statusCode).toBe(400);
   });
@@ -23,7 +26,7 @@ describe('resources/api/v2/talkgroup', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      pathParameters: { id: '8198' },
+      pathParameters: { id: '8198', },
     });
 
     const res = await main(req);
@@ -34,8 +37,8 @@ describe('resources/api/v2/talkgroup', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: '8198' },
-      body: JSON.stringify({ name: 'Dispatch' }),
+      pathParameters: { id: '8198', },
+      body: JSON.stringify({ name: 'Dispatch', }),
     });
 
     const res = await main(req);
@@ -46,8 +49,8 @@ describe('resources/api/v2/talkgroup', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: '8198' },
-      body: JSON.stringify({ name: 'Dispatch' }),
+      pathParameters: { id: '8198', },
+      body: JSON.stringify({ name: 'Dispatch', }),
     });
     mockUserRequest(req, true, true, true, false);
 
@@ -70,8 +73,8 @@ describe('resources/api/v2/talkgroup', () => {
     const req = generateApiEvent({
       method: 'PATCH',
       path: '',
-      pathParameters: { id: '8198' },
-      body: JSON.stringify({ name: 'Dispatch' }),
+      pathParameters: { id: '8198', },
+      body: JSON.stringify({ name: 'Dispatch', }),
     });
     mockUserRequest(req, true, false, false, true);
 

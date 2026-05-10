@@ -11,7 +11,7 @@ import {
   typedQuery, typedScan, typedUpdate
 } from '@/utils/backend/dynamoTyped';
 
-const { athenaSendMock } = vi.hoisted(() => ({
+const { athenaSendMock, } = vi.hoisted(() => ({
   athenaSendMock: vi.fn(),
 }));
 
@@ -51,7 +51,7 @@ describe('resources/dailyEvents', () => {
   it('Exits early when talkgroups are missing', async () => {
     (vi.mocked(typedScan) as any)
       .mockResolvedValueOnce({
-        Items: [ { RadioID: '101' } ],
+        Items: [ { RadioID: '101', }, ],
       })
       .mockResolvedValueOnce({});
 
@@ -61,46 +61,42 @@ describe('resources/dailyEvents', () => {
   it('Processes device and talkgroup event/recording updates', async () => {
     (vi.mocked(typedScan) as any)
       .mockResolvedValueOnce({
-        Items: [
-          {
-            RadioID: '101',
-            InUse: 'Y',
-            Count: 0,
-            EventsCount: 0,
-          },
-        ],
+        Items: [ {
+          RadioID: '101',
+          InUse: 'Y',
+          Count: 0,
+          EventsCount: 0,
+        }, ],
       })
       .mockResolvedValueOnce({
-        Items: [
-          {
-            ID: 8198,
-            InUse: 'Y',
-            Count: 0,
-            EventsCount: 0,
-          },
-        ],
+        Items: [ {
+          ID: 8198,
+          InUse: 'Y',
+          Count: 0,
+          EventsCount: 0,
+        }, ],
       });
 
     (vi.mocked(typedQuery) as any)
       .mockResolvedValueOnce({
-        Items: [
-          {
-            RadioID: '101',
-            StartTime: 1735689601,
-          },
-        ],
+        Items: [ {
+          RadioID: '101',
+          StartTime: 1735689601,
+        }, ],
       })
       .mockResolvedValueOnce({
-        Items: [
-          {
-            Talkgroup: 8198,
-            StartTime: 1735689601,
-            Added: 1735689601,
-          },
-        ],
+        Items: [ {
+          Talkgroup: 8198,
+          StartTime: 1735689601,
+          Added: 1735689601,
+        }, ],
       });
 
-    athenaSendMock.mockImplementation(async (command: { type: string; QueryExecutionId?: string; QueryString?: string }) => {
+    athenaSendMock.mockImplementation(async (command: {
+      type: string;
+      QueryExecutionId?: string;
+      QueryString?: string
+    }) => {
       if (command.type === 'startQueryExecution') {
         return {
           QueryExecutionId: command.QueryString?.includes('radioid')
@@ -121,8 +117,18 @@ describe('resources/dailyEvents', () => {
         return {
           ResultSet: {
             Rows: [
-              { Data: [ { VarCharValue: 'radioid' }, { VarCharValue: 'num' } ] },
-              { Data: [ { VarCharValue: '101' }, { VarCharValue: '5' } ] },
+              {
+                Data: [
+                  { VarCharValue: 'radioid', },
+                  { VarCharValue: 'num', },
+                ],
+              },
+              {
+                Data: [
+                  { VarCharValue: '101', },
+                  { VarCharValue: '5', },
+                ],
+              },
             ],
           },
         };
@@ -131,8 +137,18 @@ describe('resources/dailyEvents', () => {
       return {
         ResultSet: {
           Rows: [
-            { Data: [ { VarCharValue: 'talkgroup' }, { VarCharValue: 'num' } ] },
-            { Data: [ { VarCharValue: '8198' }, { VarCharValue: '7' } ] },
+            {
+              Data: [
+                { VarCharValue: 'talkgroup', },
+                { VarCharValue: 'num', },
+              ],
+            },
+            {
+              Data: [
+                { VarCharValue: '8198', },
+                { VarCharValue: '7', },
+              ],
+            },
           ],
         },
       };

@@ -1,3 +1,4 @@
+import { verify } from 'jsonwebtoken';
 import {
   describe, expect, it, vi
 } from 'vitest';
@@ -12,7 +13,6 @@ import { main } from '@/resources/api/v2/login';
 import {
   typedGet, typedUpdate
 } from '@/utils/backend/dynamoTyped';
-import { verify } from 'jsonwebtoken';
 
 vi.mock('jsonwebtoken', () => ({
   sign: vi.fn(() => 'jwt-token'),
@@ -43,7 +43,10 @@ describe('resources/api/v2/login', () => {
           phone: 5555555555,
           fName: 'Auth',
           lName: 'User',
-          departments: [ { id: 'Baca', active: true }, ],
+          departments: [ {
+            id: 'Baca',
+            active: true,
+          }, ],
         },
       });
 
@@ -81,7 +84,10 @@ describe('resources/api/v2/login', () => {
           phone: 5555551111,
           fName: 'A',
           lName: 'B',
-          departments: [ { id: 'Baca', active: true } ],
+          departments: [ {
+            id: 'Baca',
+            active: true,
+          }, ],
         },
       });
 
@@ -105,7 +111,10 @@ describe('resources/api/v2/login', () => {
           phone: 5555551111,
           fName: 'A',
           lName: 'B',
-          departments: [ { id: 'Baca', active: true } ],
+          departments: [ {
+            id: 'Baca',
+            active: true,
+          }, ],
           code: '123456',
           codeExpiry: Date.now() - 10,
         },
@@ -153,7 +162,10 @@ describe('resources/api/v2/login', () => {
           phone: 5555555555,
           fName: 'Auth',
           lName: 'User',
-          departments: [ { id: 'Baca', active: true }, ],
+          departments: [ {
+            id: 'Baca',
+            active: true,
+          }, ],
         },
       });
 
@@ -198,7 +210,10 @@ describe('resources/api/v2/login', () => {
           phone: 5555551111,
           fName: 'A',
           lName: 'B',
-          departments: [ { id: 'Baca', active: true } ],
+          departments: [ {
+            id: 'Baca',
+            active: true,
+          }, ],
           code: '654321',
           codeExpiry: Date.now() + 60000,
         },
@@ -229,7 +244,10 @@ describe('resources/api/v2/login', () => {
           phone: 5555551111,
           fName: 'A',
           lName: 'B',
-          departments: [ { id: 'Baca', active: true } ],
+          departments: [ {
+            id: 'Baca',
+            active: true,
+          }, ],
           code: '123456',
           codeExpiry: Date.now() + 60000,
         },

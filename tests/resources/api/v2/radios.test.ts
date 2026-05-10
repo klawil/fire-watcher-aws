@@ -11,7 +11,10 @@ import { typedFullScan } from '@/utils/backend/dynamoTyped';
 
 describe('resources/api/v2/radios', () => {
   it('Returns 401 for missing user', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
 
     const res = await main(req);
     expect(res.statusCode).toBe(401);
@@ -19,19 +22,20 @@ describe('resources/api/v2/radios', () => {
 
   it('Returns radios list for authenticated users', async () => {
     (vi.mocked(typedFullScan) as any).mockResolvedValue({
-      Items: [
-        {
-          RadioID: '101',
-          Name: 'alpha',
-          Count: 1,
-          EventsCount: 1,
-        },
-      ],
+      Items: [ {
+        RadioID: '101',
+        Name: 'alpha',
+        Count: 1,
+        EventsCount: 1,
+      }, ],
       LastEvaluatedKey: null,
       Runs: 1,
     });
 
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, false, false);
 
     const res = await main(req);

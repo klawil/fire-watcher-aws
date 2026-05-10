@@ -14,14 +14,20 @@ import {
 
 describe('resources/api/v2/errors', () => {
   it('Returns 401 for GET with no user', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
 
     const res = await main(req);
     expect(res.statusCode).toBe(401);
   });
 
   it('Returns 403 for GET when not district admin', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, true, false);
 
     const res = await main(req);
@@ -29,19 +35,20 @@ describe('resources/api/v2/errors', () => {
   });
 
   it('Returns 200 with errors list for district admin GET', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, true, true);
     (vi.mocked(typedScan) as any).mockResolvedValue({
-      Items: [
-        {
-          Datetime: 1,
-          Url: '/x',
-          Message: 'msg',
-          Trace: 'trace',
-          UserAgent: 'ua',
-          User: 'u',
-        },
-      ],
+      Items: [ {
+        Datetime: 1,
+        Url: '/x',
+        Message: 'msg',
+        Trace: 'trace',
+        UserAgent: 'ua',
+        User: 'u',
+      }, ],
     });
 
     const res = await main(req);

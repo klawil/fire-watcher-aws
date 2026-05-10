@@ -9,7 +9,10 @@ import { typedGet } from '@/utils/backend/dynamoTyped';
 
 describe('resources/api/v2/file', () => {
   it('Returns 400 when id is missing', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
 
     const res = await main(req);
     expect(res.statusCode).toBe(400);

@@ -1,9 +1,10 @@
 import {
+  describe, expect, it
+} from 'vitest';
+
+import {
   CloudWatchClientMock
 } from '../../../../__mocks__/@aws-sdk/client-cloudwatch';
-import {
-  describe, expect, it, vi
-} from 'vitest';
 
 import { generateApiEvent } from './_utils';
 
@@ -14,7 +15,7 @@ describe('resources/api/v2/metricsAdd', () => {
     const req = generateApiEvent({
       method: 'POST',
       path: '',
-      body: JSON.stringify({ data: [] }),
+      body: JSON.stringify({ data: [], }),
     });
 
     const res = await main(req);
@@ -28,7 +29,7 @@ describe('resources/api/v2/metricsAdd', () => {
       queryStringParameters: {
         code: process.env.API_CODE,
       },
-      body: JSON.stringify({ data: [] }),
+      body: JSON.stringify({ data: [], }),
     });
 
     const res = await main(req);
@@ -44,12 +45,10 @@ describe('resources/api/v2/metricsAdd', () => {
         code: process.env.API_CODE,
       },
       body: JSON.stringify({
-        data: [
-          {
-            id: 'saguache',
-            val: 7,
-          },
-        ],
+        data: [ {
+          id: 'saguache',
+          val: 7,
+        }, ],
       }),
     });
 

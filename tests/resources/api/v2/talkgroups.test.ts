@@ -11,21 +11,27 @@ import {
 
 describe('resources/api/v2/talkgroups', () => {
   it('Returns 200 for default query', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     const res = await main(req);
     expect(res.statusCode).toBe(200);
   });
 
   it('Returns 400 when all=n is not accepted by validator', async () => {
     (vi.mocked(typedFullQuery) as any).mockResolvedValue({
-      Items: [ { ID: 8198, Name: 'Dispatch' } ],
+      Items: [ {
+        ID: 8198,
+        Name: 'Dispatch',
+      }, ],
       LastEvaluatedKey: null,
       Runs: 1,
     });
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      queryStringParameters: { all: 'n' },
+      queryStringParameters: { all: 'n', },
     });
 
     const res = await main(req);
@@ -34,14 +40,17 @@ describe('resources/api/v2/talkgroups', () => {
 
   it('Returns all talkgroups when all=y', async () => {
     (vi.mocked(typedFullScan) as any).mockResolvedValue({
-      Items: [ { ID: 1 }, { ID: 2 } ],
+      Items: [
+        { ID: 1, },
+        { ID: 2, },
+      ],
       LastEvaluatedKey: null,
       Runs: 1,
     });
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      queryStringParameters: { all: 'y' },
+      queryStringParameters: { all: 'y', },
     });
 
     const res = await main(req);

@@ -4,12 +4,15 @@ import {
 
 import { generateApiEvent } from './_utils';
 
-import { main } from '@/resources/api/v2/files';
 import { mergeDynamoQueriesDocClient } from '@/resources/api/v2/_utils';
+import { main } from '@/resources/api/v2/files';
 
 describe('resources/api/v2/files', () => {
   it('Returns 200 for default query', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
 
     const res = await main(req);
     expect(res.statusCode).toBe(200);
@@ -20,7 +23,7 @@ describe('resources/api/v2/files', () => {
       method: 'GET',
       path: '',
       multiValueQueryStringParameters: {
-        before: [ 'nope' ],
+        before: [ 'nope', ],
       },
     });
 
@@ -33,21 +36,19 @@ describe('resources/api/v2/files', () => {
       MinSortKey: 10,
       MaxSortKey: 20,
       MaxAfterKey: 30,
-      Items: [
-        {
-          Talkgroup: 8198,
-          StartTime: 20,
-          Added: 30,
-        },
-      ],
+      Items: [ {
+        Talkgroup: 8198,
+        StartTime: 20,
+        Added: 30,
+      }, ],
     });
 
     const req = generateApiEvent({
       method: 'GET',
       path: '',
       multiValueQueryStringParameters: {
-        tg: [ '8198' ],
-        after: [ '10' ],
+        tg: [ '8198', ],
+        after: [ '10', ],
       },
     });
 
@@ -68,8 +69,8 @@ describe('resources/api/v2/files', () => {
       method: 'GET',
       path: '',
       multiValueQueryStringParameters: {
-        radioId: [ '1001' ],
-        afterAdded: [ '20' ],
+        radioId: [ '1001', ],
+        afterAdded: [ '20', ],
       },
     });
 

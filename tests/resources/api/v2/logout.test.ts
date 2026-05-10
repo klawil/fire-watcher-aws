@@ -8,7 +8,10 @@ import { main } from '@/resources/api/v2/logout';
 
 describe('resources/api/v2/logout', () => {
   it('Redirects to home when query is omitted', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
 
     const res = await main(req);
     expect(res.statusCode).toBe(302);
@@ -28,7 +31,7 @@ describe('resources/api/v2/logout', () => {
 
     const res = await main(req);
     expect(res.statusCode).toBe(302);
-    expect(res.multiValueHeaders?.Location).toEqual([ '/login' ]);
+    expect(res.multiValueHeaders?.Location).toEqual([ '/login', ]);
     expect((res.multiValueHeaders?.['Set-Cookie'] || []).length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -22,14 +22,15 @@ describe('resources/api/v2/users', () => {
 
   it('Returns user list for admins', async () => {
     (vi.mocked(typedScan) as any).mockResolvedValue({
-      Items: [
-        {
-          phone: 5555550001,
-          fName: 'A',
-          lName: 'B',
-          departments: [ { id: 'Baca', active: true } ],
-        },
-      ],
+      Items: [ {
+        phone: 5555550001,
+        fName: 'A',
+        lName: 'B',
+        departments: [ {
+          id: 'Baca',
+          active: true,
+        }, ],
+      }, ],
     });
 
     const req = generateApiEvent({
@@ -64,7 +65,7 @@ describe('resources/api/v2/users', () => {
       department: 'Baca',
       admin: false,
       callSign: 'B-1',
-      talkgroups: [ 8198 ],
+      talkgroups: [ 8198, ],
       getTranscript: false,
       getTranscriptOnly: true,
     }),
@@ -83,7 +84,7 @@ describe('resources/api/v2/users', () => {
         department: 'Baca',
         admin: false,
         callSign: 'B-1',
-        talkgroups: [ 8198 ],
+        talkgroups: [ 8198, ],
         getTranscript: true,
         getTranscriptOnly: true,
       }),

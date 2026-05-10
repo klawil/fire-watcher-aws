@@ -38,7 +38,7 @@ describe('resources/emailHandler', () => {
 
   it('Forwards parsed HTML/text email content', async () => {
     parseMock.mockResolvedValue({
-      from: { address: 'sender@example.com' },
+      from: { address: 'sender@example.com', },
       subject: 'Test Subject',
       html: '<p>Hello</p>',
       text: 'Hello',
@@ -51,15 +51,13 @@ describe('resources/emailHandler', () => {
     });
 
     await expect(main({
-      Records: [
-        {
-          ses: {
-            mail: {
-              messageId: 'msg-1',
-            },
+      Records: [ {
+        ses: {
+          mail: {
+            messageId: 'msg-1',
           },
         },
-      ],
+      }, ],
     } as never)).resolves.toBeUndefined();
 
     expect(sesSendMock).toHaveBeenCalledTimes(1);
@@ -67,20 +65,18 @@ describe('resources/emailHandler', () => {
 
   it('Forwards attachments as raw content', async () => {
     parseMock.mockResolvedValue({
-      from: { address: 'sender@example.com' },
+      from: { address: 'sender@example.com', },
       subject: 'With Attachment',
       html: undefined,
       text: 'Attachment body',
-      attachments: [
-        {
-          filename: 'hello.txt',
-          mimeType: 'text/plain',
-          disposition: 'attachment',
-          contentId: 'cid1',
-          content: 'hello',
-          encoding: 'utf8',
-        },
-      ],
+      attachments: [ {
+        filename: 'hello.txt',
+        mimeType: 'text/plain',
+        disposition: 'attachment',
+        contentId: 'cid1',
+        content: 'hello',
+        encoding: 'utf8',
+      }, ],
     });
     S3Mock.setResult('get', {
       Body: {
@@ -89,15 +85,13 @@ describe('resources/emailHandler', () => {
     });
 
     await expect(main({
-      Records: [
-        {
-          ses: {
-            mail: {
-              messageId: 'msg-2',
-            },
+      Records: [ {
+        ses: {
+          mail: {
+            messageId: 'msg-2',
           },
         },
-      ],
+      }, ],
     } as never)).resolves.toBeUndefined();
 
     expect(sesSendMock).toHaveBeenCalledTimes(1);
@@ -107,15 +101,13 @@ describe('resources/emailHandler', () => {
     S3Mock.setResult('get', {});
 
     await expect(main({
-      Records: [
-        {
-          ses: {
-            mail: {
-              messageId: 'msg-3',
-            },
+      Records: [ {
+        ses: {
+          mail: {
+            messageId: 'msg-3',
           },
         },
-      ],
+      }, ],
     } as never)).rejects.toThrow('Email body is undefined');
   });
 });

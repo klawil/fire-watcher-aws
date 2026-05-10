@@ -22,7 +22,7 @@ describe('resources/importAladTec', () => {
     });
     fetchMock.mockResolvedValueOnce({
       headers: {
-        getSetCookie: () => [ 'ems9646s=auth-cookie; Path=/' ],
+        getSetCookie: () => [ 'ems9646s=auth-cookie; Path=/', ],
       },
     });
 
@@ -39,14 +39,14 @@ describe('resources/importAladTec', () => {
     fetchMock
       .mockResolvedValueOnce({
         headers: {
-          getSetCookie: () => [ 'ems9646s=auth-cookie; Path=/' ],
+          getSetCookie: () => [ 'ems9646s=auth-cookie; Path=/', ],
         },
       })
       .mockResolvedValueOnce({
         json: async () => ({}),
       })
       .mockResolvedValueOnce({
-        json: async () => ({ rows: [] }),
+        json: async () => ({ rows: [], }),
       });
 
     await expect(main()).resolves.toBeUndefined();

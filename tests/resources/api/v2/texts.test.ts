@@ -2,11 +2,6 @@ import {
   describe, expect, it, vi
 } from 'vitest';
 
-vi.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: vi.fn(async () => 'https://signed.example.com/textMedia/file-1'),
-}));
-
-
 import {
   generateApiEvent, mockUserRequest
 } from './_utils';
@@ -14,12 +9,16 @@ import {
 import { main } from '@/resources/api/v2/texts';
 import { typedQuery } from '@/utils/backend/dynamoTyped';
 
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn(async () => 'https://signed.example.com/textMedia/file-1'),
+}));
+
 describe('resources/api/v2/texts', () => {
   it('Returns 401 without user', async () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      queryStringParameters: { type: 'page' },
+      queryStringParameters: { type: 'page', },
     });
 
     const res = await main(req);
@@ -27,7 +26,10 @@ describe('resources/api/v2/texts', () => {
   });
 
   it('Returns 400 when both type and department are missing', async () => {
-    const req = generateApiEvent({ method: 'GET', path: '' });
+    const req = generateApiEvent({
+      method: 'GET',
+      path: '',
+    });
     mockUserRequest(req, true, true, true);
 
     const res = await main(req);
@@ -38,7 +40,7 @@ describe('resources/api/v2/texts', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      queryStringParameters: { type: 'page' },
+      queryStringParameters: { type: 'page', },
     });
     mockUserRequest(req, true, false, false);
 
@@ -48,22 +50,23 @@ describe('resources/api/v2/texts', () => {
 
   it('Returns text list and replaces signed media urls', async () => {
     (vi.mocked(typedQuery) as any).mockResolvedValue({
-      Items: [
-        {
-          datetime: 1,
-          type: 'page',
-          recipients: 1,
-          body: 'msg',
-          mediaUrls: [ 'textMedia/file-1', 'https://example.com/file-2' ],
-        },
-      ],
+      Items: [ {
+        datetime: 1,
+        type: 'page',
+        recipients: 1,
+        body: 'msg',
+        mediaUrls: [
+          'textMedia/file-1',
+          'https://example.com/file-2',
+        ],
+      }, ],
       ScannedCount: 1,
     });
 
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      queryStringParameters: { type: 'page' },
+      queryStringParameters: { type: 'page', },
     });
     mockUserRequest(req, true, true, true);
 
@@ -101,7 +104,7 @@ describe('resources/api/v2/texts', () => {
     const req = generateApiEvent({
       method: 'GET',
       path: '',
-      queryStringParameters: { department: 'Baca' },
+      queryStringParameters: { department: 'Baca', },
     });
     mockUserRequest(req, true, true, true);
 
@@ -113,14 +116,12 @@ describe('resources/api/v2/texts', () => {
 
   it('Includes zero-recipient texts when all=y', async () => {
     (vi.mocked(typedQuery) as any).mockResolvedValue({
-      Items: [
-        {
-          datetime: 2,
-          type: 'department',
-          department: 'Baca',
-          recipients: 0,
-        },
-      ],
+      Items: [ {
+        datetime: 2,
+        type: 'department',
+        department: 'Baca',
+        recipients: 0,
+      }, ],
       ScannedCount: 1,
     });
 
