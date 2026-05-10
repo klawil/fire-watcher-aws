@@ -204,189 +204,154 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     const isPage: boolean = !!body.Item.Tone;
     const shouldDoTranscript: boolean = body.Item.Emergency === 1 ||
       isPage;
-    if (Key.indexOf('/dtr') !== -1) {
-      const startTime = body.Item.StartTime as number;
-      const endTime = body.Item.EndTime as number;
-      const existingItems = await typedQuery<FullFileObject>({
-        TableName: TABLE_FILE(),
-        IndexName: 'StartTimeTgIndex',
-        ExpressionAttributeNames: {
-          '#Talkgroup': 'Talkgroup',
-          '#StartTime': 'StartTime',
-        },
-        ExpressionAttributeValues: {
-          ':Talkgroup': body.Item.Talkgroup,
-          ':StartTime1': startTime - selectDuplicateBuffer,
-          ':StartTime2': startTime + selectDuplicateBuffer,
-        },
-        KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
-      });
-      if (
-        !!existingItems.Items &&
-        existingItems.Items.length > 1
-      ) {
-        const matchingItems = existingItems.Items
-          .filter(item => {
-            const itemStartTime = item.StartTime;
-            const itemEndTime = item.EndTime;
-            if (
-              typeof itemStartTime === 'undefined' ||
-              typeof itemEndTime === 'undefined'
-            ) {
-              return false;
+    const startTime = body.Item.StartTime as number;
+    const endTime = body.Item.EndTime as number;
+    const existingItems = await typedQuery<FullFileObject>({
+      TableName: TABLE_FILE(),
+      IndexName: 'StartTimeTgIndex',
+      ExpressionAttributeNames: {
+        '#Talkgroup': 'Talkgroup',
+        '#StartTime': 'StartTime',
+      },
+      ExpressionAttributeValues: {
+        ':Talkgroup': body.Item.Talkgroup,
+        ':StartTime1': startTime - selectDuplicateBuffer,
+        ':StartTime2': startTime + selectDuplicateBuffer,
+      },
+      KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
+    });
+    if (
+      !!existingItems.Items &&
+      existingItems.Items.length > 1
+    ) {
+      const matchingItems = existingItems.Items
+        .filter(item => {
+          const itemStartTime = item.StartTime;
+          const itemEndTime = item.EndTime;
+          if (
+            typeof itemStartTime === 'undefined' ||
+            typeof itemEndTime === 'undefined'
+          ) {
+            return false;
+          }
+
+          // Return true if the file starts in, ends in, or covers the buffer period
+          const startsIn = itemStartTime >= startTime - actualDuplicateBuffer &&
+            itemStartTime <= endTime + actualDuplicateBuffer;
+          const endsIn = itemEndTime >= startTime - actualDuplicateBuffer &&
+            itemEndTime <= endTime + actualDuplicateBuffer;
+          const covers = itemStartTime <= startTime - actualDuplicateBuffer &&
+            itemEndTime >= endTime + actualDuplicateBuffer;
+          return startsIn || endsIn || covers;
+        });
+
+      if (matchingItems.length > 1) {
+        doTranscriptOnly = true; // So we don't accidentally double page
+        const transcript: string | null = matchingItems
+          .reduce((transcript: null | string, item) => {
+            if (item.Transcript) {
+              return transcript !== null && transcript.length > item.Transcript.length
+                ? transcript
+                : item.Transcript;
+            }
+            return null;
+          }, null);
+        const allItems = matchingItems
+          .sort((a, b) => {
+            const aAdded = a.Added;
+            const bAdded = b.Added;
+            const aLen = a.Len;
+            const bLen = b.Len;
+
+            if (aLen === bLen) {
+              return aAdded > bAdded ? -1 : 1;
             }
 
-            // Return true if the file starts in, ends in, or covers the buffer period
-            const startsIn = itemStartTime >= startTime - actualDuplicateBuffer &&
-              itemStartTime <= endTime + actualDuplicateBuffer;
-            const endsIn = itemEndTime >= startTime - actualDuplicateBuffer &&
-              itemEndTime <= endTime + actualDuplicateBuffer;
-            const covers = itemStartTime <= startTime - actualDuplicateBuffer &&
-              itemEndTime >= endTime + actualDuplicateBuffer;
-            return startsIn || endsIn || covers;
+            return (aLen || 0) > (bLen || 0) ? 1 : -1;
           });
-
-        if (matchingItems.length > 1) {
-          doTranscriptOnly = true; // So we don't accidentally double page
-          const transcript: string | null = matchingItems
-            .reduce((transcript: null | string, item) => {
-              if (item.Transcript) {
-                return transcript !== null && transcript.length > item.Transcript.length
-                  ? transcript
-                  : item.Transcript;
-              }
-              return null;
-            }, null);
-          const allItems = matchingItems
-            .sort((a, b) => {
-              const aAdded = a.Added;
-              const bAdded = b.Added;
-              const aLen = a.Len;
-              const bLen = b.Len;
-
-              if (aLen === bLen) {
-                return aAdded > bAdded ? -1 : 1;
-              }
-
-              return (aLen || 0) > (bLen || 0) ? 1 : -1;
-            });
-          const itemsToDelete = allItems
-            .slice(0, -1);
-          const keptItem = allItems.slice(-1)[0];
-          const keepingCurrentItem: boolean = keptItem.Key === Key;
-          if (isPage) {
-            logger.error('itemsToDelete', itemsToDelete);
-            logger.error('keptItem', keptItem);
-            logger.error('body', body.Item);
-          } else {
-            logger.debug('itemsToDelete', itemsToDelete);
-            logger.debug('keptItem', keptItem);
-            logger.debug('body', body.Item);
-          }
-          promises['delete-dups'] = Promise.all(itemsToDelete.map(item => typedDeleteItem<FullFileObject>({
-            TableName: TABLE_FILE(),
-            Key: {
-              Talkgroup: item.Talkgroup,
-              Added: item.Added,
-            },
-          })));
-          promises['delete-devices'] = Promise.all(itemsToDelete.map(async item => {
-            if (!item.Sources) {
-              return;
-            }
-
-            return Promise.all(item.Sources.map(sourceId => typedDeleteItem<FileEventItem>({
-              TableName: TABLE_DEVICES(),
-              Key: {
-                RadioID: sourceId.toString(),
-                StartTime: item.StartTime || 0,
-              },
-            })));
-          }));
-          promises['delete-s3-dups'] = Promise.all(itemsToDelete.map(item => {
-            if (typeof item.Key === 'undefined') {
-              return;
-            }
-
-            return s3.send(new DeleteObjectCommand({
-              Bucket,
-              Key: item.Key,
-            }));
-          }));
-          if (shouldDoTranscript && !keepingCurrentItem) {
-            promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
-              TableName: TABLE_FILE_TRANSLATION(),
-              Item: {
-                Key: item.Key || '',
-                NewKey: keptItem.Key || '',
-                TTL: Math.round(Date.now() / 1000) + (60 * 60), // 1 hour TTL
-              },
-            })));
-          }
-          if (transcript !== null && keepingCurrentItem) {
-            promises['add-transcript'] = typedUpdate<FullFileObject>({
-              TableName: TABLE_FILE(),
-              Key: {
-                Talkgroup: keptItem.Talkgroup,
-                Added: keptItem.Added,
-              },
-              ExpressionAttributeNames: {
-                '#Transcript': 'Transcript',
-              },
-              ExpressionAttributeValues: {
-                ':Transcript': transcript,
-              },
-              UpdateExpression: 'SET #Transcript = :Transcript',
-            });
-          }
-
-          // Check to see if we need to send a paging message
-          if (
-            isPage &&
-            keepingCurrentItem &&
-            !itemsToDelete.reduce((agg, item) => agg || !!item.PageSent, false)
-          ) {
-            // Update the current item to indicate a page will have been sent
-            doTranscriptOnly = false;
-            promises['set-page-sent'] = typedUpdate<FullFileObject>({
-              TableName: TABLE_FILE(),
-              Key: {
-                Talkgroup: keptItem.Talkgroup,
-                Added: keptItem.Added,
-              },
-              ExpressionAttributeNames: {
-                '#PageSent': 'PageSent',
-              },
-              ExpressionAttributeValues: {
-                ':PageSent': true,
-              },
-              UpdateExpression: 'SET #PageSent = :PageSent',
-            });
-          }
-
-          // Check to see if we should redo the transcription
-          if (
-            !keepingCurrentItem || // We're not saving this file
-            !shouldDoTranscript // This file doesn't need a transcript
-          ) {
-            logger.debug('Duplicate, no transcript or page');
-            let wasError = false;
-            await Promise.all(Object.keys(promises).map(key => promises[key]
-              .catch(e => {
-                logger.error(`Error on ${key}`, e);
-                wasError = true;
-              })));
-            if (wasError) {
-              throw new Error('Error in promises');
-            }
+        const itemsToDelete = allItems
+          .slice(0, -1);
+        const keptItem = allItems.slice(-1)[0];
+        const keepingCurrentItem: boolean = keptItem.Key === Key;
+        if (isPage) {
+          logger.error('itemsToDelete', itemsToDelete);
+          logger.error('keptItem', keptItem);
+          logger.error('body', body.Item);
+        } else {
+          logger.debug('itemsToDelete', itemsToDelete);
+          logger.debug('keptItem', keptItem);
+          logger.debug('body', body.Item);
+        }
+        promises['delete-dups'] = Promise.all(itemsToDelete.map(item => typedDeleteItem<FullFileObject>({
+          TableName: TABLE_FILE(),
+          Key: {
+            Talkgroup: item.Talkgroup,
+            Added: item.Added,
+          },
+        })));
+        promises['delete-devices'] = Promise.all(itemsToDelete.map(async item => {
+          if (!item.Sources) {
             return;
           }
-        } else if (isPage) {
-          promises['set-page-sent-nodup'] = typedUpdate<FullFileObject>({
+
+          return Promise.all(item.Sources.map(sourceId => typedDeleteItem<FileEventItem>({
+            TableName: TABLE_DEVICES(),
+            Key: {
+              RadioID: sourceId.toString(),
+              StartTime: item.StartTime || 0,
+            },
+          })));
+        }));
+        promises['delete-s3-dups'] = Promise.all(itemsToDelete.map(item => {
+          if (typeof item.Key === 'undefined' || item.Key === keptItem.Key) {
+            return;
+          }
+
+          return s3.send(new DeleteObjectCommand({
+            Bucket,
+            Key: item.Key,
+          }));
+        }));
+        if (shouldDoTranscript && !keepingCurrentItem) {
+          promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
+            TableName: TABLE_FILE_TRANSLATION(),
+            Item: {
+              Key: item.Key || '',
+              NewKey: keptItem.Key || '',
+              TTL: Math.round(Date.now() / 1000) + (60 * 60), // 1 hour TTL
+            },
+          })));
+        }
+        if (transcript !== null && keepingCurrentItem) {
+          promises['add-transcript'] = typedUpdate<FullFileObject>({
             TableName: TABLE_FILE(),
             Key: {
-              Talkgroup: body.Item.Talkgroup,
-              Added: body.Item.Added,
+              Talkgroup: keptItem.Talkgroup,
+              Added: keptItem.Added,
+            },
+            ExpressionAttributeNames: {
+              '#Transcript': 'Transcript',
+            },
+            ExpressionAttributeValues: {
+              ':Transcript': transcript,
+            },
+            UpdateExpression: 'SET #Transcript = :Transcript',
+          });
+        }
+
+        // Check to see if we need to send a paging message
+        if (
+          isPage &&
+          keepingCurrentItem &&
+          !itemsToDelete.reduce((agg, item) => agg || !!item.PageSent, false)
+        ) {
+          // Update the current item to indicate a page will have been sent
+          doTranscriptOnly = false;
+          promises['set-page-sent'] = typedUpdate<FullFileObject>({
+            TableName: TABLE_FILE(),
+            Key: {
+              Talkgroup: keptItem.Talkgroup,
+              Added: keptItem.Added,
             },
             ExpressionAttributeNames: {
               '#PageSent': 'PageSent',
@@ -397,6 +362,39 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             UpdateExpression: 'SET #PageSent = :PageSent',
           });
         }
+
+        // Check to see if we should redo the transcription
+        if (
+          !keepingCurrentItem || // We're not saving this file
+          !shouldDoTranscript // This file doesn't need a transcript
+        ) {
+          logger.debug('Duplicate, no transcript or page');
+          let wasError = false;
+          await Promise.all(Object.keys(promises).map(key => promises[key]
+            .catch(e => {
+              logger.error(`Error on ${key}`, e);
+              wasError = true;
+            })));
+          if (wasError) {
+            throw new Error('Error in promises');
+          }
+          return;
+        }
+      } else if (isPage) {
+        promises['set-page-sent-nodup'] = typedUpdate<FullFileObject>({
+          TableName: TABLE_FILE(),
+          Key: {
+            Talkgroup: body.Item.Talkgroup,
+            Added: body.Item.Added,
+          },
+          ExpressionAttributeNames: {
+            '#PageSent': 'PageSent',
+          },
+          ExpressionAttributeValues: {
+            ':PageSent': true,
+          },
+          UpdateExpression: 'SET #PageSent = :PageSent',
+        });
       }
     }
 

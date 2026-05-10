@@ -420,7 +420,21 @@ describe('resources/s3', () => {
       });
 
       // Query to find possible adjacent files
-      expect(QueryCommand).toBeCalledTimes(0);
+      expect(QueryCommand).toBeCalledTimes(1);
+      expect(QueryCommand).toBeCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        ExpressionAttributeNames: {
+          '#StartTime': 'StartTime',
+          '#Talkgroup': 'Talkgroup',
+        },
+        ExpressionAttributeValues: {
+          ':StartTime1': -58,
+          ':StartTime2': 62,
+          ':Talkgroup': 18331,
+        },
+        IndexName: 'StartTimeTgIndex',
+        KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
+      });
 
       // No Get commands
       expect(GetCommand).toBeCalledTimes(0);
@@ -501,7 +515,21 @@ describe('resources/s3', () => {
       });
 
       // Query to find possible adjacent files
-      expect(QueryCommand).toBeCalledTimes(0);
+      expect(QueryCommand).toBeCalledTimes(1);
+      expect(QueryCommand).toBeCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        ExpressionAttributeNames: {
+          '#StartTime': 'StartTime',
+          '#Talkgroup': 'Talkgroup',
+        },
+        ExpressionAttributeValues: {
+          ':StartTime1': -58,
+          ':StartTime2': 62,
+          ':Talkgroup': 18333,
+        },
+        IndexName: 'StartTimeTgIndex',
+        KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
+      });
 
       // No Get commands
       expect(GetCommand).toBeCalledTimes(0);
@@ -572,6 +600,111 @@ describe('resources/s3', () => {
         ],
         TranscriptionJobName: '8198-123456',
       });
+    });
+
+    it('Picks the right VHF file if multiple start near the same time', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createVhfHeadInfo);
+
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
+        Items: [
+          {
+            Key: createVhfEvent.s3.object.key,
+            StartTime: 2,
+            EndTime: 17,
+            Len: 15,
+            Added: currentTime,
+            Talkgroup: 18331,
+          },
+          {
+            Key: 'vhf-shorter',
+            StartTime: 3,
+            EndTime: 8,
+            Len: 5,
+            Added: 1000,
+            Talkgroup: 18331,
+          },
+          {
+            Key: 'vhf-newer',
+            StartTime: 2,
+            EndTime: 17,
+            Len: 15,
+            Added: currentTime + 1000,
+            Talkgroup: 18331,
+          },
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createVhfEvent, ],
+      });
+
+      expect(DeleteCommand).toBeCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Added: 1000,
+          Talkgroup: 18331,
+        },
+      });
+      expect(DeleteCommand).toBeCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Added: currentTime + 1000,
+          Talkgroup: 18331,
+        },
+      });
+
+      expect(DeleteObjectCommand).toBeCalledWith({
+        Bucket: 'bucket-name',
+        Key: 'vhf-shorter',
+      });
+      expect(DeleteObjectCommand).toBeCalledWith({
+        Bucket: 'bucket-name',
+        Key: 'vhf-newer',
+      });
+    });
+
+    it('Does not delete S3 object if duplicate candidate has the same key', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createVhfHeadInfo);
+
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
+        Items: [
+          {
+            Key: createVhfEvent.s3.object.key,
+            StartTime: 2,
+            EndTime: 17,
+            Len: 15,
+            Added: currentTime,
+            Talkgroup: 18331,
+          },
+          {
+            Key: createVhfEvent.s3.object.key,
+            StartTime: 2,
+            EndTime: 8,
+            Len: 6,
+            Added: 1000,
+            Talkgroup: 18331,
+          },
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createVhfEvent, ],
+      });
+
+      expect(DeleteCommand).toBeCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Added: 1000,
+          Talkgroup: 18331,
+        },
+      });
+      expect(DeleteObjectCommand).toBeCalledTimes(0);
     });
 
     it('Starts a transcription job if the file is emegency traffic', async () => {
