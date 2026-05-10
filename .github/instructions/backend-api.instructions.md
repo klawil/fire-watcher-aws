@@ -19,5 +19,8 @@ applyTo:
 - Queue- and event-driven work usually spans more than one file. Check `src/resources/queue.ts`, `src/resources/s3.ts`, `src/resources/twilioQueueHandler.ts`, and `src/resources/eventFileQueueHandler.ts` before assuming a handler is isolated.
 - When an API contract changes, regenerate `oas.json` with `npm run document` because the API docs page reads from that generated file.
 - Agents must never run `npm run copy-constants`. If `src/utils/backend/hidden-constants.ts` is missing, stop and ask the user to handle constants setup before lint or tests.
-- After each backend change, iterate until all of these commands pass in this order: `npm run type-check`, `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.
+- Run verification commands based on what changed:
+  - Run `npm run lint`, `npm run type-check`, `npm run test`, and `npm run build` if any code or configuration files changed.
+  - Run `npm run synth` if CDK files or their dependencies changed.
+  - Run `npm run document` if API files or their dependencies changed.
 - Consider `npm run synth` successful only on exit code `0`; verbose template output is expected, and truncated output should be rerun with captured logs plus explicit exit-code checking.

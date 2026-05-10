@@ -67,4 +67,7 @@
 
 - For UI work, inspect the matching page in `src/app` and the nearest reusable component in `src/components` before editing.
 - For backend/API work, inspect the handler, the matching type definition in `src/types/api`, and the CDK wiring if permissions or environment variables are involved.
-- After each code change, iterate until all of these commands pass in this order: `npm run type-check`, `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.
+- Run verification commands based on what changed:
+	- Run `npm run lint`, `npm run type-check`, `npm run test`, and `npm run build` if any code or configuration files changed.
+	- Run `npm run synth` if CDK files or their dependencies changed.
+	- Run `npm run document` if API files or their dependencies changed.

@@ -39,13 +39,10 @@ Produce a review-ready pull request targeting `main` with verified code changes 
 - Keep edits minimal and consistent with project conventions.
 
 4. Verify quality gates before PR.
-- Run required checks in this order and require passing exit codes:
-  1. `npm run type-check`
-  2. `npm run build`
-  3. `npm run test`
-  4. `npm run synth`
-  5. `npm run lint`
-  6. `npm run document`
+- Run required checks based on what changed and require passing exit codes:
+  1. Run `npm run lint`, `npm run type-check`, `npm run test`, and `npm run build` if any code or configuration files changed.
+  2. Run `npm run synth` if CDK files or their dependencies changed.
+  3. Run `npm run document` if API files or their dependencies changed.
 - If a check fails: fix root causes, rerun failed checks, then continue.
 
 5. Prepare commit(s).
@@ -82,4 +79,5 @@ Produce a review-ready pull request targeting `main` with verified code changes 
 - Requested implementation is present.
 - Required verification commands pass or blockers are explicitly documented.
 - PR is opened against `main` with a useful description.
+  - This description should include what CDK resources were changed using `npm run diff` if any changes were made to CDK files or their dependencies.
 - User receives branch, PR URL, and validation status.

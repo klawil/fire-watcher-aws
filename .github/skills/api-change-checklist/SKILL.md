@@ -25,7 +25,10 @@ Use this skill for backend endpoint work in this repository.
 5. Update or add the nearest Vitest coverage, usually in `tests/resources/api/v2` or another matching `tests/resources` file.
 6. Regenerate `oas.json` with `npm run document` whenever the API contract changed.
 7. Agents must never run `npm run copy-constants`. If `src/utils/backend/hidden-constants.ts` is missing, stop and ask the user to handle constants setup before lint or tests.
-8. After each backend change, iterate until all of these commands pass in this order: `npm run type-check`, `npm run build`, `npm run test`, `npm run synth`, `npm run lint`, and `npm run document`.
+8. Run verification commands based on what changed:
+	- Run `npm run lint`, `npm run type-check`, `npm run test`, and `npm run build` if any code or configuration files changed.
+	- Run `npm run synth` if CDK files or their dependencies changed.
+	- Run `npm run document` if API files or their dependencies changed.
 
 ## Repository-Specific Reminders
 
