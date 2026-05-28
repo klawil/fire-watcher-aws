@@ -1,31 +1,17 @@
 import {
+  // GetObjectCommand,
   PutObjectCommand, S3Client
 } from '@aws-sdk/client-s3';
 import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 
 import {
-  FireTypes, WeatherResultJson
+  FireInfo, WeatherResultJson
 } from '@/deprecated/common/weather';
 import { BUCKET_AUDIO } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('weather');
-
-interface GaccUrlObject {
-  new: string;
-  ongoing: string;
-  rx: string;
-}
-
-interface GaccJson {
-  features: {
-    properties: {
-      POOState: string;
-      POOCounty: string;
-    }
-  }[];
-}
 
 interface NwsAlert {
   onset: string;
@@ -43,87 +29,52 @@ interface NwsJson {
   }[]
 }
 
-const allowedCounties: string[] = [ 'Saguache', ];
-const currentFireUrls: GaccUrlObject = {
-  new: 'https://gbcc.us/rmcc_newfires.geojson',
-  ongoing: 'https://gbcc.us/rmcc_ongoingfires.geojson',
-  rx: 'https://gbcc.us/rmcc_rxfires.geojson',
-};
+interface StateFires {
+  type: 'FeatureCollection';
+  features: FireInfo[];
+}
+
 const readiness = 'https://gacc.nifc.gov/rmcc/';
-const weatherAlertsApi = 'https://api.weather.gov/alerts/active?point=37.993%2C-105.699';
+const weatherAlertsApi = 'https://api.weather.gov/alerts/active?area=CO';
 const countyRestrictionUrl = 'https://www.google.com/maps/d/u/0/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ll=38.91583034559253%2C-106.1196738784554&z=8';
 
+// Retrieves fires in CO within the past 7 days
+const currentFireUrlQueryParams = {
+  where: 'ModifiedOnDateTime_dt BETWEEN CURRENT_TIMESTAMP - 7 AND CURRENT_TIMESTAMP',
+  geometry: '{"xmin":-109.0496,"ymin":37.0,"xmax":-102.0421,"ymax":41.0,"spatialReference":{"wkid":4326}}',
+  geometryType: 'esriGeometryEnvelope',
+  spatialRel: 'esriSpatialRelEnvelopeIntersects',
+  outFields: '*',
+  returnGeometry: 'true',
+  f: 'pgeojson',
+};
+const currentFireUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations/FeatureServer/0/query';
+
 const s3File = 'weather.json';
-
-async function processGaccUrl(url: string): Promise<number[]> {
-  logger.trace('processGaccUrl', ...arguments);
-  try {
-    const data: GaccJson = await fetch(url)
-      .then(r => r.json()) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-    return data.features
-      .filter(f => f.properties.POOState === 'US-CO')
-      .reduce((agg: number[], feature) => {
-        if (agg.length < 2) {
-          agg = [
-            0,
-            0,
-          ];
-        }
-        agg[1]++;
-        if (allowedCounties.includes(feature.properties.POOCounty)) {
-          agg[0]++;
-        }
-        return agg;
-      }, []);
-  } catch (e) {
-    logger.error('processGaccUrl', e);
-    return [
-      -1,
-      -1,
-    ];
-  }
-}
 
 async function getStateFires(): Promise<WeatherResultJson['stateFires']> {
   logger.trace('getStateFires', ...arguments);
   try {
-    const keys: FireTypes[] = Object.keys(currentFireUrls) as FireTypes[];
+    const result = await fetch(`${currentFireUrl}?${new URLSearchParams(currentFireUrlQueryParams).toString()}`)
+      .then(r => r.json()) as StateFires;
 
-    const gaccData = await Promise.all(keys.map(key => processGaccUrl(currentFireUrls[key])));
-
-    return gaccData.reduce((agg: WeatherResultJson['stateFires'], data, ind) => {
-      agg[keys[ind]] = data;
-      return agg;
-    }, {
-      new: [
-        -1,
-        -1,
-      ],
-      ongoing: [
-        -1,
-        -1,
-      ],
-      rx: [
-        -1,
-        -1,
-      ],
-    });
+    return {
+      updated: result.features.reduce((latest, feature) => {
+        if (
+          feature.properties.ModifiedOnDateTime_dt !== null &&
+          feature.properties.ModifiedOnDateTime_dt < latest
+        ) {
+          return feature.properties.ModifiedOnDateTime_dt;
+        }
+        return latest;
+      }, Date.now()),
+      fires: result.features,
+    };
   } catch (e) {
     logger.error('getStateFires', e);
     return {
-      new: [
-        -1,
-        -1,
-      ],
-      ongoing: [
-        -1,
-        -1,
-      ],
-      rx: [
-        -1,
-        -1,
-      ],
+      fires: -1,
+      updated: -1,
     };
   }
 }
@@ -287,6 +238,14 @@ async function uploadFile(text: string) {
 export async function main() {
   logger.trace('main', ...arguments);
   try {
+    // // Get the old file to pull fire info from
+    // const s3 = new S3Client();
+    // const getParams = {
+    //   Bucket: BUCKET_AUDIO(),
+    //   Key: s3File,
+    // };
+    // const oldDataPromise = s3.send(new GetObjectCommand(getParams));
+
     const dataRaw = await Promise.all([
       getStateFires(),
       getReadinessInfo(),

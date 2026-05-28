@@ -84,29 +84,25 @@ export default function CofrnLayout({
         {children}
       </Container>
 
-      <Navbar
-        bg={colorModeName}
-        className='mt-4'
+      <footer
+        className='pt-3 pb-3 mt-3 border-top d-flex justify-content-center align-items-center flex-wrap'
       >
-        <Container
-          fluid={true}
-          className='justify-content-center'
-        >
-          <Navbar.Brand href='#'>
-            <img // eslint-disable-line @next/next/no-img-element
-              src='/logo.png'
-              width='50'
-              height='50'
-              className='d-inline-block align-top'
-              alt='COFRN'
-            />
-          </Navbar.Brand>
-          <Nav.Link className='mx-4' href='/about'>About Us</Nav.Link>
-          <Nav.Link className='mx-4' href='/about/privacy-policy'>Privacy Policy</Nav.Link>
-          <Nav.Link className='mx-4' href='/about/terms-of-service'>Terms of Service</Nav.Link>
-          <Navbar.Text className='mx-4'>© 2025 First Responder Notifications, LLC</Navbar.Text>
-        </Container>
-      </Navbar>
+        <Navbar.Brand className='mx-3' href='#'>
+          <img // eslint-disable-line @next/next/no-img-element
+            src='/logo.png'
+            width='50'
+            height='50'
+            className='d-inline-block align-top'
+            alt='COFRN'
+          />
+        </Navbar.Brand>
+        <Nav.Link className='mx-3' href='/about'>About Us</Nav.Link>
+        <Nav.Link className='mx-3' href='/about/privacy-policy'>Privacy Policy</Nav.Link>
+        <Nav.Link className='mx-3' href='/about/terms-of-service'>Terms of Service</Nav.Link>
+        <Navbar.Text style={{
+          color: 'rgba(255, 255, 255, 0.65)',
+        }} className='mx-3'>© 2025 First Responder Notifications, LLC</Navbar.Text>
+      </footer>
     </LoggedInUserContext.Provider>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import L from 'leaflet';
 import Link from 'next/link';
 import {
   useCallback, useContext, useEffect, useState
@@ -7,15 +8,98 @@ import {
 import Col from 'react-bootstrap/Col';
 import Image from 'react-bootstrap/Image';
 import Row from 'react-bootstrap/Row';
+import {
+  MapContainer, Marker, Popup, TileLayer
+} from 'react-leaflet';
 
 import styles from './weather.module.css';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
-import { WeatherResultJson } from '@/deprecated/common/weather';
+import {
+  FireInfo, WeatherResultJson, getFireType, isFireActive
+} from '@/deprecated/common/weather';
+import { dateTimeToTimeStr } from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 
+import 'leaflet/dist/leaflet.css';
+
 const logger = getLogger('weatherPage');
+
+const numberFormat = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+});
+
+function FireMarker({
+  fire,
+}: Readonly<{
+  fire: FireInfo;
+}>) {
+  const type = getFireType(fire);
+
+  const current = fire.properties.IncidentSize === null
+    ? null
+    : numberFormat.format(fire.properties.IncidentSize);
+  const start = fire.properties.DiscoveryAcres === null
+    ? null
+    : numberFormat.format(fire.properties.DiscoveryAcres);
+  const final = fire.properties.FinalAcres === null
+    ? null
+    : numberFormat.format(fire.properties.FinalAcres);
+
+  return <>
+    <Marker
+      key={fire.properties.OBJECTID}
+      opacity={isFireActive(fire) ? 1 : 0.5}
+      position={[
+        fire.geometry.coordinates[1],
+        fire.geometry.coordinates[0],
+      ]}
+      icon={L.icon({
+        iconUrl: `/icons/${type == 'new' ? 'red' : type == 'rx' ? 'green' : 'black'}.png`,
+        iconSize: [
+          32,
+          32,
+        ],
+        iconAnchor: [
+          16,
+          32,
+        ],
+        popupAnchor: [
+          0,
+          -32,
+        ],
+      })}
+    >
+      <Popup>
+        <b>{fire.properties.IncidentName}</b><br />
+        <br />
+        {fire.properties.FireDiscoveryDateTime &&
+          <>Discovered: {dateTimeToTimeStr(fire.properties.FireDiscoveryDateTime)}<br /></>}
+        {fire.properties.ContainmentDateTime &&
+          <>Contained: {dateTimeToTimeStr(fire.properties.ContainmentDateTime)}<br /></>}
+        {fire.properties.ControlDateTime &&
+          <>Controlled: {dateTimeToTimeStr(fire.properties.ControlDateTime)}<br /></>}
+        {fire.properties.FireOutDateTime &&
+          <>Fire Out: {dateTimeToTimeStr(fire.properties.FireOutDateTime)}<br /></>}
+        {fire.properties.ModifiedOnDateTime_dt &&
+          <>Updated: {dateTimeToTimeStr(fire.properties.ModifiedOnDateTime_dt)}<br /></>}
+        {(start || current || final) && <br />}
+        {start && <>Initial Size: {start}ac<br /></>}
+        {current && <>{isFireActive(fire) ? 'Current' : 'Final'} Size: {current}ac<br /></>}
+        {final && <>Final Size: {final}ac<br /></>}
+        {fire.properties.PercentContained !== null && <>
+          {fire.properties.ContainmentDateTime === null &&
+            <><br />Percent Contained: {fire.properties.PercentContained}%</>}
+        </>}
+      </Popup>
+    </Marker>
+  </>;
+}
+
+function isSaguacheFire(fire: FireInfo): boolean {
+  return fire.properties.POOCounty === 'Saguache';
+}
 
 export default function WeatherPage() {
   const addAlert = useContext(AddAlertContext);
@@ -118,21 +202,73 @@ export default function WeatherPage() {
                 <th className='px-2'>Colorado</th>
               </tr></thead>
               <tbody>
-                <tr>
-                  <th className='px-2'>New</th>
-                  <td className='px-2'>{weatherData.stateFires.new[0]}</td>
-                  <td className='px-2'>{weatherData.stateFires.new[1]}</td>
-                </tr>
-                <tr>
-                  <th className='px-2'>Ongoing</th>
-                  <td className='px-2'>{weatherData.stateFires.ongoing[0]}</td>
-                  <td className='px-2'>{weatherData.stateFires.ongoing[1]}</td>
-                </tr>
-                <tr>
-                  <th className='px-2'>RX</th>
-                  <td className='px-2'>{weatherData.stateFires.rx[0]}</td>
-                  <td className='px-2'>{weatherData.stateFires.rx[1]}</td>
-                </tr>
+                {weatherData.stateFires.fires === -1
+                  ? <tr><td colSpan={3}>Current Fire Data Unavailable</td></tr>
+                  : <>
+                    <tr>
+                      <th className='px-2'>New</th>
+                      <td className='px-2'>
+                        {weatherData.stateFires.fires
+                          .filter(isSaguacheFire)
+                          .filter(isFireActive)
+                          .filter(f => getFireType(f) === 'new')
+                          .length} of {weatherData.stateFires.fires
+                          .filter(isSaguacheFire)
+                          .filter(f => getFireType(f) === 'new')
+                          .length}
+                      </td>
+                      <td className='px-2'>
+                        {weatherData.stateFires.fires
+                          .filter(isFireActive)
+                          .filter(f => getFireType(f) === 'new')
+                          .length} of {weatherData.stateFires.fires
+                          .filter(f => getFireType(f) === 'new')
+                          .length}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th className='px-2'>Ongoing</th>
+                      <td className='px-2'>
+                        {weatherData.stateFires.fires
+                          .filter(isSaguacheFire)
+                          .filter(isFireActive)
+                          .filter(f => getFireType(f) === 'ongoing')
+                          .length} of {weatherData.stateFires.fires
+                          .filter(isSaguacheFire)
+                          .filter(f => getFireType(f) === 'ongoing')
+                          .length}
+                      </td>
+                      <td className='px-2'>
+                        {weatherData.stateFires.fires
+                          .filter(isFireActive)
+                          .filter(f => getFireType(f) === 'ongoing')
+                          .length} of {weatherData.stateFires.fires
+                          .filter(f => getFireType(f) === 'ongoing')
+                          .length}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th className='px-2'>RX</th>
+                      <td className='px-2'>
+                        {weatherData.stateFires.fires
+                          .filter(isSaguacheFire)
+                          .filter(isFireActive)
+                          .filter(f => getFireType(f) === 'rx')
+                          .length} of {weatherData.stateFires.fires
+                          .filter(isSaguacheFire)
+                          .filter(f => getFireType(f) === 'rx')
+                          .length}
+                      </td>
+                      <td className='px-2'>
+                        {weatherData.stateFires.fires
+                          .filter(isFireActive)
+                          .filter(f => getFireType(f) === 'rx')
+                          .length} of {weatherData.stateFires.fires
+                          .filter(f => getFireType(f) === 'rx')
+                          .length}
+                      </td>
+                    </tr>
+                  </>}
               </tbody>
             </table>
           </Col>
@@ -153,7 +289,7 @@ export default function WeatherPage() {
           <Col xs={12} className='font-monospace'><a href='https://www.google.com/maps/d/u/0/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ll=38.91583034559255%2C-106.1196738784554&z=7'>Colorado Restriction Map</a></Col>
         </Col>
 
-        <Col md={6}>
+        <Col md={6} className='text-center'>
           <h2 className='text-center'>Fire Weather Maps</h2>
           <h3 className='text-center'>Today</h3>
           <a
@@ -210,6 +346,31 @@ export default function WeatherPage() {
             href='https://www.spc.noaa.gov/products/fire_wx/fwdy2.html'
           >Day 2 Fire Weather Outlook</Col>
         </Col>
+      </Row>
+      <Row>
+        <MapContainer
+          center={[
+            39,
+            -105.545167,
+          ]}
+          zoom={7}
+          style={{
+            height: '500px',
+          }}
+        >
+          <TileLayer
+            maxZoom={19}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+          />
+          {weatherData.stateFires.fires !== -1 && weatherData.stateFires.fires
+            .sort((a, b) => (a.properties.ModifiedOnDateTime_dt || 0) -
+              (b.properties.ModifiedOnDateTime_dt || 0))
+            .map(fire => <FireMarker
+              key={fire.properties.OBJECTID}
+              fire={fire}
+            />)}
+        </MapContainer>
       </Row>
     </>}
   </>;
