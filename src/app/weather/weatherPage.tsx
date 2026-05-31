@@ -1,15 +1,14 @@
 'use client';
 
+import { FeatureCollection } from 'geojson';
 import L from 'leaflet';
-import Link from 'next/link';
 import {
-  useCallback, useContext, useEffect, useState
+  useContext, useEffect, useState
 } from 'react';
 import Col from 'react-bootstrap/Col';
-import Image from 'react-bootstrap/Image';
 import Row from 'react-bootstrap/Row';
 import {
-  MapContainer, Marker, Popup, TileLayer
+  GeoJSON, GeoJSONProps, LayersControl, MapContainer, TileLayer
 } from 'react-leaflet';
 
 import styles from './weather.module.css';
@@ -30,11 +29,7 @@ const numberFormat = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
 });
 
-function FireMarker({
-  fire,
-}: Readonly<{
-  fire: FireInfo;
-}>) {
+function FireMarker(fire: FireInfo): L.Marker {
   const type = getFireType(fire);
 
   const current = fire.properties.IncidentSize === null
@@ -47,15 +42,14 @@ function FireMarker({
     ? null
     : numberFormat.format(fire.properties.FinalAcres);
 
-  return <>
-    <Marker
-      key={fire.properties.OBJECTID}
-      opacity={isFireActive(fire) ? 1 : 0.5}
-      position={[
-        fire.geometry.coordinates[1],
-        fire.geometry.coordinates[0],
-      ]}
-      icon={L.icon({
+  const marker = new L.Marker(
+    [
+      fire.geometry.coordinates[1],
+      fire.geometry.coordinates[0],
+    ],
+    {
+      opacity: isFireActive(fire) ? 1 : 0.5,
+      icon: L.icon({
         iconUrl: `/icons/${type == 'new' ? 'red' : type == 'rx' ? 'green' : 'black'}.png`,
         iconSize: [
           32,
@@ -69,36 +63,153 @@ function FireMarker({
           0,
           -32,
         ],
-      })}
-    >
-      <Popup>
-        <b>{fire.properties.IncidentName}</b><br />
-        <br />
-        {fire.properties.FireDiscoveryDateTime &&
-          <>Discovered: {dateTimeToTimeStr(fire.properties.FireDiscoveryDateTime)}<br /></>}
-        {fire.properties.ContainmentDateTime &&
-          <>Contained: {dateTimeToTimeStr(fire.properties.ContainmentDateTime)}<br /></>}
-        {fire.properties.ControlDateTime &&
-          <>Controlled: {dateTimeToTimeStr(fire.properties.ControlDateTime)}<br /></>}
-        {fire.properties.FireOutDateTime &&
-          <>Fire Out: {dateTimeToTimeStr(fire.properties.FireOutDateTime)}<br /></>}
-        {fire.properties.ModifiedOnDateTime_dt &&
-          <>Updated: {dateTimeToTimeStr(fire.properties.ModifiedOnDateTime_dt)}<br /></>}
-        {(start || current || final) && <br />}
-        {start && <>Initial Size: {start}ac<br /></>}
-        {current && <>{isFireActive(fire) ? 'Current' : 'Final'} Size: {current}ac<br /></>}
-        {final && <>Final Size: {final}ac<br /></>}
-        {fire.properties.PercentContained !== null && <>
-          {fire.properties.ContainmentDateTime === null &&
-            <><br />Percent Contained: {fire.properties.PercentContained}%</>}
-        </>}
-      </Popup>
-    </Marker>
-  </>;
+      }),
+    }
+  );
+  let popupContent = `<b>${fire.properties.IncidentName}</b><br /><br />`;
+  if (fire.properties.FireDiscoveryDateTime) {
+    popupContent += `Discovered: ${dateTimeToTimeStr(fire.properties.FireDiscoveryDateTime)}<br />`;
+  }
+  if (fire.properties.ContainmentDateTime) {
+    popupContent += `Contained: ${dateTimeToTimeStr(fire.properties.ContainmentDateTime)}<br />`;
+  }
+  if (fire.properties.ControlDateTime) {
+    popupContent += `Controlled: ${dateTimeToTimeStr(fire.properties.ControlDateTime)}<br />`;
+  }
+  if (fire.properties.FireOutDateTime) {
+    popupContent += `Fire Out: ${dateTimeToTimeStr(fire.properties.FireOutDateTime)}<br />`;
+  }
+  if (fire.properties.ModifiedOnDateTime_dt) {
+    popupContent += `Updated: ${dateTimeToTimeStr(fire.properties.ModifiedOnDateTime_dt)}<br />`;
+  }
+  if (start || current || final) {
+    popupContent += '<br />';
+  }
+  if (start) {
+    popupContent += `Initial Size: ${start}ac<br />`;
+  }
+  if (current) {
+    popupContent += `${isFireActive(fire) ? 'Current' : 'Final'} Size: ${current}ac<br />`;
+  }
+  if (final) {
+    popupContent += `Final Size: ${final}ac<br />`;
+  }
+  if (fire.properties.PercentContained !== null) {
+    popupContent += `<br />Percent Contained: ${fire.properties.PercentContained}%`;
+  }
+  marker.bindPopup(popupContent);
+  return marker;
 }
 
 function isSaguacheFire(fire: FireInfo): boolean {
   return fire.properties.POOCounty === 'Saguache';
+}
+
+function getPolygonSize(geometry: FeatureCollection['features'][number]['geometry']): number {
+  if (geometry.type !== 'Polygon') {
+    return 0;
+  }
+  const points = geometry.coordinates.flat();
+  const min0 = points.reduce((min, coord) => Math.min(min, coord[0]), Infinity);
+  const max0 = points.reduce((max, coord) => Math.max(max, coord[0]), -Infinity);
+  const min1 = points.reduce((min, coord) => Math.min(min, coord[1]), Infinity);
+  const max1 = points.reduce((max, coord) => Math.max(max, coord[1]), -Infinity);
+  return (max0 - min0) * (max1 - min1);
+}
+
+function useWeatherAlerts(): FeatureCollection | null {
+  const [
+    alertsGeoJson,
+    setAlertsGeoJson,
+  ] = useState<FeatureCollection | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const activeAlertsGeoJson = await fetch('https://api.weather.gov/alerts/active?area=CO')
+        .then(r => r.json()) as FeatureCollection;
+
+      let done = 0;
+      let needed = 0;
+
+      activeAlertsGeoJson.features
+        .filter(feature => feature.geometry === null &&
+          feature.properties?.affectedZones !== undefined)
+        .map(f => f.properties?.affectedZones?.map((zone: string) => ({
+          zone: zone,
+          feature: f,
+        })))
+        .flat()
+        .forEach(({
+          zone,
+          feature,
+        }) => {
+          needed++;
+          fetch(zone).then(r => r.json())
+            .then((zoneGeom: FeatureCollection['features'][number]) => {
+              activeAlertsGeoJson.features.push({
+                ...feature,
+                geometry: zoneGeom.geometry,
+              });
+              done++;
+              if (done >= needed) {
+                activeAlertsGeoJson.features = activeAlertsGeoJson.features
+                  .filter(f => f.geometry !== null)
+                  .sort((a, b) => {
+                    const aSize = a.geometry ? getPolygonSize(a.geometry) : 0;
+                    const bSize = b.geometry ? getPolygonSize(b.geometry) : 0;
+                    return bSize - aSize;
+                  });
+                setAlertsGeoJson(activeAlertsGeoJson);
+              }
+            });
+        });
+      if (done >= needed) {
+        setAlertsGeoJson(activeAlertsGeoJson);
+      }
+    })();
+  }, []);
+
+  return alertsGeoJson;
+}
+
+interface GeoJsonFromUrlProps extends Partial<GeoJSONProps> {
+  url: string;
+  name: string;
+  showByDefault?: boolean;
+}
+
+function GeoJsonFromUrl({
+  url,
+  name,
+  showByDefault = true,
+  ...props
+}: Readonly<GeoJsonFromUrlProps>) {
+  const [
+    geoJsonData,
+    setGeoJsonData,
+  ] = useState<FeatureCollection | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const result = await fetch(url)
+        .then(r => r.json()) as FeatureCollection;
+      setGeoJsonData(result);
+    })();
+  }, [ url, ]);
+
+  if (geoJsonData === null) {
+    return <></>;
+  }
+
+  return <LayersControl.Overlay
+    name={name}
+    checked={showByDefault}
+  >
+    <GeoJSON
+      data={geoJsonData}
+      {...props}
+    />
+  </LayersControl.Overlay>;
 }
 
 export default function WeatherPage() {
@@ -136,38 +247,11 @@ export default function WeatherPage() {
     addAlert,
   ]);
 
-  const [
-    imgNode,
-    setImgNode,
-  ] = useState<null | HTMLElement>(null);
-  const [
-    imgNodeHeight,
-    setImgNodeHeight,
-  ] = useState(555);
-  const setImgRef = useCallback(
-    (node: HTMLElement | null) => setImgNode(node),
-    []
-  );
+  const activeAlerts = useWeatherAlerts();
+
   useEffect(() => {
-    if (imgNode === null) {
-      return;
-    }
-
-    const setSize = () => {
-      if (imgNode === null) {
-        return;
-      }
-
-      const newWidth = imgNode.clientWidth;
-      const ratio = 555 / 815;
-      const newHeight = Math.ceil(newWidth * ratio);
-      setImgNodeHeight(newHeight);
-    };
-    setSize();
-    imgNode.addEventListener('resize', setSize);
-
-    return () => imgNode.removeEventListener('resize', setSize);
-  }, [ imgNode, ]);
+    console.log(activeAlerts);
+  }, [ activeAlerts, ]);
 
   return <>
     {(typeof weatherData === 'undefined' || isLoading) && <LoadingSpinner />}
@@ -192,8 +276,10 @@ export default function WeatherPage() {
               </tr>
             </tbody></table>
           </Col>
+        </Col>
 
-          <h2 className='text-center mt-5'>Active Fires</h2>
+        <Col md={6}>
+          <h2 className='text-center'>Active Fires</h2>
           <Col xs={12} className='font-monospace text-center'>
             <table className={styles.table}>
               <thead><tr>
@@ -274,80 +360,9 @@ export default function WeatherPage() {
           </Col>
           <Col xs={12} className='font-monospace'><a href='https://gacc.nifc.gov/rmcc/'>RM GACC Incident Map</a></Col>
           <Col xs={12} className='font-monospace'><a href='https://inciweb.nwcg.gov/'>InciWeb - National Incident Map</a></Col>
-
-          <h2 className='text-center mt-5'>Weather Alerts</h2>
-          <Col xs={12} className='font-monospace' dangerouslySetInnerHTML={{ __html: weatherData.weather, }} />
-          <Col xs={12} className='font-monospace'>
-            <a href='https://forecast.weather.gov/MapClick.php?lon=-105.6988059170544&lat=37.9934785363087#.YmFqWPPMIeY'>Crestone 7 Day Forecast</a><br />
-            <a href='https://forecast.weather.gov/MapClick.php?w0=t&w3=sfcwind&w3u=1&w4=sky&w5=pop&w6=rh&w13u=0&w14=haines&w15=lal&w16=twind&w16u=1&pqpfhr=6&psnwhr=6&AheadHour=0&Submit=Submit&FcstType=graphical&textField2=-105.6988059170544&textField1=37.9934785363087&site=all&unit=0&dd=&bw='>Crestone Hourly Forecast</a><br />
-            <a href='https://www.weather.gov/crh/FWFdisplay?zone=COZ224'>Fire Weather Forecast</a><br />
-            <a href='https://www.weather.gov/media/pub/DssPacket.pdf'>Fire Weather Decision Support Packet</a>
-          </Col>
-
-          <h2 className='text-center mt-5'>Fire Restrictions</h2>
-          <Col xs={12} className='font-monospace' dangerouslySetInnerHTML={{ __html: weatherData.bans, }} />
-          <Col xs={12} className='font-monospace'><a href='https://www.google.com/maps/d/u/0/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ll=38.91583034559255%2C-106.1196738784554&z=7'>Colorado Restriction Map</a></Col>
-        </Col>
-
-        <Col md={6} className='text-center'>
-          <h2 className='text-center'>Fire Weather Maps</h2>
-          <h3 className='text-center'>Today</h3>
-          <a
-            className={styles.imgContainer}
-            href='https://www.spc.noaa.gov/products/fire_wx/fwdy1.html'
-            style={{
-              height: `${imgNodeHeight}px`,
-            }}
-          >
-            <Image
-              className={styles.img}
-              width={815}
-              height={555}
-              src='https://www.spc.noaa.gov/products/fire_wx/day1otlk_fire.gif'
-              fluid
-              alt='Fire weather map for today'
-            />
-            <svg height='555' width='815' className={`img img-fluid ${styles.img}`} viewBox='0 0 815 555'>
-              <circle cx='282' cy='278' r='3' strokeWidth='0' fill='black' />
-            </svg>
-          </a>
-          <Col
-            as={Link}
-            xs={12}
-            className='font-monospace mb-3'
-            href='https://www.spc.noaa.gov/products/fire_wx/fwdy1.html'
-          >Day 1 Fire Weather Outlook</Col>
-
-          <h3 className='text-center'>Tomorrow</h3>
-          <a
-            className={styles.imgContainer}
-            ref={setImgRef}
-            href='https://www.spc.noaa.gov/products/fire_wx/fwdy2.html'
-            style={{
-              height: `${imgNodeHeight}px`,
-            }}
-          >
-            <Image
-              className={styles.img}
-              width={815}
-              height={555}
-              src='https://www.spc.noaa.gov/products/fire_wx/day2otlk_fire.gif'
-              fluid
-              alt='Fire weather map for today'
-            />
-            <svg height='555' width='815' className={`img img-fluid ${styles.img}`} viewBox='0 0 815 555'>
-              <circle cx='282' cy='278' r='3' strokeWidth='0' fill='black' />
-            </svg>
-          </a>
-          <Col
-            as={Link}
-            xs={12}
-            className='font-monospace mb-3'
-            href='https://www.spc.noaa.gov/products/fire_wx/fwdy2.html'
-          >Day 2 Fire Weather Outlook</Col>
         </Col>
       </Row>
-      <Row>
+      <Row className='mt-3'>
         <MapContainer
           center={[
             39,
@@ -363,14 +378,56 @@ export default function WeatherPage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
-          {weatherData.stateFires.fires !== -1 && weatherData.stateFires.fires
-            .sort((a, b) => (a.properties.ModifiedOnDateTime_dt || 0) -
-              (b.properties.ModifiedOnDateTime_dt || 0))
-            .map(fire => <FireMarker
-              key={fire.properties.OBJECTID}
-              fire={fire}
-            />)}
+          <LayersControl position='topright'>
+            {activeAlerts !== null && <LayersControl.Overlay
+              checked
+              name='Weather Alerts'
+            >
+              <GeoJSON
+                data={activeAlerts}
+                style={feature => {
+                  console.log(feature);
+                  return {
+                    color: 'red',
+                    weight: 2,
+                    fillOpacity: 0.1,
+                  };
+                }}
+                onEachFeature={(feature, layer) => {
+                  layer.bindPopup(`<b>${feature.properties?.event || 'Unknown Event'}</b><br />` +
+                    `${feature.properties?.headline || ''}<br/><br />` +
+                    `${(feature.properties?.description || '')
+                      .replace(/([^\n])\n([^\n])/g, (a: string, b: string, c: string) => `${b} ${c}`)
+                      .replace(/\n/g, '<br />')
+                    }<br /><br />`);
+                  layer.bindTooltip(feature.properties?.event || 'N/A');
+                }}
+              />
+            </LayersControl.Overlay>}
+            <GeoJsonFromUrl
+              url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/DMP_National_Dispatch_Boundaries_Public/FeatureServer/0/query?where=GACCName+%3D+%27Rocky+Mountain+Area+Coordination+Center%27&geometry=%7B%22xmin%22%3A-109.0%2C%22ymin%22%3A38.0%2C%22xmax%22%3A-103.0%2C%22ymax%22%3A40.0%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects&outFields=*&returnGeometry=true&f=pgeojson'
+              name='Dispatch Boundaries'
+              showByDefault={false}
+              style={{
+                color: 'blue',
+                weight: 2,
+                fillOpacity: 0.05,
+              }}
+              onEachFeature={(feature, layer) => {
+                layer.bindPopup(`<b>${feature.properties?.DispName || 'Unknown Dispatch Name'}</b><br />` +
+                  `Disp Loc: ${feature.properties?.DispLocation || 'Unknown'}<br />`);
+              }}
+            />
+            <GeoJsonFromUrl
+              name='Active Fires'
+              url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations/FeatureServer/0/query?where=ModifiedOnDateTime_dt+BETWEEN+CURRENT_TIMESTAMP+-+3+AND+CURRENT_TIMESTAMP&geometry=%7B%22xmin%22%3A-109.0496%2C%22ymin%22%3A37.0%2C%22xmax%22%3A-102.0421%2C%22ymax%22%3A41.0%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects&outFields=*&returnGeometry=true&f=pgeojson'
+              pointToLayer={feature => FireMarker(feature as unknown as FireInfo)}
+            />
+          </LayersControl>
         </MapContainer>
+      </Row>
+      <Row>
+        <iframe src='https://www.google.com/maps/d/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ehbc=2E312F' width='640' height='480'></iframe>
       </Row>
     </>}
   </>;

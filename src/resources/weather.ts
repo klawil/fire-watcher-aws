@@ -40,7 +40,7 @@ const countyRestrictionUrl = 'https://www.google.com/maps/d/u/0/embed?mid=1cEAhN
 
 // Retrieves fires in CO within the past 7 days
 const currentFireUrlQueryParams = {
-  where: 'ModifiedOnDateTime_dt BETWEEN CURRENT_TIMESTAMP - 7 AND CURRENT_TIMESTAMP',
+  where: 'ModifiedOnDateTime_dt BETWEEN CURRENT_TIMESTAMP - 3 AND CURRENT_TIMESTAMP',
   geometry: '{"xmin":-109.0496,"ymin":37.0,"xmax":-102.0421,"ymax":41.0,"spatialReference":{"wkid":4326}}',
   geometryType: 'esriGeometryEnvelope',
   spatialRel: 'esriSpatialRelEnvelopeIntersects',
