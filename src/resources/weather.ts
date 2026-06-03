@@ -6,78 +6,16 @@ import fetch from 'node-fetch';
 import { parse } from 'node-html-parser';
 
 import {
-  FireInfo, WeatherResultJson
+  WeatherResultJson
 } from '@/deprecated/common/weather';
 import { BUCKET_AUDIO } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('weather');
 
-interface NwsAlert {
-  onset: string;
-  ends: string;
-  expires: string;
-  description: string;
-  associated: NwsAlert[];
-  headline: string;
-  event: string;
-}
-
-interface NwsJson {
-  features: {
-    properties: NwsAlert;
-  }[]
-}
-
-interface StateFires {
-  type: 'FeatureCollection';
-  features: FireInfo[];
-}
-
 const readiness = 'https://gacc.nifc.gov/rmcc/';
-const weatherAlertsApi = 'https://api.weather.gov/alerts/active?area=CO';
-const countyRestrictionUrl = 'https://www.google.com/maps/d/u/0/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ll=38.91583034559253%2C-106.1196738784554&z=8';
-
-// Retrieves fires in CO within the past 7 days
-const currentFireUrlQueryParams = {
-  where: 'ModifiedOnDateTime_dt BETWEEN CURRENT_TIMESTAMP - 3 AND CURRENT_TIMESTAMP',
-  geometry: '{"xmin":-109.0496,"ymin":37.0,"xmax":-102.0421,"ymax":41.0,"spatialReference":{"wkid":4326}}',
-  geometryType: 'esriGeometryEnvelope',
-  spatialRel: 'esriSpatialRelEnvelopeIntersects',
-  outFields: '*',
-  returnGeometry: 'true',
-  f: 'pgeojson',
-};
-const currentFireUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations/FeatureServer/0/query';
 
 const s3File = 'weather.json';
-
-async function getStateFires(): Promise<WeatherResultJson['stateFires']> {
-  logger.trace('getStateFires', ...arguments);
-  try {
-    const result = await fetch(`${currentFireUrl}?${new URLSearchParams(currentFireUrlQueryParams).toString()}`)
-      .then(r => r.json()) as StateFires;
-
-    return {
-      updated: result.features.reduce((latest, feature) => {
-        if (
-          feature.properties.ModifiedOnDateTime_dt !== null &&
-          feature.properties.ModifiedOnDateTime_dt < latest
-        ) {
-          return feature.properties.ModifiedOnDateTime_dt;
-        }
-        return latest;
-      }, Date.now()),
-      fires: result.features,
-    };
-  } catch (e) {
-    logger.error('getStateFires', e);
-    return {
-      fires: -1,
-      updated: -1,
-    };
-  }
-}
 
 async function getReadinessInfo(): Promise<WeatherResultJson['readiness']> {
   logger.trace('getReadinessInfo', ...arguments);
@@ -128,100 +66,6 @@ function dateToLocalString(d: Date): string[] {
   ];
 }
 
-function buildTimeframe(onset: string, ends: string): string {
-  logger.trace('buildTimeframe', ...arguments);
-  const dOnset = new Date(onset);
-  const dEnds = new Date(ends);
-
-  const isSameDate = dOnset.getFullYear() === dEnds.getFullYear() &&
-    dOnset.getMonth() === dEnds.getMonth() &&
-    dOnset.getDate() === dEnds.getDate();
-
-  const sOnsetInput = dateToLocalString(dOnset);
-  const sEndsInput = dateToLocalString(dEnds);
-
-  if (isSameDate) {
-    return `${sOnsetInput[0]} from ${sOnsetInput[1]} to ${sEndsInput[1]}`;
-  } else {
-    return `From ${sOnsetInput[0]} at ${sOnsetInput[1]} to ${sEndsInput[0]} at ${sEndsInput[1]}`;
-  }
-}
-
-async function getAreaAlerts(): Promise<WeatherResultJson['weather']> {
-  logger.trace('getAreaAlerts', ...arguments);
-  try {
-    const weatherAlerts: NwsJson = await fetch(weatherAlertsApi, {
-      headers: {
-        'User-Agent': 'klawil willyk95@gmail.com',
-        Accept: 'application/geo+json',
-      },
-    }).then(r => r.json()) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-    const featuresToReturn: NwsAlert[] = [];
-    weatherAlerts.features
-      .map(feature => feature.properties)
-      .sort((a, b) => new Date(a.onset).getTime() > new Date(b.onset).getTime() ? 1 : -1)
-      .reduce((fMap: { [key: string]: NwsAlert }, feature) => {
-        const description = feature.description;
-        if (typeof fMap[description] !== 'undefined') {
-          fMap[description].associated = fMap[description].associated || [];
-          fMap[description].associated.push(feature);
-        } else {
-          featuresToReturn.push(feature);
-          fMap[description] = feature;
-          feature.associated = feature.associated || [];
-          feature.associated.push(feature);
-        }
-
-        return fMap;
-      }, {});
-
-    return featuresToReturn
-      .map(feature => {
-        let featureString = `<b>${feature.headline}</b>\n\n${feature.description.replace(/([^\n])\n([^\n])/g, (a, b, c) => `${b} ${c}`)}\n\n`;
-        featureString += feature.associated
-          .map(f => `* <b>${f.event}</b>... ${buildTimeframe(f.onset, f.ends || f.expires)}`)
-          .join('\n\n');
-
-        return featureString;
-      })
-      .join('\n\n\n')
-      .replace(/\n/g, '<br>')
-      .replace(/(\.\.\.)([^ ])/g, (a, b, c) => `${b} ${c}`);
-  } catch (e) {
-    logger.error('getAreaAlerts', e);
-    return '';
-  }
-}
-
-async function getCountyRestrictions(): Promise<WeatherResultJson['bans']> {
-  logger.trace('getCountyRestrictions', ...arguments);
-  try {
-    const html = await fetch(countyRestrictionUrl)
-      .then(r => r.text());
-
-    const json = html
-      .split('\n')
-      .filter(line => line.indexOf('var _pageData = ') !== -1)[0]
-      .match(/_pageData = (".*?");<\/script>/);
-
-    if (!json) {
-      throw new Error('Cannot find page data');
-    }
-
-    const _pageData = JSON.parse(eval(json[1]));
-
-    return _pageData[1][6][0][12][0][13][0]
-      .filter((f: any) => f[5][0][1][0] === 'Saguache') // eslint-disable-line @typescript-eslint/no-explicit-any
-      .map((f: any) => f[5][3][0][1][0]) // eslint-disable-line @typescript-eslint/no-explicit-any
-      .join('\n\n\n')
-      .replace(/\n/g, '<br>');
-  } catch (e) {
-    logger.error('getCountyRestrictions', e);
-    return '';
-  }
-}
-
 async function uploadFile(text: string) {
   logger.trace('uploadFile', ...arguments);
   const s3 = new S3Client();
@@ -238,25 +82,8 @@ async function uploadFile(text: string) {
 export async function main() {
   logger.trace('main', ...arguments);
   try {
-    // // Get the old file to pull fire info from
-    // const s3 = new S3Client();
-    // const getParams = {
-    //   Bucket: BUCKET_AUDIO(),
-    //   Key: s3File,
-    // };
-    // const oldDataPromise = s3.send(new GetObjectCommand(getParams));
-
-    const dataRaw = await Promise.all([
-      getStateFires(),
-      getReadinessInfo(),
-      getAreaAlerts(),
-      getCountyRestrictions(),
-    ]);
     const data: WeatherResultJson = {
-      stateFires: dataRaw[0],
-      readiness: dataRaw[1],
-      weather: dataRaw[2],
-      bans: dataRaw[3],
+      readiness: await getReadinessInfo(),
       updated: `Data fetched on ${dateToLocalString(new Date()).join(' at ')}`,
     };
     await uploadFile(JSON.stringify(data));

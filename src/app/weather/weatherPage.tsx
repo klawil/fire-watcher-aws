@@ -1,14 +1,22 @@
 'use client';
 
-import { FeatureCollection } from 'geojson';
-import L from 'leaflet';
+import { FeatureLayerOptions } from 'esri-leaflet';
+import {
+  Feature, FeatureCollection
+} from 'geojson';
+import L, {
+  Layer, PathOptions
+} from 'leaflet';
 import {
   useContext, useEffect, useState
 } from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import {
-  GeoJSON, GeoJSONProps, LayersControl, MapContainer, TileLayer
+  DynamicMapLayer, FeatureLayer
+} from 'react-esri-leaflet';
+import {
+  GeoJSON, LayersControl, MapContainer, TileLayer
 } from 'react-leaflet';
 
 import styles from './weather.module.css';
@@ -22,6 +30,12 @@ import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 
 import 'leaflet/dist/leaflet.css';
+
+const CorrectedFeatureLayer = FeatureLayer as unknown as React.ComponentType<{
+  style?: PathOptions;
+  transparent?: boolean;
+  opacity?: number;
+} & Omit<FeatureLayerOptions, 'style'>>;
 
 const logger = getLogger('weatherPage');
 
@@ -98,11 +112,11 @@ function FireMarker(fire: FireInfo): L.Marker {
     popupContent += `<br />Percent Contained: ${fire.properties.PercentContained}%`;
   }
   marker.bindPopup(popupContent);
-  return marker;
-}
 
-function isSaguacheFire(fire: FireInfo): boolean {
-  return fire.properties.POOCounty === 'Saguache';
+  marker.bindTooltip(fire.properties?.IncidentName || 'Unknown Incident Name', {
+    direction: 'bottom',
+  });
+  return marker;
 }
 
 function getPolygonSize(geometry: FeatureCollection['features'][number]['geometry']): number {
@@ -172,46 +186,6 @@ function useWeatherAlerts(): FeatureCollection | null {
   return alertsGeoJson;
 }
 
-interface GeoJsonFromUrlProps extends Partial<GeoJSONProps> {
-  url: string;
-  name: string;
-  showByDefault?: boolean;
-}
-
-function GeoJsonFromUrl({
-  url,
-  name,
-  showByDefault = true,
-  ...props
-}: Readonly<GeoJsonFromUrlProps>) {
-  const [
-    geoJsonData,
-    setGeoJsonData,
-  ] = useState<FeatureCollection | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const result = await fetch(url)
-        .then(r => r.json()) as FeatureCollection;
-      setGeoJsonData(result);
-    })();
-  }, [ url, ]);
-
-  if (geoJsonData === null) {
-    return <></>;
-  }
-
-  return <LayersControl.Overlay
-    name={name}
-    checked={showByDefault}
-  >
-    <GeoJSON
-      data={geoJsonData}
-      {...props}
-    />
-  </LayersControl.Overlay>;
-}
-
 export default function WeatherPage() {
   const addAlert = useContext(AddAlertContext);
   const [
@@ -258,175 +232,160 @@ export default function WeatherPage() {
     {weatherData === null && <h2 className='text-center'>Failed to Load Weather Data</h2>}
     {weatherData && <>
       <Row>
-        <Col xs={12} className='font-monospace text-center'>{weatherData.updated}</Col>
-
-        <Col md={6}>
+        <Col lg={4}>
           <h2 className='text-center'>Readiness Level</h2>
           <Col xs={12} className='font-monospace text-center'>
             <table className={styles.table}><tbody>
               <tr>
                 <td className='px-2'>National</td>
                 <td className='px-2'>{weatherData.readiness.National}</td>
-                <td className='px-2'><a href='https://www.nifc.gov/nicc/sitreprt.pdf'>National Sitrep</a></td>
               </tr>
               <tr>
                 <td className='px-2'>RM GACC</td>
                 <td className='px-2'>{weatherData.readiness.RMA}</td>
-                <td className='px-2'><a href='https://gacc.nifc.gov/rmcc/intelligence.php'>RM GACC Intel</a></td>
               </tr>
             </tbody></table>
           </Col>
+          <Col xs={12} className='font-monospace text-center'>{weatherData.updated}</Col>
+          <h2 className='text-center mt-2'>Quick Links</h2>
+          <ul>
+            <li><a target='_blank' href='https://www.nifc.gov/nicc/sitreprt.pdf'>National Sitrep</a></li>
+            <li><a target='_blank' href='https://gacc.nifc.gov/rmcc/intelligence.php'>RM GACC Intel</a></li>
+            <li><a target='_blank' href='https://gacc.nifc.gov/rmcc/index.php'>RM GACC Homepage</a></li>
+            <li><a target='_blank' href='https://inciweb.wildfire.gov/'>InciWeb</a></li>
+            <li><a target='_blank' href='https://fs-prod-nwcg.s3.us-gov-west-1.amazonaws.com/s3fs-public/publication/pms461.pdf'>IRPG</a></li>
+            <li><a target='_blank' href='https://www.weather.gov/fire/'>NWS Fire Weather</a></li>
+          </ul>
         </Col>
-
-        <Col md={6}>
-          <h2 className='text-center'>Active Fires</h2>
-          <Col xs={12} className='font-monospace text-center'>
-            <table className={styles.table}>
-              <thead><tr>
-                <th className='px-2'>Type</th>
-                <th className='px-2'>Saguache</th>
-                <th className='px-2'>Colorado</th>
-              </tr></thead>
-              <tbody>
-                {weatherData.stateFires.fires === -1
-                  ? <tr><td colSpan={3}>Current Fire Data Unavailable</td></tr>
-                  : <>
-                    <tr>
-                      <th className='px-2'>New</th>
-                      <td className='px-2'>
-                        {weatherData.stateFires.fires
-                          .filter(isSaguacheFire)
-                          .filter(isFireActive)
-                          .filter(f => getFireType(f) === 'new')
-                          .length} of {weatherData.stateFires.fires
-                          .filter(isSaguacheFire)
-                          .filter(f => getFireType(f) === 'new')
-                          .length}
-                      </td>
-                      <td className='px-2'>
-                        {weatherData.stateFires.fires
-                          .filter(isFireActive)
-                          .filter(f => getFireType(f) === 'new')
-                          .length} of {weatherData.stateFires.fires
-                          .filter(f => getFireType(f) === 'new')
-                          .length}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th className='px-2'>Ongoing</th>
-                      <td className='px-2'>
-                        {weatherData.stateFires.fires
-                          .filter(isSaguacheFire)
-                          .filter(isFireActive)
-                          .filter(f => getFireType(f) === 'ongoing')
-                          .length} of {weatherData.stateFires.fires
-                          .filter(isSaguacheFire)
-                          .filter(f => getFireType(f) === 'ongoing')
-                          .length}
-                      </td>
-                      <td className='px-2'>
-                        {weatherData.stateFires.fires
-                          .filter(isFireActive)
-                          .filter(f => getFireType(f) === 'ongoing')
-                          .length} of {weatherData.stateFires.fires
-                          .filter(f => getFireType(f) === 'ongoing')
-                          .length}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th className='px-2'>RX</th>
-                      <td className='px-2'>
-                        {weatherData.stateFires.fires
-                          .filter(isSaguacheFire)
-                          .filter(isFireActive)
-                          .filter(f => getFireType(f) === 'rx')
-                          .length} of {weatherData.stateFires.fires
-                          .filter(isSaguacheFire)
-                          .filter(f => getFireType(f) === 'rx')
-                          .length}
-                      </td>
-                      <td className='px-2'>
-                        {weatherData.stateFires.fires
-                          .filter(isFireActive)
-                          .filter(f => getFireType(f) === 'rx')
-                          .length} of {weatherData.stateFires.fires
-                          .filter(f => getFireType(f) === 'rx')
-                          .length}
-                      </td>
-                    </tr>
-                  </>}
-              </tbody>
-            </table>
-          </Col>
-          <Col xs={12} className='font-monospace'><a href='https://gacc.nifc.gov/rmcc/'>RM GACC Incident Map</a></Col>
-          <Col xs={12} className='font-monospace'><a href='https://inciweb.nwcg.gov/'>InciWeb - National Incident Map</a></Col>
-        </Col>
-      </Row>
-      <Row className='mt-3'>
-        <MapContainer
-          center={[
-            39,
-            -105.545167,
-          ]}
-          zoom={7}
-          style={{
-            height: '500px',
-          }}
-        >
-          <TileLayer
-            maxZoom={19}
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          />
-          <LayersControl position='topright'>
-            {activeAlerts !== null && <LayersControl.Overlay
-              checked
-              name='Weather Alerts'
-            >
-              <GeoJSON
-                data={activeAlerts}
-                style={feature => {
-                  console.log(feature);
-                  return {
+        <Col lg={8} className='mt-3 mt-lg-0 mt-xl-0'>
+          <MapContainer
+            center={[
+              39,
+              -105.545167,
+            ]}
+            zoom={7}
+            style={{
+              height: '500px',
+            }}
+          >
+            <TileLayer
+              maxZoom={19}
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            />
+            <LayersControl position='topright'>
+              <LayersControl.Overlay
+                name='Day 1 Fire Outlook'
+              >
+                <DynamicMapLayer
+                  url='https://fsapps.nwcg.gov/psp/rest/services/npsg/outlooks_forecast/MapServer/'
+                  transparent={true}
+                  layers={[ 0, ]}
+                  opacity={0.25}
+                />
+              </LayersControl.Overlay>
+              <LayersControl.Overlay
+                name='Day 2 Fire Outlook'
+              >
+                <DynamicMapLayer
+                  url='https://fsapps.nwcg.gov/psp/rest/services/npsg/outlooks_forecast/MapServer/'
+                  transparent={true}
+                  layers={[ 1, ]}
+                  opacity={0.25}
+                />
+              </LayersControl.Overlay>
+              <LayersControl.Overlay
+                name='Day 1 Fire Weather'>
+                <DynamicMapLayer
+                  url='https://mapservices.weather.noaa.gov/vector/rest/services/fire_weather/SPC_firewx/MapServer/'
+                  transparent={true}
+                  layers={[ 0, ]}
+                  opacity={0.25}
+                />
+              </LayersControl.Overlay>
+              <LayersControl.Overlay
+                name='Day 2 Fire Weather'>
+                <DynamicMapLayer
+                  url='https://mapservices.weather.noaa.gov/vector/rest/services/fire_weather/SPC_firewx/MapServer/'
+                  transparent={true}
+                  layers={[ 3, ]}
+                  opacity={0.25}
+                />
+              </LayersControl.Overlay>
+              {activeAlerts !== null && <LayersControl.Overlay
+                checked
+                name='Weather Alerts'
+              >
+                <GeoJSON
+                  data={activeAlerts}
+                  style={{
                     color: 'red',
                     weight: 2,
                     fillOpacity: 0.1,
-                  };
-                }}
-                onEachFeature={(feature, layer) => {
-                  layer.bindPopup(`<b>${feature.properties?.event || 'Unknown Event'}</b><br />` +
+                  }}
+                  onEachFeature={(feature, layer) => {
+                    layer.bindPopup(`<b>${feature.properties?.event || 'Unknown Event'}</b><br />` +
                     `${feature.properties?.headline || ''}<br/><br />` +
                     `${(feature.properties?.description || '')
                       .replace(/([^\n])\n([^\n])/g, (a: string, b: string, c: string) => `${b} ${c}`)
                       .replace(/\n/g, '<br />')
                     }<br /><br />`);
-                  layer.bindTooltip(feature.properties?.event || 'N/A');
-                }}
-              />
-            </LayersControl.Overlay>}
-            <GeoJsonFromUrl
-              url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/DMP_National_Dispatch_Boundaries_Public/FeatureServer/0/query?where=GACCName+%3D+%27Rocky+Mountain+Area+Coordination+Center%27&geometry=%7B%22xmin%22%3A-109.0%2C%22ymin%22%3A38.0%2C%22xmax%22%3A-103.0%2C%22ymax%22%3A40.0%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects&outFields=*&returnGeometry=true&f=pgeojson'
-              name='Dispatch Boundaries'
-              showByDefault={false}
-              style={{
-                color: 'blue',
-                weight: 2,
-                fillOpacity: 0.05,
-              }}
-              onEachFeature={(feature, layer) => {
-                layer.bindPopup(`<b>${feature.properties?.DispName || 'Unknown Dispatch Name'}</b><br />` +
-                  `Disp Loc: ${feature.properties?.DispLocation || 'Unknown'}<br />`);
-              }}
-            />
-            <GeoJsonFromUrl
-              name='Active Fires'
-              url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations/FeatureServer/0/query?where=ModifiedOnDateTime_dt+BETWEEN+CURRENT_TIMESTAMP+-+3+AND+CURRENT_TIMESTAMP&geometry=%7B%22xmin%22%3A-109.0496%2C%22ymin%22%3A37.0%2C%22xmax%22%3A-102.0421%2C%22ymax%22%3A41.0%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects&outFields=*&returnGeometry=true&f=pgeojson'
-              pointToLayer={feature => FireMarker(feature as unknown as FireInfo)}
-            />
-          </LayersControl>
-        </MapContainer>
+                    layer.bindTooltip(feature.properties?.event || 'N/A', {
+                      direction: 'center',
+                    });
+                  }}
+                />
+              </LayersControl.Overlay>}
+              <LayersControl.Overlay
+                name='Fire Dispatch Boundaries'>
+                <CorrectedFeatureLayer
+                  url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/DMP_National_Dispatch_Boundaries_Public/FeatureServer/0'
+                  transparent={true}
+                  opacity={0.5}
+                  style={{
+                    fillOpacity: 0.001,
+                  }}
+                  onEachFeature={(feature: Feature, layer: Layer) => {
+                    layer.bindPopup(`<b>${feature.properties?.DispName || 'Unknown Dispatch Name'}</b><br />` +
+                    `Disp Loc: ${feature.properties?.DispLocation || 'Unknown'}<br />`);
+                    layer.bindTooltip(feature.properties?.DispName || 'Unknown Dispatch Name', {
+                      direction: 'center',
+                    });
+                  }}
+                />
+              </LayersControl.Overlay>
+              <LayersControl.Overlay
+                checked
+                name='Active Fires'>
+                <FeatureLayer
+                  url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations/FeatureServer/0'
+                  where='ContainmentDateTime >= CURRENT_TIMESTAMP - 2 OR ControlDateTime >= CURRENT_TIMESTAMP - 2 OR FireOutDateTime >= CURRENT_TIMESTAMP - 2 OR FireDiscoveryDateTime >= CURRENT_TIMESTAMP - 2 OR ModifiedOnDateTime_dt >= CURRENT_TIMESTAMP - 2'
+                  pointToLayer={(feature: FireInfo) => FireMarker(feature)}
+                />
+              </LayersControl.Overlay>
+              <LayersControl.Overlay
+                name='Active Fire Boundaries'>
+                <CorrectedFeatureLayer
+                  url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0'
+                  where='attr_ContainmentDateTime >= CURRENT_TIMESTAMP - 2 OR attr_ControlDateTime >= CURRENT_TIMESTAMP - 2 OR attr_FireOutDateTime >= CURRENT_TIMESTAMP - 2 OR attr_FireDiscoveryDateTime >= CURRENT_TIMESTAMP - 2 OR attr_ModifiedOnDateTime_dt >= CURRENT_TIMESTAMP - 2 OR poly_PolygonDateTime >= CURRENT_TIMESTAMP - 2'
+                  style={{
+                    color: 'red',
+                    fillColor: 'red',
+                    fillOpacity: 0.2,
+                  }}
+                  onEachFeature={(feature: Feature, layer: Layer) => {
+                    layer.bindTooltip(feature.properties?.poly_IncidentName || 'Unknown Incident Name', {
+                      direction: 'center',
+                    });
+                  }}
+                // pointToLayer={(feature: FireInfo) => FireMarker(feature)}
+                />
+              </LayersControl.Overlay>
+            </LayersControl>
+          </MapContainer>
+        </Col>
       </Row>
-      <Row>
+      <Row className='mt-4'>
         <iframe src='https://www.google.com/maps/d/embed?mid=1cEAhNHqp82AXABF8qU7k6sRFI4392V0e&ehbc=2E312F' width='640' height='480'></iframe>
       </Row>
     </>}

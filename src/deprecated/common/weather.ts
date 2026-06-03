@@ -115,18 +115,16 @@ export interface FireInfo {
 export function isFireActive(f: FireInfo): boolean {
   return f.properties.ContainmentDateTime === null &&
     f.properties.ControlDateTime === null &&
+    f.properties.FireOutDateTime === null &&
     f.properties.ModifiedOnDateTime_dt !== null &&
-    f.properties.ModifiedOnDateTime_dt >= Date.now() - (2 * (24 * 60 * 60 * 1000));
+    f.properties.ModifiedOnDateTime_dt >= Date.now() - (24 * 60 * 60 * 1000);
 }
 
 export function getFireType(f: FireInfo): FireTypes {
   if (f.properties.IncidentTypeCategory === 'RX') {
     return 'rx';
   }
-  if (
-    f.properties.ModifiedOnDateTime_dt !== null &&
-    f.properties.ModifiedOnDateTime_dt >= Date.now() - (2 * (24 * 60 * 60 * 1000))
-  ) {
+  if ((f.properties?.FireDiscoveryDateTime || 0) >= Date.now() - (24 * 60 * 60 * 1000)) {
     return 'new';
   }
   return 'ongoing';
@@ -136,14 +134,8 @@ export function getFireType(f: FireInfo): FireTypes {
  * @deprecated The method should not be used
  */
 export interface WeatherResultJson {
-  bans: string;
   readiness: {
     [key: string]: number;
   };
-  stateFires: {
-    fires: FireInfo[] | -1;
-    updated: number;
-  };
   updated: string;
-  weather: string;
 }
