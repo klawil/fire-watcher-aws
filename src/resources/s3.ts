@@ -50,19 +50,63 @@ const vhfConfig: {
   [key: string]: {
     tg: number;
     freq: number;
+    tower: string;
   }
 } = {
+  // Legacy VHF - 1833X
   'BG_FIRE_VHF': {
     tg: 18331,
     freq: 154445000,
-  },
-  'MED_9_UHF': {
-    tg: 18333,
-    freq: 462950000,
+    tower: 'vhf',
   },
   'SAG_FIRE_VHF': {
     tg: 18332,
     freq: 154190000,
+    tower: 'vhf',
+  },
+
+  // VHF - 10000s
+  'VFIRE23': {
+    tg: 100001,
+    freq: 154295000,
+    tower: 'vhf',
+  },
+  'BGVFD': {
+    tg: 100002,
+    freq: 154445000,
+    tower: 'vhf',
+  },
+  'MRA1': {
+    tg: 100003,
+    freq: 155160000,
+    tower: 'vhf',
+  },
+  'MRA2': {
+    tg: 100004,
+    freq: 155235000,
+    tower: 'vhf',
+  },
+  'VMED28': {
+    tg: 100005,
+    freq: 155340000,
+    tower: 'vhf',
+  },
+  'VLAW31': {
+    tg: 100006,
+    freq: 155475000,
+    tower: 'vhf',
+  },
+
+  // UHF - 11000s
+  'MED9': {
+    tg: 110001,
+    freq: 462950000,
+    tower: 'uhf',
+  },
+  'MED10': {
+    tg: 110002,
+    freq: 462975000,
+    tower: 'uhf',
   },
 };
 
@@ -108,9 +152,11 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     let config: {
       tg: number;
       freq: number;
+      tower: string;
     } = {
       tg: -1,
       freq: 0,
+      tower: 'unknown',
     };
     if (Key.indexOf('/dtr') !== -1) {
       try {
@@ -157,6 +203,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       for (const vhfKey in vhfConfig) {
         if (Key.indexOf(vhfKey) !== -1) {
           config = vhfConfig[vhfKey];
+          break;
         }
       }
 
@@ -169,9 +216,15 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         Emergency: 0,
         Tone: headInfo.Metadata?.tone === 'y',
         ToneIndex: headInfo.Metadata?.tone === 'y' ? 'y' : 'n',
-        Tower: 'vhf',
+        Tower: config.tower,
         Talkgroup: config.tg,
       };
+      if (headInfo.Metadata?.codes) {
+        body.Item.QC2 = headInfo.Metadata.codes.split(',');
+      }
+      if (headInfo.Metadata?.recorder) {
+        body.Item.Recorder = headInfo.Metadata.recorder;
+      }
     }
     const sourcePutItems: Promise<unknown>[] = sourceList
       .map(sourceId => typedPutItem<FileEventItem>({

@@ -122,7 +122,7 @@ const createVhfEvent = newS3Event(
 );
 const createVhfMed9Event = newS3Event(
   'bucket-name',
-  'audio/MED_9_UHF_20250422_003158.mp3',
+  'audio/MED9_20250422_003158.mp3',
   'ObjectCreated'
 );
 const createVhfHeadInfo = {
@@ -456,7 +456,7 @@ describe('resources/s3', () => {
       });
     });
 
-    it('Handles a MED_9 UHF file being created', async () => {
+    it('Handles a MED9 UHF file being created', async () => {
       vi.useFakeTimers().setSystemTime(currentTime);
 
       S3Mock.setResult('head', createVhfHeadInfo);
@@ -485,10 +485,10 @@ describe('resources/s3', () => {
           Key: createVhfMed9Event.s3.object.key,
           Len: 15,
           StartTime: 2,
-          Talkgroup: 18333,
+          Talkgroup: 110001,
           Tone: false,
           ToneIndex: 'n',
-          Tower: 'vhf',
+          Tower: 'uhf',
         },
       });
 
@@ -525,7 +525,7 @@ describe('resources/s3', () => {
         ExpressionAttributeValues: {
           ':StartTime1': -58,
           ':StartTime2': 62,
-          ':Talkgroup': 18333,
+          ':Talkgroup': 110001,
         },
         IndexName: 'StartTimeTgIndex',
         KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
@@ -539,7 +539,7 @@ describe('resources/s3', () => {
       expect(UpdateCommand).toBeCalledWith({
         TableName: 'TABLE_TALKGROUP_VAL',
         Key: {
-          ID: 18333,
+          ID: 110001,
         },
         ExpressionAttributeNames: {
           '#InUse': 'InUse',
