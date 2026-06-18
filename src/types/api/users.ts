@@ -17,6 +17,7 @@ export type UserDepartment = typeof validDepartments[number];
 
 export const pagingTalkgroups = [
   8332,
+  110001,
   18332,
   18331,
   8198,

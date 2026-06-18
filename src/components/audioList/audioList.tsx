@@ -17,6 +17,7 @@ import CalendarModal from '@/components/calendarModal/calendarModal';
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import { GetAllFilesApi } from '@/types/api/files';
 import { GetAllTalkgroupsApi } from '@/types/api/talkgroups';
+import { qc2ToDeptMap } from '@/types/backend/department';
 import {
   AudioAction, AudioState, FilterPresetUrlParams, filterPresets
 } from '@/types/frontend/audio';
@@ -569,19 +570,25 @@ export default function AudioList() {
               }
               onClick={setFilePlaying(file.Key || '')}
             >
-              <td>{file.Len}</td>
-              <td className='text-start'>{state.talkgroups[file.Talkgroup]?.name || file.Talkgroup}</td>
+              <td>{file.Len ? Math.round(file.Len) : ''}</td>
+              <td className='text-start'>{state.talkgroups[file.Talkgroup]?.name || file.Talkgroup}{
+                file.QC2 && file.QC2.length > 0
+                  ? ' - ' + file.QC2.map(qc => qc2ToDeptMap[qc] || qc).join(', ')
+                  : ''
+              }</td>
               <td>{dateToStr(new Date((file.StartTime || 0) * 1000))}</td>
               <td className='d-none d-sm-table-cell'>{file.Tower === 'vhf'
                 ? 'VHF'
                 : file.Tower || 'N/A'
               }</td>
-              <td>{!file.Tone && file.Emergency !== 1
-                ? ''
-                : file.Transcript
-                  ? <BsStarFill />
-                  : <BsStar />
-              }</td>
+              <td {...file.QC2
+                ? { title: file.QC2.sort().join(', '), }
+                : {}}>{!file.Tone && file.Emergency !== 1
+                  ? ''
+                  : file.Transcript
+                    ? <BsStarFill />
+                    : <BsStar />
+                }</td>
             </tr>
             {file.Transcript && <tr
               className={

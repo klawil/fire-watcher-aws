@@ -97,6 +97,10 @@ export const pagingTalkgroupConfig: {
     ],
     department: 'Baca',
   },
+  110001: {
+    linkPreset: 'tg110001',
+    partyBeingPaged: 'Med 9',
+  },
   8334: {
     linkPreset: 'tg8334',
     partyBeingPaged: 'Center EMS/Fire',
@@ -109,4 +113,14 @@ export const pagingTalkgroupConfig: {
     linkPreset: 'pACFE',
     partyBeingPaged: 'Alamosa EMS',
   },
+};
+
+export const qc2ToDeptMap: {
+  [key: string]: string;
+} = {
+  B448: 'Conejos EMS',
+  B648: 'Monte Vista EMS',
+  C448: 'BGES',
+  J748: 'Del Norte EMS',
+  J848: 'South Fork Fire/EMS',
 };

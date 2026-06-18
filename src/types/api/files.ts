@@ -19,6 +19,7 @@ export interface FullFileObject {
   /**
    * Timestamp of the end of the recording (in seconds since epoch)
    */
+  StartTime?: number;
   EndTime?: number;
   Freq?: number;
 
@@ -30,14 +31,15 @@ export interface FullFileObject {
   Sources?: number[];
 
   /**
-   * Timestamp of the start of the recording (in seconds since epoch)
+   * Tone/Tower Metadata
    */
-  StartTime?: number;
   Tone?: boolean;
   ToneIndex?: 'y' | 'n';
+  QC2?: string[]; // Motorola Quick Call II codes
   Tower?: string;
   Transcript?: string;
   PageSent?: boolean;
+  Recorder?: string; // Device that performed the recording
 }
 
 export interface FileTranslationObject {

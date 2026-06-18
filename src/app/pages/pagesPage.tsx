@@ -22,7 +22,9 @@ import { GetPagesApi } from '@/types/api/pages';
 import {
   PagingTalkgroup, pagingTalkgroups
 } from '@/types/api/users';
-import { pagingTalkgroupConfig } from '@/types/backend/department';
+import {
+  pagingTalkgroupConfig, qc2ToDeptMap
+} from '@/types/backend/department';
 import { dateToStr } from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
@@ -307,11 +309,15 @@ export default function PagesPage() {
               : {}
             }
           >
-            <td>{file.Len}</td>
+            <td>{file.Len ? Math.round(file.Len) : ''}</td>
             <td className='text-start'>{
               typeof pagingTalkgroupConfig[file.Talkgroup as PagingTalkgroup] !== 'undefined'
                 ? pagingTalkgroupConfig[file.Talkgroup as PagingTalkgroup].partyBeingPaged
                 : `TG ${file.Talkgroup}`
+            }{
+              typeof file.QC2 !== 'undefined' && file.QC2.length > 0
+                ? ' - ' + file.QC2.map(qc => qc2ToDeptMap[qc] || qc).join(', ')
+                : ''
             }</td>
             <td>{dateToStr(new Date((file.StartTime || 0) * 1000))}</td>
             <td>{file.Tower === 'vhf'

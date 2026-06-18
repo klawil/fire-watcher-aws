@@ -304,7 +304,7 @@ async function getItemToUpdate(key: string | null): Promise<FullFileObject | nul
 async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   logger.trace('handleTranscribe', ...arguments);
   // Check for the correct transcription job fomat
-  if (!(/^\d{4,5}\-\d+$/).test(body.detail.TranscriptionJobName)) {
+  if (!(/^\d{4,6}\-\d+$/).test(body.detail.TranscriptionJobName)) {
     throw new Error(`Invalid transcription job name - ${body.detail.TranscriptionJobName}`);
   }
 
