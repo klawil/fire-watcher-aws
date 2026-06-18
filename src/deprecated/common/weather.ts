@@ -117,7 +117,7 @@ export function isFireActive(f: FireInfo): boolean {
     f.properties.ControlDateTime === null &&
     f.properties.FireOutDateTime === null &&
     f.properties.ModifiedOnDateTime_dt !== null &&
-    f.properties.ModifiedOnDateTime_dt >= Date.now() - (24 * 60 * 60 * 1000);
+    f.properties.ModifiedOnDateTime_dt >= Date.now() - (48 * 60 * 60 * 1000);
 }
 
 export function getFireType(f: FireInfo): FireTypes {
