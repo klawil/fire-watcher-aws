@@ -78,7 +78,8 @@ const GET: LambdaApiFunction<TextLinkApi> = async function (event) {
   // Build the destination URL
   const tgConfig = pagingTalkgroupConfig[query.tg];
   const finalUrl = `/?f=${encodeURIComponent(query.f)}&tg=${tgConfig.linkPreset}` +
-    `&utm_source=${query.t === '1' ? 'transcript' : 'text'}&utm_medium=text&utm_campaign=${encodeURIComponent(query.f)}`;
+    `&utm_source=${query.t === '1' ? 'transcript' : 'text'}&utm_medium=text&utm_campaign=${encodeURIComponent(query.f)}` +
+    (query.m ? `&f_time=${query.m}` : '');
 
   return [
     302,

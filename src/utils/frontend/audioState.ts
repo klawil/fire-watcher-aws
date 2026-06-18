@@ -1,3 +1,4 @@
+import { FullFileObject } from '@/types/api/files';
 import {
   AudioAction, AudioState
 } from '@/types/frontend/audio';
@@ -84,7 +85,14 @@ export function audioReducer(state: AudioState, action: AudioAction): AudioState
     case 'AddAudioFile': {
       // Remove duplicate files
       const alreadyContainedIds = state.files.map(f => f.Key);
-      const newFiles = action.files.filter(f => !alreadyContainedIds.includes(f.Key));
+      const newFiles: FullFileObject[] = [];
+      for (let i = 0; i < action.files.length; i++) {
+        const f = action.files[i];
+        if (!alreadyContainedIds.includes(f.Key)) {
+          newFiles.push(f);
+          alreadyContainedIds.push(f.Key);
+        }
+      }
 
       return {
         ...state,

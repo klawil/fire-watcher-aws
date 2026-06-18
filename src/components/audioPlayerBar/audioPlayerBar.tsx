@@ -126,7 +126,7 @@ export default function AudioPlayerBar({
     currentAudio.addEventListener('ended', ended);
     currentAudio.addEventListener('play', playing);
     currentAudio.addEventListener('paused', paused);
-    currentAudio.addEventListener('error', ended);
+    currentAudio.addEventListener('error', paused);
 
     return () => {
       currentAudio.removeEventListener('timeupdate', setPlayerTimes);
@@ -134,6 +134,7 @@ export default function AudioPlayerBar({
       currentAudio.removeEventListener('ended', ended);
       currentAudio.removeEventListener('play', playing);
       currentAudio.removeEventListener('paused', paused);
+      currentAudio.removeEventListener('error', paused);
     };
   }, [
     dispatch,

@@ -94,6 +94,7 @@ export default function AudioFilter({
       emerg: (searchParams.get('emerg') || undefined) as 'n' | 'y' | undefined,
       tone: (searchParams.get('tone') || undefined) as 'n' | 'y' | undefined,
       f: searchParams.get('f') || undefined,
+      f_time: searchParams.get('f_time') || undefined,
     };
 
     // Pull in the raw values from search params on the first run

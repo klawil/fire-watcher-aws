@@ -263,6 +263,13 @@ function useLoadFiles(
         // Load after a specific URL file
         const startDate = fNameToDate(state.filter.f);
         urlParams.after = Math.floor((startDate.getTime() - 1000) / 1000);
+        if (urlParams.after < 0 && state.filter.f_time) {
+          console.log('f_time fallback');
+          urlParams.after = Math.floor((Number(state.filter.f_time) - 1000) / 1000);
+        } else if (urlParams.after < 0) {
+          console.log('regular fallback');
+          urlParams.after = Math.floor(Date.now() / 1000);
+        }
       }
 
       // Build out the filter values

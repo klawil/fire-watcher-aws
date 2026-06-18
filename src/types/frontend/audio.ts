@@ -133,6 +133,7 @@ export interface AudioState {
     tg?: string;
     emerg?: 'y' | 'n';
     tone?: 'y' | 'n';
+    f_time?: string;
   };
   api: {
     [key in FileAddDirection]?: number;
