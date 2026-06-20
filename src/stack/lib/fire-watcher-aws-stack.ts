@@ -1272,7 +1272,7 @@ export class FireWatcherAwsStack extends Stack {
         readonly: false,
       }, ],
     };
-    const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cvfd-weather-lambda', {
+    const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cofrn-weather-lambda', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: resolve(resourceBase, 'weather.ts'),
       handler: 'main',
