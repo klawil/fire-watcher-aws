@@ -320,8 +320,8 @@ export default function PagesPage() {
                 : ''
             }</td>
             <td>{dateToStr(new Date((file.StartTime || 0) * 1000))}</td>
-            <td>{file.Tower === 'vhf'
-              ? 'VHF'
+            <td>{file.Tower?.length === 3
+              ? file.Tower.toUpperCase()
               : file.Tower || 'N/A'
             }</td>
             <td><Button
