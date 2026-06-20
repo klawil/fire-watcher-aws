@@ -53,7 +53,7 @@ export const filterPresets: {
       8331,
       18331,
     ],
-    label: 'Baca Grande Emergency Services',
+    label: 'Baca Grande Fire/EMS',
   },
   'BGFD/BGEMS': {
     talkgroups: [

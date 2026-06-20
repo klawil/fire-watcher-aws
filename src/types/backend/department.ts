@@ -34,7 +34,7 @@ export const departmentConfig: {
     textPhone: 'chatCrestone',
   },
   Baca: {
-    name: 'Baca Emergency Services',
+    name: 'Baca Grande Fire/EMS',
     shortName: 'Baca',
     type: 'page',
     defaultTalkgroups: [ 18331, ],
@@ -90,7 +90,7 @@ export const pagingTalkgroupConfig: {
   },
   18331: {
     linkPreset: 'pBGFD%2FBGEMS',
-    partyBeingPaged: 'BGES',
+    partyBeingPaged: 'Baca Grand Fire/EMS',
     aladtecDepartment: [
       'Baca Fire',
       'Baca Grande-Crestone Ambulance',
@@ -120,7 +120,7 @@ export const qc2ToDeptMap: {
 } = {
   B448: 'Conejos EMS',
   B648: 'Monte Vista EMS',
-  C448: 'BGES',
+  C448: 'Baca Grand Fire/EMS',
   J748: 'Del Norte EMS',
   J848: 'South Fork Fire/EMS',
 };
