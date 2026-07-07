@@ -1925,6 +1925,24 @@ export class FireWatcherAwsStack extends Stack {
             function: redirectCfFunction,
           }, ],
         },
+        '/active-fires.json': {
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          functionAssociations: [ {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          }, ],
+        },
+        '/active-boundaries.json': {
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          functionAssociations: [ {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: redirectCfFunction,
+          }, ],
+        },
         '/audio/*': {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),

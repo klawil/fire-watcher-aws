@@ -35,6 +35,6 @@ describe('resources/weather', () => {
       } as any);
 
     await expect(main()).resolves.toBeUndefined();
-    expect(PutObjectCommand).toHaveBeenCalledTimes(1);
+    expect(PutObjectCommand).toHaveBeenCalledTimes(3);
   });
 });

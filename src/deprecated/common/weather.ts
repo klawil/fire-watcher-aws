@@ -130,6 +130,72 @@ export function getFireType(f: FireInfo): FireTypes {
   return 'ongoing';
 }
 
+type FeaturePropertyString = string | null;
+type FeaturePropertyNumber = number | null;
+
+export interface FireData {
+  activeFires: {
+    type: 'Feature';
+    id: number;
+    geometry: {
+      type: 'Point';
+      coordinates: [number, number];
+    };
+    properties: {
+      ContainmentDateTime: FeaturePropertyNumber;
+      ControlDateTime: FeaturePropertyNumber;
+      CpxName: FeaturePropertyString;
+      DiscoveryAcres: FeaturePropertyNumber;
+      EstimatedCostToDate: FeaturePropertyNumber;
+      EstimatedFinalCost: FeaturePropertyNumber;
+      FinalAcres: FeaturePropertyNumber;
+      FireBehaviorGeneral: FeaturePropertyString;
+      FireBehaviorGeneral1: FeaturePropertyString;
+      FireBehaviorGeneral2: FeaturePropertyString;
+      FireBehaviorGeneral3: FeaturePropertyString;
+      FireCause: FeaturePropertyString;
+      FireCauseGeneral: FeaturePropertyString;
+      FireCauseSpecific: FeaturePropertyString;
+      FireDiscoveryDateTime: FeaturePropertyNumber;
+      FireOutDateTime: FeaturePropertyNumber;
+      FireStrategyConfinePercent: FeaturePropertyNumber;
+      FireStrategyFullSuppPercent: FeaturePropertyNumber;
+      FireStrategyMonitorPercent: FeaturePropertyNumber;
+      FireStrategyPointZonePercent: FeaturePropertyNumber;
+      IncidentComplexityLevel: FeaturePropertyString;
+      IncidentManagementOrganization: FeaturePropertyString;
+      IncidentName: FeaturePropertyString;
+      IncidentSize: FeaturePropertyNumber;
+      IncidentTypeCategory: FeaturePropertyString;
+      ModifiedOnDateTime_dt: FeaturePropertyNumber;
+      OBJECTID: FeaturePropertyNumber;
+      OrganizationalAssessment: FeaturePropertyString;
+      PercentContained: FeaturePropertyNumber;
+      PredominantFuelGroup: FeaturePropertyString;
+      PredominantFuelModel: FeaturePropertyString;
+      PrimaryFuelModel: FeaturePropertyString;
+      SecondaryFuelModel: FeaturePropertyString;
+      TotalIncidentPersonnel: FeaturePropertyNumber;
+    };
+  }[];
+  updated: string;
+}
+
+export interface FireBoundaryInfo {
+  activeBoundaries: {
+    type: 'Feature';
+    geometry: {
+      type: 'Polygon';
+      coordinates: number[][][];
+    };
+    properties: {
+      poly_IncidentName: FeaturePropertyString;
+      attr_CpxName: FeaturePropertyString;
+    };
+  }[];
+  updated: string;
+}
+
 /**
  * @deprecated The method should not be used
  */

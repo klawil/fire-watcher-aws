@@ -16,13 +16,16 @@ import {
   DynamicMapLayer, FeatureLayer
 } from 'react-esri-leaflet';
 import {
-  GeoJSON, LayersControl, MapContainer, TileLayer
+  GeoJSON, LayersControl, MapContainer, TileLayer,
+  useMapEvents
 } from 'react-leaflet';
 
 import styles from './weather.module.css';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
+  FireBoundaryInfo,
+  FireData,
   FireInfo, WeatherResultJson, getFireType, isFireActive
 } from '@/deprecated/common/weather';
 import { dateTimeToTimeStr } from '@/utils/common/dateAndFile';
@@ -244,59 +247,150 @@ function getPolygonSize(geometry: FeatureCollection['features'][number]['geometr
   return (max0 - min0) * (max1 - min1);
 }
 
-function useWeatherAlerts(): FeatureCollection | null {
+function useWeatherAlerts(activeLayers: string[]): FeatureCollection | null {
   const [
     alertsGeoJson,
     setAlertsGeoJson,
   ] = useState<FeatureCollection | null>(null);
+  const [
+    isStarted,
+    setIsStarted,
+  ] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (activeLayers.includes('Weather Alerts') && !isStarted) {
+      setIsStarted(true);
+      (async () => {
+        const activeAlertsGeoJson = await fetch('https://api.weather.gov/alerts/active?area=CO')
+          .then(r => r.json()) as FeatureCollection;
+
+        let done = 0;
+        let needed = 0;
+
+        activeAlertsGeoJson.features
+          .filter(feature => feature.geometry === null &&
+            feature.properties?.affectedZones !== undefined)
+          .map(f => f.properties?.affectedZones?.map((zone: string) => ({
+            zone: zone,
+            feature: f,
+          })))
+          .flat()
+          .forEach(({
+            zone,
+            feature,
+          }) => {
+            needed++;
+            fetch(zone).then(r => r.json())
+              .then((zoneGeom: FeatureCollection['features'][number]) => {
+                activeAlertsGeoJson.features.push({
+                  ...feature,
+                  geometry: zoneGeom.geometry,
+                });
+                done++;
+                if (done >= needed) {
+                  activeAlertsGeoJson.features = activeAlertsGeoJson.features
+                    .filter(f => f.geometry !== null)
+                    .sort((a, b) => {
+                      const aSize = a.geometry ? getPolygonSize(a.geometry) : 0;
+                      const bSize = b.geometry ? getPolygonSize(b.geometry) : 0;
+                      return bSize - aSize;
+                    });
+                  setAlertsGeoJson(activeAlertsGeoJson);
+                }
+              });
+          });
+        if (done >= needed) {
+          setAlertsGeoJson(activeAlertsGeoJson);
+        }
+      })();
+    }
+  }, [
+    activeLayers,
+    isStarted,
+  ]);
+
+  return alertsGeoJson;
+}
+
+function useActiveFires(): FeatureCollection | null {
+  const [
+    firesGeoJson,
+    setFiresGeoJson,
+  ] = useState<FeatureCollection | null>(null);
 
   useEffect(() => {
     (async () => {
-      const activeAlertsGeoJson = await fetch('https://api.weather.gov/alerts/active?area=CO')
-        .then(r => r.json()) as FeatureCollection;
+      const activeFiresGeoJson = await fetch('/active-fires.json')
+        .then(r => r.json()) as FireData;
 
-      let done = 0;
-      let needed = 0;
-
-      activeAlertsGeoJson.features
-        .filter(feature => feature.geometry === null &&
-          feature.properties?.affectedZones !== undefined)
-        .map(f => f.properties?.affectedZones?.map((zone: string) => ({
-          zone: zone,
-          feature: f,
-        })))
-        .flat()
-        .forEach(({
-          zone,
-          feature,
-        }) => {
-          needed++;
-          fetch(zone).then(r => r.json())
-            .then((zoneGeom: FeatureCollection['features'][number]) => {
-              activeAlertsGeoJson.features.push({
-                ...feature,
-                geometry: zoneGeom.geometry,
-              });
-              done++;
-              if (done >= needed) {
-                activeAlertsGeoJson.features = activeAlertsGeoJson.features
-                  .filter(f => f.geometry !== null)
-                  .sort((a, b) => {
-                    const aSize = a.geometry ? getPolygonSize(a.geometry) : 0;
-                    const bSize = b.geometry ? getPolygonSize(b.geometry) : 0;
-                    return bSize - aSize;
-                  });
-                setAlertsGeoJson(activeAlertsGeoJson);
-              }
-            });
-        });
-      if (done >= needed) {
-        setAlertsGeoJson(activeAlertsGeoJson);
-      }
+      setFiresGeoJson({
+        type: 'FeatureCollection',
+        features: activeFiresGeoJson.activeFires,
+      });
     })();
   }, []);
 
-  return alertsGeoJson;
+  return firesGeoJson;
+}
+
+function useActiveBoundaries(activeLayers: string[]): FeatureCollection | null {
+  const [
+    firesGeoJson,
+    setFiresGeoJson,
+  ] = useState<FeatureCollection | null>(null);
+  const [
+    isStarted,
+    setIsStarted,
+  ] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (activeLayers.includes('Active Fire Boundaries') && !isStarted) {
+      setIsStarted(true);
+      (async () => {
+        try {
+          const activeBoundariesGeoJson = await fetch('/active-boundaries.json')
+            .then(r => r.json()) as FireBoundaryInfo;
+          console.log(activeBoundariesGeoJson);
+
+          setFiresGeoJson({
+            type: 'FeatureCollection',
+            features: activeBoundariesGeoJson.activeBoundaries,
+          });
+        } catch (e) {
+          logger.error('Error fetching active boundaries:', e);
+        }
+      })();
+    }
+  }, [
+    activeLayers,
+    isStarted,
+  ]);
+
+  return firesGeoJson;
+}
+
+function MapLayerEvents({
+  setActiveLayers,
+}: Readonly<{
+  setActiveLayers: React.Dispatch<React.SetStateAction<string[]>>;
+}>) {
+  useMapEvents({
+    overlayadd: e => {
+      // Triggers when an overlay is checked (shown)
+      console.log(`Overlay shown: ${e.name}`);
+      setActiveLayers(old => [
+        ...old,
+        e.name,
+      ]);
+    },
+    overlayremove: e => {
+      // Triggers when an overlay is unchecked (hidden)
+      console.log(`Overlay hidden: ${e.name}`);
+      setActiveLayers(old => [ ...old.filter(name => name !== e.name), ]);
+    },
+  });
+
+  return null;
 }
 
 interface LegendLayer {
@@ -548,7 +642,18 @@ export default function WeatherPage() {
     addAlert,
   ]);
 
-  const activeAlerts = useWeatherAlerts();
+  const [
+    activeLayers,
+    setActiveLayers,
+  ] = useState<string[]>([ 'Active Fires', ]);
+
+  useEffect(() => {
+    console.log([ ...activeLayers, ]);
+  }, [ activeLayers, ]);
+
+  const activeAlerts = useWeatherAlerts(activeLayers);
+  const activeFires = useActiveFires();
+  const activeBoundaries = useActiveBoundaries(activeLayers);
 
   return <>
     {(typeof weatherData === 'undefined' || isLoading) && <LoadingSpinner />}
@@ -617,78 +722,74 @@ export default function WeatherPage() {
               height: '500px',
             }}
           >
+            <MapLayerEvents setActiveLayers={setActiveLayers} />
             <TileLayer
               maxZoom={19}
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
             />
+            {activeFires !== null && activeLayers.includes('Active Fires') && <GeoJSON
+              data={activeFires}
+              style={{
+                color: 'red',
+                weight: 2,
+                fillOpacity: 0.1,
+              }}
+              pointToLayer={(feature: FireInfo) => FireMarker(feature)}
+            />}
+            {activeBoundaries !== null && activeLayers.includes('Active Fire Boundaries') && <GeoJSON
+              data={activeBoundaries}
+              style={{
+                color: 'red',
+                fillColor: 'red',
+                fillOpacity: 0.2,
+              }}
+              onEachFeature={(feature: Feature, layer: Layer) => {
+                layer.bindTooltip(`${feature.properties?.poly_IncidentName || 'Unknown Incident Name'}${feature.properties?.attr_CpxName ? `<br />${feature.properties?.attr_CpxName}` : ''}`, {
+                  direction: 'center',
+                });
+              }}
+            />}
+            {activeAlerts !== null && activeLayers.includes('Weather Alerts') && <GeoJSON
+              data={activeAlerts}
+              style={{
+                color: 'red',
+                weight: 2,
+                fillOpacity: 0.1,
+              }}
+              onEachFeature={(feature, layer) => {
+                layer.bindPopup(`<b>${feature.properties?.event || 'Unknown Event'}</b><br />` +
+                    `${feature.properties?.headline || ''}<br/><br />` +
+                    `${(feature.properties?.description || '')
+                      .replace(/([^\n])\n([^\n])/g, (a: string, b: string, c: string) => `${b} ${c}`)
+                      .replace(/\n/g, '<br />')
+                    }<br /><br />`);
+                layer.bindTooltip(feature.properties?.event || 'N/A', {
+                  direction: 'center',
+                });
+              }}
+            />}
+
             <LayersControl position='topright'>
               <LayersControl.Overlay
                 checked
                 key='active'
                 name='Active Fires'>
-                <FeatureLayer
-                  url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations/FeatureServer/0'
-                  where='ControlDateTime IS NULL AND ContainmentDateTime IS NULL AND FireOutDateTime IS NULL AND ModifiedOnDateTime_dt >= CURRENT_TIMESTAMP - 2'
-                  pointToLayer={(feature: FireInfo) => FireMarker(feature)}
-                  fields={[
-                    'ContainmentDateTime',
-                    'ControlDateTime',
-                    'CpxName',
-                    'DiscoveryAcres',
-                    'EstimatedCostToDate',
-                    'EstimatedFinalCost',
-                    'FinalAcres',
-                    'FireBehaviorGeneral',
-                    'FireBehaviorGeneral1',
-                    'FireBehaviorGeneral2',
-                    'FireBehaviorGeneral3',
-                    'FireCause',
-                    'FireCauseGeneral',
-                    'FireCauseSpecific',
-                    'FireDiscoveryDateTime',
-                    'FireOutDateTime',
-                    'FireStrategyConfinePercent',
-                    'FireStrategyFullSuppPercent',
-                    'FireStrategyMonitorPercent',
-                    'FireStrategyPointZonePercent',
-                    'IncidentComplexityLevel',
-                    'IncidentManagementOrganization',
-                    'IncidentName',
-                    'IncidentSize',
-                    'IncidentTypeCategory',
-                    'ModifiedOnDateTime_dt',
-                    'OBJECTID',
-                    'OrganizationalAssessment',
-                    'PercentContained',
-                    'PredominantFuelGroup',
-                    'PredominantFuelModel',
-                    'PrimaryFuelModel',
-                    'SecondaryFuelModel',
-                    'TotalIncidentPersonnel',
-                  ]}
+                <GeoJSON
+                  data={{
+                    type: 'FeatureCollection',
+                    features: [],
+                  } as FeatureCollection}
                 />
               </LayersControl.Overlay>
               <LayersControl.Overlay
                 key='active-boundary'
                 name='Active Fire Boundaries'>
-                <CorrectedFeatureLayer
-                  url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0'
-                  where='attr_ControlDateTime IS NULL AND attr_ContainmentDateTime IS NULL AND attr_FireOutDateTime IS NULL AND attr_ModifiedOnDateTime_dt >= CURRENT_TIMESTAMP - 2'
-                  fields={[
-                    'poly_IncidentName',
-                    'attr_CpxName',
-                  ]}
-                  style={{
-                    color: 'red',
-                    fillColor: 'red',
-                    fillOpacity: 0.2,
-                  }}
-                  onEachFeature={(feature: Feature, layer: Layer) => {
-                    layer.bindTooltip(`${feature.properties?.poly_IncidentName || 'Unknown Incident Name'}${feature.properties?.attr_CpxName ? `<br />${feature.properties?.attr_CpxName}` : ''}`, {
-                      direction: 'center',
-                    });
-                  }}
+                <GeoJSON
+                  data={{
+                    type: 'FeatureCollection',
+                    features: [],
+                  } as FeatureCollection}
                 />
               </LayersControl.Overlay>
               <LayersControl.Overlay
@@ -887,30 +988,17 @@ export default function WeatherPage() {
                   opacity={0.5}
                 />
               </LayersControl.Overlay>
-              {activeAlerts !== null && <LayersControl.Overlay
+              <LayersControl.Overlay
                 key='weather'
                 name='Weather Alerts'
               >
                 <GeoJSON
-                  data={activeAlerts}
-                  style={{
-                    color: 'red',
-                    weight: 2,
-                    fillOpacity: 0.1,
-                  }}
-                  onEachFeature={(feature, layer) => {
-                    layer.bindPopup(`<b>${feature.properties?.event || 'Unknown Event'}</b><br />` +
-                    `${feature.properties?.headline || ''}<br/><br />` +
-                    `${(feature.properties?.description || '')
-                      .replace(/([^\n])\n([^\n])/g, (a: string, b: string, c: string) => `${b} ${c}`)
-                      .replace(/\n/g, '<br />')
-                    }<br /><br />`);
-                    layer.bindTooltip(feature.properties?.event || 'N/A', {
-                      direction: 'center',
-                    });
-                  }}
+                  data={{
+                    type: 'FeatureCollection',
+                    features: [],
+                  } as FeatureCollection}
                 />
-              </LayersControl.Overlay>}
+              </LayersControl.Overlay>
               <LayersControl.Overlay
                 key='dispatch-boundaries'
                 name='Fire Dispatch Boundaries'>

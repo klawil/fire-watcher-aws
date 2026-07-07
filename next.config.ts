@@ -24,6 +24,14 @@ if (process.env.PROD_BUILD) {
           source: '/weather.json',
           destination: 'https://cofrn.org/weather.json',
         },
+        {
+          source: '/active-fires.json',
+          destination: 'https://cofrn.org/active-fires.json',
+        },
+        {
+          source: '/active-boundaries.json',
+          destination: 'https://cofrn.org/active-boundaries.json',
+        },
       ],
     };
   };
