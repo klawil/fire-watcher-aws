@@ -120,7 +120,7 @@ async function updateActiveIncidents() {
       };
       await uploadFile(fileLocations.activeFires, JSON.stringify(data));
     } else {
-      logger.warn('updateActiveIncidents', 'No features found in the response');
+      logger.warn('updateActiveIncidents', 'No features found in the response', fireData);
     }
   } catch (e) {
     logger.error('updateActiveIncidents', e);
@@ -145,7 +145,7 @@ async function updateActiveBoundaries() {
       };
       await uploadFile(fileLocations.activeBoundaries, JSON.stringify(data));
     } else {
-      logger.warn('updateActiveBoundaries', 'No features found in the response');
+      logger.warn('updateActiveBoundaries', 'No features found in the response', fireData);
     }
   } catch (e) {
     logger.error('updateActiveBoundaries', e);
