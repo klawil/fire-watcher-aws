@@ -102,7 +102,7 @@ async function uploadFile(key: string, text: string) {
   return await s3.send(new PutObjectCommand(uploadParams));
 }
 
-async function updateActiveIncidents() {
+async function updateActiveIncidents(): Promise<boolean> {
   try {
     const response = await fetch(
       `${activeIncidentsUrl}?${(Object.keys(activeIncidentsBody) as (keyof typeof activeIncidentsBody)[])
@@ -119,15 +119,17 @@ async function updateActiveIncidents() {
         updated: `Data fetched on ${dateToLocalString(new Date()).join(' at ')}`,
       };
       await uploadFile(fileLocations.activeFires, JSON.stringify(data));
+      return true;
     } else {
       logger.warn('updateActiveIncidents', 'No features found in the response', fireData);
     }
   } catch (e) {
     logger.error('updateActiveIncidents', e);
   }
+  return false;
 }
 
-async function updateActiveBoundaries() {
+async function updateActiveBoundaries(): Promise<boolean> {
   try {
     const response = await fetch(
       `${activeBoundariesUrl}?${(Object.keys(activeBoundariesBody) as (keyof typeof activeBoundariesBody)[])
@@ -144,15 +146,17 @@ async function updateActiveBoundaries() {
         updated: `Data fetched on ${dateToLocalString(new Date()).join(' at ')}`,
       };
       await uploadFile(fileLocations.activeBoundaries, JSON.stringify(data));
+      return true;
     } else {
       logger.warn('updateActiveBoundaries', 'No features found in the response', fireData);
     }
   } catch (e) {
     logger.error('updateActiveBoundaries', e);
   }
+  return false;
 }
 
-async function updateReadinessInfo() {
+async function updateReadinessInfo(): Promise<boolean> {
   logger.trace('updateReadinessInfo', ...arguments);
   try {
     const data: WeatherResultJson = {
@@ -160,16 +164,33 @@ async function updateReadinessInfo() {
       updated: `Data fetched on ${dateToLocalString(new Date()).join(' at ')}`,
     };
     await uploadFile(fileLocations.readiness, JSON.stringify(data));
+    return true;
   } catch (e) {
     logger.error('updateReadinessInfo', e);
   }
+  return false;
+}
+
+async function retryUpToTimes(fn: () => Promise<boolean>, name: string, times: number = 180) {
+  for (let i = 0; i < times; i++) {
+    const result = await fn();
+    if (result) {
+      return true;
+    }
+
+    if (i < times - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  logger.error('retryUpToTimes', `Failed ${name} after ${times} attempts`);
 }
 
 export async function main() {
   logger.trace('main', ...arguments);
+
   await Promise.all([
-    updateReadinessInfo(),
-    updateActiveIncidents(),
-    updateActiveBoundaries(),
+    retryUpToTimes(updateReadinessInfo, 'updateReadinessInfo'),
+    retryUpToTimes(updateActiveIncidents, 'updateActiveIncidents'),
+    retryUpToTimes(updateActiveBoundaries, 'updateActiveBoundaries'),
   ]);
 }
