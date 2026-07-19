@@ -43,6 +43,7 @@ function useLoadFiles(
   state: AudioState,
   dispatch: React.ActionDispatch<[AudioAction]>,
   beforeRenderRows: (adding: number) => void,
+  setNoOlderFiles: (hasNoOlderFiles: boolean) => void,
   scrollTop: number
 ) {
   const [
@@ -119,6 +120,9 @@ function useLoadFiles(
 
     // Add the files
     if (responseToParse.files.length > 0) {
+      if (responseToParse.direction === 'before') {
+        setNoOlderFiles(false);
+      }
       if (state.files.length === 0 && state.filter.f) {
         const closestIdx = findClosestFileIdx(
           responseToParse.files,
@@ -148,6 +152,11 @@ function useLoadFiles(
         action: 'SetSomeNewFilters',
         f: undefined,
       });
+    } else if (
+      responseToParse.files.length === 0 &&
+      responseToParse.direction === 'before'
+    ) {
+      setNoOlderFiles(true);
     }
 
     dispatch({
@@ -161,6 +170,7 @@ function useLoadFiles(
     state.filter.f,
     dispatch,
     beforeRenderRows,
+    setNoOlderFiles,
   ]);
 
   const afterAddedTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -243,10 +253,7 @@ function useLoadFiles(
         urlParams.before = state.api.before;
       } else if (
         loadFilesDirection === 'after' &&
-        (
-          !state.api.loadAfterAdded ||
-          state.filter.tone === 'y'
-        ) &&
+        !state.api.loadAfterAdded &&
         typeof state.api.after !== 'undefined'
       ) {
         urlParams.after = state.api.after;
@@ -263,11 +270,7 @@ function useLoadFiles(
         // Load after a specific URL file
         const startDate = fNameToDate(state.filter.f);
         urlParams.after = Math.floor((startDate.getTime() - 1000) / 1000);
-        if (urlParams.after < 0 && state.filter.f_time) {
-          console.log('f_time fallback');
-          urlParams.after = Math.floor((Number(state.filter.f_time) - 1000) / 1000);
-        } else if (urlParams.after < 0) {
-          console.log('regular fallback');
+        if (urlParams.after < 0) {
           urlParams.after = Math.floor(Date.now() / 1000);
         }
       }
@@ -431,9 +434,17 @@ export default function AudioList() {
   };
 
   const [
+    noOlderFiles,
+    setNoOlderFiles,
+  ] = useState(false);
+  useEffect(() => {
+    setNoOlderFiles(false);
+  }, [ state.filter, ]);
+
+  const [
     loadAfter,
     loadBefore,
-  ] = useLoadFiles(state, dispatch, beforeRenderRows, scrollTop);
+  ] = useLoadFiles(state, dispatch, beforeRenderRows, setNoOlderFiles, scrollTop);
   const loadAfterIdx = 0;
   const loadBeforeIdx = state.files.length - 1;
   const [
@@ -618,6 +629,7 @@ export default function AudioList() {
       </tbody>
     </Table>}
     {state.files.length === 0 && <LoadingSpinner />}
+    {noOlderFiles && state.files.length > 0 && <p className='text-center pb-5'>No older files with the current filters.</p>}
 
     <AudioFilter
       state={state}

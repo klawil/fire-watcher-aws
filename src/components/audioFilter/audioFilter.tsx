@@ -1,6 +1,6 @@
 import { useSearchParams } from 'next/navigation';
 import {
-  useCallback, useEffect, useState
+  useCallback, useContext, useEffect, useState
 } from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
@@ -14,11 +14,62 @@ import Tabs from 'react-bootstrap/Tabs';
 
 import { UpdateTextSeenApi } from '@/types/api/texts';
 import {
-  AudioAction, AudioState, FilterPresetUrlParams, allowedNostartParams, filterPresetValues,
+  AudioAction, AudioState, FilterPresetUrlParams, filterPresetValues,
   filterPresets
 } from '@/types/frontend/audio';
+import { fNameToDate } from '@/utils/common/strings';
 import { defaultFilterPreset } from '@/utils/frontend/audioState';
+import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
+
+function fFromTimestamp(rawTime: string): string | undefined {
+  const parsedValue = Number(rawTime);
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return undefined;
+  }
+
+  const seconds = parsedValue > 100000000000
+    ? Math.floor(parsedValue / 1000)
+    : Math.floor(parsedValue);
+  if (seconds <= 0) {
+    return undefined;
+  }
+
+  return `00-${seconds.toString().padStart(10, '0')}_000000000-call_0.m4a`;
+}
+
+function parseTgFilter(rawTg: string | null): string | undefined {
+  if (rawTg === null) {
+    return `p${defaultFilterPreset}`;
+  }
+  if (rawTg === 'all') {
+    return rawTg;
+  }
+
+  if (rawTg.startsWith('p')) {
+    const presetName = rawTg.slice(1);
+    if (filterPresetValues.includes(presetName as FilterPresetUrlParams)) {
+      return rawTg;
+    }
+    return undefined;
+  }
+
+  if (rawTg.startsWith('tg')) {
+    const talkgroups = rawTg.slice(2).split('|')
+      .filter(v => v !== '')
+      .map(v => Number(v));
+    if (
+      talkgroups.length === 0 ||
+      talkgroups.some(v => Number.isNaN(v) || v < 0)
+    ) {
+      return undefined;
+    }
+
+    return `tg${talkgroups.join('|')}`;
+  }
+
+  return undefined;
+}
 
 export default function AudioFilter({
   state,
@@ -28,114 +79,171 @@ export default function AudioFilter({
   dispatch: React.ActionDispatch<[AudioAction]>;
 }>) {
   const searchParams = useSearchParams();
+  const addAlert = useContext(AddAlertContext);
   const [
     noStart,
     setNoStart,
   ] = useState(false);
   useEffect(() => {
+    if (noStart) {
+      return;
+    }
 
-    /*
-     * If `nostart` is present in the URL, don't load any data. This is to allow a link to the
-     * specific filter set that automatically jumps to the present to be saved on a mobile device
-     */
-    if (
-      !noStart &&
-      searchParams.get('nostart') !== null
-    ) {
+    const rawParams = new URLSearchParams(searchParams.toString());
+
+    // If `nostart` is present, remove it and block initial loading behavior.
+    if (rawParams.get('nostart') !== null) {
+      rawParams.delete('nostart');
+      window.history.replaceState(null, '', `?${rawParams.toString()}`);
       setNoStart(true);
       return;
     }
-    if (noStart) {
-      const newParams = new URLSearchParams(searchParams.toString());
-      if (newParams.get('nostart') !== null) {
-        [ ...newParams.keys(), ]
-          .filter(key => !allowedNostartParams.includes(key))
-          .forEach(key => newParams.delete(key));
-        window.history.replaceState(null, '', `?${newParams.toString()}`);
-      }
-      return;
-    }
 
-    // Check for a link from a paging message
-    if (
-      !state.queryParsed &&
-      searchParams.get('p') !== null &&
-      searchParams.get('m') !== null
-    ) {
-      (async (phone: number, message: number) => {
-        if (Number.isNaN(phone) || Number.isNaN(message)) {
-          throw new Error('Invalid phone or message');
-        }
-
-        const [ code, ] = await typeFetch<UpdateTextSeenApi>({
-          path: '/api/v2/texts/{id}/',
-          method: 'PATCH',
-          params: {
-            id: message,
-          },
-          body: {
-            phone: phone,
-          },
-        });
-        if (code !== 200) {
-          throw new Error(`Failed to update text seen - ${code}`);
-        }
-      })(Number(searchParams.get('p')), Number(searchParams.get('m')));
-
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.delete('p');
-      newParams.delete('m');
-      window.history.replaceState(null, '', `?${newParams.toString()}`);
-      return;
-    }
-
-    const searchParamValues = {
-      tg: searchParams.get('tg') || `p${defaultFilterPreset}`,
-      emerg: (searchParams.get('emerg') || undefined) as 'n' | 'y' | undefined,
-      tone: (searchParams.get('tone') || undefined) as 'n' | 'y' | undefined,
-      f: searchParams.get('f') || undefined,
-      f_time: searchParams.get('f_time') || undefined,
-    };
-
-    // Pull in the raw values from search params on the first run
     if (!state.queryParsed) {
+      let shouldReplaceState = false;
+
+      // Parse links from paging messages, then remove these params and continue parsing.
+      if (
+        rawParams.get('p') !== null &&
+        rawParams.get('m') !== null
+      ) {
+        const phone = Number(rawParams.get('p'));
+        const message = Number(rawParams.get('m'));
+        if (!Number.isNaN(phone) && !Number.isNaN(message)) {
+          (async () => {
+            const [ code, ] = await typeFetch<UpdateTextSeenApi>({
+              path: '/api/v2/texts/{id}/',
+              method: 'PATCH',
+              params: {
+                id: message,
+              },
+              body: {
+                phone: phone,
+              },
+            });
+            if (code !== 200) {
+              throw new Error(`Failed to update text seen - ${code}`);
+            }
+          })().catch(() => {
+            addAlert('warning', 'Failed to mark paging message as seen');
+          });
+        }
+      }
+      if (rawParams.get('p') !== null || rawParams.get('m') !== null) {
+        rawParams.delete('p');
+        rawParams.delete('m');
+        shouldReplaceState = true;
+      }
+
+      // Parse tg/emerg/tone with validation.
+      const invalidFilterKeys: string[] = [];
+      const parsedTg = parseTgFilter(rawParams.get('tg'));
+      if (
+        rawParams.get('tg') !== null &&
+        typeof parsedTg === 'undefined'
+      ) {
+        invalidFilterKeys.push('tg');
+        rawParams.delete('tg');
+        shouldReplaceState = true;
+      }
+
+      const emergRaw = rawParams.get('emerg');
+      let parsedEmerg: 'y' | 'n' | undefined = undefined;
+      if (emergRaw !== null) {
+        if (emergRaw === 'y' || emergRaw === 'n') {
+          parsedEmerg = emergRaw;
+        } else {
+          invalidFilterKeys.push('emerg');
+          rawParams.delete('emerg');
+          shouldReplaceState = true;
+        }
+      }
+
+      const toneRaw = rawParams.get('tone');
+      let parsedTone: 'y' | 'n' | undefined = undefined;
+      if (toneRaw !== null) {
+        if (toneRaw === 'y' || toneRaw === 'n') {
+          parsedTone = toneRaw;
+        } else {
+          invalidFilterKeys.push('tone');
+          rawParams.delete('tone');
+          shouldReplaceState = true;
+        }
+      }
+
+      if (invalidFilterKeys.length > 0) {
+        addAlert(
+          'warning',
+          `Invalid filter parameter${invalidFilterKeys.length > 1 ? 's' : ''}: ${invalidFilterKeys.join(', ')}`
+        );
+      }
+
+      // Parse f first, then f_time if needed.
+      const rawF = rawParams.get('f');
+      const rawFTime = rawParams.get('f_time');
+      let parsedF: string | undefined = undefined;
+      if (rawF !== null) {
+        const parsedDate = fNameToDate(rawF);
+        if (parsedDate.getTime() > 0) {
+          parsedF = rawF;
+        } else {
+          addAlert('warning', 'Invalid value for f; falling back to f_time if available');
+          rawParams.delete('f');
+          shouldReplaceState = true;
+        }
+      }
+      if (typeof parsedF === 'undefined' && rawFTime !== null) {
+        parsedF = fFromTimestamp(rawFTime);
+      }
+      if (rawFTime !== null) {
+        rawParams.delete('f_time');
+        shouldReplaceState = true;
+      }
+
+      if (shouldReplaceState) {
+        window.history.replaceState(null, '', `?${rawParams.toString()}`);
+      }
+
       dispatch({
         action: 'QueryParamsParsed',
-        ...searchParamValues,
+        tg: parsedTg,
+        emerg: parsedEmerg,
+        tone: parsedTone,
+        f: parsedF,
       });
       return;
     }
 
-    // Check to see if the params have changed
-    let wasChange = false;
-    const newSearchParams = new URLSearchParams(searchParams.toString());
-    (Object.keys(searchParamValues) as (keyof typeof searchParamValues)[])
-      .forEach(key => {
-        if (key === 'f') {
-          return;
-        }
+    // Keep filter query params in sync after initial parsing.
+    if (state.queryParsed) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      let wasChange = false;
+      (Object.keys(state.filter) as (keyof AudioState['filter'])[])
+        .forEach(key => {
+          if (key === 'f' || key === 'f_time') {
+            return;
+          }
 
-        if (
-          typeof state.filter[key] === 'undefined' ||
-          state.filter[key] === 'n'
-        ) {
-          newSearchParams.delete(key);
-          wasChange = true;
-        } else if (
-          newSearchParams.get(key) !== state.filter[key] &&
-          (
-            newSearchParams.get(key) !== null ||
-            state.filter[key] !== 'n'
-          )
-        ) {
-          newSearchParams.set(key, state.filter[key]);
-          wasChange = true;
-        }
-      });
-    if (wasChange) {
-      window.history.pushState(null, '', `?${newSearchParams.toString()}`);
+          if (
+            typeof state.filter[key] === 'undefined' ||
+            state.filter[key] === 'n'
+          ) {
+            if (newParams.get(key) !== null) {
+              newParams.delete(key);
+              wasChange = true;
+            }
+          } else if (newParams.get(key) !== state.filter[key]) {
+            newParams.set(key, state.filter[key] || '');
+            wasChange = true;
+          }
+        });
+
+      if (wasChange) {
+        window.history.pushState(null, '', `?${newParams.toString()}`);
+      }
     }
   }, [
+    addAlert,
     noStart,
     searchParams,
     state.filter,
@@ -221,17 +329,19 @@ export default function AudioFilter({
     }
 
     // Save the changes and reset the files to trigger a loading event
+    const playerFileName = state.player.fileUrl?.split('/').pop();
     dispatch({
       action: 'SetNewFilters',
       ...filterChanges,
       f: !jumpToPresent
-        ? searchParams.get('f') || undefined
+        ? playerFileName || state.filter.f
         : undefined,
     });
   }, [
     dispatch,
     filterChanges,
-    searchParams,
+    state.filter.f,
+    state.player.fileUrl,
   ]);
 
   const [

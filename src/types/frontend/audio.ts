@@ -168,13 +168,17 @@ interface QueryParamsParsedAction {
   action: 'QueryParamsParsed';
   tg?: string;
   emerg?: 'y' | 'n';
+  tone?: 'y' | 'n';
   f?: string;
+  f_time?: string;
 }
 interface SetFilterValueAction {
   action: 'SetFilterValue';
   tg?: string;
   emerg?: 'y' | 'n';
+  tone?: 'y' | 'n';
   f?: string;
+  f_time?: string;
 }
 interface FilterModalDisplayAction {
   action: 'CloseFilterModal' | 'OpenFilterModal';
@@ -183,13 +187,17 @@ interface SetNewFiltersAction {
   action: 'SetNewFilters';
   tg?: string;
   emerg?: 'y' | 'n';
+  tone?: 'y' | 'n';
   f?: string;
+  f_time?: string;
 }
 interface SetSomeNewFiltersAction {
   action: 'SetSomeNewFilters';
   tg?: string;
   emerg?: 'y' | 'n';
+  tone?: 'y' | 'n';
   f?: string;
+  f_time?: string;
 }
 type FilterActions = SetFilterValueAction | QueryParamsParsedAction | FilterModalDisplayAction
   | SetNewFiltersAction | SetSomeNewFiltersAction;

@@ -1,5 +1,6 @@
 import { useSearchParams } from 'next/navigation';
 import {
+  type MouseEvent,
   useContext,
   useEffect, useRef, useState
 } from 'react';
@@ -83,6 +84,7 @@ export default function AudioPlayerBar({
 
   // Add listeners for duration, start, and stop
   const audioRef = useRef(new Audio());
+  const progressRef = useRef<HTMLDivElement | null>(null);
   const [
     wasEnded,
     setWasEnded,
@@ -117,6 +119,13 @@ export default function AudioPlayerBar({
       action: 'SetPlayerState',
       state: audioRef.current.ended ? 'ended' : 'paused',
     });
+    const error = () => {
+      addAlert('danger', 'An error occurred while playing this file');
+      dispatch({
+        action: 'SetPlayerState',
+        state: 'paused',
+      });
+    };
 
     const currentAudio = audioRef.current;
 
@@ -125,21 +134,53 @@ export default function AudioPlayerBar({
     currentAudio.addEventListener('loadedmetadata', setPlayerTimes);
     currentAudio.addEventListener('ended', ended);
     currentAudio.addEventListener('play', playing);
-    currentAudio.addEventListener('paused', paused);
-    currentAudio.addEventListener('error', paused);
+    currentAudio.addEventListener('pause', paused);
+    currentAudio.addEventListener('error', error);
 
     return () => {
       currentAudio.removeEventListener('timeupdate', setPlayerTimes);
       currentAudio.removeEventListener('loadedmetadata', setPlayerTimes);
       currentAudio.removeEventListener('ended', ended);
       currentAudio.removeEventListener('play', playing);
-      currentAudio.removeEventListener('paused', paused);
-      currentAudio.removeEventListener('error', paused);
+      currentAudio.removeEventListener('pause', paused);
+      currentAudio.removeEventListener('error', error);
     };
   }, [
+    addAlert,
     dispatch,
     wasEnded,
   ]);
+
+  const seekToPercent = (percent: number) => {
+    if (
+      !Number.isFinite(percent) ||
+      typeof state.player.duration === 'undefined'
+    ) {
+      return;
+    }
+
+    const boundedPercent = Math.max(0, Math.min(1, percent));
+    const newTimestamp = boundedPercent * state.player.duration;
+    audioRef.current.currentTime = newTimestamp;
+    dispatch({
+      action: 'SetPlayerTimes',
+      timestamp: newTimestamp,
+      duration: state.player.duration,
+    });
+  };
+
+  const seekFromClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (progressRef.current === null) {
+      return;
+    }
+
+    const rect = progressRef.current.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return;
+    }
+
+    seekToPercent((event.clientX - rect.left) / rect.width);
+  };
 
   // Add effects that process changes to the player
   useEffect(() => {
@@ -310,7 +351,14 @@ export default function AudioPlayerBar({
         </Nav>
 
         <Navbar.Text>
-          <div className={`${styles.progressBarContainer} progress ms-1 mt-1`}>
+          <div
+            ref={progressRef}
+            className={`${styles.progressBarContainer} progress ms-1 mt-1`}
+            onClick={seekFromClick}
+            style={{
+              cursor: 'pointer',
+            }}
+          >
             <div
               className='progress-bar'
               role='progressbar'
