@@ -16,11 +16,17 @@ import { getLogger } from '@/utils/common/logger';
 const logger = getLogger('resources/api/v2/restart');
 
 const alarmKeyMap: {
-  [key in GetShouldRestartApi['params']['tower']]: string;
+  [key in GetShouldRestartApi['params']['tower']]: string[];
 } = {
-  PoolTable: 'Crestone Recorder Status',
-  Saguache: 'Saguache Recorder Status',
-  SanAntonio: 'Crestone Recorder Status',
+  PoolTable: [
+    'Crestone Recorder Status',
+    'Pool Table Uploads',
+  ],
+  Saguache: [
+    'Saguache Recorder Status',
+    'Saguache Tower Uploads',
+  ],
+  SanAntonio: [ 'Crestone Recorder Status', ],
 };
 
 const GET: LambdaApiFunction<GetShouldRestartApi> = async function (event) {
@@ -46,29 +52,30 @@ const GET: LambdaApiFunction<GetShouldRestartApi> = async function (event) {
 
   // Determine the response
   const alarmStatus = await getCachedAlarmData();
-  const alarmName = alarmKeyMap[params.tower];
-  const status = alarmStatus[alarmName];
-  if (
-    typeof status === 'undefined' ||
-    typeof status.lastAlarm === 'undefined' ||
-    (
-      typeof status.lastOk !== 'undefined' &&
-      status.lastOk > status.lastAlarm
-    )
-  ) {
-    return [
-      204,
-      '0',
-    ];
+  const alarmNames = alarmKeyMap[params.tower];
+  for (let i = 0; i < alarmNames.length; i++) {
+    const alarmName = alarmNames[i];
+    const status = alarmStatus[alarmName];
+    if (
+      typeof status !== 'undefined' &&
+      typeof status.lastAlarm !== 'undefined' &&
+      (
+        typeof status.lastOk === 'undefined' ||
+        status.lastOk < status.lastAlarm
+      )
+    ) {
+      return [
+        205,
+        '1',
+        {},
+        'text/plain',
+      ];
+    }
   }
 
-  logger.log(`Restarting ${params.tower}:`, status);
-
   return [
-    205,
-    '1',
-    {},
-    'text/plain',
+    204,
+    '0',
   ];
 };
 
