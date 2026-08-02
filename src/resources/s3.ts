@@ -448,6 +448,25 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           },
           UpdateExpression: 'SET #PageSent = :PageSent',
         });
+
+        // Prevents texts from being sent if 2 pages happen within a minute of each other
+        const previousPages = existingItems.Items
+          .filter(item => {
+            const itemStartTime = item.StartTime;
+            const itemEndTime = item.EndTime;
+            if (
+              typeof itemStartTime === 'undefined' ||
+              typeof itemEndTime === 'undefined'
+            ) {
+              return false;
+            }
+
+            // Return true if the file starts in, ends in, or covers the buffer period
+            return itemStartTime < startTime;
+          });
+        if (previousPages.length > 0) {
+          doTranscriptOnly = true;
+        }
       }
     }
 
@@ -480,6 +499,12 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           Value: 'COFRN',
         },
       ];
+      if (doTranscriptOnly) {
+        Tags.push({
+          Key: 'SendPage',
+          Value: 'n',
+        });
+      }
       promises['start-transcribe'] = transcribe.send(new StartTranscriptionJobCommand({
         TranscriptionJobName: transcribeJobName,
         LanguageCode: 'en-US',

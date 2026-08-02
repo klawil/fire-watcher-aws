@@ -1017,7 +1017,50 @@ describe('resources/s3', () => {
       });
 
       expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(1);
-      expect(SendMessageCommand).toHaveBeenCalledTimes(1);
+      expect(SendMessageCommand).toHaveBeenCalledTimes(0);
+
+      expect(typedUpdate).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 8198,
+          Added: currentTime,
+        },
+        ExpressionAttributeNames: {
+          '#PageSent': 'PageSent',
+        },
+        ExpressionAttributeValues: {
+          ':PageSent': true,
+        },
+        UpdateExpression: 'SET #PageSent = :PageSent',
+      });
+    });
+
+    it('Does not submit a text if less than 60s between pages', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+
+      (vi.mocked(typedQuery) as any).mockResolvedValue({
+        Items: [
+          createDtrItem,
+          getFileItem(
+            'too-early-key',
+            currentTime - 1000,
+            createDtrItem.StartTime - 59,
+            createDtrItem.StartTime - 5,
+            true,
+            false
+          ),
+        ],
+        '$metadata': {},
+      });
+
+      await mod.main({
+        Records: [ createDtrEvent, ],
+      });
+
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(1);
+      expect(SendMessageCommand).toHaveBeenCalledTimes(0);
 
       expect(typedUpdate).toHaveBeenCalledWith({
         TableName: 'TABLE_FILE_VAL',

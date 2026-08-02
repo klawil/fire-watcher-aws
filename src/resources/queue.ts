@@ -394,6 +394,12 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
     }, ],
   }));
 
+  // Exit early if the page was rate limited
+  if (jobInfo.SendPage === 'n') {
+    await updateFilePromise;
+    await metricPromise;
+  }
+
   // Finish processing the shift data
   const [
     onCallCrew,
