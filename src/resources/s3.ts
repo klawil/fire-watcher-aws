@@ -65,149 +65,274 @@ const vhfConfig: {
     tower: 'vhf',
   },
 
-  // VHF - 10000s
-  'VFIRE23': {
+  // VHF - 100000s
+  'NSCFPD': {
     tg: 100001,
+    freq: 154190000,
+    tower: 'vhf',
+  },
+  'VFIRE22': {
+    tg: 100002,
+    freq: 154265000,
+    tower: 'vhf',
+  },
+  'VFIRE21': {
+    tg: 100003,
+    freq: 154280000,
+    tower: 'vhf',
+  },
+  'VFIRE23': {
+    tg: 100004,
     freq: 154295000,
     tower: 'vhf',
   },
   'BGVFD': {
-    tg: 100002,
+    tg: 100005,
     freq: 154445000,
     tower: 'vhf',
   },
   'MRA1': {
-    tg: 100003,
+    tg: 100006,
     freq: 155160000,
     tower: 'vhf',
   },
   'MRA2': {
-    tg: 100004,
+    tg: 100007,
     freq: 155235000,
     tower: 'vhf',
   },
   'VMED28': {
-    tg: 100005,
+    tg: 100008,
     freq: 155340000,
     tower: 'vhf',
   },
   'VLAW31': {
-    tg: 100006,
+    tg: 100009,
     freq: 155475000,
     tower: 'vhf',
   },
-  'RGWORK1': {
-    tg: 100007,
-    freq: 163712500,
+  'NATLAIR1': {
+    tg: 100010,
+    freq: 166612500,
+    tower: 'vhf',
+  },
+  'NIFCCMDS4': {
+    tg: 100011,
+    freq: 166675000,
     tower: 'vhf',
   },
   'NIFTFTAC4': {
-    tg: 100008,
+    tg: 100012,
     freq: 166725000,
     tower: 'vhf',
   },
   'NIFTFTAC5': {
-    tg: 100009,
+    tg: 100013,
     freq: 166775000,
     tower: 'vhf',
   },
   'AG07': {
-    tg: 100010,
+    tg: 100014,
     freq: 166850000,
     tower: 'vhf',
   },
   'AG09': {
-    tg: 100011,
+    tg: 100015,
     freq: 166912500,
     tower: 'vhf',
   },
   'AG10': {
-    tg: 100012,
+    tg: 100016,
     freq: 166937500,
     tower: 'vhf',
   },
   'RGFTAC1': {
-    tg: 100013,
+    tg: 100017,
     freq: 166987500,
     tower: 'vhf',
   },
+  'NIFCCMDS5': {
+    tg: 100018,
+    freq: 167100000,
+    tower: 'vhf',
+  },
   'AG35': {
-    tg: 100014,
+    tg: 100019,
     freq: 167225000,
     tower: 'vhf',
   },
   'AG13': {
-    tg: 100015,
+    tg: 100020,
     freq: 167425000,
     tower: 'vhf',
   },
   'AG15': {
-    tg: 100016,
+    tg: 100021,
     freq: 167525000,
     tower: 'vhf',
   },
+  'NATLAIR2': {
+    tg: 100022,
+    freq: 167950000,
+    tower: 'vhf',
+  },
   'AG49': {
-    tg: 100017,
+    tg: 100023,
     freq: 168037500,
     tower: 'vhf',
   },
   'NIFTFTAC1': {
-    tg: 100018,
+    tg: 100024,
     freq: 168050000,
     tower: 'vhf',
   },
+  'NIFCCMDS3': {
+    tg: 100025,
+    freq: 168075000,
+    tower: 'vhf',
+  },
+  'NIFCCMDS2': {
+    tg: 100026,
+    freq: 168100000,
+    tower: 'vhf',
+  },
   'NIFTFTAC2': {
-    tg: 100019,
+    tg: 100027,
     freq: 168200000,
     tower: 'vhf',
   },
   'NIFTFTAC6': {
-    tg: 100020,
+    tg: 100028,
     freq: 168250000,
     tower: 'vhf',
   },
+  'GACUF2': {
+    tg: 100029,
+    freq: 168350000,
+    tower: 'vhf',
+  },
+  'NATLAIR3': {
+    tg: 100030,
+    freq: 168400000,
+    tower: 'vhf',
+  },
+  'NIFCCMD6': {
+    tg: 100031,
+    freq: 168475000,
+    tower: 'vhf',
+  },
+  'SJAG': {
+    tg: 100032,
+    freq: 168550000,
+    tower: 'vhf',
+  },
   'NIFTFTAC3': {
-    tg: 100021,
+    tg: 100033,
     freq: 168600000,
     tower: 'vhf',
   },
   'AIRGRD': {
-    tg: 100022,
+    tg: 100034,
     freq: 168625000,
     tower: 'vhf',
   },
   'FLTFLG': {
-    tg: 100023,
+    tg: 100035,
     freq: 168650000,
     tower: 'vhf',
   },
   'AG56': {
-    tg: 100024,
+    tg: 100036,
     freq: 168662500,
     tower: 'vhf',
   },
+  'NIFCCMDS1': {
+    tg: 100037,
+    freq: 168700000,
+    tower: 'vhf',
+  },
   'AG58': {
-    tg: 100025,
+    tg: 100038,
     freq: 169087500,
     tower: 'vhf',
   },
+  'NATLAIR4': {
+    tg: 100039,
+    freq: 169150000,
+    tower: 'vhf',
+  },
+  'NATLAIR5': {
+    tg: 100040,
+    freq: 169200000,
+    tower: 'vhf',
+  },
+  'NIFCCMD8': {
+    tg: 100041,
+    freq: 169537500,
+    tower: 'vhf',
+  },
+  'NIFCCMD5': {
+    tg: 100042,
+    freq: 169750000,
+    tower: 'vhf',
+  },
+  'NIFCCMD4': {
+    tg: 100043,
+    freq: 170000000,
+    tower: 'vhf',
+  },
+  'NIFCCMD9': {
+    tg: 100044,
+    freq: 170012500,
+    tower: 'vhf',
+  },
+  'NIFCCMD10': {
+    tg: 100045,
+    freq: 170412500,
+    tower: 'vhf',
+  },
+  'NIFCCMD3': {
+    tg: 100046,
+    freq: 170425000,
+    tower: 'vhf',
+  },
+  'NIFCCMD2': {
+    tg: 100047,
+    freq: 170450000,
+    tower: 'vhf',
+  },
+  'NIFCCMD11': {
+    tg: 100048,
+    freq: 170687500,
+    tower: 'vhf',
+  },
+  'NIFCCMD1': {
+    tg: 100049,
+    freq: 170975000,
+    tower: 'vhf',
+  },
   'RGFNORTH': {
-    tg: 100026,
+    tg: 100050,
     freq: 172075000,
     tower: 'vhf',
   },
   'RGFSOUTH': {
-    tg: 100027,
+    tg: 100051,
     freq: 172250000,
     tower: 'vhf',
   },
+  'NIFCCMD12': {
+    tg: 100052,
+    freq: 173037500,
+    tower: 'vhf',
+  },
   'BLMRPT': {
-    tg: 100028,
+    tg: 100053,
     freq: 173675000,
     tower: 'vhf',
   },
 
-  // UHF - 11000s
+  // UHF - 110000s
   'MED9': {
     tg: 110001,
     freq: 462950000,
