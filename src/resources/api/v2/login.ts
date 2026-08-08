@@ -219,7 +219,9 @@ const POST: LambdaApiFunction<SubmitLoginCodeApi> = async function (event, user)
     {
       'Set-Cookie': [
         getSetCookieHeader('cofrn-user', params.id.toString(), loginDuration),
-        getSetCookieHeader('cofrn-token', token, loginDuration),
+        getSetCookieHeader('cofrn-token', token, loginDuration, {
+          httpOnly: true,
+        }),
       ],
     },
   ];

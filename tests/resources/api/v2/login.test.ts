@@ -269,7 +269,13 @@ describe('resources/api/v2/login', () => {
       expect(res.statusCode).toBe(200);
       expect(res.multiValueHeaders?.['Set-Cookie']?.length).toBe(2);
       expect(res.multiValueHeaders?.['Set-Cookie']?.[0]).toContain('cofrn-user=5555551111');
+      expect(res.multiValueHeaders?.['Set-Cookie']?.[0]).toContain('Secure');
+      expect(res.multiValueHeaders?.['Set-Cookie']?.[0]).toContain('SameSite=Lax');
+      expect(res.multiValueHeaders?.['Set-Cookie']?.[0]).not.toContain('HttpOnly');
       expect(res.multiValueHeaders?.['Set-Cookie']?.[1]).toContain('cofrn-token=jwt-token');
+      expect(res.multiValueHeaders?.['Set-Cookie']?.[1]).toContain('Secure');
+      expect(res.multiValueHeaders?.['Set-Cookie']?.[1]).toContain('SameSite=Lax');
+      expect(res.multiValueHeaders?.['Set-Cookie']?.[1]).toContain('HttpOnly');
     });
   });
 });

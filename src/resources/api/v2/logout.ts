@@ -45,10 +45,14 @@ const GET: LambdaApiFunction<LogoutApi> = async function (event) {
 
   // Find the cookies to delete
   const cookies = getCookies(event);
-  const setCookieHeaders: string[] = [];
+  const cookiesToDelete = new Set<string>([
+    'cofrn-user',
+    'cofrn-token',
+  ]);
   Object.keys(cookies)
     .filter(key => key.includes('cvfd') || key.includes('cofrn'))
-    .forEach(key => setCookieHeaders.push(getDeleteCookieHeader(key)));
+    .forEach(key => cookiesToDelete.add(key));
+  const setCookieHeaders = Array.from(cookiesToDelete).map(getDeleteCookieHeader);
 
   // Return the response
   return [
