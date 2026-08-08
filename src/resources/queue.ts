@@ -398,6 +398,7 @@ async function handleTranscribe(body: TranscribeJobResultQueueItem) {
   if (jobInfo.SendPage === 'n') {
     await updateFilePromise;
     await metricPromise;
+    return;
   }
 
   // Finish processing the shift data
