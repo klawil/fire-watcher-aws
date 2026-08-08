@@ -123,4 +123,5 @@ export const qc2ToDeptMap: {
   C448: 'Baca Grand Fire/EMS',
   J748: 'Del Norte EMS',
   J848: 'South Fork Fire/EMS',
+  B149: 'Alamosa EMS Secondary',
 };
