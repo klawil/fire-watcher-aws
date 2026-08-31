@@ -2042,8 +2042,8 @@ export class FireWatcherAwsStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.BREACHING,
     };
     const baseUploadAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 2,
-      datapointsToAlarm: 2,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 3,
       metric: new cloudwatch.Metric({
         metricName: 'UploadTime',
         namespace: 'DTR Metrics',
@@ -2054,7 +2054,7 @@ export class FireWatcherAwsStack extends Stack {
         },
       }),
       threshold: 0,
-      alarmDescription: 'No files have been uploaded for Saguache Tower in the past 6 hours which may indicate the tower is not being recorded',
+      alarmDescription: 'No files have been uploaded for Saguache Tower in the past 3 hours which may indicate the tower is not being recorded',
       alarmName: 'Saguache Tower Uploads',
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.BREACHING,
@@ -2101,8 +2101,8 @@ export class FireWatcherAwsStack extends Stack {
         okayAction: true,
         alarm: {
           ...baseUploadAlarmConfig,
-          evaluationPeriods: 6,
-          datapointsToAlarm: 6,
+          evaluationPeriods: 3,
+          datapointsToAlarm: 3,
         },
       },
       { // Pool table tower down
@@ -2120,7 +2120,7 @@ export class FireWatcherAwsStack extends Stack {
               Tower: 'PoolTable',
             },
           }),
-          alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 6 hours which may indicate the tower is not being recorded',
+          alarmDescription: 'No files have been uploaded for Pool Table Tower in the past 3 hours which may indicate the tower is not being recorded',
           alarmName: 'Pool Table Uploads',
         },
       },
