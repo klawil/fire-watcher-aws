@@ -68,26 +68,6 @@ describe('resources/queue', () => {
     } as never)).resolves.toBeUndefined();
   });
 
-  it('Processes site-status updates', async () => {
-    (vi.mocked(typedUpdate) as any).mockResolvedValue({});
-
-    await expect(main({
-      Records: [ {
-        body: JSON.stringify({
-          action: 'site-status',
-          sites: {
-            '1-2': {
-              UpdateTime: { TEST: 10, },
-              ConvChannel: { TEST: true, },
-            },
-          },
-        }),
-      }, ],
-    } as never)).resolves.toBeUndefined();
-
-    expect(typedUpdate).toHaveBeenCalled();
-  });
-
   it('Processes page action and sends notifications', async () => {
     (vi.mocked(getUserRecipients) as any).mockResolvedValue([ {
       phone: 5555550001,

@@ -10,7 +10,6 @@ import React, {
 } from 'react';
 import Col from 'react-bootstrap/Col';
 
-import AdjacentSites from '@/components/adjacentSites/adjacentSites';
 import StatusMetricLineChart from '@/components/statusChart/statusMetricLineChart';
 import StatusTimingLineChart from '@/components/statusChart/statusTimingLineChart';
 import StatusTowerLineChart from '@/components/statusChart/statusTowerLineChart';
@@ -513,18 +512,17 @@ export default function StatusPage() {
   const [
     mode,
     setMode,
-  ] = useState<'month' | 'week' | 'day'>('week');
+  ] = useState<'month' | 'week' | 'day' | 'hour'>('week');
   useEffect(() => {
     setChartLoadedCount(0);
     logger.log('Mode:', mode);
   }, [ mode, ]);
 
   return <>
-    <AdjacentSites />
-
     <Col className='text-center'>
       {
         ([
+          'hour',
           'day',
           'week',
           'month',
@@ -568,6 +566,10 @@ export default function StatusPage() {
         config.body.period = chart.type === 'Tower'
           ? ONE_MINUTE * 5
           : ONE_MINUTE * 15;
+      }
+      if (mode === 'hour') {
+        config.body.timerange = ONE_HOUR;
+        config.body.period = ONE_MINUTE;
       }
       return <React.Fragment key={idx}>
         {idx > 0 && <hr />}

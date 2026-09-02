@@ -18,7 +18,6 @@ import {
 import {
   FileTranslationObject, FullFileObject
 } from '@/types/api/files';
-import { FullSiteObject } from '@/types/api/sites';
 import {
   FullUserObject, PagingTalkgroup
 } from '@/types/api/users';
@@ -27,15 +26,15 @@ import {
   departmentConfig, pagingTalkgroupConfig
 } from '@/types/backend/department';
 import {
-  TypedGetOutput, TypedUpdateInput
+  TypedGetOutput
 } from '@/types/backend/dynamo';
 import {
   BUCKET_COSTS,
-  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_SITE, TABLE_USER
+  TABLE_FILE, TABLE_FILE_TRANSLATION, TABLE_USER
 } from '@/types/backend/environment';
 import {
   ActivateUserQueueItem, PhoneNumberIssueQueueItem, SendPageQueueItem, SendUserAuthCodeQueueItem,
-  SiteStatusQueueItem, TranscribeJobResultQueueItem, TwilioTextQueueItem
+  TranscribeJobResultQueueItem, TwilioTextQueueItem
 } from '@/types/backend/queue';
 import {
   typedGet, typedQuery, typedScan,
@@ -791,53 +790,6 @@ async function handleActivateUser(body: ActivateUserQueueItem) {
   return await Promise.all(promises);
 }
 
-async function handleSiteStatus(body: SiteStatusQueueItem) {
-  const sites = body.sites;
-
-  await Promise.all(Object.keys(sites).map(async siteId => {
-    const site = sites[siteId];
-    const systemShortNames: string[] = [];
-
-    const updateConfig: TypedUpdateInput<FullSiteObject> = {
-      TableName: TABLE_SITE(),
-      Key: {
-        SiteId: siteId,
-      },
-      ExpressionAttributeNames: {
-        '#IsActive': 'IsActive',
-      },
-      ExpressionAttributeValues: {
-        ':IsActive': 'y',
-      },
-      UpdateExpression: '',
-    };
-    const updateStrings: string[] = [ '#IsActive = :IsActive', ];
-    (Object.keys(site) as (keyof typeof site)[]).forEach(key => {
-      if (typeof site[key] === 'string') {
-        return;
-      }
-
-      updateConfig.ExpressionAttributeNames[`#${key}`] = key as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-      Object.keys(site[key]).forEach(shortName => {
-        if (!systemShortNames.includes(shortName)) {
-          updateConfig.ExpressionAttributeNames[`#sys${systemShortNames.length}`] = shortName;
-          systemShortNames.push(shortName);
-        }
-
-        const sysIndex = systemShortNames.indexOf(shortName);
-        const value = site[key][shortName];
-        updateConfig.ExpressionAttributeValues = updateConfig.ExpressionAttributeValues || {};
-        updateConfig.ExpressionAttributeValues[`:${key}${sysIndex}`] = value;
-        updateStrings.push(`#${key}.#sys${sysIndex} = :${key}${sysIndex}`);
-      });
-    });
-    updateConfig.UpdateExpression = `SET ${updateStrings.join(', ')}`;
-
-    await typedUpdate<FullSiteObject>(updateConfig);
-  }));
-}
-
 async function handleAuthCode(body: SendUserAuthCodeQueueItem) {
   logger.trace('handleAuthCode', ...arguments);
   const code = randomString(6, true);
@@ -979,9 +931,6 @@ async function parseRecord(event: lambda.SQSRecord) {
       break;
     case 'activate-user':
       response = await handleActivateUser(body);
-      break;
-    case 'site-status':
-      response = await handleSiteStatus(body);
       break;
     case 'auth-code':
       response = await handleAuthCode(body);
