@@ -1314,6 +1314,15 @@ export class FireWatcherAwsStack extends Stack {
     });
     const apiResource = api.root.addResource('api');
 
+    // Create a usage plan for API keys
+    const usagePlan = api.addUsagePlan('cofrn-dtr-api-plan', {
+      name: 'DtrServerPlan',
+      description: 'Plan for DTR recording servers',
+    });
+    usagePlan.addApiStage({
+      stage: api.deploymentStage,
+    });
+
     // Add the v2 APIs
     const apiV2 = apiResource.addResource('v2');
     interface V2ApiConfigBase {
@@ -1324,6 +1333,7 @@ export class FireWatcherAwsStack extends Stack {
     interface V2ApiConfigHandler extends Omit<V2ApiConfigBase, 'api'>, Omit<LambdaPermissions, 'api'>, Required<Pick<LambdaPermissions, 'api'>> {
       fileName: string;
       methods: (keyof typeof HTTPMethod)[];
+      apiToken?: true;
     }
     type V2ApiConfig = V2ApiConfigBase | V2ApiConfigHandler;
     const v2Apis: V2ApiConfig[] = [
@@ -1378,6 +1388,16 @@ export class FireWatcherAwsStack extends Stack {
           table: 'ERROR',
           readonly: false,
         }, ],
+      },
+      // events v2
+      {
+        pathPart: 'eventsV2',
+        fileName: 'eventsV2',
+        api: true,
+        apiToken: true,
+        methods: [ 'POST', ],
+        extra: [ 'apiCode', ],
+        firehoses: [ 'EVENTS', ],
       },
       // events
       {
@@ -1550,16 +1570,29 @@ export class FireWatcherAwsStack extends Stack {
           'readMetrics',
           'apiCode',
         ],
-        next: [ {
-          pathPart: 'add',
-          fileName: 'metricsAdd',
-          api: true,
-          extra: [
-            'putMetrics',
-            'apiCode',
-          ],
-          methods: [ 'POST', ],
-        }, ],
+        next: [
+          {
+            pathPart: 'add',
+            fileName: 'metricsAdd',
+            api: true,
+            extra: [
+              'putMetrics',
+              'apiCode',
+            ],
+            methods: [ 'POST', ],
+          },
+          {
+            pathPart: 'addv2',
+            fileName: 'metricsAddV2',
+            api: true,
+            apiToken: true,
+            extra: [
+              'putMetrics',
+              'apiCode',
+            ],
+            methods: [ 'POST', ],
+          },
+        ],
       },
       // pages
       {
@@ -1832,7 +1865,9 @@ export class FireWatcherAwsStack extends Stack {
       // Add the resource
       const apiResource = baseResource.addResource(config.pathPart);
       if ('fileName' in config && resourceIntegration) {
-        config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration));
+        config.methods.forEach(method => apiResource.addMethod(method, resourceIntegration, {
+          apiKeyRequired: config.apiToken ?? false,
+        }));
       }
       if ('fileName' in config && resourceHandler) {
         const envName = apiResource.path
