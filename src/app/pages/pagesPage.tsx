@@ -326,7 +326,7 @@ export default function PagesPage() {
             }</td>
             <td><Button
               onClick={e => e.stopPropagation()}
-              href={`/?tg=${file.Talkgroup}&f=${file.Key?.split('/').pop()}`}
+              href={`/?tg=tg${file.Talkgroup}&f=${file.Key?.split('/').pop()}`}
             >Jump To</Button></td>
           </tr>
           {file.Transcript && <tr
