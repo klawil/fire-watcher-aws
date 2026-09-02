@@ -417,14 +417,6 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
     lambdaResources.tables.TALKGROUP = talkgroupTable;
-    const siteTable = new dynamodb.Table(this, 'cvfd-sites', {
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: {
-        name: 'SiteId',
-        type: dynamodb.AttributeType.STRING,
-      },
-    });
-    lambdaResources.tables.SITE = siteTable;
     const dtrTranslationTable = new dynamodb.Table(this, 'cvfd-dtr-translation', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: {
@@ -585,14 +577,6 @@ export class FireWatcherAwsStack extends Stack {
       sortKey: {
         name: 'datetime',
         type: dynamodb.AttributeType.NUMBER,
-      },
-    });
-
-    siteTable.addGlobalSecondaryIndex({
-      indexName: 'active',
-      partitionKey: {
-        name: 'IsActive',
-        type: dynamodb.AttributeType.STRING,
       },
     });
 
@@ -824,7 +808,6 @@ export class FireWatcherAwsStack extends Stack {
       TBL_ERROR: errorsTable.tableName,
       TBL_FILE: dtrTable.tableName,
       TBL_RADIOS: radiosTable.tableName,
-      TBL_SITE: siteTable.tableName,
       TBL_STATUS: statusTable.tableName,
       TBL_TALKGROUP: talkgroupTable.tableName,
       TBL_TEXT: textsTable.tableName,
@@ -1014,10 +997,6 @@ export class FireWatcherAwsStack extends Stack {
         },
         {
           table: 'DTR_TRANSLATION',
-          readonly: false,
-        },
-        {
-          table: 'SITE',
           readonly: false,
         },
       ],
@@ -1643,26 +1622,6 @@ export class FireWatcherAwsStack extends Stack {
             readonly: false,
           }, ],
           secrets: [ 'TWILIO', ],
-        }, ],
-      },
-      // sites
-      {
-        pathPart: 'sites',
-        fileName: 'sites',
-        api: true,
-        methods: [
-          'GET',
-          'POST',
-        ],
-        extra: [ 'apiCode', ],
-        tables: [ {
-          table: 'SITE',
-          readonly: true,
-        }, ],
-        queues: [ {
-          queue: 'EVENTS',
-          read: false,
-          write: true,
         }, ],
       },
       // talkgroups
