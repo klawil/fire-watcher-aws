@@ -1,4 +1,4 @@
-const dtrFilenameRegex = /\d{2,5}-(\d{10})_\d{9}(\.\d|)-call_\d+\.m4a/;
+const dtrFilenameRegex = /\d{2,5}-(\d{10})\.?\d{0,3}_\d{9}\.?\d?-call_\d+\.m4a/;
 const vhfFilenameRegex =
   /([0-9A-Z_]+)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.mp3/;
 

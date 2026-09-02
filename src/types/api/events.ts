@@ -1,4 +1,3 @@
-import { apiCodeValidator } from './_code';
 import {
   api200Body, api400Body, api401Body, api403Body, api404Body, api500Body
 } from './_shared';
@@ -22,6 +21,7 @@ export const validEventTypes = [
   'join',
   'call',
   'data',
+  'ack',
 ] as const;
 type EventTypes = typeof validEventTypes[number];
 
@@ -104,9 +104,6 @@ export type QueryEventsApi = {
 export type AddEventsApi = {
   path: '/api/v2/events/';
   method: 'POST';
-  query: {
-    code: string;
-  };
   body: EventItem[];
   responses: {
 
@@ -221,6 +218,7 @@ export const queryEventsQueryValidator: Validator<QueryEventsApi['query']> = {
           'on',
           'call',
           'data',
+          'ack',
         ],
       },
     },
@@ -256,10 +254,6 @@ export const queryEventsQueryValidator: Validator<QueryEventsApi['query']> = {
       string: {},
     },
   },
-};
-
-export const addEventsQueryValidator: Validator<AddEventsApi['query']> = {
-  ...apiCodeValidator,
 };
 
 export const eventItemValidator: Validator<EventItem> = {

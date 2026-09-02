@@ -1575,10 +1575,8 @@ export class FireWatcherAwsStack extends Stack {
             pathPart: 'add',
             fileName: 'metricsAdd',
             api: true,
-            extra: [
-              'putMetrics',
-              'apiCode',
-            ],
+            apiToken: true,
+            extra: [ 'putMetrics', ],
             methods: [ 'POST', ],
           },
           {
@@ -1586,10 +1584,7 @@ export class FireWatcherAwsStack extends Stack {
             fileName: 'metricsAddV2',
             api: true,
             apiToken: true,
-            extra: [
-              'putMetrics',
-              'apiCode',
-            ],
+            extra: [ 'putMetrics', ],
             methods: [ 'POST', ],
           },
         ],

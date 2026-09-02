@@ -1,4 +1,3 @@
-import { apiCodeValidator } from './_code';
 import {
   api200Body,
   api400Body, api401Body, api403Body, api500Body
@@ -126,9 +125,6 @@ export type GetMetricsApi = {
 export type AddMetricsApi = {
   path: '/api/v2/metrics/add/';
   method: 'POST';
-  query: {
-    code: string;
-  };
   body: {
     data: {
       id: string;
@@ -405,8 +401,4 @@ export const addMetricsApiBodyValidator: Validator<AddMetricsApi['body']> = {
       },
     },
   },
-};
-
-export const addMetricsQueryValidator: Validator<AddMetricsApi['query']> = {
-  ...apiCodeValidator,
 };

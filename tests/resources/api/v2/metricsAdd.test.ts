@@ -11,17 +11,6 @@ import { generateApiEvent } from './_utils';
 import { main } from '@/resources/api/v2/metricsAdd';
 
 describe('resources/api/v2/metricsAdd', () => {
-  it('Returns 401 when auth query code is missing', async () => {
-    const req = generateApiEvent({
-      method: 'POST',
-      path: '',
-      body: JSON.stringify({ data: [], }),
-    });
-
-    const res = await main(req);
-    expect(res.statusCode).toBe(401);
-  });
-
   it('Returns 400 when body data is empty', async () => {
     const req = generateApiEvent({
       method: 'POST',
