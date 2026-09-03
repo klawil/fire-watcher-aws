@@ -31,6 +31,10 @@ const color2: ColorConfig = {
   backgroundColor: 'rgba(255, 99, 132, 0.5)',
   borderColor: 'rgba(255, 99, 132, 0.5)',
 };
+const color3: ColorConfig = {
+  backgroundColor: 'rgba(255, 255, 0, 0.5)',
+  borderColor: 'yellow',
+};
 
 export default function StatusTowerLineChart({
   title,
@@ -88,6 +92,26 @@ export default function StatusTowerLineChart({
         return 30;
       }),
     });
+    data.datasets.push({
+      backgroundColor: color3.backgroundColor,
+      borderColor: 'rgba(0,0,0,0)',
+      fill: {
+        target: 0,
+        above: color3.backgroundColor,
+        below: 'rgba(0,0,0,0)',
+      },
+      pointStyle: false,
+      label: 'none',
+      data: data.labels.map((label, i) => {
+        const dataA = data.datasets[0].data[i];
+        const dataB = data.datasets[1].data[i] as number;
+
+        if (dataA < 30 && dataB < 30) {
+          return 30;
+        }
+        return dataA;
+      }),
+    });
   }
 
   return <>
@@ -143,6 +167,12 @@ export default function StatusTowerLineChart({
                 if (darkMode === 'dark') {
                   dataset.borderColor = 'gray';
                 }
+              // } else if (idx === 4) {
+              //   dataset.fill = {
+              //     target: 0,
+              //     above: 'rgba(0, 0, 0, 0)',
+              //     below: color3.backgroundColor,
+              //   };
               }
 
               return dataset;
