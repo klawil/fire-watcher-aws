@@ -218,7 +218,7 @@ const lineChartsToShow: ChartConfig[] = [
           namespace: 'DTR Metrics',
           metricName: 'UploadTime',
           tower: 'Saguache',
-          stat: 'p50',
+          stat: 'Maximum',
         },
         {
           type: 'timing',
@@ -226,7 +226,7 @@ const lineChartsToShow: ChartConfig[] = [
           namespace: 'DTR Metrics',
           metricName: 'UploadTime',
           tower: 'PoolTable',
-          stat: 'p50',
+          stat: 'Maximum',
         },
         {
           type: 'timing',
@@ -234,7 +234,7 @@ const lineChartsToShow: ChartConfig[] = [
           namespace: 'DTR Metrics',
           metricName: 'UploadTime',
           tower: 'SanAntonio',
-          stat: 'p50',
+          stat: 'Maximum',
         },
       ],
     },
