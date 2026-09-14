@@ -692,7 +692,7 @@ export default function WeatherPage() {
                   <tbody>
                     {layer.legend.map((item, idx2) =>
                       <tr key={idx2}>
-                        <td><img
+                        <td><img // eslint-disable-line @next/next/no-img-element
                           src={item.imageData
                             ? `data:${item.contentType};base64,${item.imageData}`
                             : item.url}
