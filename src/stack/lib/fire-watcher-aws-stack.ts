@@ -591,6 +591,7 @@ export class FireWatcherAwsStack extends Stack {
     // Make the Glue table
     const glueDatabaseName = 'cvfd-data-db';
     const glueTableName = 'cvfd-dtr-events';
+    const glueTableNameV2 = 'cofrn-dtr-events';
     const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
       catalogId: glueCatalogId,
       databaseInput: {
@@ -647,6 +648,90 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
     eventsGlueTable.addDependency(eventsGlueDatabase);
+    const eventsGlueTableV2 = new glue.CfnTable(this, 'cofrn-dtr-events-table', {
+      databaseName: glueDatabaseName,
+      catalogId: glueCatalogId,
+      tableInput: {
+        name: glueTableNameV2,
+        tableType: 'EXTERNAL_TABLE',
+        partitionKeys: [
+          {
+            name: 'datetime',
+            type: 'STRING',
+          },
+          {
+            name: 'event',
+            type: 'STRING',
+          },
+        ],
+        storageDescriptor: {
+          compressed: true,
+          inputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat',
+          outputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat',
+          serdeInfo: {
+            serializationLibrary: 'org.apache.hadoop.hive.ql.io.orc.OrcSerde',
+          },
+          columns: [
+            {
+              name: 'system',
+              type: 'STRING',
+            },
+            {
+              name: 'opcode',
+              type: 'TINYINT',
+              comment: '6 bit operation code',
+            },
+            {
+              name: 'duplex',
+              type: 'BOOLEAN',
+            },
+            {
+              name: 'emergency',
+              type: 'BOOLEAN',
+            },
+            {
+              name: 'encrypted',
+              type: 'BOOLEAN',
+            },
+            {
+              name: 'freq',
+              type: 'INT',
+            },
+            {
+              name: 'mode',
+              type: 'BOOLEAN',
+              comment: 'TRUE if protection mode for this TSBK is enabled',
+            },
+            {
+              name: 'phase2_tdma',
+              type: 'BOOLEAN',
+            },
+            {
+              name: 'priority',
+              type: 'TINYINT',
+              comment: '3 bits of priority, 111 = highest to 000 = lowest',
+            },
+            {
+              name: 'source',
+              type: 'INT',
+              comment: '3 bytes for source radio ID (or -1 if not applicable)',
+            },
+            {
+              name: 'talkgroup',
+              type: 'INT',
+              comment: '2 bytes for talkgroup ID (or -1 if not applicable)',
+            },
+            {
+              name: 'tdma_slot',
+              type: 'INT',
+              comment: 'Based on channel in message, default 0',
+            },
+          ],
+          location: eventsS3Bucket.s3UrlForObject() + '/data-v2/',
+        },
+      },
+    });
+    eventsGlueTableV2.addDependency(eventsGlueDatabase);
 
     // Make the role
     const eventsFirehoseRole = new iam.Role(this, 'cvfd-events-firehose-role', {
@@ -733,6 +818,53 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
     lambdaResources.firehoses.EVENTS = eventsFirehose;
+
+    // Make the kinesis firehose for the v2 events
+    const eventsFirehoseV2 = new kinesisfirehose.CfnDeliveryStream(this, 'cofrn-events-firehose', {
+      deliveryStreamName: 'cofrn-events-delivery-stream',
+      extendedS3DestinationConfiguration: {
+        bucketArn: eventsS3Bucket.bucketArn,
+        roleArn: eventsFirehoseRole.roleArn,
+        bufferingHints: {
+          intervalInSeconds: 900, // Max value, 15 minutes
+        },
+        prefix: 'data-v2/datetime=!{partitionKeyFromQuery:datePartition}/event=!{partitionKeyFromQuery:event}/',
+        errorOutputPrefix: 'errors-v2/!{firehose:error-output-type}/',
+        dataFormatConversionConfiguration: {
+          enabled: true,
+          inputFormatConfiguration: {
+            deserializer: { openXJsonSerDe: { }, },
+          },
+          outputFormatConfiguration: {
+            serializer: { orcSerDe: { }, },
+          },
+          schemaConfiguration: {
+            catalogId: eventsGlueTableV2.catalogId,
+            roleArn: eventsFirehoseRole.roleArn,
+            databaseName: eventsGlueTableV2.databaseName,
+            tableName: glueTableNameV2,
+          },
+        },
+        processingConfiguration: {
+          enabled: true,
+          processors: [ {
+            type: 'MetadataExtraction',
+            parameters: [
+              {
+                parameterName: 'JsonParsingEngine',
+                parameterValue: 'JQ-1.6',
+              },
+              {
+                parameterName: 'MetadataExtractionQuery',
+                parameterValue: '{event:.event, datePartition:.datePartition}',
+              },
+            ],
+          }, ],
+        },
+        dynamicPartitioningConfiguration: { enabled: true, },
+      },
+    });
+    lambdaResources.firehoses.EVENTS_V2 = eventsFirehoseV2;
 
     // Create the dead letter queue
     const deadLetterQueue = new sqs.Queue(this, 'cvfd-error-queue');
@@ -832,12 +964,14 @@ export class FireWatcherAwsStack extends Stack {
 
       // Firehoses
       FH_EVENTS: eventsFirehose.deliveryStreamName as string,
+      FH_EVENTS_V2: eventsFirehoseV2.deliveryStreamName as string,
 
       // @TODO
       API_CODE: process.env.SERVER_API_CODE as string,
       EMAIL_SOURCE: emailIdentity.emailIdentityArn,
 
       GLUE_TABLE: glueTableName,
+      GLUE_TABLE_V2: glueTableNameV2,
       GLUE_DATABASE: glueDatabaseName,
       ATHENA_WORKGROUP: athenaWorkgroup.name,
     };
@@ -1041,6 +1175,13 @@ export class FireWatcherAwsStack extends Stack {
       new s3Notifications.LambdaDestination(eventsS3QueueHandler),
       {
         prefix: 'data/',
+      }
+    );
+    eventsS3Bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3Notifications.LambdaDestination(eventsS3QueueHandler),
+      {
+        prefix: 'data-v2/',
       }
     );
 
@@ -1377,6 +1518,16 @@ export class FireWatcherAwsStack extends Stack {
         methods: [ 'POST', ],
         extra: [ 'apiCode', ],
         firehoses: [ 'EVENTS', ],
+      },
+      // events v3
+      {
+        pathPart: 'eventsV3',
+        fileName: 'eventsV3',
+        api: true,
+        apiToken: true,
+        methods: [ 'POST', ],
+        extra: [ 'apiCode', ],
+        firehoses: [ 'EVENTS_V2', ],
       },
       // events
       {

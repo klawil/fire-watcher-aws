@@ -9,59 +9,115 @@ import {
 
 import {
   BUCKET_EVENTS,
-  GLUE_DATABASE, GLUE_TABLE
+  GLUE_DATABASE, GLUE_TABLE, GLUE_TABLE_V2
 } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/eventFileQueueHandler');
 
-export async function main(event: S3Event) {
-  logger.trace('main', ...arguments);
+interface EventPartition {
+  datetime: string;
+  event: string;
+  path: string;
+  isV2: boolean;
+}
 
-  // Get the S3 events
-  const s3EventRecords: S3EventRecord[] = event.Records || [];
+const config = {
+  old: {
+    table: GLUE_TABLE(),
+    columns: [
+      {
+        Name: 'radioid',
+        Type: 'string',
+      },
+      {
+        Name: 'talkgroup',
+        Type: 'string',
+      },
+      {
+        Name: 'talkgrouplist',
+        Type: 'string',
+      },
+      {
+        Name: 'tower',
+        Type: 'string',
+      },
+      {
+        Name: 'timestamp',
+        Type: 'bigint',
+      },
+    ],
+  },
+  new: {
+    table: GLUE_TABLE_V2(),
+    columns: [
+      {
+        Name: 'system',
+        Type: 'STRING',
+      },
+      {
+        Name: 'opcode',
+        Type: 'TINYINT',
+      },
+      {
+        Name: 'duplex',
+        Type: 'BOOLEAN',
+      },
+      {
+        Name: 'emergency',
+        Type: 'BOOLEAN',
+      },
+      {
+        Name: 'encrypted',
+        Type: 'BOOLEAN',
+      },
+      {
+        Name: 'freq',
+        Type: 'INT',
+      },
+      {
+        Name: 'mode',
+        Type: 'BOOLEAN',
+      },
+      {
+        Name: 'phase2_tdma',
+        Type: 'BOOLEAN',
+      },
+      {
+        Name: 'priority',
+        Type: 'TINYINT',
+      },
+      {
+        Name: 'source',
+        Type: 'INT',
+      },
+      {
+        Name: 'talkgroup',
+        Type: 'INT',
+      },
+      {
+        Name: 'tdma_slot',
+        Type: 'INT',
+      },
+    ],
+  },
+};
 
-  // Exit early if no messages
-  if (s3EventRecords.length === 0) {
-    return;
+async function checkAndCreatePartitions(
+  glue: GlueClient,
+  eventPartitions: EventPartition[],
+  type: keyof typeof config
+): Promise<number> {
+  if (eventPartitions.length === 0) {
+    return 0;
   }
 
-  // Get all of the prefixes that were created
-  const paths = s3EventRecords
-    .map(record => {
-      const path = record.s3.object.key
-        .replace(/[^\/]+$/, '');
-      return decodeURIComponent(path);
-    })
-    .filter((v, i, a) => a.indexOf(v) === i);
+  const localConfig = config[type];
 
-  // Attempt to get the associated partitions
-  const eventPartitions: {
-    datetime: string;
-    event: string;
-    path: string;
-  }[] = paths.map(path => {
-    const matches = path.match(/datetime=([^\/]+)\/event=([^\/]+)\//);
-    if (matches === null) {
-      return {
-        datetime: '',
-        event: '',
-        path,
-      };
-    }
-
-    return {
-      datetime: matches[1],
-      event: matches[2],
-      path,
-    };
-  });
-
-  // Fetch the partition information
-  const glue = new GlueClient();
+  // Fetch the existing partition information
   const existingPartitions = await glue.send(new BatchGetPartitionCommand({
     DatabaseName: GLUE_DATABASE(),
-    TableName: GLUE_TABLE(),
+    TableName: localConfig.table,
     PartitionsToGet: eventPartitions.map(p => ({
       Values: [
         p.datetime,
@@ -87,28 +143,7 @@ export async function main(event: S3Event) {
         ],
         StorageDescriptor: {
           Location: `s3://${BUCKET_EVENTS()}/${p.path}`,
-          Columns: [
-            {
-              Name: 'radioid',
-              Type: 'string',
-            },
-            {
-              Name: 'talkgroup',
-              Type: 'string',
-            },
-            {
-              Name: 'talkgrouplist',
-              Type: 'string',
-            },
-            {
-              Name: 'tower',
-              Type: 'string',
-            },
-            {
-              Name: 'timestamp',
-              Type: 'bigint',
-            },
-          ],
+          Columns: localConfig.columns,
           InputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat',
           OutputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat',
           SerdeInfo: {
@@ -119,7 +154,63 @@ export async function main(event: S3Event) {
     }));
   }
 
+  return newPartitions.length;
+}
+
+export async function main(event: S3Event) {
+  logger.trace('main', ...arguments);
+
+  // Get the S3 events
+  const s3EventRecords: S3EventRecord[] = event.Records || [];
+
+  // Exit early if no messages
+  if (s3EventRecords.length === 0) {
+    return;
+  }
+
+  // Get all of the prefixes that were created
+  const paths = s3EventRecords
+    .map(record => {
+      const path = record.s3.object.key
+        .replace(/[^\/]+$/, '');
+      return decodeURIComponent(path);
+    })
+    .filter((v, i, a) => a.indexOf(v) === i);
+
+  // Attempt to get the associated partitions
+  const eventPartitions: EventPartition[] = paths.map(path => {
+    const matches = path.match(/datetime=([^\/]+)\/event=([^\/]+)\//);
+    if (matches === null) {
+      return {
+        datetime: '',
+        event: '',
+        path,
+        isV2: false,
+      };
+    }
+
+    return {
+      datetime: matches[1],
+      event: matches[2],
+      path,
+      isV2: path.includes('data-v2/'),
+    };
+  });
+
+  // Generate new partitions
+  const glue = new GlueClient();
+  const newV1Partitions = await checkAndCreatePartitions(
+    glue,
+    eventPartitions.filter(v => !v.isV2),
+    'old'
+  );
+  const newV2Partitions = await checkAndCreatePartitions(
+    glue,
+    eventPartitions.filter(v => v.isV2),
+    'new'
+  );
+
   // Log the messages received
   logger.log(`Records: ${s3EventRecords.length}, ` +
-    `Partitions: ${eventPartitions.length}, New Partitions: ${newPartitions.length}`);
+    `Partitions: ${eventPartitions.length}, New V1 Partitions: ${newV1Partitions}, New V2 Partitions: ${newV2Partitions}`);
 }

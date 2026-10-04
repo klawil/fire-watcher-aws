@@ -27,7 +27,7 @@ type QueueNameMap = {
   [key in QueueEnvName]: string;
 };
 
-export type FirehoseNames = 'EVENTS';
+export type FirehoseNames = 'EVENTS' | 'EVENTS_V2';
 
 type FirehoseEnvName = `FH_${FirehoseNames}`;
 type FirehoseNameMap = {
@@ -43,6 +43,7 @@ export interface LambdaEnvironment
 
   // Events Athena table
   GLUE_TABLE: string;
+  GLUE_TABLE_V2: string;
   GLUE_DATABASE: string;
   ATHENA_WORKGROUP: string;
 }
@@ -100,10 +101,12 @@ export const QUEUE_TWILIO = getEnvVariableOrError('Q_TWILIO');
 
 // Firehose
 export const FIREHOSE_EVENTS = getEnvVariableOrError('FH_EVENTS');
+export const FIREHOSE_EVENTS_V2 = getEnvVariableOrError('FH_EVENTS_V2');
 
 // Other
 export const API_CODE = getEnvVariableOrError('API_CODE');
 export const EMAIL_SOURCE = getEnvVariableOrError('EMAIL_SOURCE');
 export const GLUE_TABLE = getEnvVariableOrError('GLUE_TABLE');
+export const GLUE_TABLE_V2 = getEnvVariableOrError('GLUE_TABLE_V2');
 export const GLUE_DATABASE = getEnvVariableOrError('GLUE_DATABASE');
 export const ATHENA_WORKGROUP = getEnvVariableOrError('ATHENA_WORKGROUP');

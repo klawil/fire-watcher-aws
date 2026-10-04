@@ -16,9 +16,13 @@ export type ArrayTypeValidations<V> = BaseTypeValidation<V, 'array'> & {
 
 type SpecificTypeValidations<V> = Pick<
   ({
-    [type in Exclude<PossibleTypes, 'array' | 'object'>]: BaseTypeValidation<V, type>;
+    [type in Exclude<PossibleTypes, 'array' | 'object' | 'number'>]: BaseTypeValidation<V, type>;
   } & {
     array: ArrayTypeValidations<V>;
+    number: BaseTypeValidation<V, 'number'> & {
+      min?: number;
+      max?: number;
+    };
   }),
   {
     string: V extends string ? 'string' : never;

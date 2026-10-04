@@ -14,6 +14,23 @@ interface EventItem {
   timestamp?: number;
 }
 
+interface EventItemV2 {
+  event: string;
+  timestamp?: number;
+  system: string;
+  opcode: number;
+  duplex: boolean;
+  emergency: boolean;
+  encrypted: boolean;
+  freq: number;
+  mode: boolean;
+  phase2_tdma: boolean;
+  priority: number;
+  source: number;
+  talkgroup: number;
+  tdma_slot: number;
+}
+
 export const validEventTypes = [
   'location',
   'on',
@@ -105,6 +122,43 @@ export type AddEventsApi = {
   path: '/api/v2/events/';
   method: 'POST';
   body: EventItem[];
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: typeof api200Body;
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    apiKey: [];
+  }];
+};
+
+/**
+ * Push DTR events and details into the firehose
+ * @summary Push DTR events
+ * @tags Events
+ * @body.contentType application/json
+ */
+export type AddV2EventsApi = {
+  path: '/api/v2/eventsV3/';
+  method: 'POST';
+  body: EventItemV2[];
   responses: {
 
     /**
@@ -297,6 +351,122 @@ export const eventItemValidator: Validator<EventItem> = {
     required: false,
     types: {
       number: {},
+    },
+  },
+};
+
+const booleanParser: (v: string) => boolean = v => {
+  if (`${v}` === '1' || `${v}` === 'true') {
+    return true;
+  } else if (`${v}` === '0' || `${v}` === 'false') {
+    return false;
+  }
+
+  throw new Error(`Invalid boolean value: ${v}`);
+};
+
+export const eventItemV2Validator: Validator<EventItemV2> = {
+  event: {
+    required: true,
+    types: {
+      string: {},
+    },
+  },
+  timestamp: {
+    required: false,
+    types: {
+      number: {},
+    },
+  },
+  system: {
+    required: true,
+    types: {
+      string: {},
+    },
+  },
+  opcode: {
+    required: true,
+    types: {
+      number: {
+        min: 0,
+        max: 64,
+      },
+    },
+  },
+  duplex: {
+    required: true,
+    parse: booleanParser,
+    types: {
+      boolean: {},
+    },
+  },
+  emergency: {
+    required: true,
+    parse: booleanParser,
+    types: {
+      boolean: {},
+    },
+  },
+  encrypted: {
+    required: true,
+    parse: booleanParser,
+    types: {
+      boolean: {},
+    },
+  },
+  freq: {
+    required: true,
+    types: {
+      number: {
+        min: 0,
+        max: 2147483647,
+      },
+    },
+  },
+  mode: {
+    required: true,
+    parse: booleanParser,
+    types: {
+      boolean: {},
+    },
+  },
+  phase2_tdma: {
+    required: true,
+    parse: booleanParser,
+    types: {
+      boolean: {},
+    },
+  },
+  priority: {
+    required: true,
+    types: {
+      number: {
+        max: 127,
+      },
+    },
+  },
+  source: {
+    required: true,
+    types: {
+      number: {
+        max: 2147483647,
+      },
+    },
+  },
+  talkgroup: {
+    required: true,
+    types: {
+      number: {
+        max: 2147483647,
+      },
+    },
+  },
+  tdma_slot: {
+    required: true,
+    types: {
+      number: {
+        max: 2147483647,
+      },
     },
   },
 };
