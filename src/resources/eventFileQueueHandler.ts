@@ -53,51 +53,51 @@ const config = {
     columns: [
       {
         Name: 'system',
-        Type: 'STRING',
+        Type: 'string',
       },
       {
         Name: 'opcode',
-        Type: 'TINYINT',
+        Type: 'tinyint',
       },
       {
         Name: 'duplex',
-        Type: 'BOOLEAN',
+        Type: 'boolean',
       },
       {
         Name: 'emergency',
-        Type: 'BOOLEAN',
+        Type: 'boolean',
       },
       {
         Name: 'encrypted',
-        Type: 'BOOLEAN',
+        Type: 'boolean',
       },
       {
         Name: 'freq',
-        Type: 'INT',
+        Type: 'int',
       },
       {
         Name: 'mode',
-        Type: 'BOOLEAN',
+        Type: 'boolean',
       },
       {
         Name: 'phase2_tdma',
-        Type: 'BOOLEAN',
+        Type: 'boolean',
       },
       {
         Name: 'priority',
-        Type: 'TINYINT',
+        Type: 'tinyint',
       },
       {
         Name: 'source',
-        Type: 'INT',
+        Type: 'int',
       },
       {
         Name: 'talkgroup',
-        Type: 'INT',
+        Type: 'int',
       },
       {
         Name: 'tdma_slot',
-        Type: 'INT',
+        Type: 'int',
       },
     ],
   },
@@ -135,7 +135,7 @@ async function checkAndCreatePartitions(
   if (newPartitions.length > 0) {
     await glue.send(new BatchCreatePartitionCommand({
       DatabaseName: GLUE_DATABASE(),
-      TableName: GLUE_TABLE(),
+      TableName: localConfig.table,
       PartitionInputList: newPartitions.map(p => ({
         Values: [
           p.datetime,

@@ -202,10 +202,16 @@ function buildLambdaEnvironment(
 
   // Add the Athena variables
   if (permissions.extra?.includes('athena') || permissions.extra?.includes('glue')) {
-    if (!baseEnv.GLUE_TABLE || !baseEnv.GLUE_DATABASE || !baseEnv.ATHENA_WORKGROUP) {
+    if (
+      !baseEnv.GLUE_TABLE ||
+      !baseEnv.GLUE_TABLE_V2 ||
+      !baseEnv.GLUE_DATABASE ||
+      !baseEnv.ATHENA_WORKGROUP
+    ) {
       throw new Error('Glue/Athena environment variables not found in base environment');
     }
     env.GLUE_TABLE = baseEnv.GLUE_TABLE;
+    env.GLUE_TABLE_V2 = baseEnv.GLUE_TABLE_V2;
     env.GLUE_DATABASE = baseEnv.GLUE_DATABASE;
     env.ATHENA_WORKGROUP = baseEnv.ATHENA_WORKGROUP;
   }
@@ -657,11 +663,11 @@ export class FireWatcherAwsStack extends Stack {
         partitionKeys: [
           {
             name: 'datetime',
-            type: 'STRING',
+            type: 'string',
           },
           {
             name: 'event',
-            type: 'STRING',
+            type: 'string',
           },
         ],
         storageDescriptor: {
@@ -674,56 +680,56 @@ export class FireWatcherAwsStack extends Stack {
           columns: [
             {
               name: 'system',
-              type: 'STRING',
+              type: 'string',
             },
             {
               name: 'opcode',
-              type: 'TINYINT',
+              type: 'tinyint',
               comment: '6 bit operation code',
             },
             {
               name: 'duplex',
-              type: 'BOOLEAN',
+              type: 'boolean',
             },
             {
               name: 'emergency',
-              type: 'BOOLEAN',
+              type: 'boolean',
             },
             {
               name: 'encrypted',
-              type: 'BOOLEAN',
+              type: 'boolean',
             },
             {
               name: 'freq',
-              type: 'INT',
+              type: 'int',
             },
             {
               name: 'mode',
-              type: 'BOOLEAN',
+              type: 'boolean',
               comment: 'TRUE if protection mode for this TSBK is enabled',
             },
             {
               name: 'phase2_tdma',
-              type: 'BOOLEAN',
+              type: 'boolean',
             },
             {
               name: 'priority',
-              type: 'TINYINT',
+              type: 'tinyint',
               comment: '3 bits of priority, 111 = highest to 000 = lowest',
             },
             {
               name: 'source',
-              type: 'INT',
+              type: 'int',
               comment: '3 bytes for source radio ID (or -1 if not applicable)',
             },
             {
               name: 'talkgroup',
-              type: 'INT',
+              type: 'int',
               comment: '2 bytes for talkgroup ID (or -1 if not applicable)',
             },
             {
               name: 'tdma_slot',
-              type: 'INT',
+              type: 'int',
               comment: 'Based on channel in message, default 0',
             },
           ],
