@@ -21,6 +21,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-athena": "^3.840.0",
     "@aws-sdk/client-cloudwatch": "^3.787.0",
     "@aws-sdk/client-cost-explorer": "^3.787.0",
@@ -32,8 +33,11 @@
     "@aws-sdk/client-sesv2": "^3.1016.0",
     "@aws-sdk/client-sqs": "^3.840.0",
     "@aws-sdk/client-transcribe": "^3.787.0",
+    "@aws-sdk/credential-provider-node": "^3.972.84",
     "@aws-sdk/lib-dynamodb": "^3.789.0",
+    "@aws-sdk/protocol-http": "^3.370.0",
     "@aws-sdk/s3-request-presigner": "^3.1045.0",
+    "@aws-sdk/signature-v4": "^3.370.0",
     "@next/env": "^15.5.6",
     "@next/third-parties": "^15.5.6",
     "aws-cdk-lib": "^2.191.0",

@@ -6,7 +6,7 @@ type TableNameMap = {
   [key in TableEnvName]: string;
 };
 
-export type BucketNames = 'COSTS' | 'EVENTS' | 'AUDIO' | 'EMAIL';
+export type BucketNames = 'COSTS' | 'EVENTS' | 'EVENTS_V2' | 'AUDIO' | 'EMAIL';
 
 type BucketEnvName = `BKT_${BucketNames}`;
 type BucketNameMap = {
@@ -74,6 +74,7 @@ const getEnvVariableOrError = (name: string): ENV_VAR_FN => {
 // Buckets
 export const BUCKET_COSTS = getEnvVariableOrError('BKT_COSTS');
 export const BUCKET_EVENTS = getEnvVariableOrError('BKT_EVENTS');
+export const BUCKET_EVENTS_V2 = getEnvVariableOrError('BKT_EVENTS_V2');
 export const BUCKET_AUDIO = getEnvVariableOrError('BKT_AUDIO');
 export const BUCKET_EMAIL = getEnvVariableOrError('BKT_EMAIL');
 

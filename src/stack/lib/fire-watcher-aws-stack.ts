@@ -588,7 +588,9 @@ export class FireWatcherAwsStack extends Stack {
 
     // Make the S3 bucket for the kinesis stuff
     const eventsS3Bucket = new s3.Bucket(this, 'cvfd-events-bucket');
+    const eventsV2S3Bucket = new s3.Bucket(this, 'cofrn-events-v2-bucket');
     lambdaResources.buckets.EVENTS = eventsS3Bucket;
+    lambdaResources.buckets.EVENTS_V2 = eventsV2S3Bucket;
 
     // Make the S3 bucket for caching cost data from AWS
     const costDataS3Bucket = new s3.Bucket(this, 'cvfd-costs-bucket');
@@ -597,7 +599,7 @@ export class FireWatcherAwsStack extends Stack {
     // Make the Glue table
     const glueDatabaseName = 'cvfd-data-db';
     const glueTableName = 'cvfd-dtr-events';
-    const glueTableNameV2 = 'cofrn-dtr-events';
+    const glueTableNameV2 = 'cofrn-dtr-events-v2';
     const eventsGlueDatabase = new glue.CfnDatabase(this, 'cvfd-glue-database', {
       catalogId: glueCatalogId,
       databaseInput: {
@@ -654,22 +656,16 @@ export class FireWatcherAwsStack extends Stack {
       },
     });
     eventsGlueTable.addDependency(eventsGlueDatabase);
-    const eventsGlueTableV2 = new glue.CfnTable(this, 'cofrn-dtr-events-table', {
+    const eventsGlueTableV2 = new glue.CfnTable(this, 'cofrn-dtr-events-v2-table', {
       databaseName: glueDatabaseName,
       catalogId: glueCatalogId,
       tableInput: {
         name: glueTableNameV2,
         tableType: 'EXTERNAL_TABLE',
-        partitionKeys: [
-          {
-            name: 'datetime',
-            type: 'string',
-          },
-          {
-            name: 'event',
-            type: 'string',
-          },
-        ],
+        partitionKeys: [ {
+          name: 'datetime',
+          type: 'string',
+        }, ],
         storageDescriptor: {
           compressed: true,
           inputFormat: 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat',
@@ -678,6 +674,10 @@ export class FireWatcherAwsStack extends Stack {
             serializationLibrary: 'org.apache.hadoop.hive.ql.io.orc.OrcSerde',
           },
           columns: [
+            {
+              name: 'event',
+              type: 'string',
+            },
             {
               name: 'system',
               type: 'string',
@@ -733,7 +733,7 @@ export class FireWatcherAwsStack extends Stack {
               comment: 'Based on channel in message, default 0',
             },
           ],
-          location: eventsS3Bucket.s3UrlForObject() + '/data-v2/',
+          location: eventsV2S3Bucket.s3UrlForObject() + '/data/',
         },
       },
     });
@@ -744,6 +744,7 @@ export class FireWatcherAwsStack extends Stack {
       assumedBy: new iam.ServicePrincipal('firehose.amazonaws.com'),
     });
     eventsS3Bucket.grantReadWrite(eventsFirehoseRole);
+    eventsV2S3Bucket.grantReadWrite(eventsFirehoseRole);
     eventsFirehoseRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       resources: [
@@ -826,16 +827,16 @@ export class FireWatcherAwsStack extends Stack {
     lambdaResources.firehoses.EVENTS = eventsFirehose;
 
     // Make the kinesis firehose for the v2 events
-    const eventsFirehoseV2 = new kinesisfirehose.CfnDeliveryStream(this, 'cofrn-events-firehose', {
-      deliveryStreamName: 'cofrn-events-delivery-stream',
+    const eventsFirehoseV2 = new kinesisfirehose.CfnDeliveryStream(this, 'cofrn-events-v2-firehose', {
+      deliveryStreamName: 'cofrn-events-v2-delivery-stream',
       extendedS3DestinationConfiguration: {
-        bucketArn: eventsS3Bucket.bucketArn,
+        bucketArn: eventsV2S3Bucket.bucketArn,
         roleArn: eventsFirehoseRole.roleArn,
         bufferingHints: {
           intervalInSeconds: 900, // Max value, 15 minutes
         },
-        prefix: 'data-v2/datetime=!{partitionKeyFromQuery:datePartition}/event=!{partitionKeyFromQuery:event}/',
-        errorOutputPrefix: 'errors-v2/!{firehose:error-output-type}/',
+        prefix: 'data/datetime=!{partitionKeyFromQuery:datePartition}/',
+        errorOutputPrefix: 'errors/!{firehose:error-output-type}/',
         dataFormatConversionConfiguration: {
           enabled: true,
           inputFormatConfiguration: {
@@ -862,7 +863,7 @@ export class FireWatcherAwsStack extends Stack {
               },
               {
                 parameterName: 'MetadataExtractionQuery',
-                parameterValue: '{event:.event, datePartition:.datePartition}',
+                parameterValue: '{datePartition:.datePartition}',
               },
             ],
           }, ],
@@ -957,6 +958,7 @@ export class FireWatcherAwsStack extends Stack {
       BKT_AUDIO: bucket.bucketName,
       BKT_COSTS: costDataS3Bucket.bucketName,
       BKT_EVENTS: eventsS3Bucket.bucketName,
+      BKT_EVENTS_V2: eventsV2S3Bucket.bucketName,
       BKT_EMAIL: emailS3.bucketName,
 
       // Secrets
@@ -1183,11 +1185,35 @@ export class FireWatcherAwsStack extends Stack {
         prefix: 'data/',
       }
     );
-    eventsS3Bucket.addEventNotification(
+
+    // Create a handler for the S3 file creation SQS queue
+    const eventsV2S3QueueHandlerPermissions: LambdaPermissions = {
+      extra: [ 'glue', ],
+      buckets: [ {
+        bucket: 'EVENTS_V2',
+        readonly: true,
+      }, ],
+    };
+    const eventsV2S3QueueHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-events-v2-s3-queue-lambda', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: resolve(resourceBase, 'eventV2FileQueueHandler.ts'),
+      handler: 'main',
+      environment: buildLambdaEnvironment(lambdaEnv, eventsV2S3QueueHandlerPermissions),
+      timeout: Duration.minutes(5),
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    grantLambdaPermissions(
+      eventsV2S3QueueHandler,
+      eventsV2S3QueueHandlerPermissions,
+      lambdaResources
+    );
+
+    // Pipe the S3 events to the V2 handler
+    eventsV2S3Bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
-      new s3Notifications.LambdaDestination(eventsS3QueueHandler),
+      new s3Notifications.LambdaDestination(eventsV2S3QueueHandler),
       {
-        prefix: 'data-v2/',
+        prefix: 'data/',
       }
     );
 
@@ -1367,10 +1393,16 @@ export class FireWatcherAwsStack extends Stack {
           readonly: true,
         },
       ],
-      buckets: [ {
-        bucket: 'EVENTS',
-        readonly: false,
-      }, ],
+      buckets: [
+        {
+          bucket: 'EVENTS',
+          readonly: false,
+        },
+        {
+          bucket: 'EVENTS_V2',
+          readonly: false,
+        },
+      ],
     };
     const dailyEventsHandler = new lambdanodejs.NodejsFunction(this, 'cofrn-daily-events', {
       runtime: lambda.Runtime.NODEJS_22_X,

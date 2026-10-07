@@ -15,16 +15,15 @@ import {
 } from '@/utils/backend/dynamoTyped';
 import { getLogger } from '@/utils/common/logger';
 
-const radioIdQueryString = `select radioid, count(*) as num
-from "cvfd-dtr-events"
+const radioIdQueryString = `select source, count(*) as num
+from "cofrn-dtr-events-v2"
 where "datetime" like '{{datetime}}'
-    and radioid != ''
-group by radioid`;
+group by source`;
 
 const talkgroupQueryString = `select talkgroup, count(*) as num
-from "cvfd-dtr-events"
+from "cofrn-dtr-events-v2"
 where "datetime" like '{{datetime}}'
-    and talkgroup != ''
+    and talkgroup != 0
 group by talkgroup`;
 
 const minStartTime = 1735689600; // Midnight Jan 1 2025 UTC
@@ -91,6 +90,8 @@ async function processDeviceEvents(allRadios: RadioObject[], queryDate: string) 
         if (agg.num > 1000) {
           agg.num = 1000;
         }
+      } else if (names[i] === 'source') {
+        agg.radioid = v;
       }
       return agg as Row;
     }, {})) as Row[] || [];

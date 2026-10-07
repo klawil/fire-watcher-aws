@@ -9,7 +9,7 @@ import {
 
 import {
   BUCKET_EVENTS,
-  GLUE_DATABASE, GLUE_TABLE, GLUE_TABLE_V2
+  GLUE_DATABASE, GLUE_TABLE
 } from '@/types/backend/environment';
 import { getLogger } from '@/utils/common/logger';
 
@@ -45,59 +45,6 @@ const config = {
       {
         Name: 'timestamp',
         Type: 'bigint',
-      },
-    ],
-  },
-  new: {
-    table: GLUE_TABLE_V2(),
-    columns: [
-      {
-        Name: 'system',
-        Type: 'string',
-      },
-      {
-        Name: 'opcode',
-        Type: 'tinyint',
-      },
-      {
-        Name: 'duplex',
-        Type: 'boolean',
-      },
-      {
-        Name: 'emergency',
-        Type: 'boolean',
-      },
-      {
-        Name: 'encrypted',
-        Type: 'boolean',
-      },
-      {
-        Name: 'freq',
-        Type: 'int',
-      },
-      {
-        Name: 'mode',
-        Type: 'boolean',
-      },
-      {
-        Name: 'phase2_tdma',
-        Type: 'boolean',
-      },
-      {
-        Name: 'priority',
-        Type: 'tinyint',
-      },
-      {
-        Name: 'source',
-        Type: 'int',
-      },
-      {
-        Name: 'talkgroup',
-        Type: 'int',
-      },
-      {
-        Name: 'tdma_slot',
-        Type: 'int',
       },
     ],
   },
@@ -204,13 +151,8 @@ export async function main(event: S3Event) {
     eventPartitions.filter(v => !v.isV2),
     'old'
   );
-  const newV2Partitions = await checkAndCreatePartitions(
-    glue,
-    eventPartitions.filter(v => v.isV2),
-    'new'
-  );
 
   // Log the messages received
   logger.log(`Records: ${s3EventRecords.length}, ` +
-    `Partitions: ${eventPartitions.length}, New V1 Partitions: ${newV1Partitions}, New V2 Partitions: ${newV2Partitions}`);
+    `Partitions: ${eventPartitions.length}, New V1 Partitions: ${newV1Partitions}`);
 }
