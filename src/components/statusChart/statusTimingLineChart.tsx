@@ -3,7 +3,6 @@
 import {
   useCallback, useEffect, useState
 } from 'react';
-import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { Line } from 'react-chartjs-2';
@@ -19,11 +18,12 @@ import {
 } from '@/types/frontend/chart';
 
 export default function StatusTimingLineChart({
+  id,
   title,
   body,
+  promBody,
   shouldFetchData,
-  lazyLoad,
-  setChartLoaded,
+  dispatch,
   convertValue = v => v,
   mode,
 }: Readonly<ChartComponentParams<TimingChart>>) {
@@ -32,7 +32,7 @@ export default function StatusTimingLineChart({
     setShouldLoad,
   ] = useState(false);
 
-  if (!lazyLoad && shouldFetchData && !shouldLoad) {
+  if (shouldFetchData && !shouldLoad) {
     setShouldLoad(true);
   }
 
@@ -40,9 +40,11 @@ export default function StatusTimingLineChart({
     data,
     resetDataRaw,
   ] = useChartData(
+    id,
     body,
+    promBody,
     shouldFetchData,
-    setChartLoaded,
+    dispatch,
     false,
     convertValue
   );
@@ -73,27 +75,12 @@ export default function StatusTimingLineChart({
   ] = usePageSize();
 
   return <>
-    <h3 className='text-center mt-5'>{title} <BsArrowClockwise
+    <h3 className='text-center mt-4'>{title} <BsArrowClockwise
       style={{ cursor: 'pointer', }}
       onClick={resetData}
     /></h3>
     <Row><Col style={{ height: 'calc(80vh - 60px)', }}>
-      {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%', }}><LoadingSpinner fullHeight={true} /></div>}
-      {typeof data === 'undefined' && lazyLoad && shouldLoad && <LoadingSpinner fullHeight={true} />}
-      {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
-        className='d-grid'
-        xs={{
-          span: 6,
-          offset: 3,
-        }}
-        style={{ height: '100%', }}
-      >
-        <Button
-          className='align-self-center'
-          variant='success'
-          onClick={() => setShouldLoad(true)}
-        >Load Chart</Button>
-      </Col>}
+      {typeof data === 'undefined' && <div style={{ height: '100%', }}><LoadingSpinner fullHeight={true} /></div>}
       {data === null && <h2 className='text-center'>Error loading data</h2>}
       {data && data.datasets.length === 0 && <Col
         className='d-grid'

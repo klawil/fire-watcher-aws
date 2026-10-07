@@ -3,7 +3,6 @@
 import {
   useCallback, useEffect, useState
 } from 'react';
-import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import { Line } from 'react-chartjs-2';
@@ -34,11 +33,12 @@ const secondFormat = (places: number = 1) => (v: string | number) => {
 };
 
 export default function StatusMetricLineChart({
+  id,
   title,
   body,
+  promBody,
   shouldFetchData,
-  lazyLoad,
-  setChartLoaded,
+  dispatch,
   unit,
   mode,
 }: Readonly<ChartComponentParams<MetricChart>>) {
@@ -47,7 +47,7 @@ export default function StatusMetricLineChart({
     setShouldLoad,
   ] = useState(false);
 
-  if (!lazyLoad && shouldFetchData && !shouldLoad) {
+  if (shouldFetchData && !shouldLoad) {
     setShouldLoad(true);
   }
 
@@ -55,9 +55,11 @@ export default function StatusMetricLineChart({
     data,
     resetDataRaw,
   ] = useChartData(
+    id,
     body,
+    promBody,
     shouldLoad,
-    setChartLoaded,
+    dispatch,
     false
   );
 
@@ -155,30 +157,47 @@ export default function StatusMetricLineChart({
         },
       };
       break;
+    case 'Percent':
+      // Set the scale value to S
+      options.scales = options.scales || {};
+      options.scales.y = {
+        ...options.scales.y,
+        title: {
+          text: 'Percent (%)',
+          display: true,
+        },
+        ticks: {
+          callback: v => (Math.round(Number(v) * 10) / 10).toFixed(1) + '%',
+        },
+      };
+
+      // Set the tooltip to S
+      options.plugins = options.plugins || {};
+      options.plugins.tooltip = options.plugins.tooltip || {};
+      options.plugins.tooltip.callbacks = {
+        ...options.plugins.tooltip.callbacks,
+        label: function (context) {
+          let label = context.dataset.label || '';
+
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += (Math.round(context.parsed.y * 10) / 10).toFixed(1) + '%';
+          }
+          return label;
+        },
+      };
+      break;
   }
 
   return <>
-    <h3 className='text-center mt-5'>{title} <BsArrowClockwise
+    <h3 className='text-center mt-4'>{title} <BsArrowClockwise
       style={{ cursor: 'pointer', }}
       onClick={resetData}
     /></h3>
     <Row><Col style={{ height: 'calc(80vh - 60px)', }}>
-      {typeof data === 'undefined' && !lazyLoad && <div style={{ height: '100%', }}><LoadingSpinner fullHeight={true} /></div>}
-      {typeof data === 'undefined' && lazyLoad && shouldLoad && <LoadingSpinner fullHeight={true} />}
-      {typeof data === 'undefined' && lazyLoad && !shouldLoad && <Col
-        className='d-grid'
-        xs={{
-          span: 6,
-          offset: 3,
-        }}
-        style={{ height: '100%', }}
-      >
-        <Button
-          className='align-self-center'
-          variant='success'
-          onClick={() => setShouldLoad(true)}
-        >Load Chart</Button>
-      </Col>}
+      {typeof data === 'undefined' && <div style={{ height: '100%', }}><LoadingSpinner fullHeight={true} /></div>}
       {data === null && <h2 className='text-center'>Error loading data</h2>}
       {data && data.datasets.length === 0 && <Col
         className='d-grid'

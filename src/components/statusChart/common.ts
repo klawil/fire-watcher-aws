@@ -2,18 +2,22 @@
 
 import { ChartDataset } from 'chart.js';
 import {
-  Dispatch, SetStateAction, useContext, useEffect, useState
+  useContext, useEffect, useState
 } from 'react';
 
-import { GetMetricsApi } from '@/types/api/metrics';
+import {
+  GetMetricsApi,
+  GetPromMetricsApi
+} from '@/types/api/metrics';
+import { StatusPageAction } from '@/types/frontend/statusPage';
 import { getLogger } from '@/utils/common/logger';
 import { AddAlertContext } from '@/utils/frontend/clientContexts';
 import { typeFetch } from '@/utils/frontend/typeFetch';
 
 const logger = getLogger('statusChart/common');
 
-type ApiLabels = GetMetricsApi['responses'][200]['labels'];
-type ApiData = GetMetricsApi['responses'][200]['data'];
+type ApiLabels = GetPromMetricsApi['responses'][200]['labels'];
+type ApiData = GetPromMetricsApi['responses'][200]['data'];
 
 type TimeFormatFn = (a: Date) => string;
 
@@ -122,47 +126,81 @@ const rangeSizeFormatters: {
   },
 ];
 
-async function getDataBody(body: GetMetricsApi['body']): Promise<[
-  ApiLabels,
-  ApiData,
-  {
-    startTime: number;
-    endTime: number;
-    period: number;
-  }
-]> {
-  const [
-    code,
-    resp,
-  ] = await typeFetch<GetMetricsApi>({
-    path: '/api/v2/metrics/',
-    method: 'POST',
-    body: {
-      ...body,
-      live: 'y',
-    },
-  });
+async function getDataBody(
+  body: GetMetricsApi['body'] | undefined,
+  promBody: GetPromMetricsApi['body'] | undefined
+): Promise<[
+    ApiLabels,
+    ApiData,
+    {
+      startTime: number;
+      endTime: number;
+      period: number;
+    }
+  ]> {
+  if (body) {
+    const [
+      code,
+      resp,
+    ] = await typeFetch<GetMetricsApi>({
+      path: '/api/v2/metrics/',
+      method: 'POST',
+      body: {
+        ...body,
+      },
+    });
 
-  if (
-    code !== 200 ||
+    if (
+      code !== 200 ||
     resp === null ||
     'message' in resp
-  ) {
-    logger.error('API error', body, code, resp);
-    throw new Error('Unable to fetch API');
+    ) {
+      logger.error('API error', body, code, resp);
+      throw new Error('Unable to fetch API');
+    }
+
+    return [
+      resp.labels,
+      resp.data,
+      resp,
+    ];
+  } else if (promBody) {
+    const [
+      code,
+      resp,
+    ] = await typeFetch<GetPromMetricsApi>({
+      path: '/api/v2/metrics/prom/',
+      method: 'POST',
+      body: {
+        ...promBody,
+      },
+    });
+
+    if (
+      code !== 200 ||
+    resp === null ||
+    'message' in resp
+    ) {
+      logger.error('API error', body, code, resp);
+      throw new Error('Unable to fetch API');
+    }
+
+    return [
+      resp.labels,
+      resp.data,
+      resp,
+    ];
   }
 
-  return [
-    resp.labels,
-    resp.data,
-    resp,
-  ];
+  throw new Error('No body provided for API request');
 }
 
 export function useChartData(
-  body: GetMetricsApi['body'],
+  id: string,
+  body: GetMetricsApi['body'] | undefined,
+  promBody: GetPromMetricsApi['body'] | undefined,
   shouldLoad: boolean,
-  setChartLoaded: Dispatch<SetStateAction<number>>,
+  dispatch: React.ActionDispatch<[action: StatusPageAction]>,
   returnNonData: boolean,
   convertValue: (a: number) => number = v => v
 ): [
@@ -198,7 +236,7 @@ export function useChartData(
           names,
           data,
           newData,
-        ] = await getDataBody(body);
+        ] = await getDataBody(body, promBody);
 
         const chartData: {
           [key: string]: {
@@ -214,8 +252,12 @@ export function useChartData(
         }
 
         data.forEach(item => {
-          Object.keys(names)
-            .forEach(key => chartData[item.ts][key] = item.values[key] || 0);
+          if (chartData[item.ts]) {
+            Object.keys(names)
+              .forEach(key => chartData[item.ts][key] = item.values[key] || 0);
+          } else {
+            logger.warn(`Missing chart data for timestamp: ${item.ts}`);
+          }
         });
 
         labels.forEach(label => Object.keys(names)
@@ -256,15 +298,20 @@ export function useChartData(
         logger.error(`Failed to load chart (${body})`, e);
         addAlert('danger', 'Failed to load data for a chart');
       }
-      setChartLoaded(v => v + 1);
+      dispatch({
+        action: 'SetChartLoaded',
+        chartId: id,
+      });
       setIsLoading(false);
     })();
   }, [
     shouldLoad,
     body,
+    promBody,
     data,
     isLoading,
-    setChartLoaded,
+    dispatch,
+    id,
     convertValue,
     addAlert,
     returnNonData,

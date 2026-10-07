@@ -30,6 +30,22 @@ export interface LambdaMetric {
 }
 export type MetricToFetch = TimingMetric | CountMetric | LambdaMetric;
 
+// max_over_time(temp{"@instrumentation.site"="klawil-home-nuc"}[5m])
+export type PromMetricToFetch = {
+  metric: string;
+  label: string;
+  conditions: {
+    label: string;
+    value: string;
+    operator?: '=' | '!=' | '=~' | '!~';
+  }[];
+  function?: {
+    name: string;
+    windowed?: boolean;
+    quantile?: number;
+  };
+};
+
 /**
  * Retrieve one or more metrics
  * @summary Retrieve Metrics
@@ -70,6 +86,87 @@ export type GetMetricsApi = {
      * Pass 'y' to retrieve the most recent data, even if it is not fully settled
      */
     live?: 'y' | 'n';
+  };
+  responses: {
+
+    /**
+     * @contentType application/json
+     */
+    200: {
+      startTime: number;
+      endTime: number;
+      period: number;
+      labels: {
+        [key: string]: string;
+      };
+      data: {
+        ts: string;
+        values: {
+          [key: string]: number;
+        };
+      }[];
+    };
+
+    /**
+     * @contentType application/json
+     */
+    400: typeof api400Body;
+
+    /**
+     * @contentType application/json
+     */
+    401: typeof api401Body;
+
+    /**
+     * @contentType application/json
+     */
+    403: typeof api403Body;
+
+    /**
+     * @contentType application/json
+     */
+    500: typeof api500Body;
+  };
+  security: [{
+    cookie: [],
+  }];
+};
+
+/**
+ * Retrieve one or more metrics
+ * @summary Retrieve Metrics
+ * @tags Metrics
+ * @body.contentType application/json
+ */
+export type GetPromMetricsApi = {
+  path: '/api/v2/metrics/prom/';
+  method: 'POST';
+  body: {
+
+    /**
+     * The list of metrics to retrieve
+     */
+    metrics: PromMetricToFetch[];
+
+    /**
+     * Start of the time window to gather metrics in
+     */
+    startTime?: number;
+
+    /**
+     * End of the time window to gather metrics in
+     */
+    endTime?: number;
+
+    /**
+     * The amount of time for each data point, in seconds
+     */
+    period?: number;
+
+    /**
+     * Amount of time to cover in the response, in seconds
+     */
+    timerange?: number;
   };
   responses: {
 

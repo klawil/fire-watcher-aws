@@ -95,7 +95,7 @@ interface LambdaResources {
 interface LambdaPermissions {
   api?: true;
 
-  extra?: ('sendEmail' | 'apiCode' | 'putMetrics' | 'readMetrics' | 'readMetricsTags' | 'transcribe' | 'athena' | 'glue')[];
+  extra?: ('sendEmail' | 'apiCode' | 'putMetrics' | 'readPromMetrics' | 'readMetrics' | 'readMetricsTags' | 'transcribe' | 'athena' | 'glue')[];
 
   tables?: {
     table: TableNames;
@@ -236,7 +236,7 @@ function grantLambdaPermissions(
   }
 
   // Add permissions for metrics
-  if (permissions.extra?.includes('readMetrics')) {
+  if (permissions.extra?.includes('readMetrics') || permissions.extra?.includes('readPromMetrics')) {
     lambda.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [ 'cloudwatch:*', ],
@@ -1754,6 +1754,16 @@ export class FireWatcherAwsStack extends Stack {
             apiToken: true,
             extra: [ 'putMetrics', ],
             methods: [ 'POST', ],
+          },
+          {
+            pathPart: 'prom',
+            fileName: 'metricsProm',
+            api: true,
+            methods: [ 'POST', ],
+            extra: [
+              'readPromMetrics',
+              'apiCode',
+            ],
           },
         ],
       },

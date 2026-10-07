@@ -1,15 +1,16 @@
+import { StatusPageAction } from './statusPage';
+
 import {
-  Dispatch, SetStateAction
-} from 'react';
+  GetMetricsApi, GetPromMetricsApi
+} from '@/types/api/metrics';
 
-import { GetMetricsApi } from '@/types/api/metrics';
-
-type PossibleChartUnits = 'Count' | 'Milliseconds' | 'Seconds';
+type PossibleChartUnits = 'Count' | 'Milliseconds' | 'Seconds' | 'Percent';
 
 interface BaseChart {
+  id: string;
   title: string;
-  body: GetMetricsApi['body'];
-  lazyLoad?: boolean;
+  body?: GetMetricsApi['body'];
+  promBody?: GetPromMetricsApi['body'];
 }
 
 export interface TowerChart extends BaseChart {
@@ -30,6 +31,6 @@ export type ChartConfig = TowerChart | MetricChart | TimingChart;
 
 export type ChartComponentParams<T extends ChartConfig> = T & {
   shouldFetchData: boolean;
-  setChartLoaded: Dispatch<SetStateAction<number>>;
   mode: string;
+  dispatch: React.ActionDispatch<[action: StatusPageAction]>
 };
