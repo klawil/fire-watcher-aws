@@ -247,6 +247,7 @@ export async function sendMessage(
         from: fromNumber,
         to: `+1${phone}`,
         statusCallback: `https://cofrn.org/api/v2/twilio/${messageId}/`,
+        ...body.length > 1000 ? { sendAsMms: true, } : {},
       }),
     saveMessageDataPromise,
   ]);
