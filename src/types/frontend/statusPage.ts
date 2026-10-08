@@ -3,7 +3,6 @@ export type StatusPageTimeframe = 'month' | 'week' | 'day' | 'hour';
 
 export interface StatusPageState {
   loadedCharts: string[];
-  allCharts: string[];
   startLoading: boolean;
   mode: StatusPageTimeframe;
   currentPage: StatusPagePages;
@@ -16,7 +15,6 @@ interface SetChartLoaded {
 interface SetCurrentPage {
   action: 'SetCurrentPage';
   currentPage: StatusPagePages;
-  allCharts: string[];
   startLoading: boolean;
 }
 interface SetCurrentMode {

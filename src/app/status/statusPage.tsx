@@ -17,13 +17,13 @@ import StatusTimingLineChart from '@/components/statusChart/statusTimingLineChar
 import StatusTowerLineChart from '@/components/statusChart/statusTowerLineChart';
 import { ChartConfig } from '@/types/frontend/chart';
 import { StatusPagePages } from '@/types/frontend/statusPage';
-// import { getLogger } from '@/utils/common/logger';
+import { getLogger } from '@/utils/common/logger';
 import {
   defaultStatusPageState,
   statusPageReducer
 } from '@/utils/frontend/statusPageState';
 
-// const logger = getLogger('statusPage');
+const logger = getLogger('statusPage');
 
 ChartJS.register(
   annotationPlugin,
@@ -653,13 +653,12 @@ export default function StatusPage() {
 
   // Read the page from the query string on first load
   useEffect(() => {
-    const param = new URLSearchParams(window.location.search).get('currentPage');
+    const param = new URLSearchParams(window.location.search).get('currentPage') || 'all-recorders';
     const found = validIds.find(id => id === param);
     if (found) {
       dispatch({
         action: 'SetCurrentPage',
         currentPage: found,
-        allCharts: idToConfig[found].charts.map(v => v.id),
         startLoading: false,
       });
     }
@@ -682,9 +681,14 @@ export default function StatusPage() {
     pageInitialized,
   ]);
 
-  const chartsToLoad: string[] = state.allCharts
-    .filter(v => !state.loadedCharts.includes(v))
-    .slice(0, maxParallelCharts);
+  const allCharts: string[] = idToConfig[state.currentPage].charts.map(v => v.id);
+  const chartsToLoad: string[] = [
+    ...allCharts
+      .filter(v => !state.loadedCharts.includes(v))
+      .slice(0, maxParallelCharts),
+    ...state.loadedCharts,
+  ];
+  logger.debug('Charts to load:', chartsToLoad, state);
 
   return <>
     <Row><h2 className='text-center'>{ idToConfig[state.currentPage].label }</h2></Row>
@@ -703,7 +707,6 @@ export default function StatusPage() {
                 dispatch({
                   action: 'SetCurrentPage',
                   currentPage: val,
-                  allCharts: idToConfig[val].charts.map(v => v.id),
                   startLoading: true,
                 });
               }

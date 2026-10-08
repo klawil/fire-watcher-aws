@@ -4,7 +4,6 @@ import {
 
 export const defaultStatusPageState: StatusPageState = {
   loadedCharts: [],
-  allCharts: [],
   startLoading: false,
   mode: 'week',
   currentPage: 'all-recorders',
@@ -16,11 +15,6 @@ export function statusPageReducer(
 ): StatusPageState {
   switch (action.action) {
     case 'SetChartLoaded':
-      if (!state.allCharts.includes(action.chartId)) {
-        return {
-          ...state,
-        };
-      }
       return {
         ...state,
         loadedCharts: [
@@ -32,7 +26,6 @@ export function statusPageReducer(
       return {
         ...state,
         currentPage: action.currentPage,
-        allCharts: [ ...action.allCharts, ],
         loadedCharts: [],
         startLoading: action.startLoading,
       };
