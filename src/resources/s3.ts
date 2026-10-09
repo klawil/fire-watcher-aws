@@ -67,7 +67,7 @@ const vhfConfig: {
 
   // VHF - 100000s
   'NSCFPD': {
-    tg: 100001,
+    tg: 18332,
     freq: 154190000,
     tower: 'vhf',
   },
@@ -87,7 +87,7 @@ const vhfConfig: {
     tower: 'vhf',
   },
   'BGVFD': {
-    tg: 100005,
+    tg: 18331,
     freq: 154445000,
     tower: 'vhf',
   },
