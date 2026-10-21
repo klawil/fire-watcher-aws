@@ -52,6 +52,7 @@ export const filterPresets: {
       8090,
       8331,
       18331,
+      110001,
     ],
     label: 'Baca Grande Fire/EMS',
   },
@@ -60,6 +61,7 @@ export const filterPresets: {
       8090,
       8331,
       18331,
+      110001,
     ],
     hide: true,
   },
@@ -110,7 +112,10 @@ export const filterPresets: {
     label: 'Saguache County All (No ARCC 5)',
   },
   ACFE: {
-    talkgroups: [ 8181, ],
+    talkgroups: [
+      8181,
+      110001,
+    ],
     label: 'Alamosa EMS/Fire',
   },
   Hosp: {

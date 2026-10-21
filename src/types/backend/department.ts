@@ -115,12 +115,150 @@ export const pagingTalkgroupConfig: {
   },
 };
 
+export const pagableParties = [
+  'Alamosa EMS Secondary',
+  'Alamosa EMS',
+  'Baca Grand Fire/EMS',
+  'Center EMS/Fire',
+  'Conejos EMS',
+  'Del Norte EMS',
+  'Interfacility Transfer',
+  'Mineral EMS/Fire',
+  'Monte Vista EMS',
+  'NSCAD',
+  'NSCFPD',
+  'South Fork Fire/EMS',
+] as const;
+
+export const pagingPartiesConfig: {
+  [key in typeof pagableParties[number]]: {
+    linkPreset: string;
+    aladtecDepartment?: string[];
+    department?: UserDepartment;
+  };
+} = {
+  'Alamosa EMS Secondary': {
+    linkPreset: 'pACFE',
+  },
+  'Alamosa EMS': {
+    linkPreset: 'pACFE',
+  },
+  'Baca Grand Fire/EMS': {
+    linkPreset: 'pBGFD%2FBGEMS',
+    aladtecDepartment: [
+      'Baca Fire',
+      'Baca Grande-Crestone Ambulance',
+    ],
+    department: 'Baca',
+  },
+  'Center EMS/Fire': {
+    linkPreset: 'tg8334',
+  },
+  'Conejos EMS': {
+    linkPreset: 'tg110001',
+  },
+  'Del Norte EMS': {
+    linkPreset: 'tg110001',
+  },
+  'Interfacility Transfer': {
+    linkPreset: 'tg110001',
+  },
+  'Mineral EMS/Fire': {
+    linkPreset: 'tg8281',
+  },
+  'Monte Vista EMS': {
+    linkPreset: 'tg110001',
+  },
+  'NSCAD': {
+    linkPreset: 'pNSCAD',
+    aladtecDepartment: [ 'NSCAD', ],
+    department: 'NSCAD',
+  },
+  'NSCFPD': {
+    linkPreset: 'pNSCFPD',
+  },
+  'South Fork Fire/EMS': {
+    linkPreset: 'tg110001',
+  },
+};
+
+export const pagingConfigs: {
+  talkgroup: number;
+  codes?: string[];
+  partyBeingPaged: typeof pagableParties[number];
+}[] = [
+  {
+    talkgroup: 8181,
+    partyBeingPaged: 'Alamosa EMS',
+  },
+  {
+    talkgroup: 8198,
+    partyBeingPaged: 'NSCAD',
+  },
+  {
+    talkgroup: 8281,
+    partyBeingPaged: 'Mineral EMS/Fire',
+  },
+  {
+    talkgroup: 8332,
+    partyBeingPaged: 'NSCFPD',
+  },
+  {
+    talkgroup: 8334,
+    partyBeingPaged: 'Center EMS/Fire',
+  },
+  {
+    talkgroup: 18331,
+    partyBeingPaged: 'Baca Grand Fire/EMS',
+  },
+  {
+    talkgroup: 18332,
+    partyBeingPaged: 'NSCFPD',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'B448', ],
+    partyBeingPaged: 'Conejos EMS',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'B648', ],
+    partyBeingPaged: 'Monte Vista EMS',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'C448', ],
+    partyBeingPaged: 'Baca Grand Fire/EMS',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'J748', ],
+    partyBeingPaged: 'Del Norte EMS',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'J848', ],
+    partyBeingPaged: 'South Fork Fire/EMS',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'D850', ],
+    partyBeingPaged: 'Interfacility Transfer',
+  },
+  {
+    talkgroup: 110001,
+    codes: [ 'B149', ],
+    partyBeingPaged: 'Alamosa EMS Secondary',
+  },
+];
+
 export const qc2ToDeptMap: {
   [key: string]: string;
 } = {
   B448: 'Conejos EMS',
   B648: 'Monte Vista EMS',
   C448: 'Baca Grand Fire/EMS',
+  D850: 'Interfacility Transfer',
   J748: 'Del Norte EMS',
   J848: 'South Fork Fire/EMS',
   B149: 'Alamosa EMS Secondary',
