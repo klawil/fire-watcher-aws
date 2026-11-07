@@ -14,15 +14,17 @@ import {
   api200Body, api401Body, api500Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
+  AddEventItem,
   AddEventsApi,
   EventQueryResultRow,
   QueryEventsApi, eventItemValidator,
   queryEventsQueryValidator
 } from '@/types/api/events';
 import {
-  ATHENA_WORKGROUP, FIREHOSE_EVENTS, GLUE_DATABASE, GLUE_TABLE
+  ATHENA_WORKGROUP, FIREHOSE_EVENTS, GLUE_DATABASE, GLUE_TABLE_V2
 } from '@/types/backend/environment';
 import { validateObject } from '@/utils/backend/validation';
+import { dateTimeToPartition } from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/events');
@@ -33,10 +35,6 @@ const queryTimeframes = {
   week: 7 * 24 * 60 * 60 * 1000,
   month: 28 * 24 * 60 * 60 * 1000,
 } as const;
-
-const padNum = (num: number) => num.toString().padStart(2, '0');
-const dateToQueryDate = (date: Date) => `${date.getUTCFullYear()}-${padNum(date.getMonth() + 1)}-` +
-  `${padNum(date.getUTCDate())}-${padNum(date.getUTCHours())}`;
 
 const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, userPerms) {
   logger.trace('GET', ...arguments);
@@ -50,7 +48,7 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
     ];
   }
 
-  // Validate the request
+  // Validate the request using V2 validator
   const [
     query,
     validationErrors,
@@ -82,14 +80,14 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
     const startTime = new Date(endTime.getTime() - queryTimeframes[timeframe]);
 
     const queryString = `SELECT ${query.groupBy.map(v => `"${v}"`).join(', ')}, COUNT(*) as num
-      FROM "${GLUE_TABLE()}"
-      WHERE "datetime" >= '${dateToQueryDate(startTime)}' AND
-        "datetime" < '${dateToQueryDate(endTime)}'` +
+      FROM "${GLUE_TABLE_V2()}"
+      WHERE "datetime" >= '${dateTimeToPartition(startTime.getTime())}' AND
+        "datetime" < '${dateTimeToPartition(endTime.getTime())}'` +
         (query.events
-          ? `AND
+          ? ` AND
         "event" IN (${query.events.map(e => `'${e}'`).join(',')})`
           : '') +
-      `GROUP BY ${query.groupBy.map(v => `"${v}"`).join(', ')}`;
+      ` GROUP BY ${query.groupBy.map(v => `"${v}"`).join(', ')}`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString: queryString,
       WorkGroup: ATHENA_WORKGROUP(),
@@ -173,13 +171,18 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
   const names = results.ResultSet?.Rows?.[0].Data?.map(c => c.VarCharValue) || [];
   const rows: EventQueryResultRow[] = results.ResultSet?.Rows?.slice(1)
     .map(r => r.Data?.map(c => c.VarCharValue) || [])
-    .map(r => r.reduce((agg: { [key: string]: string | undefined | number }, v, i) => {
-      agg[names[i] || 'UNK'] = v;
-      if (names[i] === 'num') {
-        agg.num = Number(agg.num);
-      }
+    .map(r => {
+      const agg: { [key: string]: string | undefined | number } = {};
+      r.forEach((v, i) => {
+        const fieldName = names[i] || 'UNK';
+        if (fieldName === 'num') {
+          agg[fieldName] = Number(v);
+        } else {
+          agg[fieldName] = v;
+        }
+      });
       return agg as EventQueryResultRow;
-    }, {})) as EventQueryResultRow[] || [];
+    }) as EventQueryResultRow[] || [];
   nextToken = results.NextToken;
   while (nextToken) {
     const results = await athena.send(new GetQueryResultsCommand({
@@ -191,13 +194,18 @@ const GET: LambdaApiFunction<QueryEventsApi> = async function (event, user, user
     }
     const athenaResults = results.ResultSet?.Rows?.slice(1)
       .map(r => r.Data?.map(c => c.VarCharValue) || [])
-      .map(r => r.reduce((agg: { [key: string]: string | undefined | number }, v, i) => {
-        agg[names[i] || 'UNK'] = v;
-        if (names[i] === 'num') {
-          agg.num = Number(agg.num);
-        }
+      .map(r => {
+        const agg: { [key: string]: string | undefined | number } = {};
+        r.forEach((v, i) => {
+          const fieldName = names[i] || 'UNK';
+          if (fieldName === 'num') {
+            agg[fieldName] = Number(v);
+          } else {
+            agg[fieldName] = v;
+          }
+        });
         return agg as EventQueryResultRow;
-      }, {})) as EventQueryResultRow[] || [];
+      }) as EventQueryResultRow[] || [];
     rows.push(...athenaResults);
     nextToken = results.NextToken;
   }
@@ -228,7 +236,7 @@ const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
   }
 
   // Get the valid items from the body
-  const validItems: AddEventsApi['body'] = [];
+  const validItems: AddEventItem[] = [];
   const allItemErrors: string[] = [];
   body.forEach((item, idx) => {
     const [

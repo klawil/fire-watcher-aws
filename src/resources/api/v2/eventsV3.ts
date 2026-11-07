@@ -10,7 +10,7 @@ import {
   api200Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  AddV2EventsApi, eventItemV2Validator
+  AddEventsApi, eventItemValidator
 } from '@/types/api/events';
 import {
   FIREHOSE_EVENTS_V2
@@ -21,9 +21,8 @@ import { getLogger } from '@/utils/common/logger';
 const logger = getLogger('resources/api/v2/events');
 const firehose = new FirehoseClient();
 
-const POST: LambdaApiFunction<AddV2EventsApi> = async function (event) {
+const POST: LambdaApiFunction<AddEventsApi> = async function (event) {
   logger.trace('POST', ...arguments);
-  const eventTime = Date.now();
 
   // Parse the body
   const body = JSON.parse(event.body || '');
@@ -38,13 +37,13 @@ const POST: LambdaApiFunction<AddV2EventsApi> = async function (event) {
   }
 
   // Get the valid items from the body
-  const validItems: AddV2EventsApi['body'] = [];
+  const validItems: AddEventsApi['body'] = [];
   const allItemErrors: string[] = [];
   body.forEach((item, idx) => {
     const [
       parsedItem,
       itemErrors,
-    ] = validateObject(item, eventItemV2Validator);
+    ] = validateObject(item, eventItemValidator);
     if (itemErrors.length > 0) {
       allItemErrors.push(...itemErrors.map(v => `${idx}-${v}`));
     } else if (!parsedItem) {
@@ -60,10 +59,10 @@ const POST: LambdaApiFunction<AddV2EventsApi> = async function (event) {
     await firehose.send(new PutRecordBatchCommand({
       DeliveryStreamName: FIREHOSE_EVENTS_V2(),
       Records: validItems.map(item => {
-        const timestamp = typeof item.timestamp !== 'undefined'
-          ? item.timestamp
-          : eventTime;
-
+        const {
+          timestamp,
+          ...eventItem
+        } = item;
         const dateTime = new Date(timestamp);
         const datePartition = `${dateTime.getUTCFullYear()}-` +
           `${(dateTime.getUTCMonth() + 1).toString().padStart(2, '0')}-` +
@@ -74,8 +73,7 @@ const POST: LambdaApiFunction<AddV2EventsApi> = async function (event) {
 
         return {
           Data: encoder.encode(JSON.stringify({
-            ...item,
-            timestamp,
+            ...eventItem,
             datePartition,
           })),
         };

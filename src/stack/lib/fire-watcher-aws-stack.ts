@@ -1581,10 +1581,16 @@ export class FireWatcherAwsStack extends Stack {
           'apiCode',
         ],
         firehoses: [ 'EVENTS', ],
-        buckets: [ {
-          bucket: 'EVENTS',
-          readonly: false,
-        }, ],
+        buckets: [
+          {
+            bucket: 'EVENTS',
+            readonly: false,
+          },
+          {
+            bucket: 'EVENTS_V2',
+            readonly: false,
+          },
+        ],
         next: [ {
           pathPart: '{type}',
           api: false,
@@ -1597,10 +1603,16 @@ export class FireWatcherAwsStack extends Stack {
               'athena',
               'apiCode',
             ],
-            buckets: [ {
-              bucket: 'EVENTS',
-              readonly: false,
-            }, ],
+            buckets: [
+              {
+                bucket: 'EVENTS',
+                readonly: false,
+              },
+              {
+                bucket: 'EVENTS_V2',
+                readonly: false,
+              },
+            ],
             tables: [
               {
                 table: 'FILE',
