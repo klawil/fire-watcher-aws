@@ -16,8 +16,7 @@ import Table from 'react-bootstrap/Table';
 
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
-  FileEventItem,
-  FullEventItem, GetRadioEventsApi, GetTalkgroupEventsApi
+  EventItem, GetRadioEventsApi, GetTalkgroupEventsApi
 } from '@/types/api/events';
 import {
   PatchRadioApi
@@ -26,7 +25,7 @@ import {
   PatchTalkgroupApi
 } from '@/types/api/talkgroups';
 import {
-  dateTimeToTimeStr, dateToStr
+  dateTimeToTimeStr, dateToStr, datetimePartitionToTimestamp
 } from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
 import {
@@ -35,7 +34,6 @@ import {
 import {
   buildFilterItemsFunc,
   buildSortItemsFunc,
-  getItemLink,
   getItemName,
   useRadios, useTalkgroups
 } from '@/utils/frontend/talkgroups';
@@ -45,11 +43,9 @@ const logger = getLogger('eventsPage');
 
 type IdTypes = 'radio' | 'talkgroup';
 
-type EventItem = (FullEventItem & {
+type EventItemDisplay = EventItem & {
   type: 'event';
-}) | (FileEventItem & {
-  type: 'file';
-});
+};
 
 enum LoadingStates {
   NOT_STARTED,
@@ -58,17 +54,19 @@ enum LoadingStates {
 }
 
 const eventFilters = {
-  location: 'Location',
-  on: 'Radio On',
-  off: 'Radio Off',
-  join: 'Join',
-  recording: 'Recording',
+  GRANT: 'Grant',
+  LOCATION: 'Location',
+  AFFILIATION: 'Affiliation',
+  REGISTRATION: 'Registration',
+  ACKNOWLEDGE: 'Acknowledge',
+  DEREGISTRATION: 'Deregistration',
+  DATA_GRANT: 'Data Grant',
 } as const;
 
 function useEvents(): [
   LoadingStates,
   string,
-  EventItem[],
+  EventItemDisplay[],
   (type: IdTypes, id: string, reset?: boolean) => void,
   number | null
 ] {
@@ -88,7 +86,7 @@ function useEvents(): [
   const [
     events,
     setEvents,
-  ] = useState<EventItem[]>([]);
+  ] = useState<EventItemDisplay[]>([]);
 
   // Storage for the keys needed for the next API call
   const [
@@ -182,7 +180,7 @@ function useEvents(): [
         ...current,
         ...results.events.map(e => ({
           ...e,
-          type: 'radioid' in e ? 'event' : 'file',
+          type: 'event',
         })) as typeof events,
       ]);
     } catch (e) {
@@ -362,38 +360,6 @@ export default function EventsPage() {
     loadEvents,
   ]);
 
-  // Parse an ID into a name and link
-  const parseTalkgroup = useCallback((tgId: number | string) => {
-    if (tgId === '') {
-      return '';
-    }
-    const tgIdString = tgId.toString();
-
-    const isCurrentPage = type === 'talkgroup' && tgIdString === id;
-    return <>Talkgroup {isCurrentPage
-      ? getItemName(talkgroups, tgIdString)
-      : getItemLink(talkgroups, tgIdString, 'talkgroup', true)}</>;
-  }, [
-    id,
-    type,
-    talkgroups,
-  ]);
-  const parseRadioId = useCallback((radioId: number | string) => {
-    if (radioId === '') {
-      return '';
-    }
-    const radioIdString = radioId.toString();
-
-    const isCurrentPage = type === 'radio' && radioIdString === id;
-    return <>Radio {isCurrentPage
-      ? getItemName(radios, radioIdString)
-      : getItemLink(radios, radioIdString, 'radio', true)}</>;
-  }, [
-    id,
-    type,
-    radios,
-  ]);
-
   // Parse the query string parameters on the first run
   useEffect(() => {
     if (searchParams.get('tg') !== null) {
@@ -540,79 +506,59 @@ export default function EventsPage() {
       >
         <thead>
           <tr>
-            <th></th>
+            <th>Time</th>
             <th>Event</th>
-            <th>Tower</th>
-            <th>Talkgroups/Radios</th>
-            <th></th>
+            <th>System</th>
+            <th>Source</th>
+            <th>Talkgroup</th>
+            <th>Details</th>
           </tr>
         </thead>
         <tbody>
           {events.length === 0 && loadingState !== LoadingStates.IN_PROGRESS && <tr>
-            <th colSpan={5} className='text-center'>No Events Found</th>
+            <th colSpan={6} className='text-center'>No Events Found</th>
           </tr>}
           {events.map((v, i) => {
             if (
-              v.type === 'file' &&
-              excludeItems.includes('recording')
-            ) {
-              return;
-            }
-            if (
-              v.type === 'event' &&
               excludeItems.includes(v.event as keyof typeof eventFilters)
             ) {
               return;
+            }
+
+            const details: string[] = [];
+            if (v.opcode !== undefined) {
+              details.push(`Opcode: ${v.opcode}`);
+            }
+            if (v.priority !== undefined) {
+              details.push(`Priority: ${v.priority}`);
+            }
+            if (v.freq !== undefined) {
+              details.push(`Freq: ${v.freq}`);
+            }
+            if (v.encrypted) {
+              details.push('Encrypted');
+            }
+            if (v.emergency) {
+              details.push('Emergency');
             }
 
             return <tr
               key={i}
               className='align-middle'
             >
-              {v.type === 'event' && <React.Fragment>
-                <td>{dateToStr(new Date(v.timestamp))}</td>
-                <td>{v.event}</td>
-                <td>{v.tower}</td>
-                <td>
-                  {[
-                    parseTalkgroup(v.talkgroup),
-                    parseRadioId(v.radioid),
-                  ].filter(v => v !== '').map((v, i) => <React.Fragment
-                    key={i}
-                  >
-                    {i > 0 && <br />}
-                    {v}
-                  </React.Fragment>)}
-                </td>
-                <td></td>
-              </React.Fragment>}
-
-              {v.type === 'file' && <React.Fragment>
-                <td>{dateToStr(new Date((v.StartTime || 0) * 1000))}</td>
-                <td>recording</td>
-                <td>{v.Tower}</td>
-                <td>
-                  {[
-                    parseTalkgroup(v.Talkgroup || ''),
-                    ...v.Sources?.map(s => parseRadioId(s || '')) || [],
-                  ].map((v, idx) => <React.Fragment
-                    key={idx}
-                  >
-                    {idx > 0 && <br />}
-                    {v}
-                  </React.Fragment>)}
-                </td>
-                <td><audio preload='none' controls>
-                  <source src={`/${v.Key}`} />
-                </audio></td>
-              </React.Fragment>}
+              <td>{dateToStr(new Date(datetimePartitionToTimestamp(v.datetime)))}</td>
+              <td>{v.event}</td>
+              <td>{v.system}</td>
+              <td>{v.source}</td>
+              <td>{v.talkgroup || '-'}</td>
+              <td>{details.join(', ')}</td>
             </tr>;
           })}
           {eventsThrough !== null && <tr>
-            <td colSpan={5} className='text-center'>Events through {eventsThrough} checked</td>
+            <td colSpan={6} className='text-center'>Events through {eventsThrough} checked</td>
           </tr>}
           <tr>
-            <th colSpan={5} className='text-center'>
+            <th colSpan={6} className='text-center'>
               {loadingState === LoadingStates.IN_PROGRESS && id !== '' && <>
                 <LoadingSpinner />
                 <h4 className='text-center'>Query is {queryState}</h4>

@@ -19,6 +19,37 @@ export function dateTimeToTimeStr(datetime: number): string {
   return dateToStr(new Date(datetime));
 }
 
+export function dateTimeToPartition(datetime: number, roundUp = false): string {
+  const date = new Date(datetime);
+  date.setUTCMinutes(0, 0, 0);
+  if (roundUp && date.getTime() < datetime) {
+    date.setUTCHours(date.getUTCHours() + 1);
+  }
+
+  const month = (date.getUTCMonth() + 1).toString()
+    .padStart(2, '0');
+  const day = date.getUTCDate().toString()
+    .padStart(2, '0');
+  const hour = date.getUTCHours().toString()
+    .padStart(2, '0');
+
+  return `${date.getUTCFullYear()}-${month}-${day}-${hour}`;
+}
+
+export function datetimePartitionToTimestamp(datetime: string): number {
+  const match = datetime.match(/^(\d{4}-\d{2}-\d{2})-(\d{2})$/);
+  if (!match) {
+    throw new Error(`Invalid datetime partition: ${datetime}`);
+  }
+
+  const timestamp = new Date(`${match[1]}T${match[2]}:00:00Z`).getTime();
+  if (Number.isNaN(timestamp)) {
+    throw new Error(`Invalid datetime partition: ${datetime}`);
+  }
+
+  return timestamp;
+}
+
 export function secondsToTime(valueSeconds: number) {
   const maxValue = valueSeconds;
   let timeStr = '';

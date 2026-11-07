@@ -14,19 +14,17 @@ import {
   api404Body, api500Body, generateApi400Body
 } from '@/types/api/_shared';
 import {
-  FileEventItem,
-  FullEventItem,
+  EventItem,
   GetRadioEventsApi, GetTalkgroupEventsApi,
   getEventsParamsValidator,
   getEventsQueryValidator
 } from '@/types/api/events';
-import { TypedQueryInput } from '@/types/backend/dynamo';
 import {
-  ATHENA_WORKGROUP, GLUE_DATABASE, GLUE_TABLE, TABLE_DEVICES, TABLE_FILE
+  ATHENA_WORKGROUP, GLUE_DATABASE, GLUE_TABLE_V2
 } from '@/types/backend/environment';
 import {
-  typedQuery
-} from '@/utils/backend/dynamoTyped';
+  dateTimeToPartition, datetimePartitionToTimestamp
+} from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
 
 const logger = getLogger('resources/api/v2/eventsList');
@@ -35,15 +33,6 @@ const athena = new AthenaClient();
 
 const MAX_RESULTS = 1500;
 const minDatetime = 1735689600000; // 2025-01-01 00:00 UTC
-
-function roundToHour(ts: number, ceil: boolean) {
-  const ONE_HOUR = 60 * 60 * 1000;
-  const divided = ts / ONE_HOUR;
-  if (ceil) {
-    return Math.ceil(divided) * ONE_HOUR;
-  }
-  return Math.floor(divided) * ONE_HOUR;
-}
 
 const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async function (event) {
   logger.trace('GET', ...arguments);
@@ -92,26 +81,24 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
   }
 
   if (!query.queryId) {
-    const padNum = (num: number) => num.toString().padStart(2, '0');
-
-    // Start and end dates
-    const startDateTime = new Date(roundToHour(startTime, false));
-    const startDatetimeString = `${startDateTime.getUTCFullYear()}-${padNum(startDateTime.getMonth() + 1)}-` +
-      `${padNum(startDateTime.getUTCDate())}-${padNum(startDateTime.getUTCHours())}`;
-    const endDateTime = new Date(roundToHour(endTime, true));
-    const endDatetimeString = `${endDateTime.getUTCFullYear()}-${padNum(endDateTime.getMonth() + 1)}-` +
-      `${padNum(endDateTime.getUTCDate())}-${padNum(endDateTime.getUTCHours())}`;
+    // Build the WHERE clause based on query type
+    // For radioid: filter by source
+    // For talkgroup: filter by talkgroup
+    let whereClause = '';
+    if (queryType === 'talkgroup') {
+      whereClause = `"talkgroup" = ${params.id}`;
+    } else {
+      // For radioid, filter by source
+      whereClause = `"source" = ${params.id}`;
+    }
 
     // Run the Athena query
     const QueryString = `SELECT *
-        FROM "${GLUE_TABLE()}"
-        WHERE "${queryType}" = '${params.id}'
-        AND "event" != 'call'
-        AND "datetime" >= '${startDatetimeString}'
-        AND "datetime" <= '${endDatetimeString}'
-        AND "timestamp" < ${endTime}
-        AND "timestamp" >= ${startTime}
-        ORDER BY "timestamp" DESC`;
+        FROM "${GLUE_TABLE_V2()}"
+        WHERE ${whereClause}
+        AND "datetime" < '${dateTimeToPartition(endTime, true)}'
+        AND "datetime" >= '${dateTimeToPartition(startTime)}'
+        ORDER BY "datetime" DESC`;
     const queryId = await athena.send(new StartQueryExecutionCommand({
       QueryString,
       WorkGroup: ATHENA_WORKGROUP(),
@@ -184,89 +171,54 @@ const GET: LambdaApiFunction<GetRadioEventsApi | GetTalkgroupEventsApi> = async 
 
   // Parse the results
   const names = results.ResultSet?.Rows?.[0].Data?.map(c => c.VarCharValue) || [];
-  const athenaResults = results.ResultSet?.Rows?.slice(1)
+  const events = results.ResultSet?.Rows?.slice(1)
     .map(r => r.Data?.map(c => c.VarCharValue) || [])
-    .map(r => r.reduce((agg: { [key: string]: string | undefined | number }, v, i) => {
-      agg[names[i] || 'UNK'] = v;
-      if (names[i] === 'timestamp') {
-        agg.timestamp = Number(agg.timestamp);
-      }
-      return agg as FullEventItem;
-    }, {})) as FullEventItem[] || [];
+    .map(r => {
+      const parsed: { [key: string]: string | number | boolean } = {};
+      r.forEach((v, i) => {
+        if (!v) {
+          return;
+        }
+        const key = names[i];
+        if (!key) {
+          return;
+        }
 
-  // Get the files
-  const fileQueryConfig: TypedQueryInput<FileEventItem> & Required<Pick<
-    TypedQueryInput<FileEventItem>,
-    'ExpressionAttributeNames' | 'ExpressionAttributeValues'
-  >> = {
-    ScanIndexForward: false,
-    TableName: TABLE_FILE(),
-    ExpressionAttributeNames: {
-      '#StartTime': 'StartTime',
-    },
-    ExpressionAttributeValues: {
-      ':StartTime': Math.round(startTime / 1000),
-      ':EndTime': Math.round(endTime / 1000),
-    },
-  };
-  if (queryType === 'talkgroup') {
-    fileQueryConfig.ExpressionAttributeNames['#Talkgroup'] = 'Talkgroup';
-    fileQueryConfig.ExpressionAttributeValues[':Talkgroup'] = params.id;
-    fileQueryConfig.IndexName = 'StartTimeTgIndex';
-    fileQueryConfig.KeyConditionExpression = '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime AND :EndTime';
-  } else {
-    fileQueryConfig.TableName = TABLE_DEVICES();
-    fileQueryConfig.ExpressionAttributeNames['#RadioID'] = 'RadioID';
-    fileQueryConfig.ExpressionAttributeValues[':RadioID'] = params.id.toString();
-    fileQueryConfig.KeyConditionExpression = '#RadioID = :RadioID AND #StartTime BETWEEN :StartTime AND :EndTime';
-  }
-  const filesQueryResult = await typedQuery<FileEventItem>(fileQueryConfig);
-  const fileResults = filesQueryResult.Items || [];
+        if ([
+          'opcode',
+          'priority',
+          'freq',
+          'source',
+          'talkgroup',
+          'tdma_slot',
+        ].includes(key)) {
+          parsed[key] = parseInt(v);
+        } else if ([
+          'duplex',
+          'mode',
+          'phase2_tdma',
+          'emergency',
+          'encrypted',
+        ].includes(key)) {
+          parsed[key] = v.toLowerCase() === 'true' || v === '1';
+        } else {
+          parsed[key] = v;
+        }
+      });
 
-  let endResults = [
-    ...athenaResults,
-    ...fileResults,
-  ].sort((a, b) => {
-    const aVal = 'StartTime' in a
-      ? a.StartTime * 1000
-      : a.timestamp;
-    const bVal = 'StartTime' in b
-      ? b.StartTime * 1000
-      : b.timestamp;
-
-    return aVal >= bVal ? -1 : 1;
-  });
+      return parsed as unknown as EventItem;
+    }) as EventItem[] || [];
 
   let firstEvent = startTime;
-  const athenaFirst = athenaResults.length
-    ? athenaResults[athenaResults.length - 1].timestamp
-    : 0;
-  const filesFirst = fileResults.length
-    ? fileResults[fileResults.length - 1].StartTime * 1000
-    : 0;
-  if (endResults.length >= MAX_RESULTS) {
-    const firstEventItem = endResults[MAX_RESULTS];
-    firstEvent = 'timestamp' in firstEventItem
-      ? firstEventItem.timestamp
-      : firstEventItem.StartTime * 1000;
-  } else if (athenaResults.length && fileResults.length) {
-    firstEvent = athenaFirst < filesFirst
-      ? athenaFirst
-      : filesFirst;
-  } else if (athenaResults.length) {
-    firstEvent = athenaFirst;
-  } else if (fileResults.length) {
-    firstEvent = filesFirst;
+  if (events.length >= MAX_RESULTS) {
+    const firstEventItem = events[MAX_RESULTS] || events[events.length - 1];
+    firstEvent = datetimePartitionToTimestamp(firstEventItem.datetime);
+  } else if (events.length > 0) {
+    firstEvent = datetimePartitionToTimestamp(events[events.length - 1].datetime);
   }
 
   // Filter out older events
-  endResults = endResults.filter(v => {
-    if ('StartTime' in v) {
-      return v.StartTime * 1000 >= firstEvent;
-    }
-
-    return v.timestamp >= firstEvent;
-  });
+  const endResults = events.filter(v => datetimePartitionToTimestamp(v.datetime) >= firstEvent);
 
   return [
     200,

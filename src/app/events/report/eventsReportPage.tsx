@@ -13,8 +13,8 @@ import {
 import LoadingSpinner from '@/components/loadingSpinner/loadingSpinner';
 import {
   EventQueryResultRow, QueryEventsApi,
-  validEventGroupKeys,
-  validEventTypes
+  validEventTypes,
+  validGroupKeys
 } from '@/types/api/events';
 import { dateToStr } from '@/utils/common/dateAndFile';
 import { getLogger } from '@/utils/common/logger';
@@ -27,7 +27,7 @@ import { typeFetch } from '@/utils/frontend/typeFetch';
 
 const logger = getLogger('eventsReportPage');
 
-const groupKeysOrder = validEventGroupKeys.sort((a, b) => a.localeCompare(b));
+const groupKeysOrder = validGroupKeys.sort((a, b) => a.localeCompare(b));
 
 const numberFormat = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
@@ -77,7 +77,7 @@ export default function EventsReportPage() {
   const [
     eventTypes,
     setEventTypes,
-  ] = useState<NonNullable<QueryEventsApi['query']['events']>>([ ...validEventTypes, ]);
+  ] = useState<NonNullable<QueryEventsApi['query']['events']>>([ ...validEventTypes, ] as NonNullable<QueryEventsApi['query']['events']>);
   function addEventType(key: typeof eventTypes[number]) {
     setEventTypes(current => {
       const newVal = [ ...current, ];
@@ -401,9 +401,13 @@ export default function EventsReportPage() {
                 return 1;
               }
 
-              if (validEventGroupKeys.includes(sortColumn as typeof validEventGroupKeys[number])) {
-                return (a[sortColumn] || '').toString()
-                  .localeCompare((b[sortColumn] || '').toString()) * (sortDir ? 1 : -1);
+              const isGroupKey = validGroupKeys.includes(
+                sortColumn as typeof validGroupKeys[number]
+              );
+              if (isGroupKey) {
+                const aVal = (a[sortColumn as keyof typeof a] || '').toString();
+                const bVal = (b[sortColumn as keyof typeof b] || '').toString();
+                return aVal.localeCompare(bVal) * (sortDir ? 1 : -1);
               }
 
               const A_GT_B = sortDir ? -1 : 1;
@@ -418,11 +422,21 @@ export default function EventsReportPage() {
               {groupByKeys
                 .filter(key => !columnKeys.includes(key))
                 .map(key => {
-                  if (key === 'radioId' || key === 'talkgroup') {
+                  if (key === 'source') {
                     return <td key={key}>{getItemLink(
-                      key === 'radioId' ? radios : talkgroups,
+                      radios,
                       row[key] || '',
-                      key === 'radioId' ? 'radio' : 'talkgroup',
+                      'radio',
+                      showCounts,
+                      !idsToNames
+                    )}</td>;
+                  }
+
+                  if (key === 'talkgroup') {
+                    return <td key={key}>{getItemLink(
+                      talkgroups,
+                      row[key] || '',
+                      'talkgroup',
                       showCounts,
                       !idsToNames
                     )}</td>;

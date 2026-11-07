@@ -5,61 +5,72 @@ import { FullFileObject } from './files';
 
 import { Validator } from '@/types/backend/validation';
 
-interface EventItem {
-  tower: string;
-  radioId: string;
-  event: string;
-  talkgroup: string;
-  talkgroupList: string;
-  timestamp?: number;
-}
-
-interface EventItemV2 {
-  event: string;
-  timestamp?: number;
-  system: string;
-  opcode: number;
-  duplex: boolean;
-  emergency: boolean;
-  encrypted: boolean;
-  freq: number;
-  mode: boolean;
-  phase2_tdma: boolean;
-  priority: number;
-  source: number;
-  talkgroup: number;
-  tdma_slot: number;
-}
-
+/**
+ * Event types supported by V2 Glue table
+ */
 export const validEventTypes = [
-  'location',
-  'on',
-  'off',
-  'join',
-  'call',
-  'data',
-  'ack',
+  'GRANT',
+  'LOCATION',
+  'AFFILIATION',
+  'REGISTRATION',
+  'ACKNOWLEDGE',
+  'DEREGISTRATION',
+  'DATA_GRANT',
 ] as const;
-type EventTypes = typeof validEventTypes[number];
+export type EventType = typeof validEventTypes[number];
 
-type GroupKeys = keyof Omit<EventItem, 'talkgroupList' | 'timestamp'>;
-export const validEventGroupKeys: GroupKeys[] = [
-  'tower',
-  'radioId',
+/**
+ * Event item from V2 Glue table
+ */
+export type EventItem = {
+  event: EventType;
+  datetime: string;
+  system: string;
+  source: number;
+  opcode?: number;
+  priority?: number;
+  encrypted?: boolean;
+  emergency?: boolean;
+  freq?: number;
+  talkgroup?: number;
+  duplex?: boolean;
+  mode?: boolean;
+  phase2_tdma?: boolean;
+  tdma_slot?: number;
+};
+
+export type AddEventItem = Omit<EventItem, 'datetime'> & {
+  timestamp: number;
+};
+
+/**
+ * Group-by keys for event queries (only fields present in V2 table)
+ */
+export type GroupKey = 'event' | 'system' | 'source' | 'talkgroup' | 'freq' | 'priority' | 'opcode' | 'encrypted' | 'emergency';
+export const validGroupKeys: GroupKey[] = [
   'event',
+  'system',
+  'source',
   'talkgroup',
+  'freq',
+  'priority',
+  'opcode',
+  'encrypted',
+  'emergency',
 ];
 
+/**
+ * Query result row for group-by queries
+ */
 export type EventQueryResultRow = {
-  [key in GroupKeys]?: string;
+  [key in GroupKey]?: string;
 } & {
   num: number;
 };
 
-export type FullEventItem = Required<Omit<EventItem, 'radioId'> & {
-  radioid: string;
-}>;
-
+/**
+ * File event item (for backward compatibility with file storage)
+ */
 export type FileEventItem = Partial<Omit<FullFileObject, 'StartTime'>> & {
   RadioID: string;
   StartTime: number;
@@ -74,9 +85,9 @@ export type QueryEventsApi = {
   path: '/api/v2/events/';
   method: 'GET';
   query: {
-    groupBy?: GroupKeys[];
+    groupBy?: GroupKey[];
     timeframe?: 'day' | 'week' | 'month';
-    events?: EventTypes[];
+    events?: EventType[];
     queryId?: string;
   };
   responses: {
@@ -113,7 +124,7 @@ export type QueryEventsApi = {
 };
 
 /**
- * Push DTR events and details into the firehose
+ * Push DTR events into the firehose
  * @summary Push DTR events
  * @tags Events
  * @body.contentType application/json
@@ -121,44 +132,7 @@ export type QueryEventsApi = {
 export type AddEventsApi = {
   path: '/api/v2/events/';
   method: 'POST';
-  body: EventItem[];
-  responses: {
-
-    /**
-     * @contentType application/json
-     */
-    200: typeof api200Body;
-
-    /**
-     * @contentType application/json
-     */
-    400: typeof api400Body;
-
-    /**
-     * @contentType application/json
-     */
-    401: typeof api401Body;
-
-    /**
-     * @contentType application/json
-     */
-    500: typeof api500Body;
-  };
-  security: [{
-    apiKey: [];
-  }];
-};
-
-/**
- * Push DTR events and details into the firehose
- * @summary Push DTR events
- * @tags Events
- * @body.contentType application/json
- */
-export type AddV2EventsApi = {
-  path: '/api/v2/eventsV3/';
-  method: 'POST';
-  body: EventItemV2[];
+  body: AddEventItem[];
   responses: {
 
     /**
@@ -190,7 +164,6 @@ export type AddV2EventsApi = {
  * Get DTR events associated with a radio ID
  * @summary Get Radio Events
  * @tags Events
- * @body.contentType application/json
  */
 export type GetRadioEventsApi = {
   path: '/api/v2/events/radioid/{id}/';
@@ -213,7 +186,7 @@ export type GetRadioEventsApi = {
      */
     200: ({
       count: number;
-      events: (FullEventItem | FileEventItem)[];
+      events: EventItem[];
       endTime: number;
       startTime: number;
     } | {
@@ -254,7 +227,6 @@ export type GetRadioEventsApi = {
  * Get DTR events associated with a Talkgroup
  * @summary Get Talkgroup Events
  * @tags Events
- * @body.contentType application/json
  */
 export type GetTalkgroupEventsApi = Omit<GetRadioEventsApi, 'path'> & {
   path: '/api/v2/events/talkgroup/{id}/';
@@ -266,13 +238,13 @@ export const queryEventsQueryValidator: Validator<QueryEventsApi['query']> = {
     types: {
       array: {
         exact: [
-          'join',
-          'location',
-          'off',
-          'on',
-          'call',
-          'data',
-          'ack',
+          'GRANT',
+          'LOCATION',
+          'AFFILIATION',
+          'REGISTRATION',
+          'ACKNOWLEDGE',
+          'DEREGISTRATION',
+          'DATA_GRANT',
         ],
       },
     },
@@ -283,9 +255,14 @@ export const queryEventsQueryValidator: Validator<QueryEventsApi['query']> = {
       array: {
         exact: [
           'event',
-          'radioId',
+          'system',
+          'source',
           'talkgroup',
-          'tower',
+          'freq',
+          'priority',
+          'opcode',
+          'encrypted',
+          'emergency',
         ],
       },
     },
@@ -310,70 +287,25 @@ export const queryEventsQueryValidator: Validator<QueryEventsApi['query']> = {
   },
 };
 
-export const eventItemValidator: Validator<EventItem> = {
-  tower: {
-    required: true,
-    types: {
-      string: {},
-    },
-  },
+export const eventItemValidator: Validator<AddEventItem> = {
   event: {
     required: true,
     types: {
-      string: {},
-    },
-  },
-  radioId: {
-    required: true,
-    types: {
       string: {
-        regex: /^\-?[0-9]+$/,
-      },
-    },
-  },
-  talkgroup: {
-    required: true,
-    types: {
-      string: {
-        regex: /^[0-9]*$/,
-      },
-    },
-  },
-  talkgroupList: {
-    required: true,
-    types: {
-      string: {
-        regex: /^[0-9]*(,[0-9]*)*$/,
+        exact: [
+          'GRANT',
+          'LOCATION',
+          'AFFILIATION',
+          'REGISTRATION',
+          'ACKNOWLEDGE',
+          'DEREGISTRATION',
+          'DATA_GRANT',
+        ],
       },
     },
   },
   timestamp: {
-    required: false,
-    types: {
-      number: {},
-    },
-  },
-};
-
-const booleanParser: (v: string) => boolean = v => {
-  if (`${v}` === '1' || `${v}` === 'true') {
-    return true;
-  } else if (`${v}` === '0' || `${v}` === 'false') {
-    return false;
-  }
-
-  throw new Error(`Invalid boolean value: ${v}`);
-};
-
-export const eventItemV2Validator: Validator<EventItemV2> = {
-  event: {
     required: true,
-    types: {
-      string: {},
-    },
-  },
-  timestamp: {
-    required: false,
     types: {
       number: {},
     },
@@ -384,67 +316,6 @@ export const eventItemV2Validator: Validator<EventItemV2> = {
       string: {},
     },
   },
-  opcode: {
-    required: true,
-    types: {
-      number: {
-        min: 0,
-        max: 64,
-      },
-    },
-  },
-  duplex: {
-    required: true,
-    parse: booleanParser,
-    types: {
-      boolean: {},
-    },
-  },
-  emergency: {
-    required: true,
-    parse: booleanParser,
-    types: {
-      boolean: {},
-    },
-  },
-  encrypted: {
-    required: true,
-    parse: booleanParser,
-    types: {
-      boolean: {},
-    },
-  },
-  freq: {
-    required: true,
-    types: {
-      number: {
-        min: 0,
-        max: 2147483647,
-      },
-    },
-  },
-  mode: {
-    required: true,
-    parse: booleanParser,
-    types: {
-      boolean: {},
-    },
-  },
-  phase2_tdma: {
-    required: true,
-    parse: booleanParser,
-    types: {
-      boolean: {},
-    },
-  },
-  priority: {
-    required: true,
-    types: {
-      number: {
-        max: 127,
-      },
-    },
-  },
   source: {
     required: true,
     types: {
@@ -453,16 +324,77 @@ export const eventItemV2Validator: Validator<EventItemV2> = {
       },
     },
   },
+  opcode: {
+    required: false,
+    types: {
+      number: {
+        min: 0,
+        max: 64,
+      },
+    },
+  },
+  priority: {
+    required: false,
+    types: {
+      number: {
+        max: 127,
+      },
+    },
+  },
+  encrypted: {
+    required: false,
+    parse: (v: string) => v === 'true' || v === '1',
+    types: {
+      boolean: {},
+    },
+  },
+  emergency: {
+    required: false,
+    parse: (v: string) => v === 'true' || v === '1',
+    types: {
+      boolean: {},
+    },
+  },
+  freq: {
+    required: false,
+    types: {
+      number: {
+        min: 0,
+        max: 2147483647,
+      },
+    },
+  },
   talkgroup: {
-    required: true,
+    required: false,
     types: {
       number: {
         max: 2147483647,
       },
     },
   },
+  duplex: {
+    required: false,
+    parse: (v: string) => v === 'true' || v === '1',
+    types: {
+      boolean: {},
+    },
+  },
+  mode: {
+    required: false,
+    parse: (v: string) => v === 'true' || v === '1',
+    types: {
+      boolean: {},
+    },
+  },
+  phase2_tdma: {
+    required: false,
+    parse: (v: string) => v === 'true' || v === '1',
+    types: {
+      boolean: {},
+    },
+  },
   tdma_slot: {
-    required: true,
+    required: false,
     types: {
       number: {
         max: 2147483647,

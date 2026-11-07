@@ -38,7 +38,7 @@ describe('resources/api/v2/eventsList', () => {
   });
 
   it('Starts query and returns query id', async () => {
-    vi.spyOn(AthenaClient.prototype, 'send').mockResolvedValueOnce({ QueryExecutionId: 'q1', } as never);
+    const athenaSpy = vi.spyOn(AthenaClient.prototype, 'send').mockResolvedValueOnce({ QueryExecutionId: 'q1', } as never);
 
     const req = generateApiEvent({
       method: 'GET',
@@ -55,6 +55,9 @@ describe('resources/api/v2/eventsList', () => {
     const res = await main(req);
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('queryId');
+    const queryString = JSON.stringify(athenaSpy.mock.calls[0][0].input);
+    expect(queryString).toContain('datetime');
+    expect(queryString).not.toContain('timestamp');
   });
 
   it('Returns 500 when athena query id is missing', async () => {
@@ -124,7 +127,7 @@ describe('resources/api/v2/eventsList', () => {
     expect(res.body).toContain('QUEUED');
   });
 
-  it('Returns merged events when query is complete', async () => {
+  it('Returns events with their datetime partition when query is complete', async () => {
     vi.spyOn(AthenaClient.prototype, 'send')
       .mockResolvedValueOnce({ QueryExecution: { Status: { State: 'SUCCEEDED', }, }, } as never)
       .mockResolvedValueOnce({
@@ -133,13 +136,13 @@ describe('resources/api/v2/eventsList', () => {
             {
               Data: [
                 { VarCharValue: 'event', },
-                { VarCharValue: 'timestamp', },
+                { VarCharValue: 'datetime', },
               ],
             },
             {
               Data: [
-                { VarCharValue: 'tone', },
-                { VarCharValue: '1735689700000', },
+                { VarCharValue: 'GRANT', },
+                { VarCharValue: '2025-01-01-12', },
               ],
             },
           ],
@@ -168,6 +171,7 @@ describe('resources/api/v2/eventsList', () => {
 
     const res = await main(req);
     expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('events');
+    expect(res.body).toContain('"datetime":"2025-01-01-12"');
+    expect(res.body).not.toContain('"timestamp"');
   });
 });

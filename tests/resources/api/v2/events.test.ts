@@ -47,7 +47,7 @@ describe('resources/api/v2/events', () => {
   });
 
   it('Starts an Athena query when groupBy is provided', async () => {
-    vi.spyOn(AthenaClient.prototype, 'send').mockResolvedValue({
+    const athenaSpy = vi.spyOn(AthenaClient.prototype, 'send').mockResolvedValue({
       QueryExecutionId: 'q1',
     } as never);
 
@@ -63,6 +63,9 @@ describe('resources/api/v2/events', () => {
     const res = await main(req);
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('queryId');
+    const queryString = JSON.stringify(athenaSpy.mock.calls[0][0].input);
+    expect(queryString).toContain('datetime');
+    expect(queryString).not.toContain('timestamp');
   });
 
   it('Returns 500 when query execution state is FAILED', async () => {
@@ -212,16 +215,18 @@ describe('resources/api/v2/events', () => {
       },
       body: JSON.stringify([
         {
-          tower: 'Saguache',
-          radioId: '1234',
-          event: 'call',
-          talkgroup: '8198',
-          talkgroupList: '8198',
+          event: 'GRANT',
           timestamp: 1735689600000,
+          system: 'Saguache',
+          source: 1234,
+          priority: 5,
+          opcode: 3,
+          freq: 1234567,
+          encrypted: false,
+          emergency: false,
         },
         {
-          tower: 'Saguache',
-          event: 'call',
+          event: 'LOCATION',
         },
       ]),
     });
