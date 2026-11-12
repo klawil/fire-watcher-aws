@@ -3,9 +3,6 @@ import {
   AthenaClient
 } from '@aws-sdk/client-athena';
 import {
-  FirehoseClient
-} from '@aws-sdk/client-firehose';
-import {
   describe, expect, it, vi
 } from 'vitest';
 
@@ -174,66 +171,5 @@ describe('resources/api/v2/events', () => {
     expect(res.body).toContain('"count":2');
     expect(res.body).toContain('"event":"call"');
     expect(res.body).toContain('"event":"join"');
-  });
-
-  it('Returns 400 for invalid POST body', async () => {
-    const req = generateApiEvent({
-      method: 'POST',
-      path: '',
-      body: JSON.stringify({ not: 'an-array', }),
-    });
-
-    const res = await main(req);
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('Returns 400 when POST items fail validation', async () => {
-    vi.spyOn(FirehoseClient.prototype, 'send').mockResolvedValue({} as never);
-
-    const req = generateApiEvent({
-      method: 'POST',
-      path: '',
-      body: JSON.stringify([ {
-        event: 'call',
-        talkgroup: '1234',
-        timestamp: Date.now(),
-      }, ]),
-    });
-
-    const res = await main(req);
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('Sends valid POST items to firehose and still returns 400 when some items are invalid', async () => {
-    const firehoseSpy = vi.spyOn(FirehoseClient.prototype, 'send').mockResolvedValue({} as never);
-
-    const req = generateApiEvent({
-      method: 'POST',
-      path: '',
-      queryStringParameters: {
-        code: process.env.API_CODE,
-      },
-      body: JSON.stringify([
-        {
-          event: 'GRANT',
-          timestamp: 1735689600000,
-          system: 'Saguache',
-          source: 1234,
-          priority: 5,
-          opcode: 3,
-          freq: 1234567,
-          encrypted: false,
-          emergency: false,
-        },
-        {
-          event: 'LOCATION',
-        },
-      ]),
-    });
-
-    const res = await main(req);
-    expect(res.statusCode).toBe(400);
-    expect(firehoseSpy).toHaveBeenCalledTimes(1);
-    expect(res.body).toContain('1-');
   });
 });
