@@ -148,6 +148,7 @@ function getFileItem(
   return {
     Key,
     Added,
+    Talkgroup: 8198,
     StartTime,
     EndTime,
     Len: EndTime - StartTime,
@@ -158,6 +159,23 @@ function getFileItem(
     Tower: 'tower',
     Transcript,
     PageSent,
+  };
+}
+
+function getDtrCandidate(
+  Key: string,
+  Added: number,
+  StartTime: number,
+  EndTime: number,
+  Len: number
+) {
+  return {
+    Key,
+    Added,
+    StartTime,
+    EndTime,
+    Len,
+    Talkgroup: 1234,
   };
 }
 
@@ -296,20 +314,20 @@ describe('resources/s3', () => {
       });
     });
 
-    it('Picks the right file if multiple start near the same time', async () => {
-      vi.useFakeTimers().setSystemTime(currentTime);
+    it('Retains equally long recordings that each contain unique audio', async () => {
+      vi.useFakeTimers().setSystemTime(1234);
 
       S3Mock.setResult('head', createDtrHeadInfo);
 
       DynamoDBDocumentClientMock.setResult('query', {
         Items: [
           {
-            Key: 'key-1', // Deleted because length less than key-2
+            Key: 'audio/dtr/8332-1745367697_851475000.0-call_227155.m4a', // Deleted because length less than key-2
             StartTime: 10,
             EndTime: 15,
             Len: 5,
             Added: 1234,
-            Talkgroup: 8332,
+            Talkgroup: 1234,
           },
           {
             Key: 'key-2',
@@ -317,15 +335,15 @@ describe('resources/s3', () => {
             EndTime: 15,
             Len: 20,
             Added: 5678,
-            Talkgroup: 8332,
+            Talkgroup: 1234,
           },
           {
-            Key: 'key-3', // Deleted because Added > key-2 Added
+            Key: 'key-3',
             StartTime: 0,
             EndTime: 20,
             Len: 20,
             Added: 9012,
-            Talkgroup: 8332,
+            Talkgroup: 1234,
           },
         ],
       });
@@ -334,30 +352,339 @@ describe('resources/s3', () => {
         Records: [ createDtrEvent, ],
       });
 
-      expect(DeleteCommand).toBeCalledTimes(2);
+      expect(DeleteCommand).toBeCalledTimes(1);
       expect(DeleteCommand).toBeCalledWith({
         TableName: 'TABLE_FILE_VAL',
         Key: {
           Added: 1234,
-          Talkgroup: 8332,
-        },
-      });
-      expect(DeleteCommand).toBeCalledWith({
-        TableName: 'TABLE_FILE_VAL',
-        Key: {
-          Added: 9012,
-          Talkgroup: 8332,
+          Talkgroup: 1234,
         },
       });
 
-      expect(DeleteObjectCommand).toBeCalledTimes(2);
+      expect(DeleteObjectCommand).toBeCalledTimes(1);
       expect(DeleteObjectCommand).toBeCalledWith({
         Bucket: 'bucket-name',
-        Key: 'key-1',
+        Key: createDtrEvent.s3.object.key,
       });
-      expect(DeleteObjectCommand).toBeCalledWith({
+    });
+
+    it('Keeps partial overlaps and touching calls while deleting a fully covered recording', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [
+          getDtrCandidate('before', 1000, 5, 11, 6),
+          getDtrCandidate('after', 2000, 14, 22, 8),
+          getDtrCandidate('touching', 3000, 15, 17, 2),
+          getDtrCandidate('inside', 4000, 11, 14, 3),
+        ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).toHaveBeenCalledTimes(1);
+      expect(DeleteCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 1234,
+          Added: 4000,
+        },
+      });
+      expect(DeleteObjectCommand).toHaveBeenCalledTimes(1);
+      expect(DeleteObjectCommand).toHaveBeenCalledWith({
         Bucket: 'bucket-name',
-        Key: 'key-3',
+        Key: 'inside',
+      });
+    });
+
+    it.each([
+      { currentInIndex: false, },
+      { currentInIndex: true, },
+    ])('Compares all contained recordings when currentInIndex is $currentInIndex', async ({ currentInIndex, }) => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [
+          getDtrCandidate('first', 1000, 10, 12, 2),
+          getDtrCandidate('second', 2000, 13, 15, 2),
+          ...currentInIndex
+            ? [ getDtrCandidate(createDtrEvent.s3.object.key, currentTime, 10, 15, 7), ]
+            : [],
+        ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).toHaveBeenCalledTimes(2);
+      expect(DeleteCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 1234,
+          Added: 1000,
+        },
+      });
+      expect(DeleteCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 1234,
+          Added: 2000,
+        },
+      });
+      expect(DeleteObjectCommand).toHaveBeenCalledTimes(2);
+      expect(DeleteObjectCommand).not.toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        Key: createDtrEvent.s3.object.key,
+      });
+    });
+
+    it.each([
+      { currentInIndex: false, },
+      { currentInIndex: true, },
+    ])('Deletes the current upload when a longer file covers it and currentInIndex is $currentInIndex', async ({ currentInIndex, }) => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [
+          getDtrCandidate('longer', 1000, 9, 16, 8),
+          ...currentInIndex
+            ? [ getDtrCandidate(createDtrEvent.s3.object.key, currentTime, 10, 15, 7), ]
+            : [],
+        ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).toHaveBeenCalledTimes(1);
+      expect(DeleteCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 1234,
+          Added: currentTime,
+        },
+      });
+      expect(DeleteObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        Key: createDtrEvent.s3.object.key,
+      });
+    });
+
+    it('Keeps the earlier recording when length and coverage are equal', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [ getDtrCandidate('earlier', 1000, 10, 15, 7), ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteObjectCommand).toHaveBeenCalledTimes(1);
+      expect(DeleteObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        Key: createDtrEvent.s3.object.key,
+      });
+    });
+
+    it('Keeps the covering recording when equal lengths have different coverage', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [ getDtrCandidate('earlier', 1000, 11, 14, 7), ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteObjectCommand).toHaveBeenCalledTimes(1);
+      expect(DeleteObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        Key: 'earlier',
+      });
+    });
+
+    it('Keeps records when length or time metadata cannot establish safe containment', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [
+          getDtrCandidate('longer-metadata', 1000, 11, 14, 10),
+          {
+            ...getDtrCandidate('missing-length', 2000, 11, 14, 3),
+            Len: undefined,
+          },
+          getDtrCandidate('zero-duration', 3000, 12, 12, 3),
+          getDtrCandidate('zero-length', 4000, 11, 14, 0),
+        ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).not.toHaveBeenCalled();
+      expect(DeleteObjectCommand).not.toHaveBeenCalled();
+    });
+
+    it('Does not delete an S3 key shared with a different surviving recording', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [
+          getDtrCandidate('shared', 1000, 11, 14, 3),
+          getDtrCandidate('shared', 2000, 14, 20, 6),
+        ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).toHaveBeenCalledTimes(1);
+      expect(DeleteCommand).toHaveBeenCalledWith({
+        TableName: 'TABLE_FILE_VAL',
+        Key: {
+          Talkgroup: 1234,
+          Added: 1000,
+        },
+      });
+      expect(DeleteObjectCommand).not.toHaveBeenCalled();
+    });
+
+    it('Preserves a survivor in the device index when a duplicate shares its device key', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', {
+        Metadata: {
+          ...createDtrHeadInfo.Metadata,
+          source_list: JSON.stringify([ {
+            pos: 0,
+            src: 1,
+          }, ]),
+        },
+      });
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [ {
+          ...getDtrCandidate('shorter', 1000, 10, 12, 2),
+          Sources: [ 1, ],
+        }, ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).not.toHaveBeenCalledWith({
+        TableName: 'TABLE_DEVICES_VAL',
+        Key: {
+          RadioID: '1',
+          StartTime: 10,
+        },
+      });
+      expect(PutCommand).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'TABLE_DEVICES_VAL',
+        Item: expect.objectContaining({
+          RadioID: '1',
+          StartTime: 10,
+          Key: createDtrEvent.s3.object.key,
+        }),
+      }));
+      expect(PutCommand).toHaveBeenCalledTimes(3);
+    });
+
+    it('Restores the surviving device entry when the current upload is removed', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', {
+        Metadata: {
+          ...createDtrHeadInfo.Metadata,
+          source_list: JSON.stringify([ {
+            pos: 0,
+            src: 1,
+          }, ]),
+        },
+      });
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [ {
+          ...getDtrCandidate('longer', 1000, 10, 20, 10),
+          Sources: [ 1, ],
+        }, ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).not.toHaveBeenCalledWith({
+        TableName: 'TABLE_DEVICES_VAL',
+        Key: {
+          RadioID: '1',
+          StartTime: 10,
+        },
+      });
+      expect(PutCommand).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'TABLE_DEVICES_VAL',
+        Item: expect.objectContaining({
+          RadioID: '1',
+          StartTime: 10,
+          Key: 'longer',
+        }),
+      }));
+    });
+
+    it('Suppresses duplicate page processing when the current upload is absent from the index', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [ {
+          ...getFileItem('longer', 1000, 9, 20, true, false, undefined, true),
+          Talkgroup: 8198,
+        }, ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        Key: createDtrEvent.s3.object.key,
+      });
+      expect(StartTranscriptionJobCommand).not.toHaveBeenCalled();
+      expect(SendMessageCommand).not.toHaveBeenCalled();
+      expect(typedPutItem).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'TABLE_DTR_TRANSLATION_VAL',
+        Item: expect.objectContaining({
+          Key: createDtrEvent.s3.object.key,
+          NewKey: 'longer',
+        }),
+      }));
+    });
+
+    it('Keeps a partially overlapping page while preserving nearby-page suppression', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [ getFileItem('earlier-page', 1000, 5, 11, true, false), ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(DeleteCommand).not.toHaveBeenCalled();
+      expect(DeleteObjectCommand).not.toHaveBeenCalled();
+      expect(StartTranscriptionJobCommand).toHaveBeenCalledTimes(1);
+      expect(SendMessageCommand).not.toHaveBeenCalled();
+    });
+
+    it('Does not redirect a deleted page record whose S3 key is still in use', async () => {
+      vi.useFakeTimers().setSystemTime(currentTime);
+      S3Mock.setResult('head', createDtrPageHeadInfo);
+      DynamoDBDocumentClientMock.setResult('query', {
+        Items: [
+          getFileItem('longer', 1000, 9, 20, true, false),
+          getFileItem('shared', 2000, 10, 12, true, false),
+          getFileItem('shared', 3000, 5, 11, true, false),
+        ],
+      });
+
+      await mod.main({ Records: [ createDtrEvent, ], });
+
+      expect(typedPutItem).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'TABLE_DTR_TRANSLATION_VAL',
+        Item: expect.objectContaining({ Key: createDtrEvent.s3.object.key, }),
+      }));
+      expect(typedPutItem).not.toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'TABLE_DTR_TRANSLATION_VAL',
+        Item: expect.objectContaining({ Key: 'shared', }),
+      }));
+      expect(DeleteObjectCommand).not.toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        Key: 'shared',
       });
     });
 
@@ -840,7 +1167,7 @@ describe('resources/s3', () => {
           getFileItem(
             'lower-length',
             currentTime - 1000,
-            createDtrItem.StartTime + 5,
+            createDtrItem.StartTime + 4,
             createDtrItem.EndTime,
             true,
             false,
@@ -848,13 +1175,21 @@ describe('resources/s3', () => {
           ),
           getFileItem(
             'added-before',
-            currentTime - 1000,
+            currentTime - 2000,
             createDtrItem.StartTime,
             createDtrItem.EndTime,
             true,
             false,
             'Transcript 2',
             true
+          ),
+          getFileItem(
+            'no-transcript',
+            currentTime - 3000,
+            createDtrItem.EndTime - 0.5,
+            createDtrItem.EndTime,
+            true,
+            false
           ),
         ],
         '$metadata': {},
@@ -894,7 +1229,7 @@ describe('resources/s3', () => {
           getFileItem(
             'lower-length',
             currentTime - 1000,
-            createDtrItem.StartTime + 5,
+            createDtrItem.StartTime + 4,
             createDtrItem.EndTime,
             true,
             false,
@@ -902,7 +1237,7 @@ describe('resources/s3', () => {
           ),
           getFileItem(
             'longer',
-            currentTime - 1000,
+            currentTime - 2000,
             createDtrItem.StartTime,
             createDtrItem.EndTime + 2,
             true,
@@ -950,7 +1285,7 @@ describe('resources/s3', () => {
           getFileItem(
             'lower-length',
             currentTime - 1000,
-            createDtrItem.StartTime + 5,
+            createDtrItem.StartTime + 4,
             createDtrItem.EndTime,
             true,
             false,

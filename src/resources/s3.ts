@@ -44,7 +44,6 @@ const cloudwatch = new CloudWatchClient();
 const metricSource = 'S3';
 
 const selectDuplicateBuffer = 60; // Select calls 60s each way for analysis for duplicates
-const actualDuplicateBuffer = 1; // Check for calls 1s each way for DTR duplicates
 
 const vhfConfig: {
   [key: string]: {
@@ -350,6 +349,31 @@ interface SourceListItem {
   src: number;
 }
 
+type ComparableFile = FullFileObject & {
+  StartTime: number;
+  EndTime: number;
+  Len: number;
+  Key: string;
+};
+
+function isComparableFile(item: FullFileObject): item is ComparableFile {
+  return typeof item.StartTime === 'number' && Number.isFinite(item.StartTime) &&
+    typeof item.EndTime === 'number' && Number.isFinite(item.EndTime) &&
+    item.StartTime < item.EndTime &&
+    typeof item.Len === 'number' && Number.isFinite(item.Len) && item.Len > 0 &&
+    typeof item.Key === 'string' && item.Key.length > 0;
+}
+
+function coversFile(covering: ComparableFile, covered: ComparableFile): boolean {
+  return covering.StartTime <= covered.StartTime && covering.EndTime >= covered.EndTime &&
+    covering.Len >= covered.Len;
+}
+
+function compareFiles(a: ComparableFile, b: ComparableFile): number {
+  return b.Len - a.Len || a.StartTime - b.StartTime || b.EndTime - a.EndTime ||
+    a.Added - b.Added || a.Key.localeCompare(b.Key);
+}
+
 async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
   logger.trace('parseRecord', ...arguments);
   const Bucket = record.s3.bucket.name;
@@ -493,7 +517,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
     const shouldDoTranscript: boolean = body.Item.Emergency === 1 ||
       isPage;
     const startTime = body.Item.StartTime as number;
-    const endTime = body.Item.EndTime as number;
     const existingItems = await typedQuery<FullFileObject>({
       TableName: TABLE_FILE(),
       IndexName: 'StartTimeTgIndex',
@@ -508,58 +531,46 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       },
       KeyConditionExpression: '#Talkgroup = :Talkgroup AND #StartTime BETWEEN :StartTime1 AND :StartTime2',
     });
-    if (
-      !!existingItems.Items &&
-      existingItems.Items.length > 1
-    ) {
-      const matchingItems = existingItems.Items
-        .filter(item => {
-          const itemStartTime = item.StartTime;
-          const itemEndTime = item.EndTime;
-          if (
-            typeof itemStartTime === 'undefined' ||
-            typeof itemEndTime === 'undefined'
-          ) {
-            return false;
-          }
+    const indexedItems = existingItems.Items || [];
+    const sameCurrentItem = (item: FullFileObject) =>
+      item.Talkgroup === body.Item.Talkgroup && item.Added === body.Item.Added;
+    const indexedCurrentItem = indexedItems.find(sameCurrentItem);
+    const currentItem = {
+      ...indexedCurrentItem,
+      ...body.Item,
+    };
+    const candidates = [
+      ...indexedItems.filter(item => !sameCurrentItem(item)),
+      currentItem,
+    ];
 
-          // Return true if the file starts in, ends in, or covers the buffer period
-          const startsIn = itemStartTime >= startTime - actualDuplicateBuffer &&
-            itemStartTime <= endTime + actualDuplicateBuffer;
-          const endsIn = itemEndTime >= startTime - actualDuplicateBuffer &&
-            itemEndTime <= endTime + actualDuplicateBuffer;
-          const covers = itemStartTime <= startTime - actualDuplicateBuffer &&
-            itemEndTime >= endTime + actualDuplicateBuffer;
-          return startsIn || endsIn || covers;
-        });
+    if (candidates.length > 1) {
+      const comparableItems = candidates.filter(isComparableFile).sort(compareFiles);
+      const keptItem = isComparableFile(currentItem)
+        ? comparableItems.find(item => coversFile(item, currentItem))
+        : undefined;
+      const itemsToDelete = keptItem
+        ? comparableItems.filter(item => item !== keptItem && coversFile(keptItem, item) &&
+          compareFiles(keptItem, item) < 0)
+        : [];
 
-      if (matchingItems.length > 1) {
+      if (keptItem && itemsToDelete.length > 0) {
+        const deletedItems = new Set<FullFileObject>(itemsToDelete);
+        const survivingItems = candidates.filter(item => !deletedItems.has(item));
+        const survivingKeys = new Set(survivingItems.map(item => item.Key));
         doTranscriptOnly = true; // So we don't accidentally double page
-        const transcript: string | null = matchingItems
+        const transcript: string | null = [
+          keptItem,
+          ...itemsToDelete,
+        ]
           .reduce((transcript: null | string, item) => {
             if (item.Transcript) {
               return transcript !== null && transcript.length > item.Transcript.length
                 ? transcript
                 : item.Transcript;
             }
-            return null;
+            return transcript;
           }, null);
-        const allItems = matchingItems
-          .sort((a, b) => {
-            const aAdded = a.Added;
-            const bAdded = b.Added;
-            const aLen = a.Len;
-            const bLen = b.Len;
-
-            if (aLen === bLen) {
-              return aAdded > bAdded ? -1 : 1;
-            }
-
-            return (aLen || 0) > (bLen || 0) ? 1 : -1;
-          });
-        const itemsToDelete = allItems
-          .slice(0, -1);
-        const keptItem = allItems.slice(-1)[0];
         const keepingCurrentItem: boolean = keptItem.Key === Key;
         if (isPage) {
           logger.error('itemsToDelete', itemsToDelete);
@@ -582,16 +593,31 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
             return;
           }
 
-          return Promise.all(item.Sources.map(sourceId => typedDeleteItem<FileEventItem>({
-            TableName: TABLE_DEVICES(),
-            Key: {
-              RadioID: sourceId.toString(),
-              StartTime: item.StartTime || 0,
-            },
-          })));
+          return Promise.all(item.Sources.map(sourceId => {
+            const survivor = survivingItems.find(candidate =>
+              candidate.StartTime === item.StartTime && candidate.Sources?.includes(sourceId));
+            if (survivor) {
+              return typedPutItem<FileEventItem>({
+                TableName: TABLE_DEVICES(),
+                Item: {
+                  RadioID: sourceId.toString(),
+                  StartTime: 0,
+                  ...survivor,
+                },
+              });
+            }
+
+            return typedDeleteItem<FileEventItem>({
+              TableName: TABLE_DEVICES(),
+              Key: {
+                RadioID: sourceId.toString(),
+                StartTime: item.StartTime,
+              },
+            });
+          }));
         }));
         promises['delete-s3-dups'] = Promise.all(itemsToDelete.map(item => {
-          if (typeof item.Key === 'undefined' || item.Key === keptItem.Key) {
+          if (survivingKeys.has(item.Key)) {
             return;
           }
 
@@ -601,14 +627,16 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
           }));
         }));
         if (shouldDoTranscript && !keepingCurrentItem) {
-          promises['translation-table'] = Promise.all(itemsToDelete.map(item => typedPutItem<FileTranslationObject>({
-            TableName: TABLE_FILE_TRANSLATION(),
-            Item: {
-              Key: item.Key || '',
-              NewKey: keptItem.Key || '',
-              TTL: Math.round(Date.now() / 1000) + (60 * 60), // 1 hour TTL
-            },
-          })));
+          promises['translation-table'] = Promise.all(itemsToDelete
+            .filter(item => !survivingKeys.has(item.Key))
+            .map(item => typedPutItem<FileTranslationObject>({
+              TableName: TABLE_FILE_TRANSLATION(),
+              Item: {
+                Key: item.Key,
+                NewKey: keptItem.Key,
+                TTL: Math.round(Date.now() / 1000) + (60 * 60), // 1 hour TTL
+              },
+            })));
         }
         if (transcript !== null && keepingCurrentItem) {
           promises['add-transcript'] = typedUpdate<FullFileObject>({
@@ -685,7 +713,7 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         });
 
         // Prevents texts from being sent if 2 pages happen within a minute of each other
-        const previousPages = existingItems.Items
+        const previousPages = indexedItems
           .filter(item => {
             const itemStartTime = item.StartTime;
             const itemEndTime = item.EndTime;
