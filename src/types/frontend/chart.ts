@@ -20,6 +20,7 @@ export interface TowerChart extends BaseChart {
 export interface MetricChart extends BaseChart {
   type: 'Metric';
   unit: PossibleChartUnits;
+  limit?: boolean;
 }
 
 export interface TimingChart extends BaseChart {

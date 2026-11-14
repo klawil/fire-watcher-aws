@@ -29,6 +29,24 @@ const secondFormat = (places: number = 1) => (v: string | number) => {
     v = Number(v);
   }
 
+  if (v > 60 * 60) {
+    v = Math.round(v);
+    const days = Math.floor(v / (60 * 60 * 24));
+    const hours = Math.floor((v % (60 * 60 * 24)) / (60 * 60));
+    const minutes = Math.floor((v % (60 * 60)) / 60);
+    const seconds = v % 60;
+    const parts: string[] = [];
+    if (hours > 0) {
+      parts.push(`${hours}`);
+    }
+    parts.push(`${minutes.toString().padStart(2, '0')}`);
+    parts.push(`${seconds.toString().padStart(2, '0')}`);
+    if (days > 0) {
+      return `${days}d ${parts.join(':')}`;
+    }
+    return parts.join(':');
+  }
+
   return (Math.round(v * 1000) / 1000).toFixed(places);
 };
 
@@ -41,6 +59,7 @@ export default function StatusMetricLineChart({
   dispatch,
   unit,
   mode,
+  limit,
 }: Readonly<ChartComponentParams<MetricChart>>) {
   const [
     shouldLoad,
@@ -72,6 +91,25 @@ export default function StatusMetricLineChart({
     resetDataRaw();
   }, [ mode, ]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const yMax: {
+    max?: number;
+  } = {};
+  if (limit) {
+    console.log(data?.datasets);
+    const maxDataValue = data?.datasets?.reduce((m, d) => {
+      if (d.data) {
+        const localMax = Math.max(...d.data);
+        if (localMax > m) {
+          m = localMax;
+        }
+      }
+      return m;
+    }, 0) || 0;
+    if (!isNaN(maxDataValue) && maxDataValue > 30) {
+      yMax.max = 30;
+    }
+  }
+
   const [
     pageWidth,
     pageHeight,
@@ -84,6 +122,7 @@ export default function StatusMetricLineChart({
     scales: {
       y: {
         min: 0,
+        ...yMax,
       },
     },
     plugins: {

@@ -151,6 +151,7 @@ const idToConfig: {
         type: 'Metric',
         unit: 'Seconds',
         title: 'Upload Delay',
+        limit: true,
         body: {
           metrics: [
             {
@@ -437,6 +438,7 @@ const idToConfig: {
         type: 'Metric',
         unit: 'Seconds',
         title: 'Upload Delay',
+        limit: true,
         body: {
           metrics: [
             {
@@ -518,6 +520,7 @@ const idToConfig: {
         type: 'Metric',
         unit: 'Seconds',
         title: 'Upload Delay',
+        limit: true,
         body: {
           metrics: [ {
             type: 'timing',
