@@ -2205,24 +2205,6 @@ export class FireWatcherAwsStack extends Stack {
     }
 
     // Add the alarms
-    const baseTowerAlarmConfig: cloudwatch.AlarmProps = {
-      evaluationPeriods: 48,
-      datapointsToAlarm: 48,
-      metric: new cloudwatch.Metric({
-        metricName: 'Decode Rate',
-        namespace: 'DTR Metrics',
-        period: Duration.minutes(5),
-        statistic: cloudwatch.Stats.AVERAGE,
-        dimensionsMap: {
-          Tower: 'Saguache',
-        },
-      }),
-      threshold: 30,
-      alarmDescription: 'Recording audio from the Saguache Tower may not be occurring on may only be occurring intermitently',
-      alarmName: 'Saguache Tower Decode Rate',
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.IGNORE,
-    };
     const baseTowerOfflineAlarmConfig: cloudwatch.AlarmProps = {
       evaluationPeriods: 5,
       datapointsToAlarm: 5,
@@ -2260,14 +2242,6 @@ export class FireWatcherAwsStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.BREACHING,
     };
     const alarms: CvfdAlarm[] = [
-      { // Saguache tower not decoding
-        tag: 'Dtr',
-        codeName: 'saguache-tower',
-        okayAction: true,
-        alarm: {
-          ...baseTowerAlarmConfig,
-        },
-      },
       { // Saguache recorder offline
         tag: 'Dtr',
         codeName: 'saguache-tower-offline',
