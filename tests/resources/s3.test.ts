@@ -130,6 +130,7 @@ const createVhfHeadInfo = {
     datetime: '2000',
     len: '15',
     tone: 'n',
+    recorder: 'test-recorder',
   },
 };
 
@@ -715,6 +716,7 @@ describe('resources/s3', () => {
           EndTime: 17,
           Freq: 154445000,
           Key: createVhfEvent.s3.object.key,
+          Recorder: 'test-recorder',
           Len: 15,
           StartTime: 2,
           Talkgroup: 18331,
@@ -727,22 +729,15 @@ describe('resources/s3', () => {
       // Add the VHF upload metric
       expect(PutMetricDataCommand).toBeCalledTimes(1);
       expect(PutMetricDataCommand).toBeCalledWith({
-        Namespace: 'CVFD API',
+        Namespace: 'DTR Metrics',
         MetricData: [ {
-          Dimensions: [
-            {
-              Name: 'source',
-              Value: 'S3',
-            },
-            {
-              Name: 'action',
-              Value: 'createVHF',
-            },
-          ],
-          MetricName: 'Call',
-          Timestamp: new Date(),
-          Unit: 'Count',
-          Value: 1,
+          Dimensions: [ {
+            Name: 'Tower',
+            Value: 'test-recorder',
+          }, ],
+          MetricName: 'UploadTime',
+          Unit: 'Seconds',
+          Value: Math.round(currentTime / 1000) - 17,
         }, ],
       });
 
@@ -810,6 +805,7 @@ describe('resources/s3', () => {
           EndTime: 17,
           Freq: 462950000,
           Key: createVhfMed9Event.s3.object.key,
+          Recorder: 'test-recorder',
           Len: 15,
           StartTime: 2,
           Talkgroup: 110001,
@@ -822,22 +818,15 @@ describe('resources/s3', () => {
       // Add the VHF upload metric
       expect(PutMetricDataCommand).toBeCalledTimes(1);
       expect(PutMetricDataCommand).toBeCalledWith({
-        Namespace: 'CVFD API',
+        Namespace: 'DTR Metrics',
         MetricData: [ {
-          Dimensions: [
-            {
-              Name: 'source',
-              Value: 'S3',
-            },
-            {
-              Name: 'action',
-              Value: 'createVHF',
-            },
-          ],
-          MetricName: 'Call',
-          Timestamp: new Date(),
-          Unit: 'Count',
-          Value: 1,
+          Dimensions: [ {
+            Name: 'Tower',
+            Value: 'test-recorder',
+          }, ],
+          MetricName: 'UploadTime',
+          Unit: 'Seconds',
+          Value: Math.round(currentTime / 1000) - 17,
         }, ],
       });
 

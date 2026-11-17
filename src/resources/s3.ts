@@ -384,13 +384,6 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
       [key: string]: Promise<unknown>;
     } = {};
 
-    if (!Key.includes('/dtr')) {
-      const metric = incrementMetric('Call', {
-        source: metricSource,
-        action: 'createVHF',
-      }, false);
-      promises['call-metric'] = metric;
-    }
     const headInfo = await s3.send(new HeadObjectCommand({
       Bucket,
       Key,
@@ -466,10 +459,26 @@ async function parseRecord(record: lambda.S3EventRecord): Promise<void> {
         }
       }
 
+      const endTime = (Number(headInfo.Metadata?.datetime) / 1000) + Number(headInfo.Metadata?.len || '0');
+      const towerUploadMetrics: PutMetricDataCommandInput['MetricData'] = [ {
+        MetricName: 'UploadTime',
+        Dimensions: [ {
+          Name: 'Tower',
+          Value: (headInfo.Metadata?.recorder || config.tower) as string,
+        }, ],
+        Unit: 'Seconds',
+        Value: Math.round(addedTime / 1000) - endTime,
+      }, ];
+
+      promises['put-metric-data'] = cloudwatch.send(new PutMetricDataCommand({
+        Namespace: 'DTR Metrics',
+        MetricData: towerUploadMetrics,
+      }));
+
       body.Item = {
         ...body.Item,
         StartTime: Number(headInfo.Metadata?.datetime) / 1000,
-        EndTime: (Number(headInfo.Metadata?.datetime) / 1000) + Number(headInfo.Metadata?.len || '0'),
+        EndTime: endTime,
         Len: Number(headInfo.Metadata?.len),
         Freq: config.freq,
         Emergency: 0,
