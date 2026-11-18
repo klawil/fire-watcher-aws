@@ -137,6 +137,22 @@ const idToConfig: {
             },
             {
               type: 'timing',
+              label: 'VHF Uploads',
+              namespace: 'DTR Metrics',
+              metricName: 'UploadTime',
+              tower: 'vhf',
+              stat: 'SampleCount',
+            },
+            {
+              type: 'timing',
+              label: 'UHF Uploads',
+              namespace: 'DTR Metrics',
+              metricName: 'UploadTime',
+              tower: 'uhf',
+              stat: 'SampleCount',
+            },
+            {
+              type: 'timing',
               label: 'VHF/UHF NUC Uploads',
               namespace: 'DTR Metrics',
               metricName: 'UploadTime',
