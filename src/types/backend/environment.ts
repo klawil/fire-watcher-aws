@@ -6,7 +6,7 @@ type TableNameMap = {
   [key in TableEnvName]: string;
 };
 
-export type BucketNames = 'COSTS' | 'EVENTS' | 'EVENTS_V2' | 'AUDIO' | 'EMAIL';
+export type BucketNames = 'COSTS' | 'EVENTS_V2' | 'AUDIO' | 'EMAIL';
 
 type BucketEnvName = `BKT_${BucketNames}`;
 type BucketNameMap = {
@@ -27,7 +27,7 @@ type QueueNameMap = {
   [key in QueueEnvName]: string;
 };
 
-export type FirehoseNames = 'EVENTS' | 'EVENTS_V2';
+export type FirehoseNames = 'EVENTS_V2';
 
 type FirehoseEnvName = `FH_${FirehoseNames}`;
 type FirehoseNameMap = {

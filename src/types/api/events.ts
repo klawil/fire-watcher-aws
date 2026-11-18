@@ -130,7 +130,7 @@ export type QueryEventsApi = {
  * @body.contentType application/json
  */
 export type AddEventsApi = {
-  path: '/api/v2/events/';
+  path: '/api/v2/eventsV3/';
   method: 'POST';
   body: AddEventItem[];
   responses: {
