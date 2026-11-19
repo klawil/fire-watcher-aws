@@ -44,7 +44,6 @@ export default function CofrnNavbar({
         <Navbar.Collapse id='basic-navbar-nav'>
           <Nav className='me-auto mb-2 mb-lg-0' activeKey={loc?.pathname || '/'}>
             <Nav.Link href='/'>Radio Traffic</Nav.Link>
-            <Nav.Link href='/weather'>Weather</Nav.Link>
           </Nav>
 
           <Nav className='ms-auto mb-2 mb-lg-0' activeKey={loc?.pathname || '/'}>

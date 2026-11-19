@@ -62,7 +62,6 @@ fire-watcher-aws/
 │   │   ├── departments/         # Department settings
 │   │   ├── texts/               # Text message groups
 │   │   ├── status/              # System status
-│   │   ├── weather/             # Weather information
 │   │   ├── profile/             # User profile
 │   │   ├── pages/               # Paging events
 │   │   ├── login/               # Authentication
@@ -85,7 +84,6 @@ fire-watcher-aws/
 │   │   ├── dailyEvents.ts       # Daily event aggregation
 │   │   ├── emailHandler.ts      # Email forwarding
 │   │   ├── status.ts            # System status checks
-│   │   ├── weather.ts           # Weather data updates
 │   │   ├── importAladTec.ts     # Scheduling data import
 │   │   └── api/v2/              # REST API endpoints
 │   │       ├── users.ts
@@ -217,7 +215,6 @@ Dashboards showing:
 - Historic DTR events
 - Message delivery status
 - System health and metrics
-- Weather conditions by location
 
 ## API Documentation
 

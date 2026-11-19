@@ -23,15 +23,6 @@ export interface PhoneNumberIssueQueueItem {
   department: UserDepartment[];
 }
 
-export interface SendAnnouncementQueueItem {
-  action: 'announce';
-  body: string;
-  phone: number;
-  isTest: boolean;
-  department?: UserDepartment;
-  talkgroup?: PagingTalkgroup;
-}
-
 export interface SendPageQueueItem {
   action: 'page';
   key: string;

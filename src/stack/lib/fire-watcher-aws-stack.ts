@@ -63,13 +63,21 @@ const secretArn = process.env.TWILIO_SECRET_ARN as string;
 const glueCatalogId = process.env.GLUE_CATALOG_ID as string;
 const emailDomain = process.env.EMAIL_DOMAIN as string;
 
-type AlarmTag = 'Dtr' | 'Api';
-interface CvfdAlarm {
+type AlarmTag = 'Dtr' | 'Api' | 'Vhf';
+interface CvfdAlarmCommon {
   tag: AlarmTag;
   codeName: string;
   okayAction: boolean;
+}
+interface CvfdBaseAlarm extends CvfdAlarmCommon {
+  type: 'base';
   alarm: cloudwatch.AlarmProps;
 }
+interface CvfdPromAlarm extends CvfdAlarmCommon {
+  type: 'prom';
+  alarm: cloudwatch.PromQLAlarmProps;
+}
+type CvfdAlarm = CvfdBaseAlarm | CvfdPromAlarm;
 
 interface LambdaResources {
   tables: {
@@ -1289,31 +1297,6 @@ export class FireWatcherAwsStack extends Stack {
     });
     dailyEventRule.addTarget(new targets.LambdaFunction(dailyEventsHandler));
 
-    // Create the weather updater
-    const weatherUpdaterPermissions: LambdaPermissions = {
-      buckets: [ {
-        bucket: 'AUDIO',
-        readonly: false,
-      }, ],
-    };
-    const weatherUpdater = new lambdanodejs.NodejsFunction(this, 'cofrn-weather-lambda', {
-      runtime: lambda.Runtime.NODEJS_22_X,
-      entry: resolve(resourceBase, 'weather.ts'),
-      handler: 'main',
-      environment: buildLambdaEnvironment(lambdaEnv, weatherUpdaterPermissions),
-      timeout: Duration.minutes(5),
-      logRetention: logs.RetentionDays.ONE_MONTH,
-    });
-    grantLambdaPermissions(weatherUpdater, weatherUpdaterPermissions, lambdaResources);
-
-    // Schedule the function for every 15 minutes
-    const weatherEventRule = new events.Rule(this, '-rule', {
-      schedule: events.Schedule.cron({
-        minute: '*/15',
-      }),
-    });
-    weatherEventRule.addTarget(new targets.LambdaFunction(weatherUpdater));
-
     // Store APIs that should get a list of URLs -> lambda functions and that mapping
     const lambdaNameRecips: lambdanodejs.NodejsFunction[] = [];
     const lambdaNames: { [key: string]: string } = {
@@ -1321,7 +1304,6 @@ export class FireWatcherAwsStack extends Stack {
       'I_S3': s3Handler.functionName,
       'I_ALARM_QUEUE': alarmQueueHandler.functionName,
       'I_STATUS': statusHandler.functionName,
-      'I_WEATHER': weatherUpdater.functionName,
       'I_TWILIO_QUEUE': twilioQueueHandler.functionName,
       'I_EVENTS_S3_QUEUE': eventsV2S3QueueHandler.functionName,
       'I_EMAIL': emailHandler.functionName,
@@ -1946,33 +1928,6 @@ export class FireWatcherAwsStack extends Stack {
         }, ],
       },
       additionalBehaviors: {
-        '/weather.json': {
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-          functionAssociations: [ {
-            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            function: redirectCfFunction,
-          }, ],
-        },
-        '/active-fires.json': {
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-          functionAssociations: [ {
-            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            function: redirectCfFunction,
-          }, ],
-        },
-        '/active-boundaries.json': {
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-          functionAssociations: [ {
-            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            function: redirectCfFunction,
-          }, ],
-        },
         '/audio/*': {
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
           origin: cloudfrontOrigins.S3BucketOrigin.withOriginAccessControl(bucket),
@@ -2076,6 +2031,7 @@ export class FireWatcherAwsStack extends Stack {
         tag: 'Dtr',
         codeName: 'saguache-tower-offline',
         okayAction: true,
+        type: 'base',
         alarm: {
           ...baseTowerOfflineAlarmConfig,
         },
@@ -2084,6 +2040,7 @@ export class FireWatcherAwsStack extends Stack {
         tag: 'Dtr',
         codeName: 'pool-table-offline',
         okayAction: true,
+        type: 'base',
         alarm: {
           ...baseTowerOfflineAlarmConfig,
           metric: new cloudwatch.Metric({
@@ -2099,20 +2056,22 @@ export class FireWatcherAwsStack extends Stack {
           alarmName: 'Crestone Recorder Status',
         },
       },
-      { // Saguache tower down
+      { // Saguache tower uploads
         tag: 'Dtr',
         codeName: 'saguache-tower-upload',
         okayAction: true,
+        type: 'base',
         alarm: {
           ...baseUploadAlarmConfig,
           evaluationPeriods: 3,
           datapointsToAlarm: 3,
         },
       },
-      { // Pool table tower down
+      { // Pool table tower uploads
         tag: 'Dtr',
         codeName: 'pool-table-upload',
         okayAction: true,
+        type: 'base',
         alarm: {
           ...baseUploadAlarmConfig,
           metric: new cloudwatch.Metric({
@@ -2132,6 +2091,7 @@ export class FireWatcherAwsStack extends Stack {
         tag: 'Api',
         codeName: 'api5xx',
         okayAction: true,
+        type: 'base',
         alarm: {
           evaluationPeriods: 1,
           datapointsToAlarm: 1,
@@ -2151,16 +2111,17 @@ export class FireWatcherAwsStack extends Stack {
           }),
         },
       },
-      { // Queue errors
+      { // Lambda errors
         tag: 'Api',
-        codeName: 'queue-handler',
+        codeName: 'lambda-error',
         okayAction: false,
+        type: 'base',
         alarm: {
           evaluationPeriods: 1,
           datapointsToAlarm: 1,
           threshold: 0,
-          alarmDescription: 'The queue handler is throwing errors',
-          alarmName: 'Queue Errors',
+          alarmDescription: 'A Lambda function is throwing errors',
+          alarmName: 'Lambda Errors',
           comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
           treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
           metric: new cloudwatch.Metric({
@@ -2168,32 +2129,6 @@ export class FireWatcherAwsStack extends Stack {
             namespace: 'AWS/Lambda',
             period: Duration.minutes(15),
             statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              FunctionName: queueHandler.functionName,
-            },
-          }),
-        },
-      },
-      { // S3 errors
-        tag: 'Api',
-        codeName: 's3-handler',
-        okayAction: false,
-        alarm: {
-          evaluationPeriods: 1,
-          datapointsToAlarm: 1,
-          threshold: 0,
-          alarmDescription: 'The S3 event handler is throwing errors',
-          alarmName: 'S3 Errors',
-          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-          metric: new cloudwatch.Metric({
-            metricName: 'Errors',
-            namespace: 'AWS/Lambda',
-            period: Duration.minutes(15),
-            statistic: cloudwatch.Stats.SUM,
-            dimensionsMap: {
-              FunctionName: s3Handler.functionName,
-            },
           }),
         },
       },
@@ -2201,6 +2136,7 @@ export class FireWatcherAwsStack extends Stack {
         tag: 'Api',
         codeName: 'twilio-failed',
         okayAction: false,
+        type: 'base',
         alarm: {
           evaluationPeriods: 1,
           datapointsToAlarm: 1,
@@ -2217,10 +2153,28 @@ export class FireWatcherAwsStack extends Stack {
           }),
         },
       },
+      {
+        tag: 'Vhf',
+        codeName: 'klawil-nuc-offline',
+        okayAction: true,
+        type: 'prom',
+        alarm: {
+          alarmDescription: 'The server recording Saguache tower is offline',
+          alarmName: 'Klawil NUC Status',
+          evaluationInterval: Duration.minutes(1),
+          query: 'absent_over_time(squelch_noise{"@instrumentation.site"="klawil-home-nuc"}[5m]) > 0',
+          recoveryPeriod: Duration.minutes(1),
+        },
+      },
     ];
 
     alarms.forEach(alarmConfig => {
-      const alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm);
+      let alarm: cloudwatch.Alarm | cloudwatch.PromQLAlarm;
+      if (alarmConfig.type === 'base') {
+        alarm = new cloudwatch.Alarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm);
+      } else {
+        alarm = new cloudwatch.PromQLAlarm(this, `cvfd-alarm-${alarmConfig.codeName}`, alarmConfig.alarm);
+      }
       alarm.addAlarmAction(alarmAction);
       if (alarmConfig.okayAction !== false) {
         alarm.addOkAction(alarmAction);
