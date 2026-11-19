@@ -99,7 +99,7 @@ function buildLambdaMetric(
   const metricToPush: MetricDataQuery = {
     Id: key,
     ReturnData: true,
-    Label: `${conf.label || metric.fn} ${metric.metric}`,
+    Label: `${conf.label || metric.fn}`,
     MetricStat: {
       Metric: {
         Namespace: 'AWS/Lambda',

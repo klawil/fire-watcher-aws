@@ -210,6 +210,22 @@ const idToConfig: {
               tower: 'klawil-home-nuc',
               stat: 'p80',
             },
+            {
+              type: 'timing',
+              label: 'VHF Uploads',
+              namespace: 'DTR Metrics',
+              metricName: 'UploadTime',
+              tower: 'vhf',
+              stat: 'p80',
+            },
+            {
+              type: 'timing',
+              label: 'UHF Uploads',
+              namespace: 'DTR Metrics',
+              metricName: 'UploadTime',
+              tower: 'uhf',
+              stat: 'p80',
+            },
           ],
         },
       },
@@ -569,7 +585,42 @@ const idToConfig: {
   },
   'klawil-home-nuc': {
     label: 'William Home Station (VHF/UHF)',
-    charts: [ ...generateSiteCharts('klawil-home-nuc'), ],
+    charts: [
+      { // Upload Count
+        id: 'klawil-home-nuc-upload-count',
+        type: 'Metric',
+        title: 'Files Uploaded',
+        unit: 'Count',
+        body: {
+          metrics: [ {
+            type: 'timing',
+            label: 'Home NUC',
+            namespace: 'DTR Metrics',
+            metricName: 'UploadTime',
+            tower: 'klawil-home-nuc',
+            stat: 'SampleCount',
+          }, ],
+        },
+      },
+      { // Upload Delay
+        id: 'klawil-home-nuc-upload-delay',
+        type: 'Metric',
+        unit: 'Seconds',
+        title: 'Upload Delay',
+        limit: true,
+        body: {
+          metrics: [ {
+            type: 'timing',
+            label: 'Home NUC',
+            namespace: 'DTR Metrics',
+            metricName: 'UploadTime',
+            tower: 'klawil-home-nuc',
+            stat: 'Maximum',
+          }, ],
+        },
+      },
+      ...generateSiteCharts('klawil-home-nuc'),
+    ],
   },
   'twilio': {
     label: 'Twilio Services',
